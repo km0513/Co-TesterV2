@@ -1,0 +1,89 @@
+{
+  "commands": [
+    {
+      "name": "Refactor Impact Analyzer",
+      "prompt": "What are the risks if I change this function/module? Where is it used and what might break?",
+      "type": "chat"
+    },
+    {
+      "name": "Change Safety Checklist",
+      "prompt": "Im planning to change [function/module]. Give me a checklist of tests, impacted files, and validations.",
+      "type": "chat"
+    },
+    {
+      "name": "Root Cause Tracing",
+      "prompt": "This broke in prod. Walk me through where I should start investigating and why.",
+      "type": "chat"
+    },
+    {
+      "name": "Backward Compatibility Guard",
+      "prompt": "Help me refactor this safely without breaking backward compatibility.",
+      "type": "chat"
+    },
+    {
+      "name": "Explain + Usage + Tests",
+      "prompt": "Explain what this does, where it's used, and suggest edge/boundary test cases.",
+      "type": "chat"
+    },
+    {
+      "name": "Cross-file Usage Tracker",
+      "prompt": "List all modules or components that use this function/service.",
+      "type": "chat"
+    },
+    {
+      "name": "Interface & Type Propagation",
+      "prompt": "If I modify this interface, where will it ripple across the app?",
+      "type": "chat"
+    },
+    {
+      "name": "Repo-Wide Risk Scan",
+      "prompt": "List all shared utilities and who uses them. Highlight critical paths or under-tested logic.",
+      "type": "chat"
+    },
+    {
+      "name": "Untested Paths Scanner",
+      "prompt": "Show me any critical but untested functions in this file/module.",
+      "type": "chat"
+    },
+    {
+      "name": "Monorepo Dependency Mapping",
+      "prompt": "In this monorepo, which packages depend on this module?",
+      "type": "chat"
+    },
+    {
+      "name": "Create Test Plan from Diff",
+      "prompt": "Here\u2019s a code diff. Generate a test plan covering all major impacted areas.",
+      "type": "chat"
+    },
+    {
+      "name": "Autogenerate Commit Message",
+      "prompt": "Write a clear, meaningful commit message from this change.",
+      "type": "chat"
+    },
+    {
+      "name": "Write PR Description",
+      "prompt": "Summarize this PR with intent, risk, and impacted areas.",
+      "type": "chat"
+    },
+    {
+      "name": "Changelog Generator",
+      "prompt": "Convert this diff or commit history into a changelog entry.",
+      "type": "chat"
+    },
+    {
+      "name": "Act as Reviewer",
+      "prompt": "Act as a senior dev. Review this code for readability, performance, and maintainability.",
+      "type": "chat"
+    },
+    {
+      "name": "Teach Me Best Practices",
+      "prompt": "What are common mistakes when writing async functions in NodeJS?",
+      "type": "chat"
+    },
+    {
+      "name": "Architecture Coach",
+      "prompt": "Explain how this project\u2019s folder structure supports scalability.",
+      "type": "chat"
+    }
+  ]
+}

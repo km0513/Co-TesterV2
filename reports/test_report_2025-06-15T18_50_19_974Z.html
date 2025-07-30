@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>test_report_2025-06-15T18_50_19_974Z</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #eee;
+        }
+        .header h1 {
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+        .timestamp {
+            color: #7f8c8d;
+            font-size: 14px;
+        }
+        .summary {
+            display: flex;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            margin-bottom: 30px;
+            background-color: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+        }
+        .summary-item {
+            text-align: center;
+            padding: 15px;
+            border-radius: 8px;
+            min-width: 120px;
+            margin: 5px;
+        }
+        .total {
+            background-color: #3498db;
+            color: white;
+        }
+        .passed {
+            background-color: #2ecc71;
+            color: white;
+        }
+        .failed {
+            background-color: #e74c3c;
+            color: white;
+        }
+        .skipped {
+            background-color: #f39c12;
+            color: white;
+        }
+        .duration {
+            background-color: #9b59b6;
+            color: white;
+        }
+        .summary-item h3 {
+            margin: 0;
+            font-size: 24px;
+        }
+        .summary-item p {
+            margin: 5px 0 0;
+            font-size: 14px;
+        }
+        .test-results {
+            margin-top: 30px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        th {
+            background-color: #f2f2f2;
+            font-weight: 600;
+        }
+        tr:hover {
+            background-color: #f5f5f5;
+        }
+        .status-pass {
+            color: #2ecc71;
+            font-weight: bold;
+        }
+        .status-fail {
+            color: #e74c3c;
+            font-weight: bold;
+        }
+        .status-skip {
+            color: #f39c12;
+            font-weight: bold;
+        }
+        .test-details {
+            margin-top: 10px;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-radius: 4px;
+        }
+        .test-steps {
+            margin-top: 10px;
+        }
+        .test-step {
+            padding: 8px 15px;
+            margin-bottom: 5px;
+            border-radius: 4px;
+            background-color: #f0f0f0;
+        }
+        .step-pass {
+            border-left: 4px solid #2ecc71;
+        }
+        .step-fail {
+            border-left: 4px solid #e74c3c;
+        }
+        .step-skip {
+            border-left: 4px solid #f39c12;
+        }
+        .error-details {
+            background-color: #ffeeee;
+            padding: 10px;
+            border-radius: 4px;
+            margin-top: 10px;
+            border-left: 4px solid #e74c3c;
+            font-family: monospace;
+            white-space: pre-wrap;
+        }
+        .screenshot {
+            max-width: 100%;
+            margin-top: 15px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .footer {
+            margin-top: 40px;
+            text-align: center;
+            color: #7f8c8d;
+            font-size: 14px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+        }
+        .collapsible {
+            background-color: #f8f9fa;
+            color: #444;
+            cursor: pointer;
+            padding: 18px;
+            width: 100%;
+            border: none;
+            text-align: left;
+            outline: none;
+            font-size: 15px;
+            border-radius: 4px;
+            margin-bottom: 5px;
+            transition: 0.4s;
+        }
+        .active, .collapsible:hover {
+            background-color: #e9ecef;
+        }
+        .content {
+            padding: 0 18px;
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.2s ease-out;
+            background-color: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>test_report_2025-06-15T18_50_19_974Z</h1>
+            <div class="timestamp">Generated on: 2025-06-16 00:20:20</div>
+        </div>
+
+        <div class="summary">
+            <div class="summary-item total">
+                <h3>0</h3>
+                <p>Total Tests</p>
+            </div>
+            <div class="summary-item passed">
+                <h3>0</h3>
+                <p>Passed</p>
+            </div>
+            <div class="summary-item failed">
+                <h3>0</h3>
+                <p>Failed</p>
+            </div>
+            <div class="summary-item skipped">
+                <h3>0</h3>
+                <p>Skipped</p>
+            </div>
+            <div class="summary-item duration">
+                <h3>0.00s</h3>
+                <p>Duration</p>
+            </div>
+        </div>
+
+        <div class="test-results">
+            <h2>Test Results</h2>
+            
+        </div>
+
+        <div class="footer">
+            <p>Generated by CurlRunner Test Reporter</p>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            var coll = document.getElementsByClassName("collapsible");
+            for (var i = 0; i < coll.length; i++) {
+                coll[i].addEventListener("click", function() {
+                    this.classList.toggle("active");
+                    var content = this.nextElementSibling;
+                    if (content.style.maxHeight) {
+                        content.style.maxHeight = null;
+                    } else {
+                        content.style.maxHeight = content.scrollHeight + "px";
+                    }
+                });
+            }
+        });
+    </script>
+</body>
+</html>

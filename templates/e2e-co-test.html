@@ -1,0 +1,1275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Co-Tester - E2E Co-Test</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text x=%2250%22 y=%2250%22 font-size=%2280%22 text-anchor=%22middle%22 dy=%2220%22>🚀</text></svg>">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/styles.css">
+  <link rel="stylesheet" href="/static/navbar-tabs.css">
+  <style>
+    .step-card { 
+      background: #fff; 
+      border: 1px solid #E0E0E0; 
+      border-radius: 5px; 
+      padding: 1rem; 
+      margin-bottom: 1rem;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      position: relative;
+    }
+    .step-card.has-error { border-color: #D32F2F; }
+    .step-error { color: #D32F2F; font-size: 0.9em; margin-top: 0.5em; }
+    .step-number { font-weight: 600; color: #666; }
+    .step-type { 
+      padding: 0.2em 0.6em; 
+      border-radius: 4px; 
+      font-size: 0.9em; 
+      font-weight: 500;
+    }
+    .step-type.ui { background: #FFEBEE; color: #D32F2F; }
+    .step-type.setup { background: #E3F2FD; color: #1976D2; }
+    .step-type.teardown { background: #E3F2FD; color: #1976D2; }
+    .step-pagename-badge { 
+      background: #F5F5F5; 
+      padding: 0.2em 0.6em; 
+      border-radius: 4px; 
+      font-size: 0.9em;
+    }
+    .step-actions { margin-left: auto; display: flex; gap: 0.5rem; }
+    .drag-handle { 
+      cursor: move; 
+      color: #999; 
+      font-size: 1.2em; 
+      padding: 0 0.5rem;
+    }
+    .step-section { margin-bottom: 2rem; }
+    .step-section h3 { margin-bottom: 1rem; }
+    .modal { 
+      display: none; 
+      position: fixed; 
+      top: 0; 
+      left: 0; 
+      width: 100%; 
+      height: 100%; 
+      background: rgba(0,0,0,0.5); 
+      z-index: 1000;
+    }
+    .modal.active { display: flex; align-items: center; justify-content: center; }
+    .modal-content { 
+      background: #fff; 
+      padding: 2rem; 
+      border-radius: 8px; 
+      width: 90%; 
+      max-width: 800px; 
+      max-height: 90vh; 
+      overflow-y: auto;
+      position: relative;
+    }
+    .modal-close-btn {
+      position: absolute;
+      top: 1rem;
+      right: 1rem;
+      background: none;
+      border: none;
+      font-size: 1.5rem;
+      cursor: pointer;
+      color: #666;
+    }
+    .modal-actions {
+      margin-top: 1.5rem;
+      display: flex;
+      gap: 1rem;
+      justify-content: flex-end;
+    }
+    .element-action {
+      background: #F5F5F5;
+      border: 1px solid #E0E0E0;
+      border-radius: 5px;
+      padding: 1rem;
+      margin-bottom: 1rem;
+    }
+    .element-action-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1rem;
+    }
+    .element-preview {
+      position: relative;
+      display: inline-block;
+    }
+    .element-preview-inner {
+      background: #fff;
+      border: 1px solid #E0E0E0;
+      border-radius: 4px;
+      padding: 0.3em 0.6em;
+      margin-left: 0.5em;
+    }
+    .element-preview-popup {
+      display: none;
+      position: absolute;
+      background: #fff;
+      border: 1px solid #E0E0E0;
+      border-radius: 4px;
+      padding: 1rem;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      z-index: 1000;
+      min-width: 300px;
+    }
+    .element-preview:hover .element-preview-popup {
+      display: block;
+    }
+    .dom-detail-row {
+      margin-bottom: 0.5rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .dom-detail-label {
+      font-weight: 600;
+      color: #666;
+      min-width: 80px;
+    }
+    .copy-btn {
+      background: #1976D2;
+      color: #fff;
+      border: none;
+      border-radius: 4px;
+      padding: 0.2em 0.6em;
+      font-size: 0.9em;
+      cursor: pointer;
+    }
+    .copy-btn:hover { background: #1565C0; }
+  </style>
+</head>
+<body>
+  {% include 'navbar.html' %}
+  <div class="container">
+    <div class="panel" style="max-width: 900px; margin: 2rem auto 0 auto;">
+      <h1 style="font-size: 1.35rem; color: #D32F2F; font-weight: 700; margin-bottom: 0.7em;">E2E Co-Test</h1>
+      <div class="instructions" style="margin-bottom:1.2em; background: #fffbe7; border: 1.5px solid #ffe082; color: #7c5a00; border-radius: 7px; padding: 0.7em 1em; font-size: 0.98em; max-width:600px; margin-left:auto; margin-right:auto; text-align:left; line-height:1.3;">
+        <b>Instructions:</b>
+        <ol style="margin:0.3em 0 0.3em 1.2em; padding:0;">
+          <li>Select step type and click <b>Add Step</b> to build your test flow.</li>
+          <li>Add API Setup Hooks before UI Steps.</li>
+          <li>Add API Teardown Hooks after UI Steps.</li>
+        </ol>
+      </div>
+
+      <div class="button-group" style="margin-bottom: 1em;">
+        <select id="stepType" style="min-width: 180px; padding: 0.4em 0.7em; border-radius: 5px; border: 1px solid #E0E0E0; font-size: 1rem;" disabled>
+          <option value="ui">UI Step</option>
+          <option value="api-setup">API Setup Hook</option>
+          <option value="api-teardown">API Teardown Hook</option>
+        </select>
+        <button id="addStepBtn" class="add-btn btn-primary" disabled title="Create a test first to add steps">Add Step</button>
+        <button id="addTestBtn" class="add-btn btn-primary">Add Test</button>
+      <span id="currentTestName"></span>
+    </div>
+
+    <div id="testControls" style="display:none;">
+        <div class="button-group">
+          <button id="saveTestBtn" class="btn-primary">Save Test</button>
+          <button id="generateZipBtn" class="btn-primary" onclick="openGenerateZipModal()">Generate Zip</button>
+    </div>
+      </div>
+
+    <div id="stepList"></div>
+    </div>
+  </div>
+
+  <!-- Test Name Modal -->
+  <div class="modal" id="testNameModal">
+    <div class="modal-content">
+      <button class="modal-close-btn" onclick="closeTestNameModal()">&times;</button>
+      <h2 style="margin-bottom:1em; color:#D32F2F;">Enter Test Name</h2>
+      <form onsubmit="event.preventDefault(); submitTestName();">
+        <input type="text" id="testNameInput" placeholder="Enter test name..." required style="width:100%; padding:0.5em; margin-bottom:1em; border:1px solid #E0E0E0; border-radius:4px;">
+        <div class="modal-actions">
+          <button type="submit" class="add-btn">Create Test</button>
+          <button type="button" class="remove-btn" onclick="closeTestNameModal()">Cancel</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+  <!-- API Step Modal -->
+  <div class="modal" id="apiStepModal">
+    <div class="modal-content">
+      <button class="modal-close-btn" onclick="closeApiStepModal()">&times;</button>
+      <h2 style="margin-bottom:1em; color:#D32F2F;">Add API Hook</h2>
+      <form id="apiStepForm" style="display:flex;flex-direction:column;gap:1.2em;">
+        <div>
+          <label style="font-weight:600;">Input Type:</label>
+          <div style="margin-top:0.5em;">
+            <label style="display:block;margin-bottom:0.5em;">
+              <input type="radio" name="inputType" value="collection" checked> API Collection
+            </label>
+            <label style="display:block;">
+              <input type="radio" name="inputType" value="curl"> CURL Command
+            </label>
+          </div>
+        </div>
+
+        <div id="collectionInput">
+          <label for="collection" style="font-weight:600;">Upload API Collection:</label>
+          <input type="file" id="collection" name="collection" accept=".json" style="margin-top:0.5em;">
+        </div>
+
+        <div id="curlInputSection" style="display:none;">
+          <label for="curlInputMerged" style="font-weight:600;">CURL Command:</label>
+          <textarea id="curlInputMerged" rows="4" style="width:100%;font-family:monospace;padding:0.7rem;border-radius:5px;border:1px solid #E0E0E0;" placeholder="Paste your CURL command here..."></textarea>
+        </div>
+
+        <div class="modal-actions">
+          <button type="button" class="add-btn" onclick="saveApiStep()">Save</button>
+          <button type="button" class="remove-btn" onclick="closeApiStepModal()">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+    <!-- UI Step Modal -->
+    <div class="modal" id="uiStepModal">
+      <div class="modal-content">
+        <button class="modal-close-btn" onclick="closeUiStepModal()">&times;</button>
+        <h2 style="margin-bottom:1em; color:#D32F2F;">Add UI Step</h2>
+        <div style="margin-bottom:0.7em; background: #fffbe7; border: 1.5px solid #ffe082; color: #7c5a00; border-radius: 7px; padding: 0.25em 0.8em; font-size: 0.93em; max-width:480px; margin-left:0; margin-right:auto; text-align:left; line-height:1.3;">
+          <b>Instructions:</b>
+          <ol style="margin:0.3em 0 0.3em 1.2em; padding:0;">
+            <li>Paste the <b>OUTER HTML of the entire page</b> below.</li>
+            <li>Click <b>Extract Elements</b> and then <b>Save</b> to add this UI step to your E2E flow.</li>
+          </ol>
+        </div>
+        <form id="uiStepForm" style="display:flex;flex-direction:column;gap:1.2em;">
+  <label for="uiPageNameInput" style="font-weight:600;">Page Name <span style="color:#D32F2F">*</span></label>
+  <input type="text" id="uiPageNameInput" placeholder="Enter logical page name (e.g. LoginPage)" style="padding:0.5em;border-radius:4px;border:1px solid #ccc;" required>
+
+          <label for="uiHtmlInput" style="font-weight:600;">Paste HTML or Fetch from URL:</label>
+          <div style="display:flex;gap:0.5em;align-items:center;margin-bottom:0.5em;">
+            <input type="text" id="fetchUrlInput" placeholder="Enter page URL (https://...)" style="flex:1;padding:0.5em;border-radius:4px;border:1px solid #ccc;">
+            <button type="button" class="add-btn" style="background:#1976D2;" onclick="fetchHtmlFromUrl()">Fetch & Extract</button>
+          </div>
+          <textarea id="uiHtmlInput" rows="6" style="width:100%;font-family:monospace;padding:0.7rem;border-radius:5px;border:1px solid #E0E0E0;margin-bottom:1rem;max-height:250px;overflow-y:auto;" placeholder="Paste DOM HTML here..."></textarea>
+          <button type="button" class="add-btn" style="background:#1976D2;" onclick="extractUiElements()">Extract Elements</button>
+          <div id="uiExtractedElements" style="margin-top:1em;"></div>
+        </form>
+          <div class="modal-actions">
+            <button type="button" class="add-btn" onclick="saveUiStep()">Save</button>
+          <button type="button" class="remove-btn" onclick="closeUiStepModal()" tabindex="0">Cancel</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Generate Zip Mode Selection Modal -->
+    <div class="modal" id="generateZipModal">
+      <div class="modal-content">
+        <button class="modal-close-btn" onclick="closeGenerateZipModal()">&times;</button>
+        <h2 style="margin-bottom:1em; color:#D32F2F;">Select Code Generation Mode</h2>
+        <form id="generateZipForm" style="display:flex;flex-direction:column;gap:1.2em;">
+          <label style="font-weight:600;">
+            <input type="radio" name="zipMode" value="upgrad" checked style="margin-right:0.5em;"> Upgrad Context <span style="color:#888;font-weight:400;">(uses Upgrad project utilities)</span>
+          </label>
+          <label style="font-weight:600;">
+            <input type="radio" name="zipMode" value="general" style="margin-right:0.5em;"> General Purpose <span style="color:#888;font-weight:400;">(portable Java)</span>
+          </label>
+          <label style="font-weight:600; opacity:0.6; cursor:not-allowed;">
+            <input type="radio" name="zipMode" value="ai" disabled style="margin-right:0.5em;"> AI Powered <span style="color:#888;font-weight:400;">(Coming Soon)</span>
+          </label>
+          <div class="modal-actions">
+            <button type="button" class="add-btn" onclick="confirmGenerateZip()">Generate</button>
+            <button type="button" class="remove-btn" onclick="closeGenerateZipModal()">Cancel</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+  <script>
+    let steps = [];
+    let isDirty = false;
+    let currentTestId = null;
+    let currentTestName = "";
+
+    document.addEventListener('DOMContentLoaded', function() {
+  fetchSavedTests();
+
+      const addTestBtn = document.getElementById('addTestBtn');
+      const saveTestBtn = document.getElementById('saveTestBtn');
+      const currentTestNameSpan = document.getElementById('currentTestName');
+      const testControls = document.getElementById('testControls');
+      const generateZipBtn = document.getElementById('generateZipBtn');
+      const testNameModal = document.getElementById('testNameModal');
+      const testNameInput = document.getElementById('testNameInput');
+
+      // On initial load, hide test controls and Save/Generate buttons
+      if (testControls) testControls.style.display = 'none';
+      if (saveTestBtn) saveTestBtn.style.display = 'none';
+      if (generateZipBtn) generateZipBtn.style.display = 'none';
+      // Disable stepType and addStepBtn until test is created
+      document.getElementById('stepType').disabled = true;
+      document.getElementById('addStepBtn').disabled = true;
+      document.getElementById('addStepBtn').title = 'Create a test first to add steps';
+
+      if (addTestBtn) {
+        addTestBtn.onclick = function() {
+          // Show modal to enter test name
+          if (testNameModal) {
+            testNameModal.classList.add('active');
+            if (testNameInput) testNameInput.value = '';
+            if (testNameInput) testNameInput.focus();
+          }
+        };
+      }
+
+      if (saveTestBtn) {
+        saveTestBtn.onclick = function() {
+          if (!currentTestName) {
+            alert("Please add a test first.");
+            return;
+          }
+          var loader = document.getElementById('loaderOverlay');
+          if (loader) loader.classList.add('active');
+          const method = currentTestId ? 'PUT' : 'POST';
+          const url = currentTestId ? `/api/e2e-tests/${currentTestId}` : '/api/e2e-tests';
+          fetch(url, {
+            method: method,
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              testName: currentTestName,
+              steps: steps,
+              createdBy: window.userEmail || null
+            })
+          })
+          .then(response => response.json())
+          .then(data => {
+            isDirty = false;
+            if (generateZipBtn) generateZipBtn.style.display = '';
+            if (loader) loader.classList.remove('active');
+            window.location.reload();
+          })
+          .catch(error => {
+            if (loader) loader.classList.remove('active');
+            window.location.reload();
+            console.error('Error:', error);
+          });
+        };
+      }
+
+      // Only set isDirty on textarea input
+      var htmlInput = document.getElementById('uiHtmlInput');
+      if (htmlInput) {
+        htmlInput.addEventListener('input', function() {
+          isDirty = true;
+        });
+      }
+    });
+
+    // Modal popup logic for test name
+    function submitTestName() {
+      const testNameInput = document.getElementById('testNameInput');
+      const testName = testNameInput ? testNameInput.value.trim() : '';
+      if (!testName) {
+        alert('Please enter a test name.');
+        if (testNameInput) testNameInput.focus();
+        return;
+      }
+      // Set up new test
+      steps = [];
+      currentTestId = null;
+      currentTestName = testName;
+      const currentTestNameSpan = document.getElementById('currentTestName');
+      const saveTestBtn = document.getElementById('saveTestBtn');
+      const testControls = document.getElementById('testControls');
+      const generateZipBtn = document.getElementById('generateZipBtn');
+      if (currentTestNameSpan) currentTestNameSpan.innerText = "Test: " + testName;
+      if (saveTestBtn) saveTestBtn.style.display = '';
+      if (testControls) testControls.style.display = '';
+      if (generateZipBtn) generateZipBtn.style.display = 'none'; // Hide until saved
+      // Enable stepType and addStepBtn
+      document.getElementById('stepType').disabled = false;
+      document.getElementById('addStepBtn').disabled = false;
+      document.getElementById('addStepBtn').title = '';
+      isDirty = true;
+      renderSteps();
+      closeTestNameModal();
+    }
+
+    function closeTestNameModal() {
+      const testNameModal = document.getElementById('testNameModal');
+      if (testNameModal) testNameModal.classList.remove('active');
+    }
+
+    // Add dirty page validation
+    window.addEventListener('beforeunload', function(e) {
+        if (isDirty) {
+            e.preventDefault();
+            e.returnValue = '';
+            return '';
+        }
+    });
+
+    function addStep() {
+      const type = document.getElementById('stepType').value;
+      const idx = steps.length + 1;
+      
+      // Validate step sequence
+      if (type === 'api-setup') {
+        // Check if there are any UI steps already
+        const hasUiSteps = steps.some(s => s.type === 'ui');
+        if (hasUiSteps) {
+          alert('API Setup Hooks must be added before any UI Steps. Please add them at the beginning of your test flow.');
+          return;
+        }
+      } else if (type === 'api-teardown') {
+        // Check if there are any UI steps
+        const hasUiSteps = steps.some(s => s.type === 'ui');
+        if (!hasUiSteps) {
+          alert('You must add at least one UI Step before adding API Teardown Hooks. UI Steps are the core of your test flow.');
+          return;
+        }
+      }
+      
+      const step = { type, idx };
+      steps.push(step);
+      isDirty = true;
+      renderSteps();
+    }
+
+    function removeStep(i) {
+      const step = steps[i];
+      const stepType = step.type === 'ui' ? 'UI Step' : 
+                      step.type === 'api-setup' ? 'API Setup Hook' : 'API Teardown Hook';
+      
+      if (!confirm(`Are you sure you want to remove this ${stepType}?`)) {
+        return;
+      }
+      
+      steps.splice(i, 1);
+      isDirty = true;
+      renderSteps();
+    }
+
+    function renderSteps() {
+      const list = document.getElementById('stepList');
+      if (steps.length === 0) {
+        list.innerHTML = '<div style="color:#888;font-style:italic;">No steps added yet. Use Add Step to build your flow.</div>';
+        return;
+      }
+
+      // Separate steps by type
+      const setupSteps = steps.filter(s => s.type === 'api-setup');
+      const uiSteps = steps.filter(s => s.type === 'ui');
+      const teardownSteps = steps.filter(s => s.type === 'api-teardown');
+
+      let html = '';
+
+      // Render setup steps
+      if (setupSteps.length > 0) {
+        html += '<div class="step-section setup-section"><h3 style="color:#1976D2;">Setup Hooks (Before UI Steps)</h3>';
+        html += setupSteps.map((s, i) => renderStepCard(s, steps.indexOf(s))).join('');
+        html += '</div>';
+      }
+
+      // Render UI steps
+      if (uiSteps.length > 0) {
+        html += '<div class="step-section ui-section"><h3 style="color:#D32F2F;">UI Steps</h3>';
+        html += uiSteps.map((s, i) => renderStepCard(s, steps.indexOf(s))).join('');
+        html += '</div>';
+      }
+
+      // Render teardown steps
+      if (teardownSteps.length > 0) {
+        html += '<div class="step-section teardown-section"><h3 style="color:#1976D2;">Teardown Hooks (After UI Steps)</h3>';
+        html += teardownSteps.map((s, i) => renderStepCard(s, steps.indexOf(s))).join('');
+        html += '</div>';
+      }
+
+      list.innerHTML = html;
+      initializeDragAndDrop();
+    }
+
+    function renderStepCard(step, index) {
+      const typeLabel = {
+        'ui': 'UI Step',
+        'api-setup': 'API Setup Hook',
+        'api-teardown': 'API Teardown Hook'
+      }[step.type];
+
+      const typeClass = {
+        'ui': 'ui',
+        'api-setup': 'setup',
+        'api-teardown': 'teardown'
+      }[step.type];
+
+      const errorMessage = validateStepPosition(step, index);
+
+      return `
+        <div class="step-card ${errorMessage ? 'has-error' : ''}" data-index="${index}" draggable="true">
+          <div class="drag-handle" title="Drag to reorder">⋮⋮</div>
+          <span class="step-number">#${index + 1}</span>
+          <span class="step-type ${typeClass}">${typeLabel}</span>
+          <span>${step.summary ? step.summary : 'Step ' + (index+1)}</span>
+          ${step.type === 'ui' && step.pageName ? `<span class="step-pagename-badge">Page: <b>${step.pageName}</b></span>` : ''}
+          ${errorMessage ? `<div class="step-error">${errorMessage}</div>` : ''}
+          <div class="step-actions">
+            ${step.type.includes('api') ? 
+              `<button class="add-btn" style="background:#1976D2;" onclick="editApiStep(${index})">Edit</button>` : 
+              `<button class="add-btn" style="background:#1976D2;" onclick="editUiStep(${index})">Edit</button>`
+            }
+            <button class="remove-btn" onclick="removeStep(${index})" title="Remove step">Remove</button>
+        </div>
+        </div>
+      `;
+    }
+
+    function validateStepPosition(step, index) {
+      if (step.type === 'api-setup') {
+        // Check if there are any UI steps before this setup step
+        const hasUiBefore = steps.slice(0, index).some(s => s.type === 'ui');
+        if (hasUiBefore) {
+          return 'API Setup Hooks must be added before any UI Steps';
+        }
+      } else if (step.type === 'api-teardown') {
+        // Check if there are any UI steps before this teardown step
+        const hasUiBefore = steps.slice(0, index).some(s => s.type === 'ui');
+        if (!hasUiBefore) {
+          return 'UI Steps must be added before API Teardown Hooks';
+        }
+      }
+      return null;
+    }
+
+    function initializeDragAndDrop() {
+      const cards = document.querySelectorAll('.step-card');
+      cards.forEach(card => {
+        card.addEventListener('dragstart', handleDragStart);
+        card.addEventListener('dragend', handleDragEnd);
+        card.addEventListener('dragover', handleDragOver);
+        card.addEventListener('drop', handleDrop);
+      });
+    }
+
+    function handleDragStart(e) {
+      e.target.classList.add('dragging');
+      e.dataTransfer.setData('text/plain', e.target.dataset.index);
+    }
+
+    function handleDragEnd(e) {
+      e.target.classList.remove('dragging');
+    }
+
+    function handleDragOver(e) {
+      e.preventDefault();
+    }
+
+    function handleDrop(e) {
+      e.preventDefault();
+      const fromIndex = parseInt(e.dataTransfer.getData('text/plain'));
+      const toIndex = parseInt(e.target.closest('.step-card').dataset.index);
+      
+      if (fromIndex === toIndex) return;
+
+      // Get the step being moved
+      const step = steps[fromIndex];
+      const stepType = step.type === 'ui' ? 'UI Step' : 
+                      step.type === 'api-setup' ? 'API Setup Hook' : 'API Teardown Hook';
+      
+      // Create a new array without the moved step
+      const newSteps = steps.filter((_, i) => i !== fromIndex);
+      
+      // Insert the step at the new position
+      newSteps.splice(toIndex, 0, step);
+      
+      // Validate the new sequence
+      const hasError = newSteps.some((step, index) => validateStepPosition(step, index));
+      
+      if (hasError) {
+        alert('Cannot reorder steps: The new sequence would violate the setup/teardown rules');
+        return;
+      }
+
+      // Show confirmation dialog
+      if (!confirm(`Are you sure you want to move this ${stepType}? This will change the test flow sequence.`)) {
+        return;
+      }
+      
+      steps = newSteps;
+      isDirty = true;
+      renderSteps();
+    }
+
+    function openGenerateZipModal() {
+      document.getElementById('generateZipModal').classList.add('active');
+    }
+
+    function closeGenerateZipModal() {
+      document.getElementById('generateZipModal').classList.remove('active');
+    }
+
+    function confirmGenerateZip() {
+      // Validate all UI steps have a non-empty pageName
+      for (const s of steps) {
+        if (s.type === 'ui' && (!s.pageName || !s.pageName.trim())) {
+          alert('All UI Steps must have a Page Name before generating the zip. Please edit your UI steps.');
+          return;
+        }
+      }
+      const mode = document.querySelector('#generateZipForm input[name="zipMode"]:checked').value;
+      closeGenerateZipModal();
+      generateZip(mode);
+    }
+
+    function generateZip(mode) {
+      // Show loading
+      const btns = document.querySelectorAll('.modal-actions .add-btn');
+      btns.forEach(btn => { btn.disabled = true; btn.textContent = 'Generating...'; });
+
+      // Collect the current testId if available, otherwise send an empty array to fetch all
+      let testIds = [];
+      if (currentTestId) {
+        testIds = [currentTestId];
+      }
+
+      fetch('/api/generate-e2e-zip', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ testIds: testIds, mode })
+      })
+        .then(async (res) => {
+          btns.forEach(btn => { btn.disabled = false; btn.textContent = 'Generate'; });
+          if (!res.ok) {
+            let errText = 'Zip generation failed.';
+            try {
+              const data = await res.json();
+              if (data.error) errText = data.error;
+            } catch {}
+            alert('Error: ' + errText);
+            return;
+          }
+          return res.blob();
+        })
+        .then(blob => {
+          if (!blob) return;
+          const url = window.URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = 'e2e-test-project.zip';
+          document.body.appendChild(a);
+          a.click();
+          setTimeout(() => {
+            window.URL.revokeObjectURL(url);
+            a.remove();
+          }, 150);
+        })
+        .catch(err => {
+          btns.forEach(btn => { btn.disabled = false; btn.textContent = 'Generate'; });
+          alert('Error generating zip: ' + err);
+        });
+    }
+
+    let editingApiStepIdx = null;
+    function openApiStepModal(editIdx) {
+      document.getElementById('apiStepModal').classList.add('active');
+      editingApiStepIdx = typeof editIdx === 'number' ? editIdx : null;
+      
+      // Set the step type based on dropdown selection
+      const stepType = document.getElementById('stepType').value;
+      
+      // Prefill if editing
+      if (editingApiStepIdx !== null) {
+        const step = steps[editingApiStepIdx];
+        if (!step) return;
+        // Set input type
+        document.querySelectorAll('#apiStepForm input[name="inputType"]').forEach(radio => {
+          radio.checked = (radio.value === step.inputType);
+        });
+        // Show/hide sections
+        if (step.inputType === 'collection') {
+          document.getElementById('collectionInput').style.display = 'block';
+          document.getElementById('curlInputSection').style.display = 'none';
+        } else {
+          document.getElementById('collectionInput').style.display = 'none';
+          document.getElementById('curlInputSection').style.display = 'block';
+          document.getElementById('curlInputMerged').value = step.curl || '';
+        }
+      } else {
+        // Reset form
+        document.getElementById('apiStepForm').reset();
+        document.getElementById('collectionInput').style.display = 'block';
+        document.getElementById('curlInputSection').style.display = 'none';
+        document.getElementById('curlInputMerged').value = '';
+      }
+    }
+
+    function closeApiStepModal() {
+      document.getElementById('apiStepModal').classList.remove('active');
+      editingApiStepIdx = null;
+    }
+
+    // Toggle input areas in modal
+    Array.from(document.querySelectorAll('#apiStepForm input[name="inputType"]')).forEach(function(radio) {
+      radio.addEventListener('change', function() {
+        if (this.value === 'collection') {
+          document.getElementById('collectionInput').style.display = 'block';
+          document.getElementById('curlInputSection').style.display = 'none';
+        } else {
+          document.getElementById('collectionInput').style.display = 'none';
+          document.getElementById('curlInputSection').style.display = 'block';
+        }
+      });
+    });
+
+    function saveApiStep() {
+      let inputType = document.querySelector('#apiStepForm input[name="inputType"]:checked').value;
+      let curl = document.getElementById('curlInputMerged').value;
+      let stepType = document.getElementById('stepType').value;
+      
+      // Validate input
+      if (inputType === 'curl' && !curl.trim()) {
+        alert('Please enter a CURL command');
+        return;
+      }
+      
+      if (inputType === 'collection' && !document.querySelector('input[name="collection"]').files.length) {
+        alert('Please select an API collection file');
+        return;
+      }
+
+      let summary = inputType === 'collection' ? 'API Hook: API Collection' : 'API Hook: CURL Command';
+      
+      const stepData = { 
+        type: stepType, 
+        inputType, 
+        curl, 
+        summary: summary 
+      };
+      
+      if (editingApiStepIdx !== null) {
+        steps[editingApiStepIdx] = stepData;
+      } else {
+        steps.push(stepData);
+      }
+      isDirty = true;
+      closeApiStepModal();
+      renderSteps();
+    }
+
+    function editApiStep(idx) {
+      openApiStepModal(idx);
+    }
+
+    let editingUiStepIdx = null;
+    function openUiStepModal(editIdx) {
+      document.getElementById('uiStepModal').classList.add('active');
+      editingUiStepIdx = typeof editIdx === 'number' ? editIdx : null;
+      // Prefill if editing
+      if (editingUiStepIdx !== null) {
+        const step = steps[editingUiStepIdx];
+        if (!step) return;
+        document.getElementById('uiHtmlInput').value = step.html || '';
+        document.getElementById('uiPageNameInput').value = step.pageName || '';
+        // Re-extract elements from saved HTML
+        setTimeout(() => {
+          extractUiElements(() => {
+            // After extraction, restore saved values
+            if (step.steps && Array.isArray(step.steps)) {
+              step.steps.forEach((saved, index) => {
+                // Restore action
+                const actionSel = document.getElementById(`action-${index}`);
+                if (actionSel) {
+                  actionSel.value = saved.action || '';
+                  toggleActionInputs(index);
+                }
+                // Restore description
+                const descInput = document.getElementById(`step-desc-${index}`);
+                if (descInput) descInput.value = saved.description || '';
+                // Restore validation needed
+                const valCheck = document.getElementById(`validation-needed-${index}`);
+                if (valCheck) valCheck.checked = !!saved.validationNeeded;
+                // Restore action-specific fields
+                if (saved.action === 'type') {
+                  const typeInput = document.getElementById(`type-text-${index}`);
+                  if (typeInput) typeInput.value = saved.text || '';
+                } else if (saved.action === 'assert') {
+                  const assertInput = document.getElementById(`assert-value-${index}`);
+                  if (assertInput) assertInput.value = saved.expectedValue || '';
+                } else if (saved.action === 'wait') {
+                  const waitInput = document.getElementById(`wait-time-${index}`);
+                  if (waitInput) waitInput.value = saved.waitTime || '';
+                } else if (saved.action === 'select') {
+                  const selectInput = document.getElementById(`select-value-${index}`);
+                  if (selectInput) selectInput.value = saved.optionValue || '';
+                }
+              });
+            }
+          });
+        }, 0);
+      } else {
+        document.getElementById('uiStepForm').reset();
+        document.getElementById('uiHtmlInput').value = '';
+        document.getElementById('uiExtractedElements').innerHTML = '';
+      }
+    }
+
+    function closeUiStepModal() {
+      const modal = document.getElementById('uiStepModal');
+      if (modal) modal.classList.remove('active');
+      editingUiStepIdx = null;
+      // Reset form and extracted elements
+      const form = document.getElementById('uiStepForm');
+      if (form) form.reset();
+      const htmlInput = document.getElementById('uiHtmlInput');
+      if (htmlInput) htmlInput.value = '';
+      const extracted = document.getElementById('uiExtractedElements');
+      if (extracted) extracted.innerHTML = '';
+      // Blur any focused element to prevent accidental re-opening
+      if (document.activeElement) document.activeElement.blur();
+    }
+
+    function extractUiElements(callback) {
+      const htmlInput = document.getElementById('uiHtmlInput').value;
+      if (!htmlInput.trim()) {
+        alert('Please paste HTML content first');
+        if (callback) callback();
+        return;
+      }
+
+      // Show loading state
+      const extractBtn = document.querySelector('.add-btn[onclick="extractUiElements()"]');
+      const originalText = extractBtn ? extractBtn.textContent : '';
+      if (extractBtn) {
+      extractBtn.textContent = 'Extracting...';
+      extractBtn.disabled = true;
+      }
+
+      setTimeout(() => {
+        // Parse HTML and extract elements
+        const temp = document.createElement('div');
+        temp.innerHTML = htmlInput;
+        const elements = temp.querySelectorAll('input, button, select, textarea, a, [role="button"]');
+        const extractedElements = [];
+
+        function isDynamic(str) {
+          return str && (str.length > 10 || /[_\d]/.test(str));
+        }
+
+        function getAllSelectors(el, root) {
+          const selectors = [];
+          if (el.getAttribute) {
+            const name = el.getAttribute('name');
+            if (name) selectors.push(`[name='${name}']`);
+            const placeholder = el.getAttribute('placeholder');
+            if (placeholder) selectors.push(`[placeholder='${placeholder}']`);
+            const aria = el.getAttribute('aria-label');
+            if (aria) selectors.push(`[aria-label='${aria}']`);
+          }
+          if (el.id && !isDynamic(el.id)) selectors.push('#' + el.id);
+          if (el.classList && el.classList.length > 0) {
+            for (let cls of el.classList) {
+              if (!isDynamic(cls)) {
+                selectors.push('.' + cls);
+                break;
+              }
+            }
+          }
+          if ((el.tagName === 'BUTTON' || el.tagName === 'A') && el.innerText) {
+            const text = el.innerText.trim();
+            if (text) selectors.push(`${el.tagName.toLowerCase()}:contains('${text}')`);
+          }
+          let path = '';
+          let current = el;
+          while (current && current.nodeType === 1 && current !== root) {
+            let selector = current.tagName.toLowerCase();
+            if (current.classList && current.classList.length > 0) {
+              const stableClasses = Array.from(current.classList).filter(c => !isDynamic(c));
+              if (stableClasses.length > 0) {
+                selector += '.' + stableClasses.map(c => CSS.escape(c)).join('.');
+              }
+            }
+            if (current.parentElement) {
+              const siblings = Array.from(current.parentElement.children).filter(e => e.tagName === current.tagName);
+              if (siblings.length > 1) {
+                const idx = siblings.indexOf(current) + 1;
+                selector += `:nth-of-type(${idx})`;
+              }
+            }
+            path = selector + (path ? ' > ' + path : '');
+            current = current.parentElement;
+          }
+          if (path) selectors.push(path);
+          return Array.from(new Set(selectors)).slice(0, 4);
+        }
+
+        function getLabel(el) {
+          if (el.labels && el.labels.length > 0) return el.labels[0].innerText;
+          if (el.getAttribute('aria-label')) return el.getAttribute('aria-label');
+          if (el.placeholder) return el.placeholder;
+          if (el.name) return el.name;
+          if (el.id) {
+            const label = temp.querySelector(`label[for='${el.id}']`);
+            if (label) return label.innerText;
+          }
+          if (el.innerText && el.innerText.trim().length > 0) return el.innerText.trim();
+          return el.tagName.toLowerCase();
+        }
+
+        function getType(el) {
+          if (el.tagName.toLowerCase() === 'input') {
+            return (el.type ? el.type.charAt(0).toUpperCase() + el.type.slice(1) : 'Input') + ' Field';
+          }
+          if (el.tagName.toLowerCase() === 'button') return 'Button';
+          if (el.tagName.toLowerCase() === 'select') return 'Dropdown';
+          if (el.tagName.toLowerCase() === 'textarea') return 'Textarea';
+          if (el.tagName.toLowerCase() === 'a') return 'Link';
+          return el.tagName.charAt(0).toUpperCase() + el.tagName.slice(1).toLowerCase();
+        }
+
+        elements.forEach(el => {
+          const allSelectors = getAllSelectors(el, temp);
+          extractedElements.push({
+            selector: allSelectors[0] || '',
+            type: getType(el),
+            html: el.outerHTML,
+            label: getLabel(el)
+          });
+        });
+
+        if (extractedElements.length === 0) {
+          alert('No interactive elements found in the provided HTML');
+        extractBtn.textContent = originalText;
+        extractBtn.disabled = false;
+          return;
+        }
+
+        // Display extracted elements with action selection and preview
+        const elementsContainer = document.getElementById('uiExtractedElements');
+        elementsContainer.innerHTML = '<h3 style="margin-bottom: 1em;">Select Actions for Each Element</h3>' +
+          extractedElements.map(function(element, index) {
+            var tempDiv = document.createElement('div');
+            tempDiv.innerHTML = element.html;
+            var el = tempDiv.firstElementChild;
+            var tag = el ? el.tagName.toLowerCase() : '';
+            var id = el && el.id ? el.id : '';
+            var classes = el && el.className ? el.className : '';
+            var attrs = '';
+            if (el) {
+              for (var i = 0; i < el.attributes.length; i++) {
+                var attr = el.attributes[i];
+                if (attr.name !== 'id' && attr.name !== 'class') {
+                  attrs += attr.name + '="' + attr.value + '" ';
+                }
+              }
+            }
+            var prettyHtml = el ? el.outerHTML.replace(/></g,'>\n  <') : element.html;
+            return [
+              '<div class="element-action">',
+                '<div class="element-action-header">',
+                  '<div style="display:flex;align-items:center;gap:1em;">',
+                    '<strong>Element ', (index + 1), ':</strong> ', element.selector,
+                    '<span style="color: #666; margin-left: 0.5em;">(', element.type, ')</span>',
+                    '<span class="element-preview">',
+                      '<span style="font-size:0.95em; color:#888;">Preview:</span>',
+                      '<span class="element-preview-inner" style="display:inline-block;vertical-align:middle;">', element.html, '</span>',
+                      '<div class="element-preview-popup">',
+                        '<div class="dom-detail-row"><span class="dom-detail-label">Tag:</span> <code>', tag, '</code></div>',
+                        '<div class="dom-detail-row"><span class="dom-detail-label">ID:</span> <code>', id || '-', '</code></div>',
+                        '<div class="dom-detail-row"><span class="dom-detail-label">Class:</span> <code>', classes || '-', '</code></div>',
+                        '<div class="dom-detail-row"><span class="dom-detail-label">Attributes:</span> <code>', attrs || '-', '</code></div>',
+                        '<div class="dom-detail-row"><span class="dom-detail-label">Selector:</span> <code>', element.selector, '</code> <button class="copy-btn" type="button" onclick="copyToClipboard(\'' + element.selector.replace(/'/g, "\\'") + '\')">Copy</button></div>',
+                        '<div class="dom-detail-row"><span class="dom-detail-label">HTML:</span> <code>', prettyHtml.replace(/</g,'&lt;').replace(/>/g,'&gt;'), '</code> <button class="copy-btn" type="button" onclick="copyToClipboard(\'' + element.html.replace(/'/g, "\\'") + '\')">Copy</button></div>',
+                      '</div>',
+                    '</span>',
+                  '</div>',
+                  '<label style="display:flex;align-items:center;gap:0.5em;white-space:nowrap;font-weight:500;">',
+                    '<input type="checkbox" id="validation-needed-', index, '"> Validation needed',
+                  '</label>',
+                '</div>',
+                '<label for="action-', index, '">Action:</label>',
+                '<select id="action-', index, '" onchange="toggleActionInputs(', index, ')" required>',
+                  '<option value="">Select an action...</option>',
+                  '<option value="click">Click</option>',
+                  '<option value="type">Type Text</option>',
+                  '<option value="assert">Assert Value</option>',
+                  '<option value="wait">Wait for Element</option>',
+                  '<option value="clear">Clear Input</option>',
+                  '<option value="select">Select Option</option>',
+                '</select>',
+                '<div id="action-inputs-', index, '" style="display: none;"></div>',
+                '<label for="step-desc-', index, '">Step Description:</label>',
+                '<input type="text" id="step-desc-', index, '" placeholder="Describe what this step does..." required>',
+              '</div>'
+            ].join('');
+          }).join('');
+
+        extractBtn.textContent = originalText;
+        extractBtn.disabled = false;
+        if (callback) callback();
+      }, 500);
+    }
+
+    function toggleActionInputs(index) {
+      const action = document.getElementById(`action-${index}`).value;
+      const inputsContainer = document.getElementById(`action-inputs-${index}`);
+      
+      let inputsHtml = '';
+      switch(action) {
+        case 'type':
+          inputsHtml = `
+            <label for="type-text-${index}">Text to Type:</label>
+            <input type="text" id="type-text-${index}" placeholder="Enter text to type..." required>
+          `;
+          break;
+        case 'assert':
+          inputsHtml = `
+            <label for="assert-value-${index}">Expected Value:</label>
+            <input type="text" id="assert-value-${index}" placeholder="Enter expected value..." required>
+          `;
+          break;
+        case 'wait':
+          inputsHtml = `
+            <label for="wait-time-${index}">Wait Time (ms):</label>
+            <input type="number" id="wait-time-${index}" value="5000" min="0" required>
+          `;
+          break;
+        case 'select':
+          inputsHtml = `
+            <label for="select-value-${index}">Option Value:</label>
+            <input type="text" id="select-value-${index}" placeholder="Enter option value..." required>
+          `;
+          break;
+      }
+      
+      inputsContainer.innerHTML = inputsHtml;
+      inputsContainer.style.display = action ? 'block' : 'none';
+    }
+
+    function saveUiStep() {
+      const pageNameInput = document.getElementById('uiPageNameInput');
+      const pageName = pageNameInput ? pageNameInput.value.trim() : '';
+      if (!pageName) {
+        alert('Page Name is required for every UI Step.');
+        if (pageNameInput) pageNameInput.focus();
+        return;
+      }
+      const elements = document.querySelectorAll('.element-action');
+      if (elements.length === 0) {
+        alert('Please extract elements first by clicking "Extract Elements"');
+        return;
+      }
+
+      let atLeastOne = false;
+      const uiSteps = Array.from(elements).map((element, index) => {
+        const action = document.getElementById(`action-${index}`).value;
+        const description = document.getElementById(`step-desc-${index}`).value;
+        const validationNeeded = document.getElementById(`validation-needed-${index}`).checked;
+        let actionData = {};
+        if (action) {
+          atLeastOne = true;
+          // Only validate description and action-specific fields if action is set
+          if (!description.trim()) {
+            alert(`Please provide a description for element ${index + 1}`);
+            return null;
+          }
+        switch(action) {
+            case 'type': {
+              const text = document.getElementById(`type-text-${index}`).value;
+              if (!text.trim()) {
+                alert(`Please enter text to type for element ${index + 1}`);
+                return null;
+              }
+              actionData = { text };
+            break;
+            }
+            case 'assert': {
+              const expectedValue = document.getElementById(`assert-value-${index}`).value;
+              if (!expectedValue.trim()) {
+                alert(`Please enter expected value for element ${index + 1}`);
+                return null;
+              }
+              actionData = { expectedValue };
+            break;
+            }
+            case 'wait': {
+              const waitTime = document.getElementById(`wait-time-${index}`).value;
+              if (!waitTime || waitTime < 0) {
+                alert(`Please enter a valid wait time for element ${index + 1}`);
+                return null;
+              }
+              actionData = { waitTime };
+            break;
+            }
+            case 'select': {
+              const optionValue = document.getElementById(`select-value-${index}`).value;
+              if (!optionValue.trim()) {
+                alert(`Please enter option value for element ${index + 1}`);
+                return null;
+              }
+              actionData = { optionValue };
+            break;
+        }
+          }
+        return {
+          element: element.querySelector('strong').textContent.split(': ')[1],
+          action,
+          description,
+          validationNeeded,
+          ...actionData
+        };
+        }
+        return null;
+      }).filter(Boolean);
+
+      if (!atLeastOne) {
+        alert('Please set an action for at least one element.');
+        return;
+      }
+
+      // Confirm with the user before saving
+      if (!confirm('Are you sure you\'re done with actions and elements for this step?')) {
+        return;
+      }
+
+      const stepData = {
+        type: 'ui',
+        steps: uiSteps,
+        pageName: pageName,
+        summary: `UI Step: ${uiSteps.length} actions on ${pageName}`
+      };
+
+      if (editingUiStepIdx !== null) {
+        steps[editingUiStepIdx] = stepData;
+      } else {
+        steps.push(stepData);
+      }
+      console.log('Current steps array:', steps);
+      isDirty = true;
+      closeUiStepModal();
+      renderSteps();
+    }
+
+    function editUiStep(idx) {
+      openUiStepModal(idx);
+    }
+
+    // Add Step button logic:
+    document.getElementById('addStepBtn').onclick = function() {
+      const type = document.getElementById('stepType').value;
+      if (type === 'api-setup' || type === 'api-teardown') {
+        openApiStepModal();
+      } else if (type === 'ui') {
+        openUiStepModal();
+      }
+    };
+
+    // Copy to clipboard helper
+    function copyToClipboard(text) {
+      if (navigator.clipboard) {
+        navigator.clipboard.writeText(text);
+      } else {
+        const textarea = document.createElement('textarea');
+        textarea.value = text;
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textarea);
+      }
+      alert('Copied!');
+    }
+
+    // Fetch HTML from URL and extract
+    function fetchHtmlFromUrl() {
+      let url = document.getElementById('fetchUrlInput').value.trim();
+      if (!url) {
+        alert('Please enter a URL');
+        return;
+      }
+      // Auto-prepend https:// if missing
+      if (!/^https?:\/\//i.test(url)) {
+        url = 'https://' + url;
+      }
+      const btn = document.querySelector('button[onclick="fetchHtmlFromUrl()"]');
+      btn.textContent = 'Fetching...';
+      btn.disabled = true;
+      fetch(`/api/fetch-html?url=${encodeURIComponent(url)}`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.error) {
+            alert('Error: ' + data.error);
+            btn.textContent = 'Fetch & Extract';
+            btn.disabled = false;
+            return;
+          }
+          document.getElementById('uiHtmlInput').value = data.html;
+          btn.textContent = 'Fetch & Extract';
+          btn.disabled = false;
+          extractUiElements();
+        })
+        .catch(err => {
+          alert('Error fetching URL: ' + err);
+          btn.textContent = 'Fetch & Extract';
+          btn.disabled = false;
+        });
+    }
+
+    // Smart alignment for element preview popup (fixed positioning)
+    document.addEventListener('mouseover', function(e) {
+      const preview = e.target.closest('.element-preview');
+      if (preview) {
+        const popup = preview.querySelector('.element-preview-popup');
+        if (popup) {
+          // Show popup to measure
+          popup.style.display = 'block';
+          popup.style.top = '';
+          popup.style.bottom = '';
+          popup.style.left = '';
+          popup.style.right = '';
+          // Get bounding rects
+          const rect = preview.getBoundingClientRect();
+          const popupRect = popup.getBoundingClientRect();
+          // Default: below
+          let top = rect.bottom + 4;
+          let left = rect.left;
+          let alignRight = false;
+          // If popup would overflow right edge, align right
+          if (left + popupRect.width > window.innerWidth) {
+            left = window.innerWidth - popupRect.width - 8;
+            alignRight = true;
+          }
+          // If popup would overflow bottom, show above
+          if (top + popupRect.height > window.innerHeight) {
+            top = rect.top - popupRect.height - 4;
+          }
+          // Clamp top to at least 0
+          if (top < 0) top = 8;
+          popup.style.top = top + 'px';
+          popup.style.left = left + 'px';
+          popup.style.right = 'auto';
+          // Optionally, add a class for styling if aligned right
+          if (alignRight) popup.classList.add('align-right');
+          else popup.classList.remove('align-right');
+        }
+      }
+    });
+
+    document.addEventListener('mouseout', function(e) {
+      const preview = e.target.closest('.element-preview');
+      if (preview) {
+        const popup = preview.querySelector('.element-preview-popup');
+        if (popup) {
+          popup.style.display = '';
+          popup.style.top = '';
+          popup.style.left = '';
+          popup.style.right = '';
+          popup.classList.remove('align-right');
+        }
+      }
+    });
+
+    // Initialize
+      renderSteps();
+  </script>
+</body>
+</html> 

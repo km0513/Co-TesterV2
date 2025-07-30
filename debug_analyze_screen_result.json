@@ -1,0 +1,22 @@
+{
+  "ocr_text": "Sample OCR text for testing",
+  "issues": [
+    {
+      "title": "Inconsistent Button Styling",
+      "severity": "Medium",
+      "description": "The primary action buttons have inconsistent styling. Some use rounded corners while others have sharp corners.",
+      "location": "Throughout the interface"
+    },
+    {
+      "title": "Poor Text Contrast",
+      "severity": "High",
+      "description": "The light gray text on white background in the sidebar has insufficient contrast, making it difficult to read.",
+      "location": "Left sidebar"
+    }
+  ],
+  "recommendations": [
+    "Standardize button styling across the interface for better visual consistency.",
+    "Increase text contrast in the sidebar to meet WCAG AA accessibility standards.",
+    "Consider adding more spacing between UI elements to improve readability."
+  ]
+}

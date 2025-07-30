@@ -1,0 +1,1175 @@
+<!-- Manual Test Scenario Generator (with AI integration UI) -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Generation - Co-Tester</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='0.9em' font-size='90'>🚀</text></svg>"> 
+
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/styles.css">
+    <link rel="stylesheet" href="/static/navbar-tabs.css">
+    <style>
+        body { background: #f8f9fa; font-family: 'Inter', 'Segoe UI', Arial, sans-serif; }
+        .container {
+          max-width: 1100px;
+          margin: 0 auto;
+          padding: 1.2rem;
+        }
+        .ai-badge { font-size: 0.9em; color: #fff; background: #6f42c1; border-radius: 5px; padding: 2px 8px; }
+        .testcase-table { width: 100%; border-collapse: separate; border-spacing: 0; }
+        .testcase-table td, .testcase-table th { 
+            padding: 8px; 
+            border: 1px solid #dee2e6; 
+            vertical-align: top; 
+        }
+        .testcase-table th { background-color: #f8f9fa; font-weight: 500; }
+        .testcase-table td[contenteditable="true"] { 
+            min-height: 24px; 
+            word-break: break-word; 
+        }
+        .testcase-table td[contenteditable="true"]:focus { 
+            outline: 1px solid #0d6efd; 
+            background-color: #f0f7ff; 
+        }
+        #fullscreenLoader {
+          display: none;
+          position: fixed;
+          top: 0; left: 0; width: 100vw; height: 100vh;
+          z-index: 9999;
+          background: rgba(255,255,255,0.7);
+          align-items: center;
+          justify-content: center;
+        }
+        #fullscreenLoader.active { display: flex; }
+        #testcasePagination button.btn.btn-sm { min-width: 2.2em; }
+        /* Make disabled buttons visually greyed out and unclickable */
+        button:disabled,
+        .btn:disabled,
+        button[disabled],
+        .btn[disabled] {
+          opacity: 0.6 !important;
+          cursor: not-allowed !important;
+          pointer-events: none;
+          background-color: #adb5bd !important;
+          color: #fff !important;
+          border-color: #adb5bd !important;
+        }
+        @media (max-width: 767px) {
+          .container {
+            padding: 0.5rem 0.2rem;
+          }
+          .instructions {
+            padding: 0.7em 0.5em;
+            font-size: 0.95em;
+            max-width: 100%;
+          }
+          .mb-3.d-flex, .mb-3.d-flex.gap-2, .mb-3.d-flex.gap-2.align-items-end, .mb-3.d-flex.gap-2.align-items-center {
+            flex-direction: column !important;
+            align-items: stretch !important;
+            gap: 0.7em !important;
+          }
+          .form-control, .form-label, select, input, textarea {
+            width: 100% !important;
+            max-width: 100% !important;
+            font-size: 1em;
+          }
+          #testcasesSection {
+            padding: 0.5em 0.2em;
+          }
+          .panel, .table, .testcase-table {
+            font-size: 0.98em;
+          }
+          .testcase-table, .table {
+            display: block;
+            width: 100%;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+          }
+          .testcase-table thead, .testcase-table tbody, .testcase-table tr {
+            display: table;
+            width: 100%;
+            table-layout: fixed;
+          }
+          .testcase-table td, .testcase-table th {
+            font-size: 0.97em;
+            padding: 0.5em 0.3em;
+          }
+          button, .btn {
+            font-size: 1em;
+            padding: 0.7em 1.1em;
+            width: 100%;
+            margin-bottom: 0.5em;
+          }
+        }
+        .btn.active, .btn:active {
+          background-color: #0d6efd !important;
+          color: #fff !important;
+          border-color: #0d6efd !important;
+        }
+    </style>
+</head>
+<body>
+  {% set active_tab = 'manual' %}
+  {% include 'navbar.html' %}
+<div class="container">
+    <!-- Instructions Panel -->
+    <div style="background-color: #fff9e6; border: 1px solid #ffe066; border-radius: 6px; padding: 1rem 1.5rem; margin-bottom: 1.5rem;">
+        <h5 style="color: #856404; margin-top: 0; margin-bottom: 0.75rem; font-weight: 600;">Instructions:</h5>
+        <ol style="margin-bottom: 0; padding-left: 1.5rem;">
+            <li><strong>Jira Story</strong>: Connect to Jira, enter a Jira ID, and fetch the story details.</li>
+            <li><strong>PRD Document</strong>: Upload a PDF, Word, or text document containing product requirements.</li>
+            <li>Add context or screenshots if needed to enhance test generation.</li>
+            <li>Click <strong>Generate Tests</strong> to create test cases based on the provided information.</li>
+            <li>Edit, delete, or add test cases as needed before saving or creating Jira subtasks.</li>
+        </ol>
+    </div>
+    
+    <!-- Jira Connect moved inside Jira tab -->
+   <!-- Toggle Buttons -->
+    <!-- <div class="d-flex gap-2 mb-3" style="margin-top:1em;">
+    </div> -->
+
+    <style>
+        /* Modern Tab Styling */
+        .custom-tabs {
+            border-bottom: none;
+            margin-bottom: 1.5rem;
+            display: flex;
+            gap: 0.5rem;
+        }
+        .custom-tabs .nav-link {
+            padding: 0.75rem 1.5rem;
+            font-weight: 600;
+            border-radius: 6px;
+            border: none;
+            cursor: pointer;
+            color: #495057;
+            background-color: #f0f0f0;
+            transition: all 0.2s ease-in-out;
+            position: relative;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .custom-tabs .nav-link:hover {
+            background-color: #e0e0e0;
+            color: #333;
+        }
+        .custom-tabs .nav-link.active {
+            color: #fff;
+            background-color: #D32F2F; /* upGrad Brand Color */
+            box-shadow: 0 2px 5px rgba(211, 47, 47, 0.3);
+        }
+        .custom-tabs .nav-link::before {
+            content: '';
+            display: inline-block;
+            width: 18px;
+            height: 18px;
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center;
+        }
+        #jira-tab::before {
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' width='18' height='18'%3E%3Cpath fill='currentColor' d='M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 4c1.86 0 3.41 1.28 3.86 3H8.14c.45-1.72 2-3 3.86-3zm0 14c-2.21 0-4-1.79-4-4h8c0 2.21-1.79 4-4 4z'/%3E%3C/svg%3E");
+        }
+        #prd-tab::before {
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' width='18' height='18'%3E%3Cpath fill='currentColor' d='M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z'/%3E%3C/svg%3E");
+        }
+        /* Tab content styling */
+        .tab-content {
+            background-color: #fff;
+            border-radius: 6px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            padding: 1.5rem;
+        }
+    </style>
+    
+    <!-- Tab Navigation -->
+    <div class="nav nav-tabs custom-tabs" id="testGenTabs" role="tablist">
+        <button class="nav-link active" id="jira-tab" data-bs-toggle="tab" data-bs-target="#jira-content" type="button" role="tab" aria-controls="jira-content" aria-selected="true">Jira Story</button>
+        <button class="nav-link" id="prd-tab" data-bs-toggle="tab" data-bs-target="#prd-content" type="button" role="tab" aria-controls="prd-content" aria-selected="false">PRD Document</button>
+    </div>
+
+    <style>
+        .tab-content-custom {
+            padding: 1.5rem 0;
+        }
+        .tab-pane {
+            display: none;
+        }
+        .tab-pane.show.active {
+            display: block;
+        }
+        .input-group-custom {
+            display: flex;
+            gap: 0.5rem;
+            align-items: flex-end;
+            margin-bottom: 1rem;
+        }
+        .form-control-custom {
+            border: 1px solid #ced4da;
+            border-radius: 0.25rem;
+            padding: 0.375rem 0.75rem;
+            transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+        }
+        .form-control-custom:focus {
+            border-color: #86b7fe;
+            box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+            outline: 0;
+        }
+        .btn-custom {
+            display: inline-block;
+            font-weight: 400;
+            text-align: center;
+            vertical-align: middle;
+            user-select: none;
+            border: 1px solid transparent;
+            padding: 0.375rem 0.75rem;
+            font-size: 1rem;
+            border-radius: 0.25rem;
+            transition: color 0.15s ease-in-out, background-color 0.15s ease-in-out, border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+        }
+    </style>
+    
+    <!-- Tab Content -->
+    <div class="tab-content tab-content-custom" id="testGenTabContent">
+        <!-- Jira Tab -->
+        <div class="tab-pane fade show active" id="jira-content" role="tabpanel" aria-labelledby="jira-tab">
+            <!-- Jira Connect Button -->
+            <div class="mb-3 d-flex gap-2 align-items-center">
+                <button type="button" id="connectJiraBtn" class="btn btn-primary btn-custom" style="display: flex; align-items: center; gap: 0.5em;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 32 32" fill="none"><g><path d="M17.1 2.3a2.1 2.1 0 0 0-2.9 0L2.3 14.2a2.1 2.1 0 0 0 0 2.9l11.9 11.9a2.1 2.1 0 0 0 2.9 0l11.9-11.9a2.1 2.1 0 0 0 0-2.9L17.1 2.3z" fill="#2684FF"/><path d="M21.7 10.3a1.3 1.3 0 0 0-1.8 0l-9.6 9.6a1.3 1.3 0 0 0 0 1.8l6.5 6.5a1.3 1.3 0 0 0 1.8 0l9.6-9.6a1.3 1.3 0 0 0 0-1.8l-6.5-6.5z" fill="#0052CC"/></g></svg>
+                    Jira Connect
+                </button>
+                <button type="button" id="disconnectJiraBtn" class="btn btn-danger btn-custom" style="display:none;">Disconnect Jira</button>
+            </div>
+            
+            <!-- Jira ID Input -->
+            <div class="input-group-custom">
+                <input type="text" id="jiraIdInput" class="form-control form-control-custom" style="max-width: 250px;" placeholder="Jira Story ID (e.g. IRA-62215)">
+                <button type="button" id="fetchJiraBtn" class="btn btn-primary btn-custom">Fetch from Jira</button>
+                <button type="button" id="clearJiraBtn" class="btn btn-outline-secondary btn-custom">Clear</button>
+            </div>
+        </div>
+
+        <!-- PRD Tab -->
+        <div class="tab-pane fade" id="prd-content" role="tabpanel" aria-labelledby="prd-tab">
+            <div class="mb-3">
+                <label for="prdUpload" class="form-label" style="font-weight: 500; margin-bottom: 0.5rem;">Upload PRD Document</label>
+                <input type="file" id="prdUpload" class="form-control form-control-custom" style="max-width: 500px;" accept=".pdf,.doc,.docx,.txt">
+                <div class="form-text" style="margin-top: 0.5rem; font-size: 0.875rem; color: #6c757d;">Upload a PRD document to generate tests from (PDF, Word, or Text format)</div>
+                <button type="button" id="clearPrdBtn" class="btn btn-outline-secondary btn-custom mt-3">Clear</button>
+            </div>
+        </div>
+    </div>
+
+    <form id="scenarioForm">
+        <!-- Common Fields Section -->
+        <div id="commonFields">
+            <!-- Summary field only shown for Jira tab -->
+            <div class="mb-3" id="summarySection">
+                <label for="summaryInput" class="form-label">Summary</label>
+                <input type="text" class="form-control" id="summaryInput" placeholder="Summary will appear here" readonly>
+            </div>
+            <div class="mb-3">
+                <label for="scenarioInput" class="form-label">Description</label>
+                <div class="form-control" id="scenarioInput" style="min-height: 100px; max-height: 300px; overflow-y: auto; background: #f8f9fa; cursor: default;" readonly tabindex="0"></div>
+            </div>
+            <div class="mb-3">
+                <label for="contextSelect" class="form-label" style="font-weight:bold;">Context (optional)</label>
+                <select id="contextSelect" class="form-control w-auto" style="max-width: 180px; font-weight:bold;">
+                    <option value="">None</option>
+                    <option value="lxp">LXP</option>
+                </select>
+            </div>
+            <div class="mb-3">
+                <label for="attachmentInput" class="form-label" style="font-weight:bold;">Attach Screenshot(s) or Visual Doc</label>
+                <input type="file" id="attachmentInput" class="form-control" multiple accept="image/*,application/pdf">
+                <div class="form-text">You may attach one or more screenshots (PNG, JPG) or a PDF document containing UI images.</div>
+            </div>
+            <div class="mb-3 d-flex gap-2 align-items-center">
+                <br>
+                <button type="button" id="generateBtn" class="btn btn-primary" disabled>Generate Tests</button>
+            </div>
+        </form>
+        <div id="loading" class="my-3" style="display:none;">
+            <div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div>
+            <span class="ms-2">Generating tests...</span>
+        </div>
+        <div id="testcasesSection" style="display:none; margin-top: 2.5rem;">
+            <h4 id="generatedTestsHeading" style="margin-bottom: 1.2rem;">Generated Tests</h4>
+            <div id="totalEstimatedTime" style="font-size:1.1em; font-weight:500; color:#6f42c1; margin-bottom:0.8em; display:none;">Total Estimated Time: <span id="totalEstimatedTimeValue">0</span> minutes</div>
+            <div style="background: #f9f9f9; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); padding: 1.5rem 1.2rem;">
+                <table class="table table-bordered testcase-table mt-3" style="margin-bottom: 1.5rem; width: 100%; border: 1px solid #dee2e6;">
+                    <thead class="table-light">
+                        <tr>
+                            <th style="width:5%; text-align: left;">#</th>
+                            <th style="width:35%; text-align: left;">Test Step</th>
+                            <th style="width:35%; text-align: left;">Expected Result</th>
+                            <th style="width:15%; text-align: left;">Estimate (minutes)</th>
+                            <th style="width:10%; text-align: left;">Edit</th>
+                        </tr>
+                    </thead>
+                    <tbody id="testcasesTableBody">
+                        <!-- Test cases will be inserted here -->
+                    </tbody>
+                </table>
+                <div id="testcasePagination" style="margin-top:1em;text-align:center;"></div>
+                <button class="btn btn-success" id="saveBtn">Save Test Cases</button>
+                <button class="btn btn-primary" id="createJiraSubtasksBtn" style="margin-left: 10px;">Create Jira Subtasks</button>
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+// Assign all DOM elements FIRST
+const descriptionInput = document.getElementById('scenarioInput');
+const generateBtn = document.getElementById('generateBtn');
+const summaryInput = document.getElementById('summaryInput');
+const jiraIdInput = document.getElementById('jiraIdInput');
+const fetchJiraBtn = document.getElementById('fetchJiraBtn');
+const clearJiraBtn = document.getElementById('clearJiraBtn');
+const clearPrdBtn = document.getElementById('clearPrdBtn');
+const connectJiraBtn = document.getElementById('connectJiraBtn');
+const disconnectJiraBtn = document.getElementById('disconnectJiraBtn');
+const prdUpload = document.getElementById('prdUpload');
+const summarySection = document.getElementById('summarySection');
+const jiraTab = document.getElementById('jira-tab');
+const prdTab = document.getElementById('prd-tab');
+const createJiraSubtasksBtn = document.getElementById('createJiraSubtasksBtn');
+
+// Initialize UI state
+let activeTab = 'jira'; // Default tab is Jira
+let jiraFetched = false;
+let prdUploaded = false;
+
+// Tab switching logic
+jiraTab.addEventListener('click', function(e) {
+    e.preventDefault();
+    activeTab = 'jira';
+    
+    // Update tab UI
+    jiraTab.classList.add('active');
+    jiraTab.setAttribute('aria-selected', 'true');
+    prdTab.classList.remove('active');
+    prdTab.setAttribute('aria-selected', 'false');
+    
+    // Update content panes
+    document.getElementById('jira-content').classList.add('show', 'active');
+    document.getElementById('prd-content').classList.remove('show', 'active');
+    
+    // Show/hide elements specific to Jira tab
+    summarySection.style.display = 'block';
+    createJiraSubtasksBtn.style.display = 'inline-block';
+    updateGenerateBtnState();
+});
+
+prdTab.addEventListener('click', function(e) {
+    e.preventDefault();
+    activeTab = 'prd';
+    
+    // Update tab UI
+    prdTab.classList.add('active');
+    prdTab.setAttribute('aria-selected', 'true');
+    jiraTab.classList.remove('active');
+    jiraTab.setAttribute('aria-selected', 'false');
+    
+    // Update content panes
+    document.getElementById('prd-content').classList.add('show', 'active');
+    document.getElementById('jira-content').classList.remove('show', 'active');
+    
+    // Show/hide elements specific to PRD tab
+    summarySection.style.display = 'none';
+    createJiraSubtasksBtn.style.display = 'none';
+    updateGenerateBtnState();
+});
+
+// Initialize the UI based on active tab on page load
+if (activeTab === 'prd') {
+    summarySection.style.display = 'none';
+    createJiraSubtasksBtn.style.display = 'none';
+}
+
+// Update generate button state based on active tab
+function updateGenerateBtnState() {
+    if (activeTab === 'jira') {
+        generateBtn.disabled = !jiraFetched;
+    } else { // PRD tab
+        generateBtn.disabled = !prdUploaded;
+    }
+}
+
+// Handle PRD document upload
+if (prdUpload) {
+    prdUpload.addEventListener('change', async function(e) {
+        if (!this.files || !this.files[0]) return;
+        
+        const file = this.files[0];
+        const fileType = file.type;
+        const fileName = file.name;
+        
+        // Show loading indicator
+        const loadingSpan = document.createElement('span');
+        loadingSpan.id = 'prdLoadingIndicator';
+        loadingSpan.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true" style="margin-right:0.5em;"></span> Processing PRD document...';
+        loadingSpan.style.display = 'block';
+        loadingSpan.style.marginTop = '5px';
+        loadingSpan.style.color = '#0d6efd';
+        this.parentNode.appendChild(loadingSpan);
+        
+        try {
+            // For text files, read directly
+            if (fileType === 'text/plain') {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const prdContent = e.target.result;
+                    // Auto-populate the description field
+                    descriptionInput.innerHTML = prdContent;
+                    prdUploaded = true;
+                    updateGenerateBtnState();
+                    loadingSpan.innerHTML = '✓ PRD content loaded successfully';
+                    loadingSpan.style.color = 'green';
+                    setTimeout(() => loadingSpan.remove(), 3000);
+                };
+                reader.readAsText(file);
+            } else {
+                // For PDF and Word docs, upload to server for processing
+                const formData = new FormData();
+                formData.append('file', file);
+                
+                const response = await fetch('/api/extract-text', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                if (!response.ok) {
+                    throw new Error('Failed to process document');
+                }
+                
+                const data = await response.json();
+                const prdContent = data.text || 'Failed to extract text from document.';
+                
+                // Auto-populate the description field
+                descriptionInput.innerHTML = prdContent;
+                prdUploaded = true;
+                updateGenerateBtnState();
+                loadingSpan.innerHTML = '✓ PRD content loaded successfully';
+                loadingSpan.style.color = 'green';
+                setTimeout(() => loadingSpan.remove(), 3000);
+            }
+        } catch (error) {
+            console.error('Error processing PRD document:', error);
+            loadingSpan.innerHTML = '❌ Error processing document: ' + error.message;
+            loadingSpan.style.color = 'red';
+            setTimeout(() => loadingSpan.remove(), 5000);
+        }
+    });
+}
+
+// Clear buttons functionality
+clearJiraBtn.onclick = function() {
+    if (confirm('Are you sure you want to clear the Jira ID, Summary, and Description fields?')) {
+        jiraIdInput.value = '';
+        summaryInput.value = '';
+        descriptionInput.innerHTML = '';
+        jiraFetched = false;
+        updateGenerateBtnState();
+        isDirty = false;
+    }
+};
+
+clearPrdBtn.onclick = function() {
+    if (confirm('Are you sure you want to clear the uploaded PRD and Description field?')) {
+        prdUpload.value = '';
+        descriptionInput.innerHTML = '';
+        prdUploaded = false;
+        updateGenerateBtnState();
+        isDirty = false;
+        
+        // Remove any existing loading indicator
+        const loadingSpan = document.getElementById('prdLoadingIndicator');
+        if (loadingSpan) loadingSpan.remove();
+    }
+}
+
+function renderTestCases(testcases, page = 1) {
+    const tbody = document.getElementById('testcasesTableBody');
+    const perPage = 10;
+    const totalPages = Math.ceil(testcases.length / perPage);
+    const start = (page - 1) * perPage;
+    const end = start + perPage;
+    const pageCases = testcases.slice(start, end);
+
+    tbody.innerHTML = '';
+    pageCases.forEach((tc, idx) => {
+        tbody.innerHTML += `
+            <tr>
+                <td>${start + idx + 1}</td>
+                <td contenteditable="true">${tc.step}</td>
+                <td contenteditable="true">${tc.expected}</td>
+                <td contenteditable="true">${tc.estimate_minutes !== undefined ? tc.estimate_minutes : ''}</td>
+                <td style="white-space: nowrap;">
+                    <button class="btn btn-sm btn-primary" onclick="editTestCase(${start + idx})" title="Edit" style="padding: 0.25rem 0.5rem; margin-right: 5px;">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                            <path d="M12.146.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1 0 .708l-10 10a.5.5 0 0 1-.168.11l-5 2a.5.5 0 0 1-.65-.65l2-5a.5.5 0 0 1 .11-.168l10-10zM11.207 2.5 13.5 4.793 14.793 3.5 12.5 1.207 11.207 2.5zm1.586 3L10.5 3.207 4 9.707V10h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.293l6.5-6.5zm-9.761 5.175-.106.106-1.528 3.821 3.821-1.528.106-.106A.5.5 0 0 1 5 12.5V12h-.5a.5.5 0 0 1-.5-.5V11h-.5a.5.5 0 0 1-.468-.325z"/>
+                        </svg>
+                    </button>
+                    <button class="btn btn-sm btn-danger" onclick="removeTestCase(${start + idx})" title="Delete" style="padding: 0.25rem 0.5rem;">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                            <path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z"/>
+                            <path fill-rule="evenodd" d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z"/>
+                        </svg>
+                    </button>
+                </td>
+            </tr>
+        `;
+    });
+
+    // Total Estimated Time
+    const totalTimeDiv = document.getElementById('totalEstimatedTime');
+    const totalTimeValue = document.getElementById('totalEstimatedTimeValue');
+    if (testcases && testcases.length > 0) {
+        let total = 0;
+        for (const tc of testcases) {
+            if (typeof tc.estimate_minutes === 'number') {
+                total += tc.estimate_minutes;
+            } else if (typeof tc.estimate_minutes === 'string' && tc.estimate_minutes.trim() !== '') {
+                const parsed = parseInt(tc.estimate_minutes);
+                if (!isNaN(parsed)) total += parsed;
+            }
+        }
+        totalTimeValue.textContent = total;
+        totalTimeDiv.style.display = '';
+    } else {
+        totalTimeDiv.style.display = 'none';
+        totalTimeValue.textContent = '0';
+    }
+
+    // Pagination controls
+    let pagination = document.getElementById('testcasePagination');
+    if (!pagination) {
+        pagination = document.createElement('div');
+        pagination.id = 'testcasePagination';
+        pagination.style = 'margin-top:1em;text-align:center;';
+        tbody.parentElement.parentElement.after(pagination);
+    }
+    let html = '';
+    for (let i = 1; i <= totalPages; i++) {
+        html += `<button class="btn btn-sm${i === page ? ' btn-primary' : ''}" style="margin:0 2px;" onclick="renderTestCases(currentTestCases,${i})">${i}</button>`;
+    }
+    pagination.innerHTML = html;
+    isDirty = true;
+}
+
+let currentTestCases = [];
+
+function removeTestCase(idx) {
+    currentTestCases.splice(idx, 1);
+    window.currentTestCases = currentTestCases;
+    renderTestCases(currentTestCases, 1);
+}
+
+function editTestCase(idx) {
+    const testCase = currentTestCases[idx];
+    if (!testCase) return;
+    
+    // Create a modal for editing the test case
+    const modal = document.createElement('div');
+    modal.style.position = 'fixed';
+    modal.style.top = '0';
+    modal.style.left = '0';
+    modal.style.width = '100%';
+    modal.style.height = '100%';
+    modal.style.backgroundColor = 'rgba(0,0,0,0.5)';
+    modal.style.display = 'flex';
+    modal.style.alignItems = 'center';
+    modal.style.justifyContent = 'center';
+    modal.style.zIndex = '1000';
+    
+    const modalContent = document.createElement('div');
+    modalContent.style.backgroundColor = 'white';
+    modalContent.style.padding = '20px';
+    modalContent.style.borderRadius = '5px';
+    modalContent.style.width = '80%';
+    modalContent.style.maxWidth = '800px';
+    modalContent.style.maxHeight = '80vh';
+    modalContent.style.overflowY = 'auto';
+    
+    modalContent.innerHTML = `
+        <h4>Edit Test Case</h4>
+        <div class="mb-3">
+            <label for="editStep" class="form-label">Test Step</label>
+            <textarea id="editStep" class="form-control" rows="3">${testCase.step}</textarea>
+        </div>
+        <div class="mb-3">
+            <label for="editExpected" class="form-label">Expected Result</label>
+            <textarea id="editExpected" class="form-control" rows="3">${testCase.expected}</textarea>
+        </div>
+        <div class="mb-3">
+            <label for="editEstimate" class="form-label">Estimate (minutes)</label>
+            <input type="number" id="editEstimate" class="form-control" value="${testCase.estimate_minutes || ''}">
+        </div>
+        <div class="d-flex justify-content-end gap-2">
+            <button id="cancelEdit" class="btn btn-secondary">Cancel</button>
+            <button id="saveEdit" class="btn btn-primary">Save Changes</button>
+        </div>
+    `;
+    
+    modal.appendChild(modalContent);
+    document.body.appendChild(modal);
+    
+    // Add event listeners
+    document.getElementById('cancelEdit').addEventListener('click', () => {
+        document.body.removeChild(modal);
+    });
+    
+    document.getElementById('saveEdit').addEventListener('click', () => {
+        const step = document.getElementById('editStep').value;
+        const expected = document.getElementById('editExpected').value;
+        const estimate = document.getElementById('editEstimate').value;
+        
+        // Update the test case
+        currentTestCases[idx].step = step;
+        currentTestCases[idx].expected = expected;
+        currentTestCases[idx].estimate_minutes = estimate ? parseInt(estimate) : '';
+        
+        // Re-render the table
+        renderTestCases(currentTestCases, Math.floor(idx / 10) + 1);
+        
+        // Close the modal
+        document.body.removeChild(modal);
+    });
+}
+
+// Handle Clear Jira button
+clearJiraBtn.onclick = function() {
+    if (confirm('Are you sure you want to clear the Jira ID, Summary, and Description fields?')) {
+        jiraIdInput.value = '';
+        document.getElementById('summaryInput').value = '';
+        document.getElementById('scenarioInput').innerHTML = '';
+        jiraFetched = false;
+        updateGenerateBtnState();
+        isDirty = false;
+    }
+};
+
+// Handle Clear PRD button
+clearPrdBtn.onclick = function() {
+    if (confirm('Are you sure you want to clear the uploaded PRD document?')) {
+        prdUpload.value = '';
+        document.getElementById('scenarioInput').innerHTML = '';
+        prdUploaded = false;
+        updateGenerateBtnState();
+        isDirty = false;
+    }
+};
+
+// Spinner HTML
+const spinnerHtml = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true" style="margin-right:0.5em;"></span>';
+
+// --- Jira Connect Button ---
+connectJiraBtn.onclick = function() {
+    connectJiraBtn.disabled = true;
+    const original = connectJiraBtn.innerHTML;
+    connectJiraBtn.innerHTML = spinnerHtml + 'Connecting...';
+    window.location.href = '/api/jira/oauth/login';
+    setTimeout(() => { connectJiraBtn.innerHTML = original; connectJiraBtn.disabled = false; }, 3000); // fallback restore
+};
+
+// Helper: Normalize Jira ID input
+function normalizeJiraId(input) {
+    input = input.trim();
+    // If it's a URL, extract the key
+    const urlMatch = input.match(/browse\/([A-Z]+-\d+)/i);
+    if (urlMatch) return urlMatch[1];
+    // If it's just digits, prepend IRA-
+    if (/^\d+$/.test(input)) return 'IRA-' + input;
+    // If it's already in KEY-12345 format, use as is
+    if (/^[A-Z]+-\d+$/i.test(input)) return input.toUpperCase();
+    // Fallback: return as is
+    return input;
+}
+
+let currentJiraKey = '';
+
+// --- Fetch Button ---
+fetchJiraBtn.onclick = async function() {
+    jiraFetched = false;
+    updateGenerateBtnState();
+    validationMsg.style.display = 'none';
+    validationMsg.textContent = '';
+    const rawInput = document.getElementById('jiraIdInput').value;
+    const jiraId = normalizeJiraId(rawInput);
+    currentJiraKey = jiraId;
+    if (!jiraId) {
+        alert('Please enter a Jira Story ID.');
+        return;
+    }
+    fetchJiraBtn.disabled = true;
+    const original = fetchJiraBtn.innerHTML;
+    fetchJiraBtn.innerHTML = spinnerHtml + 'Fetching...';
+    document.getElementById('generateBtn').disabled = true;
+    document.getElementById('saveBtn').disabled = true;
+    try {
+        // Use GET and pass jiraId as search param
+        const response = await fetch(`/api/jira/issues?search=${encodeURIComponent(jiraId)}`);
+        const data = await response.json();
+        if (data.issues && data.issues.length > 0) {
+            // Use the summary and description to populate the fields
+            const issue = data.issues[0];
+            document.getElementById('summaryInput').value = issue.summary || '';
+            // --- Render HTML description ---
+            let descHtml = issue.description_html || '';
+            // Optionally sanitize descHtml here with DOMPurify or similar
+            document.getElementById('scenarioInput').innerHTML = descHtml;
+            // Ensure all links open in a new tab
+            const descLinks = document.getElementById('scenarioInput').querySelectorAll('a');
+            descLinks.forEach(link => {
+                link.setAttribute('target', '_blank');
+                link.setAttribute('rel', 'noopener noreferrer');
+            });
+            jiraFetched = true;
+            updateGenerateBtnState();
+            isDirty = true;
+        } else {
+            alert(data.error || 'No Jira story found for this ID.');
+            jiraFetched = false;
+            updateGenerateBtnState();
+        }
+    } catch (err) {
+        alert('Error fetching Jira story: ' + err);
+        jiraFetched = false;
+        updateGenerateBtnState();
+    } finally {
+        fetchJiraBtn.disabled = false;
+        fetchJiraBtn.innerHTML = original;
+        document.getElementById('saveBtn').disabled = false;
+        document.getElementById('fetchJiraBtn').innerHTML = 'Fetch';
+    }
+};
+
+// Helper: Extract all image URLs from HTML
+function extractImageUrlsFromHtml(html) {
+    const div = document.createElement('div');
+    div.innerHTML = html;
+    const imgs = div.querySelectorAll('img');
+    return Array.from(imgs).map(img => img.src);
+}
+
+// Helper: Call backend OCR+Vision endpoint
+async function getImageText(imageUrl) {
+    const resp = await fetch('/api/image-to-text', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({image_url: imageUrl})
+    });
+    const data = await resp.json();
+    return data.text || '';
+}
+
+// Update Generate button handler
+async function onGenerateTests() {
+    const descDiv = document.getElementById('scenarioInput');
+    const description = descDiv.innerText;
+    const html = descDiv.innerHTML;
+    const imageUrls = extractImageUrlsFromHtml(html);
+    let imageTexts = [];
+    for (const url of imageUrls) {
+        const text = await getImageText(url);
+        if (text) imageTexts.push(text);
+    }
+    // Extract tables and convert to markdown
+    function htmlTableToMarkdown(table) {
+        let md = '';
+        const rows = table.querySelectorAll('tr');
+        let headerCells = rows[0] ? rows[0].querySelectorAll('th,td') : [];
+        if (headerCells.length > 0) {
+            md += '| ' + Array.from(headerCells).map(cell => cell.innerText.trim()).join(' | ') + ' |\n';
+            md += '| ' + Array.from(headerCells).map(() => '---').join(' | ') + ' |\n';
+        }
+        for (let i = 1; i < rows.length; i++) {
+            const cells = rows[i].querySelectorAll('td,th');
+            md += '| ' + Array.from(cells).map(cell => cell.innerText.trim()).join(' | ') + ' |\n';
+        }
+        return md;
+    }
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = html;
+    const tables = tempDiv.querySelectorAll('table');
+    let tablesMarkdown = '';
+    tables.forEach(table => {
+        tablesMarkdown += '\n' + htmlTableToMarkdown(table) + '\n';
+    });
+    const fullPrompt = description + '\n' + imageTexts.join('\n') + (tablesMarkdown ? '\nTables from description:\n' + tablesMarkdown : '');
+    console.log('Prompt for test generation:', fullPrompt);
+    
+    // Check if we have content to generate tests from (either from Jira or PRD upload)
+    if (!description.trim()) {
+        validationMsg.textContent = 'Please provide content in the Description field by fetching from Jira or uploading a PRD.';
+        validationMsg.style.display = 'block';
+        return;
+    }
+    
+    // Set heading based on active tab
+    const heading = document.getElementById('generatedTestsHeading');
+    if (activeTab === 'jira' && currentJiraKey) {
+        heading.textContent = `Generated Tests for ${currentJiraKey}`;
+    } else if (activeTab === 'prd') {
+        const prdFile = prdUpload.files[0];
+        heading.textContent = prdFile ? `Generated Tests for ${prdFile.name}` : 'Generated Tests from PRD';
+    } else {
+        heading.textContent = 'Generated Tests';
+    }
+    validationMsg.textContent = '';
+    validationMsg.style.display = 'none';
+    setAllButtonsDisabled(true);
+    fetchJiraBtn.disabled = true;
+    const original = generateBtn.innerHTML;
+    generateBtn.innerHTML = spinnerHtml + 'Generating...';
+    document.getElementById('testcasesSection').style.display = 'none';
+    try {
+        // Collect attachment files and doc URL
+        const attachmentInput = document.getElementById('attachmentInput');
+        const docUrlInput = document.getElementById('docUrlInput');
+        let visual_image_urls = [];
+        let visual_doc_url = '';
+
+        // If a doc URL is provided, use it
+        if (docUrlInput && docUrlInput.value.trim()) {
+            visual_doc_url = docUrlInput.value.trim();
+        }
+
+        // If files are attached, upload them first
+        if (attachmentInput && attachmentInput.files.length > 0) {
+            const files = Array.from(attachmentInput.files);
+            const imageFiles = files.filter(f => f.type.startsWith('image/'));
+            const pdfFiles = files.filter(f => f.type === 'application/pdf');
+            // Upload images
+            for (const file of imageFiles) {
+                const formData = new FormData();
+                formData.append('file', file);
+                try {
+                    const resp = await fetch('/api/upload', { method: 'POST', body: formData });
+                    const result = await resp.json();
+                    if (resp.ok && result.url) {
+                        visual_image_urls.push(result.url);
+                    } else {
+                        alert('Failed to upload image: ' + (result.error || file.name));
+                        return;
+                    }
+                } catch (e) {
+                    alert('Error uploading image: ' + file.name);
+                    return;
+                }
+            }
+            // Upload PDF (only first PDF is supported)
+            if (pdfFiles.length > 0) {
+                const formData = new FormData();
+                formData.append('file', pdfFiles[0]);
+                try {
+                    const resp = await fetch('/api/upload', { method: 'POST', body: formData });
+                    const result = await resp.json();
+                    if (resp.ok && result.url) {
+                        visual_doc_url = result.url;
+                    } else {
+                        alert('Failed to upload PDF: ' + (result.error || pdfFiles[0].name));
+                        return;
+                    }
+                } catch (e) {
+                    alert('Error uploading PDF: ' + pdfFiles[0].name);
+                    return;
+                }
+            }
+        }
+
+        // Build payload
+        const payload = { scenario: fullPrompt };
+        if (visual_image_urls.length > 0) payload.visual_image_urls = visual_image_urls;
+        if (visual_doc_url) payload.visual_doc_url = visual_doc_url;
+        // Send Jira description image URLs for Gemini multimodal
+        if (imageUrls.length > 0) payload.jira_image_urls = imageUrls;
+
+        const response = await fetch('/api/generate-testcases', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        const data = await response.json();
+        if (data.testcases) {
+            currentTestCases = data.testcases;
+            window.currentTestCases = currentTestCases;
+            renderTestCases(currentTestCases, 1);
+            document.getElementById('testcasesSection').style.display = 'block';
+            document.getElementById('testcasesSection').scrollIntoView({ behavior: 'smooth', block: 'start' });
+            const heading = document.getElementById('generatedTestsHeading');
+            if (currentJiraKey) {
+                heading.textContent = `Generated Tests for ${currentJiraKey}`;
+            } else {
+                heading.textContent = 'Generated Tests';
+            }
+        } else {
+            // Hide total estimated time if no testcases
+            document.getElementById('totalEstimatedTime').style.display = 'none';
+            document.getElementById('totalEstimatedTimeValue').textContent = '0';
+            alert(data.error || 'Failed to generate test cases.');
+        }
+    } catch (err) {
+        alert('Error generating test cases: ' + err);
+    } finally {
+        setButtonsForIdle();
+        generateBtn.innerHTML = original;
+    }
+}
+
+// Attach handler to Generate button
+generateBtn.onclick = onGenerateTests;
+
+// --- Save Button ---
+document.getElementById('saveBtn').onclick = function() {
+    const saveBtn = document.getElementById('saveBtn');
+    saveBtn.disabled = true;
+    const original = saveBtn.innerHTML;
+    saveBtn.innerHTML = spinnerHtml + 'Saving...';
+    setTimeout(() => {
+        // Save edits from current page to currentTestCases
+        const rows = document.querySelectorAll('#testcasesTableBody tr');
+        const perPage = 10;
+        const page = Array.from(document.querySelectorAll('#testcasePagination .btn-primary')).map(btn => parseInt(btn.textContent))[0] || 1;
+        const start = (page - 1) * perPage;
+        rows.forEach((row, idx) => {
+            const step = row.cells[1].innerText.trim();
+            const expected = row.cells[2].innerText.trim();
+            if (currentTestCases[start + idx]) {
+                currentTestCases[start + idx].step = step;
+                currentTestCases[start + idx].expected = expected;
+            }
+        });
+        if (!currentTestCases.length) {
+            alert('No test cases to save!');
+            saveBtn.innerHTML = original;
+            saveBtn.disabled = false;
+            return;
+        }
+        let csv = 'Step,Expected Result\n';
+        currentTestCases.forEach(tc => {
+            const step = `"${(tc.step || '').replace(/"/g, '""')}"`;
+            const expected = `"${(tc.expected || '').replace(/"/g, '""')}"`;
+            csv += `${step},${expected}\n`;
+        });
+        const blob = new Blob([csv], { type: 'text/csv' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        let jiraId = currentJiraKey || '';
+        if (jiraId) {
+            jiraId = jiraId.replace(/[^a-zA-Z0-9_-]/g, '');
+            a.download = jiraId + '_testscenarios.csv';
+        } else {
+            a.download = 'testcases.csv';
+        }
+        document.body.appendChild(a);
+        a.click();
+        setTimeout(() => document.body.removeChild(a), 100);
+        isDirty = false;
+        saveBtn.innerHTML = original;
+        saveBtn.disabled = false;
+    }, 500);
+};
+
+// --- Create Jira Subtasks Button ---
+document.getElementById('createJiraSubtasksBtn').onclick = function() {
+    const createBtn = document.getElementById('createJiraSubtasksBtn');
+    createBtn.disabled = true;
+    const original = createBtn.innerHTML;
+    createBtn.innerHTML = spinnerHtml + 'Creating Subtasks...';
+    
+    // Save edits from current page to currentTestCases
+    const rows = document.querySelectorAll('#testcasesTableBody tr');
+    const perPage = 10;
+    const page = Array.from(document.querySelectorAll('#testcasePagination .btn-primary')).map(btn => parseInt(btn.textContent))[0] || 1;
+    const start = (page - 1) * perPage;
+    rows.forEach((row, idx) => {
+        const step = row.cells[1].innerText.trim();
+        const expected = row.cells[2].innerText.trim();
+        if (currentTestCases[start + idx]) {
+            currentTestCases[start + idx].step = step;
+            currentTestCases[start + idx].expected = expected;
+        }
+    });
+    
+    if (!currentTestCases.length) {
+        alert('No test cases to create subtasks for!');
+        createBtn.innerHTML = original;
+        createBtn.disabled = false;
+        return;
+    }
+    
+    let jiraId = currentJiraKey || '';
+    if (!jiraId) {
+        alert('Please fetch a Jira issue first!');
+        createBtn.innerHTML = original;
+        createBtn.disabled = false;
+        return;
+    }
+    
+    // Send the test cases to the server to create Jira subtasks
+    console.log('Creating subtasks for parent:', jiraId);
+    console.log('Number of test cases:', currentTestCases.length);
+    
+    fetch('/api/jira/create-subtasks', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            parentIssueKey: jiraId,
+            testCases: currentTestCases
+        })
+    })
+    .then(response => {
+        if (!response.ok) {
+            return response.json().then(data => {
+                throw new Error(data.error || `HTTP error! status: ${response.status}`);
+            });
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (data.error) {
+            console.error('Server reported error:', data.error);
+            alert('Error creating subtasks: ' + data.error);
+        } else {
+            console.log('Subtasks creation result:', data);
+            if (data.createdCount === 0 && data.failedCount > 0) {
+                alert(`Failed to create ${data.failedCount} subtasks in Jira. Please check the console for details.`);
+            } else {
+                alert(`Successfully created ${data.createdCount} subtasks in Jira!${data.failedCount > 0 ? ` (${data.failedCount} failed)` : ''}`);
+            }
+        }
+    })
+    .catch(error => {
+        console.error('Error creating subtasks:', error);
+        alert('Error creating subtasks: ' + error.message);
+    })
+    .finally(() => {
+        createBtn.innerHTML = original;
+        createBtn.disabled = false;
+    });
+};
+
+// Create validation message element
+const validationMsg = document.createElement('div');
+validationMsg.id = 'validationMsg';
+validationMsg.style.color = 'red';
+validationMsg.style.marginTop = '0.5em';
+validationMsg.style.display = 'none';
+generateBtn.parentNode.appendChild(validationMsg);
+
+descriptionInput.addEventListener('input', updateGenerateBtnState);
+// At the very end of DOMContentLoaded, ensure correct state
+updateGenerateBtnState();
+setTimeout(() => {
+    console.log('Final state, generateBtn.disabled:', generateBtn.disabled);
+}, 1000);
+
+// Utility to enable/disable all buttons
+function setAllButtonsDisabled(disabled) {
+    generateBtn.disabled = disabled;
+    fetchJiraBtn.disabled = disabled;
+    clearJiraBtn.disabled = disabled;
+    clearPrdBtn.disabled = disabled;
+    if (!isJiraConnected) connectJiraBtn.disabled = disabled;
+    const saveBtn = document.getElementById('saveBtn');
+    if (saveBtn) saveBtn.disabled = disabled;
+}
+
+function setButtonsForIdle() {
+    fetchJiraBtn.disabled = false;
+    clearJiraBtn.disabled = false;
+    clearPrdBtn.disabled = false;
+    updateGenerateBtnState();
+    if (!isJiraConnected) connectJiraBtn.disabled = false;
+    const saveBtn = document.getElementById('saveBtn');
+    if (saveBtn) saveBtn.disabled = false;
+}
+
+// Handle Connect to Jira button
+connectJiraBtn.onclick = function() {
+    window.location.href = '/api/jira/oauth/login';
+};
+
+// Jira SVG icon markup
+const jiraSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 32 32" fill="none" style="vertical-align:middle;margin-right:0.3em;"><g><path d="M17.1 2.3a2.1 2.1 0 0 0-2.9 0L2.3 14.2a2.1 2.1 0 0 0 0 2.9l11.9 11.9a2.1 2.1 0 0 0 2.9 0l11.9-11.9a2.1 2.1 0 0 0 0-2.9L17.1 2.3z" fill="#2684FF"/><path d="M21.7 10.3a1.3 1.3 0 0 0-1.8 0l-9.6 9.6a1.3 1.3 0 0 0 0 1.8l6.5 6.5a1.3 1.3 0 0 0 1.8 0l9.6-9.6a1.3 1.3 0 0 0 0-1.8l-6.5-6.5z" fill="#0052CC"/></g></svg>`;
+
+let isJiraConnected = false;
+function setJiraConnectBtn(status) {
+    if (status === 'connected') {
+        connectJiraBtn.innerHTML = jiraSvg + 'Jira Connected';
+        connectJiraBtn.className = 'btn btn-success';
+        connectJiraBtn.disabled = true;
+        isJiraConnected = true;
+    } else {
+        connectJiraBtn.innerHTML = jiraSvg + 'Jira Connect';
+        connectJiraBtn.className = 'btn btn-outline-primary';
+        connectJiraBtn.disabled = false;
+        isJiraConnected = false;
+    }
+}
+
+// Check Jira connection status and update button
+async function checkJiraConnection() {
+    try {
+        const resp = await fetch('/api/jira/status');
+        const data = await resp.json();
+        if (data.connected) {
+            setJiraConnectBtn('connected');
+        } else {
+            setJiraConnectBtn('connect');
+        }
+    } catch (e) {
+        setJiraConnectBtn('connect');
+    }
+}
+checkJiraConnection();
+
+window.renderTestCases = renderTestCases;
+window.currentTestCases = currentTestCases;
+window.removeTestCase = removeTestCase;
+
+function updateJiraButtons(connected) {
+    if (connected) {
+        connectJiraBtn.style.display = 'none';
+        disconnectJiraBtn.style.display = '';
+        fetchJiraBtn.disabled = false;
+    } else {
+        connectJiraBtn.style.display = '';
+        disconnectJiraBtn.style.display = 'none';
+        fetchJiraBtn.disabled = true;
+    }
+}
+
+fetch('/api/jira/status').then(r => r.json()).then(data => {
+    updateJiraButtons(data.connected);
+});
+
+disconnectJiraBtn.onclick = function() {
+    fetch('/api/jira/disconnect', {method: 'POST'}).then(r => {
+        if (r.ok) location.reload();
+        else alert('Failed to disconnect Jira.');
+    });
+};
+
+// Add dirty page warning on navigation
+window.addEventListener('beforeunload', function(e) {
+    if (isDirty) {
+        e.preventDefault();
+        e.returnValue = '';
+        return '';
+    }
+});
+}); // End DOMContentLoaded
+</script>
+</body>
+</html>

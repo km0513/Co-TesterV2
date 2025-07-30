@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='0.9em' font-size='90'>🚀</text></svg>">
+  <title>Data Generator - Co-Tester</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/styles.css">
+  <link rel="stylesheet" href="/static/navbar-tabs.css">
+  <style>
+    .data-gen-section { margin-bottom: 2.5rem; }
+    .data-gen-label { font-weight: 600; margin-right: 1em; }
+    .data-gen-actions { display: flex; gap: 1.2em; margin-top: 1em; }
+    .data-gen-output { background: #23272B; color: #fff; padding: 1rem; border-radius: 5px; overflow: auto; max-height: 300px; font-family: monospace; margin-top: 1em; }
+  </style>
+</head>
+<body>
+  {% include 'navbar.html' %}
+  <div class="container">
+    <div class="content-area" style="width:100%; padding:1.5rem;">
+      <div class="instructions" style="margin-bottom:1.2em; background: #fffbe7; border: 1.5px solid #ffe082; color: #7c5a00; border-radius: 7px; padding: 0.7em 1em; font-size: 0.98em; max-width:600px; margin-left:0; text-align:left; line-height:1.3;">
+        <b>Instructions:</b>
+        <ol style="margin:0.3em 0 0.3em 1.2em; padding:0;">
+          <li>Select the data columns you want to generate.</li>
+          <li>Optionally add custom columns.</li>
+          <li>Set the number of rows and click <b>Generate</b>.</li>
+        </ol>
+      </div>
+      <form id="dataGenForm" onsubmit="event.preventDefault(); generateDataset();">
+        <div class="data-gen-section">
+          <div><b>Select Data Columns:</b></div>
+          <div style="display:flex; flex-wrap:wrap; gap:1.2em; margin:1em 0;">
+            <label><input type="checkbox" class="col-checkbox" value="fullName" checked onchange="toggleNameType()"> Name</label>
+            <select id="nameType" style="margin-right:1em;">
+              <option value="full">Full Name</option>
+              <option value="first">First Name</option>
+              <option value="last">Last Name</option>
+            </select>
+            <label><input type="checkbox" class="col-checkbox" value="email" checked> Email</label>
+            <label><input type="checkbox" class="col-checkbox" value="phone"> Phone</label>
+            <label><input type="checkbox" class="col-checkbox" value="country"> Country</label>
+            <label><input type="checkbox" class="col-checkbox" value="state"> State</label>
+            <label><input type="checkbox" class="col-checkbox" value="date"> Date</label>
+            <label><input type="checkbox" class="col-checkbox" value="address"> Address</label>
+            <label><input type="checkbox" class="col-checkbox" value="uuid"> UUID</label>
+            <label><input type="checkbox" class="col-checkbox" value="creditCard"> Credit Card</label>
+          </div>
+          <div id="countryStateOptions" style="display:none; gap:1em; align-items:center; margin-bottom:1em;">
+            <label>Country:
+              <select id="countrySelect" onchange="updateStates()">
+                <option value="India" selected>India</option>
+                <option value="USA">USA</option>
+              </select>
+            </label>
+            <label>State:
+              <select id="stateSelect"></select>
+            </label>
+          </div>
+          
+          <!-- Format Options -->
+          <div id="formatOptions" style="margin-top:1em; padding:1em; border:1px solid #ddd; border-radius:5px; display:none;">
+            <h4 style="margin-top:0;">Format Options</h4>
+            
+            <div style="display:flex; flex-wrap:wrap; gap:1.5em;">
+              <div class="format-option">
+                <label>Phone Format:</label>
+                <select id="phoneFormat">
+                  <option value="india">India (+91)</option>
+                  <option value="us">US (+1)</option>
+                  <option value="raw">Raw (no formatting)</option>
+                </select>
+              </div>
+              
+              <div class="format-option">
+                <label>Date Format:</label>
+                <select id="dateFormat">
+                  <option value="yyyy-mm-dd">YYYY-MM-DD</option>
+                  <option value="dd/mm/yyyy">DD/MM/YYYY</option>
+                  <option value="mm/dd/yyyy">MM/DD/YYYY</option>
+                </select>
+              </div>
+            </div>
+          </div>
+          <div style="margin:1em 0 0.5em 0;"><b>Custom Columns:</b></div>
+          <div id="customColumns"></div>
+          <button type="button" class="btn-secondary" onclick="addCustomColumn()">+ Add Custom Column</button>
+        </div>
+        <div class="data-gen-section">
+          <label class="data-gen-label" for="rowCount">Rows to Generate:</label>
+          <input type="number" id="rowCount" min="1" max="1000" value="10" style="width:70px;">
+          <button type="submit" class="btn-primary">Generate</button>
+        </div>
+      </form>
+      <div class="data-gen-actions" style="display:none;" id="dataActions">
+        <button class="btn-primary" onclick="downloadCSV()">Download CSV</button>
+        <button class="btn-secondary" onclick="downloadJSON()">Download JSON</button>
+        <button class="btn-secondary" onclick="copyCSV()">Copy to Clipboard</button>
+        <button class="btn-secondary" onclick="previewData()">Preview Data</button>
+      </div>
+      <div id="previewArea" style="margin-top:1em;"></div>
+      <div id="dataTableWrap" style="margin-top:2em;"></div>
+    </div>
+  </div>
+  <script>
+// --- Preset Data ---
+const FIRST_NAMES = ["Amit", "Priya", "Rahul", "Sneha", "Kiran", "Neha", "Ravi", "Anjali", "Vikram", "Pooja"];
+const LAST_NAMES = ["Sharma", "Patel", "Singh", "Mehra", "Reddy", "Gupta", "Kumar", "Jain", "Joshi", "Nair"];
+const EMAIL_DOMAINS = ["yopmail.com", "mailinator.com"];
+const PHONES = () => '+91' + (Math.floor(Math.random()*9000000000)+1000000000);
+const COUNTRIES = {
+  "India": ["Maharashtra","Karnataka","Delhi","Tamil Nadu","Gujarat","West Bengal","Uttar Pradesh"],
+  "USA": ["California","Texas","New York","Florida","Illinois","Washington","Ohio"]
+};
+
+// --- Additional Data Types ---
+const DATES = () => {
+  const start = new Date(2020, 0, 1);
+  const end = new Date();
+  return new Date(start.getTime() + Math.random() * (end.getTime() - start.getTime())).toISOString().split('T')[0];
+};
+
+const ADDRESSES = [
+  "123 Main St, Mumbai", "456 Park Ave, Bangalore", "789 Oak Rd, Delhi",
+  "101 Pine Blvd, Chennai", "202 Maple Dr, Hyderabad", "303 Cedar Ln, Pune",
+  "404 Elm St, New York", "505 Birch Ave, Los Angeles", "606 Walnut Rd, Chicago"
+];
+
+const UUID = () => 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+  const r = Math.random() * 16 | 0;
+  return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
+});
+
+const CREDIT_CARDS = () => {
+  // Generate a valid-format Visa card (not a real card)
+  return '4' + Array(15).fill(0).map(() => Math.floor(Math.random() * 10)).join('');
+};
+
+// --- UI Logic ---
+function toggleNameType() {
+  document.getElementById('nameType').disabled = !document.querySelector('input.col-checkbox[value="fullName"]').checked;
+}
+function updateStates() {
+  const country = document.getElementById('countrySelect').value;
+  const states = COUNTRIES[country] || [];
+  const sel = document.getElementById('stateSelect');
+  sel.innerHTML = states.map(s => `<option value="${s}">${s}</option>`).join('');
+}
+function addCustomColumn() {
+  const idx = document.querySelectorAll('.custom-col-row').length;
+  const div = document.createElement('div');
+  div.className = 'custom-col-row';
+  div.style.marginBottom = '0.5em';
+  div.innerHTML = `
+    <input type="text" placeholder="Column Name" class="custom-col-name" style="width:140px;margin-right:0.7em;">
+    <input type="text" placeholder="Value Pattern or List (comma separated)" class="custom-col-pattern" style="width:260px;margin-right:0.7em;">
+    <button type="button" onclick="this.parentNode.remove()">Remove</button>
+  `;
+  document.getElementById('customColumns').appendChild(div);
+}
+// Show/hide country/state options
+Array.from(document.getElementsByClassName('col-checkbox')).forEach(cb => {
+  cb.addEventListener('change', function() {
+    if(this.value==='country' || this.value==='state') {
+      document.getElementById('countryStateOptions').style.display =
+        document.querySelector('input.col-checkbox[value="country"]').checked ||
+        document.querySelector('input.col-checkbox[value="state"]').checked ? 'flex' : 'none';
+    }
+  });
+});
+window.onload = function() {
+  toggleNameType();
+  updateStates();
+  document.getElementById('countryStateOptions').style.display = 'none';
+};
+
+// --- Data Generation Logic ---
+function generateDataset() {
+  // Show/hide format options based on selections
+  const showFormatOptions = document.querySelector('input.col-checkbox[value="date"]').checked || 
+                           document.querySelector('input.col-checkbox[value="phone"]').checked;
+  document.getElementById('formatOptions').style.display = showFormatOptions ? 'block' : 'none';
+  
+  // Gather selected columns
+  const cols = [];
+  if(document.querySelector('input.col-checkbox[value="fullName"]').checked) {
+    const type = document.getElementById('nameType').value;
+    if(type==='full') cols.push({key:'Name', gen:()=>randomName()});
+    if(type==='first') cols.push({key:'First Name', gen:()=>FIRST_NAMES[Math.floor(Math.random()*FIRST_NAMES.length)]});
+    if(type==='last') cols.push({key:'Last Name', gen:()=>LAST_NAMES[Math.floor(Math.random()*LAST_NAMES.length)]});
+  }
+  if(document.querySelector('input.col-checkbox[value="email"]').checked) {
+    cols.push({key:'Email', gen:()=>randomEmail()});
+  }
+  if(document.querySelector('input.col-checkbox[value="phone"]').checked) {
+    const format = document.getElementById('phoneFormat').value;
+    cols.push({key:'Phone', gen:()=>formatPhone(PHONES(), format)});
+  }
+  if(document.querySelector('input.col-checkbox[value="country"]').checked) {
+    const country = document.getElementById('countrySelect').value;
+    cols.push({key:'Country', gen:()=>country});
+  }
+  if(document.querySelector('input.col-checkbox[value="state"]').checked) {
+    const sel = document.getElementById('stateSelect');
+    const options = Array.from(sel.options).map(o=>o.value);
+    cols.push({key:'State', gen:()=>options[Math.floor(Math.random()*options.length)]});
+  }
+  if(document.querySelector('input.col-checkbox[value="date"]').checked) {
+    const format = document.getElementById('dateFormat').value;
+    cols.push({key:'Date', gen:()=>formatDate(DATES(), format)});
+  }
+  if(document.querySelector('input.col-checkbox[value="address"]').checked) {
+    cols.push({key:'Address', gen:()=>ADDRESSES[Math.floor(Math.random()*ADDRESSES.length)]});
+  }
+  if(document.querySelector('input.col-checkbox[value="uuid"]').checked) {
+    cols.push({key:'UUID', gen:()=>UUID()});
+  }
+  if(document.querySelector('input.col-checkbox[value="creditCard"]').checked) {
+    cols.push({key:'Credit Card', gen:()=>CREDIT_CARDS()});
+  }
+  // Custom columns
+  document.querySelectorAll('.custom-col-row').forEach(row => {
+    const name = row.querySelector('.custom-col-name').value || 'Custom';
+    const pat = row.querySelector('.custom-col-pattern').value;
+    if(pat && pat.includes(',')) {
+      const vals = pat.split(',').map(s=>s.trim()).filter(Boolean);
+      cols.push({key:name, gen:()=>vals[Math.floor(Math.random()*vals.length)]});
+    } else if(pat) {
+      cols.push({key:name, gen:()=>pat});
+    } else {
+      cols.push({key:name, gen:()=>''});
+    }
+  });
+  // Generate rows
+  const n = parseInt(document.getElementById('rowCount').value)||1;
+  const rows = [];
+  for(let i=0;i<n;i++) {
+    const row = {};
+    cols.forEach(col => row[col.key] = col.gen());
+    rows.push(row);
+  }
+  // Render table
+  renderTable(cols.map(c=>c.key), rows);
+  // Enable actions
+  document.getElementById('dataActions').style.display = 'flex';
+}
+function renderTable(headers, rows) {
+  let html = '<table border="1" cellpadding="6" style="border-collapse:collapse;width:100%;background:#fff;margin-top:1em;">';
+  html += '<tr>' + headers.map(h=>`<th style="background:#f3f3f3;">${h}</th>`).join('') + '</tr>';
+  rows.forEach(r => {
+    html += '<tr>' + headers.map(h=>`<td>${r[h]}</td>`).join('') + '</tr>';
+  });
+  html += '</table>';
+  document.getElementById('dataTableWrap').innerHTML = html;
+  // Save for CSV
+  window._csvHeaders = headers;
+  window._csvRows = rows;
+}
+function randomName() {
+  return FIRST_NAMES[Math.floor(Math.random()*FIRST_NAMES.length)] + ' ' + LAST_NAMES[Math.floor(Math.random()*LAST_NAMES.length)];
+}
+
+function randomEmail() {
+  const names = ["amit", "priya", "rahul", "sneha", "kiran", "neha", "ravi", "anjali", "vikram", "pooja"];
+  return names[Math.floor(Math.random()*names.length)] + Math.floor(Math.random()*10000) + '@' + EMAIL_DOMAINS[Math.floor(Math.random()*EMAIL_DOMAINS.length)];
+}
+
+function formatPhone(phone, format) {
+  if (format === 'india') {
+    // Format as +91 98765-43210
+    return phone.replace(/\+91(\d{5})(\d{5})/, '+91 $1-$2');
+  } else if (format === 'us') {
+    // Format as +1 (555) 123-4567
+    return '+1 (' + Math.floor(Math.random() * 900 + 100) + ') ' + 
+           Math.floor(Math.random() * 900 + 100) + '-' + 
+           Math.floor(Math.random() * 10000).toString().padStart(4, '0');
+  } else {
+    // Raw format
+    return phone;
+  }
+}
+
+function formatDate(date, format) {
+  const parts = date.split('-');
+  const year = parts[0];
+  const month = parts[1];
+  const day = parts[2];
+  
+  if (format === 'yyyy-mm-dd') {
+    return date; // Already in this format
+  } else if (format === 'dd/mm/yyyy') {
+    return `${day}/${month}/${year}`;
+  } else if (format === 'mm/dd/yyyy') {
+    return `${month}/${day}/${year}`;
+  }
+  return date;
+}
+function downloadCSV() {
+  const headers = window._csvHeaders;
+  const rows = window._csvRows;
+  let csv = headers.join(',') + '\n';
+  rows.forEach(r => {
+    csv += headers.map(h=>`"${(r[h]||'').replace(/"/g,'""')}"`).join(',') + '\n';
+  });
+  const blob = new Blob([csv], {type:'text/csv'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'dataset.csv';
+  a.click();
+}
+
+function downloadJSON() {
+  const headers = window._csvHeaders;
+  const rows = window._csvRows;
+  const jsonData = rows.map(row => {
+    // Create a clean object for each row
+    const cleanRow = {};
+    headers.forEach(h => {
+      cleanRow[h] = row[h] || '';
+    });
+    return cleanRow;
+  });
+  
+  const blob = new Blob([JSON.stringify(jsonData, null, 2)], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'dataset.json';
+  a.click();
+}
+
+function copyCSV() {
+  const headers = window._csvHeaders;
+  const rows = window._csvRows;
+  let csv = headers.join(',') + '\n';
+  rows.forEach(r => {
+    csv += headers.map(h=>`"${(r[h]||'').replace(/"/g,'""')}"`).join(',') + '\n';
+  });
+  navigator.clipboard.writeText(csv);
+}
+
+function previewData() {
+  // Generate a small sample of the current data
+  const previewRows = 3;
+  const headers = window._csvHeaders;
+  const rows = window._csvRows;
+  
+  // Take just the first few rows
+  const sampleRows = rows.slice(0, Math.min(previewRows, rows.length));
+  
+  // Create a preview table
+  let html = '<h4>Data Preview</h4>';
+  html += '<div style="max-height:200px; overflow-y:auto; margin-bottom:1em;">';
+  html += '<table border="1" cellpadding="6" style="border-collapse:collapse;width:100%;background:#fff;">';
+  html += '<tr>' + headers.map(h=>`<th style="background:#f3f3f3;">${h}</th>`).join('') + '</tr>';
+  
+  sampleRows.forEach(r => {
+    html += '<tr>' + headers.map(h=>`<td>${r[h]}</td>`).join('') + '</tr>';
+  });
+  
+  html += '</table></div>';
+  
+  // Also show JSON preview
+  html += '<h5>JSON Format</h5>';
+  html += '<pre style="background:#f8f8f8; padding:1em; border-radius:4px; max-height:150px; overflow:auto;">';
+  html += JSON.stringify(sampleRows, null, 2);
+  html += '</pre>';
+  
+  document.getElementById('previewArea').innerHTML = html;
+}
+
+// Spinner HTML
+const spinnerHtml = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true" style="margin-right:0.5em;"></span>';
+
+// --- Generate Button ---
+const dataGenForm = document.getElementById('dataGenForm');
+dataGenForm.onsubmit = function(event) {
+  event.preventDefault();
+  const btn = dataGenForm.querySelector('button[type="submit"]');
+  btn.disabled = true;
+  const original = btn.innerHTML;
+  btn.innerHTML = spinnerHtml + 'Generating...';
+  setTimeout(() => {
+    generateDataset();
+    btn.innerHTML = original;
+    btn.disabled = false;
+  }, 600); // simulate loading
+};
+
+// --- Download CSV Button ---
+const downloadBtn = document.querySelector('#dataActions .btn-primary');
+downloadBtn.onclick = function() {
+  downloadBtn.disabled = true;
+  const original = downloadBtn.innerHTML;
+  downloadBtn.innerHTML = spinnerHtml + 'Downloading...';
+  setTimeout(() => {
+    downloadCSV();
+    downloadBtn.innerHTML = original;
+    downloadBtn.disabled = false;
+  }, 500);
+};
+
+// --- Copy to Clipboard Button ---
+const copyBtn = document.querySelector('#dataActions .btn-secondary');
+copyBtn.onclick = function() {
+  copyBtn.disabled = true;
+  const original = copyBtn.innerHTML;
+  copyBtn.innerHTML = spinnerHtml + 'Copying...';
+  setTimeout(() => {
+    copyCSV();
+    copyBtn.innerHTML = original;
+    copyBtn.disabled = false;
+  }, 500);
+};
+  </script>
+</body>
+</html>

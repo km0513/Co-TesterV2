@@ -1,0 +1,989 @@
+<!-- Browseruse AI Automation -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='0.9em' font-size='90'>🚀</text></svg>">
+    <title>AI Automation</title>
+    <link rel="stylesheet" href="/static/styles.css">
+    <style>
+        .container { max-width: 900px; margin: 0 auto; padding: 1.5rem; }
+        .step-list { margin: 1em 0; }
+        .step { background: #f8f8f8; border-radius: 6px; padding: 1em; margin-bottom: 1em; display: flex; flex-wrap: wrap; gap: 1em; align-items: flex-start; }
+        .step select, .step input { margin-right: 0.5em; min-width: 180px; max-width: 300px; box-sizing: border-box; }
+        .step textarea { min-width: 500px; max-width: 700px; min-height: 120px; box-sizing: border-box; margin-top: 10px; width: 100%; }
+        .step .btn-danger { align-self: center; margin-left: auto; }
+        @media (max-width: 700px) { .step { flex-direction: column; gap: 0.5em; } .step select, .step input, .step textarea { min-width: 100%; max-width: 100%; } .step textarea { min-height: 150px; } }
+        .btn { margin-top: 1em; }
+.btn-secondary { background: #e9e9ee !important; color: #111 !important; }
+
+.btn-warning { background: #FFA000 !important; color: #fff !important; border-color: #FFA000 !important; }
+        .prompt-preview { background: #f2f2f2; padding: 1em; border-radius: 6px; margin: 1em 0; font-family: monospace; }
+        .loader { display: none; }
+        .loader.active { display: block; }
+        .step-controls { display: flex; gap: 1em; align-items: center; margin-bottom: 1em; }
+        .step-controls input[type="file"] { display: inline-block; }
+        .input-error {
+          border: 2px solid #D32F2F !important;
+          background: #fff6f6 !important;
+        }
+    </style>
+</head>
+<body>
+{% set active_tab = 'browseruse' %}
+{% include 'navbar.html' %}
+<div class="container">
+  <div class="instructions" style="margin-bottom:1.2em; background: #fffbe7; border: 1.5px solid #ffe082; color: #7c5a00; border-radius: 7px; padding: 0.7em 1em; font-size: 0.98em; max-width:600px; margin-left:0; text-align:left; line-height:1.3;">
+    <b>Instructions:</b>
+    <ol style="margin:0.3em 0 0.3em 1.2em; padding:0;">
+      <li>Build your browser automation flow step by step using the actions below.</li>
+      <li>Click <b>Save Scenario</b> to confirm and lock your changes. You must save before running or exporting.</li>
+      <li>Click <b>Export Scenario</b> to download your saved scenario as a file.</li>
+      <li>Click <b>Import Scenario</b> to load a previously exported scenario file.</li>
+      <li>Click <b>Run Automation</b> to execute your <b>saved</b> flow and view results. You cannot run unsaved or incomplete steps.</li>
+    </ol>
+  </div>
+  <div id="stepList" class="step-list"></div>
+
+  <br>
+  <br>
+  <h4>Scenario Preview</h4>
+  <div id="promptPreview" class="prompt-preview"></div>
+  <div class="step-controls" style="display:flex;gap:1em;align-items:center;margin:1.5em 0 1em 0;">
+  <button id="saveStepsBtn" class="btn btn-success" type="button">Save Scenario</button>
+  <button id="exportStepsBtn" class="btn btn-warning" type="button">Export Scenario</button>
+  <label style="margin-bottom:0;">
+    <input id="uploadStepsInput" type="file" accept="application/json" style="display:none;">
+    <button id="uploadStepsBtn" class="btn btn-info" type="button">Import Scenario</button>
+  </label>
+  <span id="uploadStatus" style="color:#1976D2;font-size:0.95em;"></span>
+  <div style="flex:1;"></div>
+  <button id="runStepwiseBtn" class="btn btn-primary run-automation-btn-large" style="min-width:200px;position:relative;font-size:1.22em;padding:0.7em 2.2em;">
+    <span id="runBtnText">Run Automation</span>
+    <span id="runBtnSpinner" class="spinner-border spinner-border-sm" style="display:none;vertical-align:middle;margin-left:0.5em;"></span>
+  </button>
+</div>
+<style>
+  .run-automation-btn-large {
+    font-size: 1.08em !important;
+    padding: 0.55em 1.5em !important;
+    min-width: 170px !important;
+  }
+</style>
+ 
+  <div id="loader" class="loader"><span class="spinner-border text-primary"></span> Running automation...</div>
+<!-- Fullscreen loader overlay -->
+<div id="fullscreenLoader" style="display:none;position:fixed;z-index:9999;top:0;left:0;width:100vw;height:100vh;background:rgba(255,255,255,0.75);align-items:center;justify-content:center;text-align:center;">
+  <div style="display:inline-block;padding:2em 3em;background:#fff;border-radius:12px;box-shadow:0 2px 16px #ccc;">
+    <span class="spinner-border text-primary" style="width:2.5rem;height:2.5rem;"></span>
+    <div style="margin-top:1em;font-size:1.2em;font-weight:bold;">Running automation...</div>
+  </div>
+</div>
+  <div id="resultSection"></div>
+  <div id="reportSection" style="margin-top:2em;"></div>
+<button id="downloadHtmlReportBtn" class="btn btn-outline-secondary" style="margin-top:1em;display:none;">Download HTML Report</button>
+  
+</div>
+<script>
+const stepList = document.getElementById('stepList');
+const addStepBtn = document.getElementById('addStepBtn');
+const promptPreview = document.getElementById('promptPreview');
+const runBtn = document.getElementById('runStepwiseBtn');
+const runBtnText = document.getElementById('runBtnText');
+const runBtnSpinner = document.getElementById('runBtnSpinner');
+const loader = document.getElementById('loader');
+const resultSection = document.getElementById('resultSection');
+const reportSection = document.getElementById('reportSection');
+const saveStepsBtn = document.getElementById('saveStepsBtn');
+const exportStepsBtn = document.getElementById('exportStepsBtn'); // If you have a separate export button
+
+let stepsAreSaved = false;
+
+function setRunBtnState() {
+  // Do not disable the Run Automation button; only use visual cues
+  if (stepsAreSaved) {
+    runBtn.classList.remove('disabled');
+  } else {
+    runBtn.classList.add('disabled');
+  }
+}
+
+// Call this after any change to steps
+function markStepsDirty() {
+  stepsAreSaved = false;
+  setRunBtnState();
+}
+
+// Save Steps logic
+saveStepsBtn.onclick = function() {
+  // Here you can persist steps to localStorage or backend if needed
+  stepsAreSaved = true;
+  setRunBtnState();
+  saveStepsBtn.textContent = 'Saved!';
+  setTimeout(() => { saveStepsBtn.textContent = 'Save Scenario'; }, 1200);
+};
+
+// On page load, mark steps as dirty and set initial state
+stepsAreSaved = false;
+setRunBtnState();
+const uploadStepsBtn = document.getElementById('uploadStepsBtn');
+const uploadStepsInput = document.getElementById('uploadStepsInput');
+const uploadStatus = document.getElementById('uploadStatus');
+
+loader.classList.remove('active');
+runBtn.disabled = false; // Always enabled
+
+const ACTIONS = [
+  // Navigation & Waits
+  { value: 'navigate', label: 'Navigate to URL', inputs: [{name:'url', type:'text', placeholder:'https://...'}] },
+  { value: 'wait_for_element', label: 'Wait for element', inputs: [{name:'selector', type:'text', placeholder:'#login-form'}] },
+  { value: 'wait_for_navigation', label: 'Wait for navigation', inputs: [] },
+  { value: 'wait_for_url', label: 'Wait for URL', inputs: [{name:'url', type:'text', placeholder:'https://...'}] },
+  { value: 'wait_for_timeout', label: 'Wait for timeout (ms)', inputs: [{name:'timeout', type:'number', placeholder:'1000'}] },
+  // Element Actions
+  { value: 'click', label: 'Click element', inputs: [{name:'selector', type:'text', placeholder:'#submit, .btn, etc.'}] },
+  { value: 'double_click', label: 'Double-click element', inputs: [{name:'selector', type:'text', placeholder:'#submit, .btn, etc.'}] },
+  { value: 'right_click', label: 'Right-click element', inputs: [{name:'selector', type:'text', placeholder:'#submit, .btn, etc.'}] },
+  { value: 'hover', label: 'Hover over element', inputs: [{name:'selector', type:'text', placeholder:'#menu'}] },
+  { value: 'fill', label: 'Fill form field', inputs: [{name:'selector', type:'text', placeholder:'#email'}, {name:'value', type:'text', placeholder:'Value'}] },
+  { value: 'select', label: 'Select from dropdown', inputs: [{name:'selector', type:'text', placeholder:'#dropdown'}, {name:'value', type:'text', placeholder:'Option value/text'}] },
+  { value: 'check', label: 'Check/Uncheck checkbox', inputs: [{name:'selector', type:'text', placeholder:'#agree'}, {name:'value', type:'text', placeholder:'check/uncheck'}] },
+  { value: 'upload_file', label: 'Upload file', inputs: [{name:'selector', type:'text', placeholder:'#file-input'}, {name:'filepath', type:'text', placeholder:'/path/to/file'}] },
+  { value: 'download', label: 'Download file', inputs: [{name:'selector', type:'text', placeholder:'a.download-link'}] },
+  // Keyboard & Mouse
+  { value: 'type', label: 'Type text (keyboard)', inputs: [{name:'selector', type:'text', placeholder:'#input'}, {name:'text', type:'text', placeholder:'Text to type'}] },
+  { value: 'press_key', label: 'Press key', inputs: [{name:'key', type:'text', placeholder:'Enter, Tab, ArrowDown, etc.'}] },
+  { value: 'key_down', label: 'Key down', inputs: [{name:'key', type:'text', placeholder:'Shift, Control, etc.'}] },
+  { value: 'key_up', label: 'Key up', inputs: [{name:'key', type:'text', placeholder:'Shift, Control, etc.'}] },
+  { value: 'mouse_move', label: 'Mouse move to element', inputs: [{name:'selector', type:'text', placeholder:'#target'}] },
+  { value: 'mouse_down', label: 'Mouse down', inputs: [{name:'selector', type:'text', placeholder:'#target'}] },
+  { value: 'mouse_up', label: 'Mouse up', inputs: [{name:'selector', type:'text', placeholder:'#target'}] },
+  { value: 'drag_and_drop', label: 'Drag and drop', inputs: [{name:'source', type:'text', placeholder:'#source'}, {name:'target', type:'text', placeholder:'#target'}] },
+  // Scrolling
+  { value: 'scroll', label: 'Scroll to element', inputs: [{name:'selector', type:'text', placeholder:'#footer'}] },
+  { value: 'scroll_to', label: 'Scroll to position', inputs: [{name:'position', type:'text', placeholder:'top/bottom/x,y'}] },
+  // Frames
+  { value: 'switch_to_frame', label: 'Switch to frame by selector', inputs: [{name:'selector', type:'text', placeholder:'iframe[name]'}] },
+  { value: 'switch_to_main_frame', label: 'Switch to main frame', inputs: [] },
+  // Assertions
+  { value: 'assert_visible', label: 'Assert element is visible', inputs: [{name:'selector', type:'text', placeholder:'#element'}] },
+  { value: 'assert_hidden', label: 'Assert element is hidden', inputs: [{name:'selector', type:'text', placeholder:'#element'}] },
+  { value: 'assert_text', label: 'Assert element contains text', inputs: [{name:'selector', type:'text', placeholder:'#element'}, {name:'text', type:'text', placeholder:'Expected text'}] },
+  { value: 'assert_enabled', label: 'Assert element is enabled', inputs: [{name:'selector', type:'text', placeholder:'#element'}] },
+  { value: 'assert_disabled', label: 'Assert element is disabled', inputs: [{name:'selector', type:'text', placeholder:'#element'}] },
+  { value: 'assert_title', label: 'Assert page title', inputs: [{name:'title', type:'text', placeholder:'Expected title'}] },
+  { value: 'assert_url', label: 'Assert URL', inputs: [{name:'url', type:'text', placeholder:'Expected URL'}] },
+  // Extraction
+  { value: 'extract_text', label: 'Extract text from element', inputs: [{name:'selector', type:'text', placeholder:'#main'}] },
+  { value: 'extract_attribute', label: 'Extract attribute from elements', inputs: [{name:'selector', type:'text', placeholder:'.item'}, {name:'attribute', type:'text', placeholder:'href, src, etc.'}] },
+  { value: 'extract_links', label: 'Extract all navigation links', inputs: [] },
+  { value: 'extract_buttons', label: 'Extract all buttons', inputs: [] },
+  { value: 'extract_tables', label: 'Extract all tables', inputs: [] },
+  { value: 'extract_images', label: 'Extract all images', inputs: [] },
+  { value: 'page_html', label: 'Extract page HTML', inputs: [] },
+  // Screenshots
+  { value: 'screenshot', label: 'Take screenshot', inputs: [] },
+  { value: 'element_screenshot', label: 'Take element screenshot', inputs: [{name:'selector', type:'text', placeholder:'#element'}] },
+  // JavaScript
+  { value: 'js', label: 'Execute custom JavaScript', inputs: [{name:'script', type:'textarea', placeholder:'document.title'}] },
+  // Custom
+  { value: 'custom', label: 'Custom instruction', inputs: [{name:'instruction', type:'textarea', placeholder:'Describe your Scenario...'}] }
+];
+
+let steps = [
+  { action: 'custom', instruction: '' }
+];
+
+function renderSteps() {
+  stepList.innerHTML = '';
+  markStepsDirty(); // Any re-render means steps may have changed
+  steps.forEach((step, idx) => {
+    const div = document.createElement('div');
+    div.className = 'step';
+    div.style.display = 'flex';
+    div.style.flexDirection = 'column';
+    // Replace dropdown with a label for Scenario
+    const scenarioLabel = document.createElement('label');
+    scenarioLabel.textContent = 'Scenario:';
+    scenarioLabel.style.fontWeight = 'bold';
+    scenarioLabel.style.marginBottom = '10px';
+    scenarioLabel.style.display = 'block';
+    scenarioLabel.style.fontSize = '1.1em';
+    div.appendChild(scenarioLabel);
+    // Inputs for action
+    const action = ACTIONS.find(a => a.value === step.action);
+    if (action && action.inputs) {
+      action.inputs.forEach(input => {
+        const inp = document.createElement(input.type === 'textarea' ? 'textarea' : 'input');
+        inp.type = input.type === 'textarea' ? undefined : input.type;
+        inp.placeholder = input.placeholder;
+        inp.name = input.name;
+        inp.value = step[input.name] || '';
+        inp.className = 'step-input';
+        // Validation: Mark as required for selector/text/url/value inputs
+        if (['selector','text','url','value'].includes(input.name)) {
+          inp.required = true;
+        }
+        inp.oninput = e => {
+          steps[idx][input.name] = e.target.value;
+          inp.classList.remove('input-error');
+          updatePrompt();
+        };
+        div.appendChild(inp);
+      });
+    }
+    // Remove button (except for first step)
+    if (idx > 0) {
+      const removeBtn = document.createElement('button');
+      removeBtn.textContent = 'Remove';
+      removeBtn.type = 'button';
+      removeBtn.className = 'btn btn-danger';
+      removeBtn.onclick = () => {
+        steps.splice(idx, 1);
+        renderSteps();
+        updatePrompt();
+      };
+      div.appendChild(removeBtn);
+    }
+    stepList.appendChild(div);
+  });
+}
+
+// Removed Add Step functionality
+
+// Save steps to file
+saveStepsBtn.onclick = function() {
+  // Validate required fields
+  let invalid = false;
+  document.querySelectorAll('.step-input').forEach(inp => {
+    if (inp.required && (!inp.value || inp.value.trim() === '')) {
+      inp.classList.add('input-error');
+      invalid = true;
+    }
+  });
+  if (invalid) {
+    resultSection.innerHTML = '<div style="color:red;">Please fill all required fields (highlighted in red) before saving scenario.</div>';
+    return;
+  }
+  stepsAreSaved = true;
+  setRunBtnState();
+  saveStepsBtn.textContent = 'Saved!';
+  setTimeout(() => { saveStepsBtn.textContent = 'Save Scenario'; }, 1200);
+  resultSection.innerHTML = '';
+};
+
+exportStepsBtn.onclick = function() {
+  // Only allow export if steps are saved and valid
+  let invalid = false;
+  document.querySelectorAll('.step-input').forEach(inp => {
+    if (inp.required && (!inp.value || inp.value.trim() === '')) {
+      inp.classList.add('input-error');
+      invalid = true;
+    }
+  });
+  if (invalid) {
+    resultSection.innerHTML = '<div style="color:red;">Please fill all required fields (highlighted in red) before exporting scenario.</div>';
+    return;
+  }
+  if (!stepsAreSaved) {
+    resultSection.innerHTML = '<div style="color:red;">Please click "Save Scenario" before exporting.</div>';
+    return;
+  }
+  const data = { steps, prompt: promptPreview.textContent };
+  const blob = new Blob([JSON.stringify(data, null, 2)], {type: 'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'browseruse-scenario.json';
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(() => document.body.removeChild(a), 100);
+  resultSection.innerHTML = '';
+};
+
+// Upload steps from file
+uploadStepsBtn.onclick = function() {
+  uploadStepsInput.click();
+};
+uploadStepsInput.onchange = function(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(evt) {
+    try {
+      const data = JSON.parse(evt.target.result);
+      if (Array.isArray(data.steps)) {
+        steps = data.steps;
+        renderSteps();
+        updatePrompt();
+        uploadStatus.textContent = 'Steps loaded!';
+        setTimeout(() => { uploadStatus.textContent = ''; }, 2000);
+        markStepsDirty();
+      }
+      if (data.prompt) {
+        promptPreview.textContent = data.prompt;
+      }
+    } catch (err) {
+      uploadStatus.textContent = 'Invalid file!';
+      setTimeout(() => { uploadStatus.textContent = ''; }, 2000);
+    }
+  };
+  reader.readAsText(file);
+};
+
+function updatePrompt() {
+  let prompt = '';
+  steps.forEach(step => {
+    switch (step.action) {
+      case 'navigate':
+        prompt += `Navigate to ${step.url || '[URL]'} and wait until the page loads. `;
+        break;
+      case 'wait_for_element':
+        prompt += `Wait for the element with selector ${step.selector || '[selector]'} to appear. `;
+        break;
+      case 'wait_for_navigation':
+        prompt += `Wait for navigation to complete. `;
+        break;
+      case 'wait_for_url':
+        prompt += `Wait until the URL is ${step.url || '[URL]'}. `;
+        break;
+      case 'wait_for_timeout':
+        prompt += `Wait for ${step.timeout || '[timeout]'} milliseconds. `;
+        break;
+      case 'click':
+        prompt += `Click the element with selector ${step.selector || '[selector]'}. `;
+        break;
+      case 'double_click':
+        prompt += `Double-click the element with selector ${step.selector || '[selector]'}. `;
+        break;
+      case 'right_click':
+        prompt += `Right-click the element with selector ${step.selector || '[selector]'}. `;
+        break;
+      case 'hover':
+        prompt += `Hover over the element with selector ${step.selector || '[selector]'}. `;
+        break;
+      case 'fill':
+        prompt += `Fill the field with selector ${step.selector || '[selector]'} with value ${step.value || '[value]'}. `;
+        break;
+      case 'select':
+        prompt += `Select the option ${step.value || '[value]'} in the dropdown with selector ${step.selector || '[selector]'}. `;
+        break;
+      case 'check':
+        prompt += `${step.value === 'uncheck' ? 'Uncheck' : 'Check'} the checkbox with selector ${step.selector || '[selector]'}. `;
+        break;
+      case 'upload_file':
+        prompt += `Upload the file at path ${step.filepath || '[filepath]'} to the input with selector ${step.selector || '[selector]'}. `;
+        break;
+      case 'download':
+        prompt += `Download the file from the element with selector ${step.selector || '[selector]'}. `;
+        break;
+      case 'type':
+        prompt += `Type "${step.text || '[text]'}" into the element with selector ${step.selector || '[selector]'}. `;
+        break;
+      case 'press_key':
+        prompt += `Press the "${step.key || '[key]'}" key. `;
+        break;
+      case 'key_down':
+        prompt += `Hold down the "${step.key || '[key]'}" key. `;
+        break;
+      case 'key_up':
+        prompt += `Release the "${step.key || '[key]'}" key. `;
+        break;
+      case 'mouse_move':
+        prompt += `Move the mouse to the element with selector ${step.selector || '[selector]'}. `;
+        break;
+      case 'mouse_down':
+        prompt += `Mouse down on the element with selector ${step.selector || '[selector]'}. `;
+        break;
+      case 'mouse_up':
+        prompt += `Mouse up on the element with selector ${step.selector || '[selector]'}. `;
+        break;
+      case 'drag_and_drop':
+        prompt += `Drag the element with selector ${step.source || '[source]'} and drop it on ${step.target || '[target]'}. `;
+        break;
+      case 'scroll':
+        prompt += `Scroll to the element with selector ${step.selector || '[selector]'}. `;
+        break;
+      case 'scroll_to':
+        prompt += `Scroll to the ${step.position || '[position]'}. `;
+        break;
+      case 'switch_to_frame':
+        prompt += `Switch to the frame with selector ${step.selector || '[selector]'}. `;
+        break;
+      case 'switch_to_main_frame':
+        prompt += `Switch to the main frame. `;
+        break;
+      case 'assert_visible':
+        prompt += `Assert that the element with selector ${step.selector || '[selector]'} is visible. `;
+        break;
+      case 'assert_hidden':
+        prompt += `Assert that the element with selector ${step.selector || '[selector]'} is hidden. `;
+        break;
+      case 'assert_text':
+        prompt += `Assert that the element with selector ${step.selector || '[selector]'} contains the text "${step.text || '[text]'}". `;
+        break;
+      case 'assert_enabled':
+        prompt += `Assert that the element with selector ${step.selector || '[selector]'} is enabled. `;
+        break;
+      case 'assert_disabled':
+        prompt += `Assert that the element with selector ${step.selector || '[selector]'} is disabled. `;
+        break;
+      case 'assert_title':
+        prompt += `Assert that the page title is "${step.title || '[title]'}". `;
+        break;
+      case 'assert_url':
+        prompt += `Assert that the current URL is "${step.url || '[url]'}". `;
+        break;
+      case 'extract_text':
+        prompt += `Extract the text from the element with selector ${step.selector || '[selector]'}. `;
+        break;
+      case 'extract_attribute':
+        prompt += `Extract the attribute ${step.attribute || '[attribute]'} from all elements matching ${step.selector || '[selector]'}. `;
+        break;
+      case 'extract_links':
+        prompt += `Extract all navigation links as a JSON array. `;
+        break;
+      case 'extract_buttons':
+        prompt += `Extract all button texts and their selectors. `;
+        break;
+      case 'extract_tables':
+        prompt += `Extract all tables from the page as JSON. `;
+        break;
+      case 'extract_images':
+        prompt += `Extract all image URLs and alt texts. `;
+        break;
+      case 'page_html':
+        prompt += `Return the full page HTML. `;
+        break;
+      case 'screenshot':
+        prompt += `Take a screenshot of the page. `;
+        break;
+      case 'element_screenshot':
+        prompt += `Take a screenshot of the element with selector ${step.selector || '[selector]'}. `;
+        break;
+      case 'js':
+        prompt += `Execute the following JavaScript: ${step.script || '[script]'}. `;
+        break;
+      case 'custom':
+        prompt += `${step.instruction || '[custom instruction]'}. `;
+        break;
+    }
+  });
+  // Always prepend and append the timeout/retry instruction
+  prompt = prompt.trim();
+  const hybridInstruction = '';
+  if (!prompt.startsWith(hybridInstruction)) {
+    prompt = hybridInstruction + ' ' + prompt;
+  }
+  if (!prompt.endsWith(hybridInstruction)) {
+    prompt += ' ' + hybridInstruction;
+  }
+  promptPreview.textContent = prompt.trim();
+}
+
+renderSteps();
+updatePrompt();
+
+runBtn.onclick = async function() {
+    if (!stepsAreSaved) {
+      loader.classList.add('active');
+      resultSection.innerHTML = `
+        <div style="color:#D32F2F; font-weight:bold; font-size:1.1em; margin-bottom:1em;">
+          <span style="background:#fffbe7; border:1.5px solid #ffe082; border-radius:6px; padding:0.5em 1em; display:inline-block;">
+            <b>Unsaved changes!</b> Please click <span style="color:#388E3C;">Save Steps</span> before running automation.
+          </span>
+        </div>
+      `;
+      // Scroll to Save Steps button and highlight
+      saveStepsBtn.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      saveStepsBtn.classList.add('btn-warning');
+      setTimeout(() => saveStepsBtn.classList.remove('btn-warning'), 1500);
+      setTimeout(() => loader.classList.remove('active'), 500);
+      return;
+    }
+    // Validation for all steps before running
+    let invalid = false;
+    document.querySelectorAll('.step-input').forEach(inp => {
+      if (inp.required && (!inp.value || inp.value.trim() === '')) {
+        inp.classList.add('input-error');
+        invalid = true;
+      }
+    });
+    if (invalid) {
+      loader.classList.add('active');
+      resultSection.innerHTML = '<div style="color:red;">Please fill all required fields (highlighted in red) before running automation.</div>';
+      setTimeout(() => loader.classList.remove('active'), 500);
+      return;
+    }
+    runBtn.disabled = true;
+    runBtn.classList.add('disabled');
+    runBtnSpinner.style.display = '';
+    runBtnText.textContent = 'Running...';
+    loader.classList.add('active');
+    resultSection.innerHTML = '';
+    reportSection.innerHTML = '';
+    try {
+        const prompt = promptPreview.textContent;
+        let urlMissing = false;
+        if (steps.length > 0 && steps[0].action === 'navigate' && (!steps[0].url || steps[0].url.trim() === '')) {
+            urlMissing = true;
+        }
+        if (!prompt.trim() || urlMissing) {
+            loader.classList.add('active');
+            resultSection.innerHTML = '<div style="color:red;">Please enter a valid URL for the first step.</div>';
+            setTimeout(() => loader.classList.remove('active'), 500);
+            runBtn.disabled = false;
+            runBtn.classList.remove('disabled');
+            runBtnSpinner.style.display = 'none';
+            runBtnText.textContent = 'Run Automation';
+            return;
+        }
+        // Calculate the exact number of steps in the scenario
+        const numSteps = steps.length;
+        
+        const resp = await fetch('/api/browseruse/navigation', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ 
+                prompt, 
+                steps,
+                captureScreenshotOnFailure: true, // Request screenshot on failure
+                maxRetries: 0, // No retries - only try once exactly as specified
+                strictPromptFollowing: true, // Follow the prompt exactly without additional attempts
+                strictElementMatching: true, // Only look for exact element matches, don't try alternatives
+                failFast: true, // Fail immediately when an element isn't found instead of trying alternatives
+                maxActions: numSteps, // Limit the total number of actions to exactly match the number of steps
+                noExtraActions: true // Don't perform any actions beyond what's explicitly specified in the steps
+            })
+        });
+        const data = await resp.json();
+        if (data.navigation && data.navigation.length) {
+            let html = '<h4>Extracted Navigation</h4>';
+            html += '<table><tr><th>#</th><th>Name</th><th>Link</th></tr>';
+            data.navigation.forEach((btn) => {
+                html += `<tr><td>${btn.name.replace(/\./g, '.<br>')}</td><td><a href="${btn.link}" target="_blank">${btn.link}</a></td></tr>`;
+            });
+            html += '</table>';
+            resultSection.innerHTML = html;
+        } else {
+            resultSection.innerHTML = '';
+            // Hide the download button if there is no result
+            document.getElementById('downloadHtmlReportBtn').style.display = 'none';
+        }
+        // Always hide the fullscreen loader when done
+        document.getElementById('fullscreenLoader').style.display = 'none';
+        // Show report if present
+        if (data.report) {
+            // Compute overall status based on the success value in the last agent result
+            const rawOutput = (data.report && data.report.details) ? data.report.details : '';
+            
+            // Default to FAIL unless we find a successful completion
+            let overallStatus = 'FAIL';
+            let overallColor = 'red';
+            
+            // Look for success value at the end of the agent result
+            if (rawOutput) {
+              let foundSuccess = false;
+              
+              // Get the last 200 characters of the output where success is most likely to appear
+              const endOfOutput = rawOutput.slice(-200);
+              
+              // Check for success in various formats that might appear at the end
+              if (endOfOutput.includes('success=True') || 
+                  endOfOutput.includes('\'success\': True') || 
+                  endOfOutput.includes('"success": true') ||
+                  endOfOutput.includes('success":true') ||
+                  endOfOutput.includes('is_done=True, success=True')) {
+                foundSuccess = true;
+              }
+              
+              // If not found at the end, check the full output as a fallback
+              if (!foundSuccess) {
+                // Check for ActionResult with is_done=True and success=True
+                const actionResultRegex = /ActionResult\(is_done=True, success=True/i;
+                if (actionResultRegex.test(rawOutput)) {
+                  foundSuccess = true;
+                }
+              }
+              
+              if (foundSuccess) {
+                overallStatus = 'PASS';
+                overallColor = 'green';
+              } else {
+                // Check if we have a failure screenshot
+                if (data.report.failureScreenshot) {
+                  // Store screenshot in global report data
+                  window.latestAutomationReport = window.latestAutomationReport || {};
+                  window.latestAutomationReport.failureScreenshot = data.report.failureScreenshot;
+                }
+              }
+            }
+            
+            // Show the download button
+            document.getElementById('downloadHtmlReportBtn').style.display = '';
+            
+            // Build the report HTML
+            let reportHtml = `<div style='background:#f8f8f8;padding:1em;border-radius:6px;'>`;
+            
+            // Store status in global so renderStepReport can patch steps
+            window.latestAutomationReport = window.latestAutomationReport || {};
+            window.latestAutomationReport.overallStatus = overallStatus;
+            reportHtml += `<b>Scenario</b><br><div style='background:#f4f4f4;padding:1em;border-radius:6px;margin-bottom:1em;'><pre style='margin:0;font-family:monospace;font-size:1em;background:none;border:none;padding:0;color:#222;'>${prompt}</pre></div>
+      <b>Status:</b> <span style="color:${overallColor};font-weight:bold;">${overallStatus}</span><br><br>`;
+
+            if (data.report.total_links !== undefined) reportHtml += `<b>Total links:</b> ${data.report.total_links}`;
+            // No steps table needed
+            // Display failure screenshot if available and test failed
+            if (overallStatus === 'FAIL' && data.report.failureScreenshot) {
+                reportHtml += `<div style='margin-top:1em;'><b>Failure Screenshot:</b></div>
+                <div style='margin-top:0.5em;margin-bottom:1em;'>
+                    <img src="${data.report.failureScreenshot}" alt="Failure Screenshot" style="max-width:100%;border:1px solid #ddd;border-radius:4px;">
+                </div>`;
+                
+                // Display screenshot analysis if available
+                if (data.steps && data.steps.length > 0) {
+                    // Find any step with screenshot analysis
+                    const stepsWithAnalysis = data.steps.filter(step => 
+                        step.result && step.result.screenshot_analysis);
+                    
+                    if (stepsWithAnalysis.length > 0) {
+                        reportHtml += `<div style='margin-top:1em;'><b>Screenshot Analysis:</b></div>
+                        <div style='margin-top:0.5em;margin-bottom:1em;background:#f8f8f8;padding:1em;border-radius:6px;'>
+                            ${stepsWithAnalysis[0].result.screenshot_analysis}
+                        </div>`;
+                    }
+                }
+            }
+            
+            // Raw output section
+            if (data.report.details) {
+                reportHtml += `<div style='margin-top:1em;'><b>Raw Output:</b></div><pre>${data.report.details}</pre>`;
+            } else {
+                reportHtml += `<span style='color:gray;'>No details available for this run.</span>`;
+            }
+            reportHtml += '</div>';
+            // Set report HTML
+            reportSection.innerHTML = reportHtml;
+            // Store latest report data globally for download
+            window.latestAutomationReport = {
+                prompt: document.getElementById('promptPreview').innerText || '',
+                rawOutput: data.report.details || '',
+                overallStatus: overallStatus
+            };
+
+        }
+        // Render step-by-step report
+        renderStepReport(data);
+
+        if (data.error) {
+          resultSection.innerHTML = `<div style="color:red;margin-top:1em;">${data.error}</div>`;
+          if (data.raw_output) {
+            resultSection.innerHTML += `<div style="margin-top:1em;"><strong>Raw Output:</strong><pre style="background:#f4f4f4;padding:1em;border-radius:6px;overflow-x:auto;">${data.raw_output}</pre></div>`;
+          }
+        } else {
+          // Success case
+          if (data.raw_output) {
+            resultSection.innerHTML = `<div style="margin-top:1em;"><strong>Raw Output:</strong><pre style="background:#f4f4f4;padding:1em;border-radius:6px;max-height:400px;overflow-y:auto;overflow-x:auto;">${data.raw_output}</pre></div>`;
+          }
+        }
+
+    } catch (e) {
+        resultSection.innerHTML = '';
+    } finally {
+        loader.classList.remove('active');
+        runBtn.disabled = false;
+        runBtn.classList.remove('disabled');
+        runBtnSpinner.style.display = 'none';
+        runBtnText.textContent = 'Run Automation';
+    }
+};
+
+// Function to render the step-by-step report
+function renderStepReport(response) {
+  const steps = response.steps || [];
+  // Patch: If overall status is FAIL due to raw output error, mark last step as FAIL
+  if (window.latestAutomationReport && window.latestAutomationReport.overallStatus === 'FAIL') {
+    const hasStepError = steps.some(pair => pair.result && pair.result.error);
+    const rawOutput = window.latestAutomationReport.rawOutput || '';
+    if (!hasStepError && rawOutput) {
+      if (steps.length > 0) {
+        steps[steps.length - 1].result = steps[steps.length - 1].result || {};
+        steps[steps.length - 1].result.error = 'Agent/Raw Output Error: ' + (rawOutput.substring(0, 200) + (rawOutput.length > 200 ? '...' : ''));
+        steps[steps.length - 1].result.status = 'fail';
+      }
+    }
+  }
+  if (!steps.length) {
+    document.getElementById('step-report').innerHTML = '<div style="color:gray;">No step data found.</div>';
+    return;
+  }
+  let html = `<table style="width:100%;border-collapse:collapse;background:#fff;font-family:Segoe UI,Arial,sans-serif;font-size:15px;box-shadow:0 2px 8px #e0e6ed;border-radius:8px;overflow:hidden;">
+    <thead>
+      <tr style="background:#f6f8fa;border-bottom:2px solid #e0e6ed;">
+        <th style="padding:10px 0;text-align:left;">Steps</th>
+      </tr>
+    </thead>
+    <tbody>`;
+  steps.forEach((pair, i) => {
+    const intent = pair.intent;
+    const result = pair.result;
+    // Step Description from Request (intent)
+    let stepDesc = '';
+    if (result && result.description) {
+      stepDesc = result.description;
+    } else if (intent) {
+      if (intent.description) {
+        stepDesc = intent.description;
+      } else if (intent.action) {
+        // Compose a description from the action and its parameters if available
+        stepDesc = intent.action;
+        if (intent.url) stepDesc += `: ${intent.url}`;
+        if (intent.selector) stepDesc += `: ${intent.selector}`;
+        if (intent.value) stepDesc += `: ${intent.value}`;
+        if (intent.instruction) stepDesc += `: ${intent.instruction}`;
+      } else {
+        stepDesc = JSON.stringify(intent);
+      }
+    }
+    // Split the stepDesc into sentences, prefix each with a number, and join with <br>
+      let sentences = stepDesc.split(/\.(?=\s|$)/g).filter(s => s.trim().length > 0);
+      const formattedDesc = sentences.map((s, idx) => `${idx + 1}. ${s.trim()}.`).join('<br>');
+      // Mark as FAIL if result.error is present
+      const hasError = result && result.error;
+      const resultStatus = hasError ? 'FAIL' : (result && result.status ? result.status.toUpperCase() : 'N/A');
+      const resultColor = hasError ? 'red' : (result && result.status === 'pass' ? 'green' : 'red');
+      // Check if this step has screenshot analysis
+      const hasScreenshotAnalysis = result && result.screenshot_analysis;
+      
+      html += `<tr style="border-bottom:1px solid #e0e6ed;">
+        <td style="padding:8px 12px;">
+          <span style="color:#222;">${formattedDesc}</span>
+          ${hasScreenshotAnalysis ? `
+            <div style="margin-top:0.8em;padding:0.8em;background:#f4f4f4;border-radius:4px;border-left:3px solid #2196F3;">
+              <strong>Screenshot Analysis:</strong><br>
+              ${result.screenshot_analysis}
+            </div>
+          ` : ''}
+        </td>
+      </tr>`;
+  });
+  html += '</tbody></table>';
+  document.getElementById('step-report').innerHTML = html;
+}
+// Parse raw output into readable format
+function parseRawOutput(rawOutput) {
+  // Check if the output is empty or undefined
+  if (!rawOutput || rawOutput.trim() === '') {
+    return '<div class="alert alert-info">No raw output available.</div>';
+  }
+
+  try {
+    // Try to identify the AgentHistoryList pattern
+    if (rawOutput.includes('AgentHistoryList') && rawOutput.includes('ActionResult')) {
+      // Create a table for the parsed results
+      let html = '<div class="parsed-results">';
+      html += '<h4>Test Steps Summary</h4>';
+      html += '<table class="table table-striped">';
+      html += '<thead><tr><th>#</th><th>Action</th><th>Result</th><th>Status</th></tr></thead><tbody>';
+      
+      // Extract all ActionResult items
+      const actionResults = [];
+      let match;
+      const actionRegex = /ActionResult\(is_done=([^,]+), success=([^,]+), extracted_content=([^,]+), error=([^\)]+)/g;
+      while ((match = actionRegex.exec(rawOutput)) !== null) {
+        const isDone = match[1] === 'True';
+        const success = match[2] === 'True' ? true : match[2] === 'False' ? false : null;
+        let content = match[3];
+        let error = match[4];
+        if (content === 'None') content = null;
+        else if (content) {
+          content = content.replace(/^'|'$/g, '');
+        }
+        if (error === 'None') error = null;
+        else if (error) {
+          error = error.replace(/^'|'$/g, '');
+        }
+        actionResults.push({ isDone, success, content, error });
+      }
+
+      // If no action results were found, try a different approach
+      if (actionResults.length === 0) {
+        const contentMatches = rawOutput.match(/extracted_content='([^']+)'/g) || [];
+        const errorMatches = rawOutput.match(/error='([^']+)'/g) || [];
+        const successMatches = rawOutput.match(/success=(True|False)/g) || [];
+        
+        // If we have at least some matches, create results from them
+        const maxLength = Math.max(contentMatches.length, errorMatches.length, successMatches.length);
+        for (let i = 0; i < maxLength; i++) {
+          let content = i < contentMatches.length ? contentMatches[i].match(/extracted_content='([^']+)'/)[1] : null;
+          let error = i < errorMatches.length ? errorMatches[i].match(/error='([^']+)'/)[1] : null;
+          let success = i < successMatches.length ? successMatches[i].match(/success=(True|False)/)[1] === 'True' : null;
+          
+          actionResults.push({ isDone: true, success, content, error });
+        }
+      }
+
+      // Generate table rows for each action result
+      if (actionResults.length > 0) {
+        actionResults.forEach((result, index) => {
+          const statusClass = result.success ? 'text-success' : 'text-danger';
+          const statusText = result.success ? 'PASS' : 'FAIL';
+          
+          html += `<tr>
+            <td>${index + 1}</td>
+            <td>Step ${index + 1}</td>
+            <td>${result.content || (result.error ? `<span class="text-danger">${result.error}</span>` : 'No content')}</td>
+            <td class="${statusClass}">${statusText}</td>
+          </tr>`;
+        });
+      } else {
+        // No results found, show a message
+        html += '<tr><td colspan="4">No detailed results found in the output.</td></tr>';
+      }
+
+      html += '</tbody></table>';
+      
+      // Add overall status
+      const overallSuccess = actionResults.every(r => r.success !== false);
+      html += `<div class="overall-status">
+        <strong>Overall Status:</strong> 
+        <span class="${overallSuccess ? 'text-success' : 'text-danger'}">
+          ${overallSuccess ? 'PASS' : 'FAIL'}
+        </span>
+      </div>`;
+      
+      // Add final message or error if present
+      const finalMessage = rawOutput.match(/final_message='([^']+)'/);
+      if (finalMessage) {
+        html += `<div class="final-message alert ${overallSuccess ? 'alert-success' : 'alert-danger'}">
+          ${finalMessage[1]}
+        </div>`;
+      }
+      
+      html += '</div>';
+      return html;
+    } else {
+      // Fallback for other formats
+      return `<pre style="background:#f4f4f4;padding:1em;border-radius:6px;overflow-x:auto;">${rawOutput}</pre>`;
+    }
+  } catch (e) {
+    console.error('Error parsing raw output:', e);
+    return `<div class="alert alert-danger">Error parsing output: ${e.message}</div>
+            <pre style="background:#f4f4f4;padding:1em;border-radius:6px;overflow-x:auto;">${rawOutput}</pre>`;
+  }
+}
+
+// Update the result display function to use the parser
+function updateResultDisplay(rawOutput) {
+  const resultSection = document.getElementById('resultSection');
+  if (rawOutput) {
+    const parsedHtml = parseRawOutput(rawOutput);
+    resultSection.innerHTML = parsedHtml;
+    
+    // Add some styling
+    const style = document.createElement('style');
+    style.textContent = `
+      .parsed-results { margin-top: 20px; }
+      .parsed-results table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+      .parsed-results th, .parsed-results td { padding: 8px 12px; text-align: left; border-bottom: 1px solid #ddd; }
+      .parsed-results th { background-color: #f5f5f5; }
+      .overall-status { font-size: 1.2em; margin: 15px 0; }
+      .text-success { color: #28a745; }
+      .text-danger { color: #dc3545; }
+      .final-message { border-radius: 4px; }
+    `;
+    document.head.appendChild(style);
+  }
+}
+
+// Download HTML Report logic
+
+document.getElementById('downloadHtmlReportBtn').addEventListener('click', function() {
+  // Use the globally stored report data
+  const report = window.latestAutomationReport || {};
+  const prompt = report.prompt || '';
+  const rawOutputStr = report.rawOutput || '';
+  
+  // Use the same status detection logic as the main UI
+  let overallStatus = 'FAIL';
+  let overallColor = 'red';
+  
+  if (rawOutputStr) {
+    let foundSuccess = false;
+    
+    // Get the last 200 characters of the output where success is most likely to appear
+    const endOfOutput = rawOutputStr.slice(-200);
+    
+    // Check for success in various formats that might appear at the end
+    if (endOfOutput.includes('success=True') || 
+        endOfOutput.includes('\'success\': True') || 
+        endOfOutput.includes('"success": true') ||
+        endOfOutput.includes('success":true') ||
+        endOfOutput.includes('is_done=True, success=True')) {
+      foundSuccess = true;
+    }
+    
+    // If not found at the end, check the full output as a fallback
+    if (!foundSuccess) {
+      // Check for ActionResult with is_done=True and success=True
+      const actionResultRegex = /ActionResult\(is_done=True, success=True/i;
+      if (actionResultRegex.test(rawOutputStr)) {
+        foundSuccess = true;
+      }
+    }
+    
+    if (foundSuccess) {
+      overallStatus = 'PASS';
+      overallColor = 'green';
+    }
+  }
+  
+  // Build the HTML content
+  const htmlContent = `<!DOCTYPE html>
+<html><head><meta charset='UTF-8'><title>Automation Report</title>
+<style>
+  body { font-family: Segoe UI, Arial, sans-serif; background: #f8f8f8; color: #222; }
+  .container { max-width: 900px; margin: 2em auto; background: #fff; border-radius: 8px; padding: 2em; box-shadow: 0 2px 8px #e0e6ed; }
+  pre {
+    background: #f4f4f4;
+    color: #222;
+    padding: 1em;
+    border-radius: 6px;
+    margin-top: 1em;
+    white-space: pre-wrap;
+    max-height: none;
+    overflow-y: visible;
+    overflow-x: auto;
+  }
+  h2 { margin-bottom: 0.5em; }
+  img.screenshot { max-width: 100%; border: 1px solid #ddd; border-radius: 4px; margin: 1em 0; }
+</style>
+</head><body><div class='container'>
+  <h2>Automation Report</h2>
+  <h3>Scenario</h3>
+  <div style='background:#f4f4f4;padding:1em;border-radius:6px;margin-bottom:1.5em;font-family:monospace;'><pre style='margin:0;font-family:monospace;font-size:1em;background:none;border:none;padding:0;color:#222;'>${prompt}</pre></div>
+  <b>Status:</b> <span style="color:${overallColor};font-weight:bold;">${overallStatus}</span><br><br>
+  ${overallStatus === 'FAIL' && report.failureScreenshot ? `
+  <h3>Failure Screenshot</h3>
+  <img src="${report.failureScreenshot}" alt="Failure Screenshot" class="screenshot">
+  ` : ''}
+  <h3>Raw Output</h3>
+  ${rawOutputStr ? `<pre style="background:#f4f4f4;padding:1em;border-radius:6px;overflow-x:auto;">${rawOutputStr}</pre>` : '<div style="color:gray;">No raw output available.</div>'}
+</div></body></html>`;
+  
+  // Create a Blob and trigger download
+  const blob = new Blob([htmlContent], {type: 'text/html'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'automation-report.html';
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(() => {
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }, 100);
+});
+</script>
+</body>
+</html>

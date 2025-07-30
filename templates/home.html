@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='0.9em' font-size='90'>🚀</text></svg>">
+  <title>Co-Tester</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/styles.css">
+  <link rel="stylesheet" href="/static/navbar-tabs.css">
+</head>
+<body>
+  {% include 'navbar.html' %}
+  <div class="container">
+
+    <div class="welcome-box">
+
+      <br>
+      <h1 style="display: flex; align-items: center; gap: 0.2em; font-size: 1.7rem; font-weight: 700; white-space: nowrap;">
+        👋 Welcome to<span class="navbar-logo" style="font-size: 1.1rem; margin-left: 0.1em;">
+          <span class="logo-emoji">🚀</span>
+          <span class="logo-text">Co-Tester</span>
+        </span>
+      </h1>
+      <br><br>
+    
+      <p><strong>This is your one-stop platform for:</strong></p>
+      <br>
+    
+      <ul>
+        <li><strong>Test Gen <span class="ai-badge-navbar">🤖 AI</span></strong>: AI- powered Test Generator for faster QA cycles</li>
+        <br>
+        <li><strong>UI Analysis <span class="ai-badge-navbar">🤖 AI</span></strong>: AI-powered UI analysis</li>
+        <br>
+        <li><strong>UI Automation<span class="ai-badge-navbar">🤖 AI</span></strong>: AI-powered UI automation</li>
+        <br>
+        <li><strong>Data Generator 📊</strong>: Test Data Generation for realistic scenarios</li>
+        <br>
+        </ul>
+    
+      <br>
+    
+      <h3>📍 Use the Navigation above to <strong>Get Started</strong></h3>
+      <br>
+    
+      <p><em>🛠️ More modules under construction — stay tuned!</em></p>
+    
+      <br>
+    
+    </div>
+    
+    <br>
+    <div class="quote-spotlight" id="daily-quote">
+    </div>
+    
+
+  </div>
+  <script src="{{ url_for('static', filename='js/quotes.js') }}"></script>
+</body>
+</html>

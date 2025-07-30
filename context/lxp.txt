@@ -1,0 +1,258 @@
+### Chunk 1 — LMS Structure & Hierarchy
+
+```
+Entities & Relationships:
+- Program → contains Courses
+- Course → contains Modules
+- Module → contains Sessions & Segments
+- Segment → contains Assets
+
+Asset Locking:
+- On enrollment, only first asset of first module in each course is unlocked.
+- Next asset unlocks only when previous asset is completed.
+
+Sequential vs Non-Sequential:
+- Can configure containers (Course/Module/Segment) as sequential or non-sequential.
+- If sequential, learner must finish prior container before next unlocks.
+- Availability & Due Dates apply at each container level.
+```
+
+### Chunk 2 — Asset Types & Behaviors
+
+```
+Asset Types:
+1. Video
+2. PDF/Document
+3. Graded Assessment (MCQ, MSQ)
+4. Assignments
+   - Manual-graded
+   - Auto-graded
+5. Super Asset (Video + Text)
+6. Recall Quiz (Non-graded)
+
+Behavior:
+- Videos: can Bookmark at timestamp; Watch Now plays video.
+- PDFs: open in viewer; can Bookmark page.
+- Graded Assessments: immediate score display.
+- Assignments: submission workflow, file upload, grading panel.
+- Super Assets: combined media/text view.
+- Recall Quizzes: for self-assessment, no score stored.
+```
+
+### Chunk 3 — Navigation & UI Flows
+
+```
+Main Navigation:
+- Home → Dashboard
+- Courses → Module list → Asset list
+- Sessions tab → Live session links (Zoom, UGlive, External)
+- Profile dropdown → Profile, Help & Support, Logout
+
+Help & Support:
+- Accessible via navbar and profile dropdown.
+- Pages:
+  • My Queries (tabs: Open, Closed)
+  • “No Queries Found” when empty (with header & subtext).
+  • Only shows queries ≤120 days old.
+
+Bookmarks & Notes:
+- Bookmark icon on assets; stores timestamp/context.
+- Notes tab: free text notes linked to assets; timestamped.
+- Notes and Bookmarks appear under their respective pages.
+```
+
+### Chunk 4 — Enrollment & Access Rules
+
+```
+Enrollment:
+- Learner enrolls in Program → all courses added to learner’s view.
+- Enrollment date captured; used for availability windows.
+
+Access Control:
+- Assets locked/unlocked per sequence & due dates.
+- Direct URL to locked asset → “Access Denied” message.
+- Admin/Delivery Manager roles bypass locking rules.
+
+Guest Link:
+- Generates temporary access URL for non-learners.
+- Instructor privileges: view & present session via iPad (IIITB use-case).
+```
+
+### Chunk 5 — Assignment Submission & Grading
+
+```
+Manual Assignment Workflow:
+- Learner uploads file before due date.
+- Post-due: can request extension; if approved, due date shifts.
+
+Auto-Graded Assignment:
+- System runs against answer key; instant feedback.
+
+Grading Panel:
+- Display submission details (timestamp, file link).
+- Grader enters marks; UI supports lenient/strict schema.
+
+Deferral Tag:
+- If learner defers submission, “Deferral” shown on scorecard.
+
+Penalties:
+- Late penalty % per day (configurable).
+- Grace period days exempt from penalty.
+- Max penalty cap per assignment.
+```
+
+### Chunk 6 — Penalty & Extension Logic
+
+```
+Penalty Configuration:
+- Parameters:
+  • penalty_percent_per_day
+  • grace_period_days
+  • max_penalty_percent
+
+Application:
+- If submission_date > due_date + grace_period:
+   final_score = raw_score * (1 − penalty_percent_per_day * days_late)
+   final_score ≥ 0; floor at zero.
+- If penalty exceeds max_penalty_percent, apply cap.
+
+Extension Requests:
+- Learner clicks “Request Extension” → form (reason, days).
+- Delivery Manager approves/denies → due_date updated or stays.
+```
+
+### Chunk 7 — Program Versioning & Cohort Logic
+
+```
+Versioning Epic (IRA-59024 → 59090):
+- Cohort-specific curriculum versions.
+- Create new version → edits apply only to new cohort.
+- Discard unpublished versions; history retained.
+
+Cohort Cloning:
+- Clone curriculum from one cohort to another.
+- Can choose to include only published assets or drafts too.
+
+Enrollment Impact:
+- Learners in “current” cohorts see active version.
+- “Future” cohorts inherit new versions automatically.
+- Completed cohorts locked; no further updates.
+```
+
+### Chunk 8 — Session & Live Class Management
+
+```
+Live Sessions:
+- Types: Zoom, UGlive, External link.
+- “Join” button initiates attendance recording.
+- Attendance logged when learner clicks “Join”.
+
+Recording Access:
+- After session, “Watch Now” link appears under Sessions.
+- Recording retention policy: X days after session.
+
+Rescheduling & Cancellation:
+- System sends notifications to learners & instructors.
+- UI indicates “Rescheduled” or “Cancelled” with new date/time.
+```
+
+### Chunk 9 — Auto-Allocation of Evaluators
+
+```
+AutoAllocator Workflow:
+- Input: evaluator-to-assignment CSV at cohort level.
+- Modes:
+  • Round-Robin
+  • Load-Based (least active load first)
+
+Rules:
+- Skip evaluators with capacity = 0.
+- Active_load and capacity updated on each assignment.
+- Manual override: change capacity or active_load → reallocate remaining.
+
+Error Handling:
+- Invalid CSV rows → error file download with line numbers.
+```
+
+### Chunk 10 — Bulk Operations & Sync
+
+```
+Bulk Assignment:
+- Enroll multiple learners via CSV.
+- Bulk track/elective assignment via Enrollment Manager.
+
+Content Sync:
+- Push updates from “Woolf” widget to course pages.
+- Bulk file download for videos/documents on multiple pages.
+
+Learner Name Sync:
+- Ensure consistent naming across UI and reports.
+- Touchpoints: Scorecard, Profile, Notifications.
+```
+
+### Chunk 11 — Duplicate & Version Conflict Handling
+
+```
+Duplicate Asset Guardrails:
+- Prevent adding same asset twice in a curriculum.
+- If attempted:
+  • Show warning: “Asset already exists”
+  • Option: link existing asset instead of creating new.
+
+Unpublished vs Published:
+- Editing unpublished asset doesn’t affect live cohorts.
+- Publishing moves asset from draft to active timeline.
+
+Rollback:
+- Delivery Manager can revert published asset → previous version restored.
+```
+
+### Chunk 12 — Error Pages & Edge Cases
+
+```
+Error & Support Screens:
+- 404 Page: custom design, support link.
+- Browser‐not‐supported Page: lists required browsers.
+
+Edge Cases:
+- If no modules in course → “Coming Soon” placeholder.
+- If all assets locked → show countdown to availability.
+- If API fails fetching assignments → retry logic & user message.
+
+API Rate-Limiting:
+- Context file coverage ensures fallback for partial failures.
+```
+
+### Chunk 13 — Roles & Permissions
+
+```
+- **Learner**
+  • Enrolls in programs, navigates courses/modules/assets
+  • Can view/open unlocked assets, bookmark, take notes, submit assignments, request extensions
+  • Sees only their own queries in Help & Support
+
+- **Instructor / SME**
+  • Creates and schedules live sessions (Zoom, UGlive, External)
+  • Views session attendance, reschedules/cancels sessions
+  • Accesses guest link features (e.g. present via iPad)
+
+- **Content Manager**
+  • Publishes/unpublishes assets across program versions
+  • Edits draft assets without affecting live cohorts
+  • Clones curricula between cohorts
+
+- **Delivery Manager / Admin**
+  • Overrides locking rules (can unlock any asset)
+  • Approves/denies extension requests
+  • Rolls back published versions, manages bulk enrollment/tracks
+  • Views all learner queries (not limited by 120-day filter)
+
+- **Grader / Evaluator**
+  • Receives auto-allocator assignments
+  • Uses grading panel (strict/lenient) for manual assignments
+  • Cannot change penalty configs, but can apply deferral tags
+
+- **Guest (External)**
+  • Access via time-limited URL
+  • Can join live sessions but cannot submit or view internal dashboards
+```

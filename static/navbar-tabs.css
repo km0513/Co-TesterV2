@@ -1,0 +1,84 @@
+/* Shared Navbar/Tab Styles for Co-Tester */
+:root {
+  --primary: #D32F2F;
+  --primary-hover: #B71C1C;
+  --border: #999999;
+}
+.navbar-header {
+  background: #fff;
+  border-radius: 10px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  margin: 8px auto 8px auto;
+  max-width: 980px;
+  padding: 0.6rem 1.6rem;
+  display: flex;
+  align-items: center;
+  position: sticky;
+  top: 0;
+  z-index: 1100;
+}
+
+.navbar-brand {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #D32F2F;
+  letter-spacing: -1px;
+  font-family: 'Inter', 'Segoe UI', Arial, sans-serif;
+  display: flex;
+  align-items: center;
+}
+
+.tabs-container {
+  display: flex;
+  gap: 0.3rem;
+  margin-bottom: 0.7rem;
+  padding: 0.5rem 0.5rem 0 0.5rem;
+  background: #fff;
+  border-radius: 5px;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+  align-items: center;
+}
+.tab {
+  padding: 0.4rem 1.1rem;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 0;
+  cursor: pointer;
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: var(--primary);
+  transition: all 0.15s ease;
+  text-decoration: none !important;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+}
+.tab.active {
+  background: var(--primary);
+  color: #fff;
+  border-color: var(--primary);
+  text-decoration: none !important;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+.tab:hover:not(.active) {
+  background: var(--primary-hover);
+  color: #fff;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+.tab[disabled], .tab:disabled {
+  background: #f5f5f5 !important;
+  color: #bdbdbd !important;
+  opacity: 0.6;
+  border-color: #f5f5f5;
+}
+/* Only round the left corners for the first tab, right corners for the last tab */
+.tabs-container .tab:first-child {
+  border-top-left-radius: 5px;
+  border-bottom-left-radius: 5px;
+}
+.tabs-container .tab:last-child {
+  border-top-right-radius: 5px;
+  border-bottom-right-radius: 5px;
+}
+.tabs-container .tab:last-child.active {
+  border-left: none;
+  margin-left: -1px;
+}

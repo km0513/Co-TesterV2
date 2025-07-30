@@ -1,0 +1,27 @@
+navigate to stage-lxp.upgrad.dev 
+click on proceed with email 
+enter ramesh.rao@upgrad.com in the textbox 
+click on continue button 
+enter 1 2 3 4 in the OTP 
+click on continue button 
+In the role selection page click on learner 
+wait for learner dashboard to load 
+Verify in on top Home, My Programs, Academic planner are displayed.
+
+
+navigate to stage-lxp.upgrad.dev 
+click on proceed with email 
+Verify continue button 
+
+
+navigate google.com
+click on the search box
+enter news and search
+verify if user lands in the news section
+
+
+navigate google.com
+click on the search box
+enter news and search
+in the results click on news
+on load verify if user lands in the news section

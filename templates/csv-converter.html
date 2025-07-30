@@ -1,0 +1,55 @@
+<!-- CSV Converter Page -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CSV Converter - Co-Tester</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/styles.css">
+    <style>
+        body { background: #f8f9fa; font-family: 'Inter', 'Segoe UI', Arial, sans-serif; }
+        .container { max-width: 700px; margin: 0 auto; padding: 2rem; }
+        textarea { width: 100%; min-height: 120px; font-size: 1.1em; margin-bottom: 1em; }
+        .output-area { background: #fff; border: 1px solid #ddd; padding: 1em; border-radius: 6px; min-height: 80px; font-family: monospace; }
+        .btn { margin-top: 1em; }
+        .copy-btn { float: right; margin-top: -2.5em; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>CSV Converter</h2>
+        <p>Paste your list (comma, tab, or newline separated) below. Click 'Convert' to generate a CSV, which you can easily copy.</p>
+        <textarea id="inputList" placeholder="Paste your items here..."></textarea>
+        <button class="btn btn-primary" onclick="convertToCSV()">Convert</button>
+        <button class="btn btn-secondary copy-btn" onclick="copyCSV()">Copy CSV</button>
+        <h4 style="margin-top:1.5em;">CSV Output</h4>
+        <div class="output-area" id="csvOutput" contenteditable="true"></div>
+    </div>
+    <script>
+        function convertToCSV() {
+            let input = document.getElementById('inputList').value;
+            let lines = input.split(/\r?\n|,|\t/).map(s => s.trim()).filter(Boolean);
+            if (lines.length === 0) {
+                document.getElementById('csvOutput').innerText = '';
+                return;
+            }
+            // Escape double quotes and join as CSV
+            let csv = lines.map(item => '"' + item.replace(/"/g, '""') + '"').join(',');
+            document.getElementById('csvOutput').innerText = csv;
+        }
+        function copyCSV() {
+            let output = document.getElementById('csvOutput');
+            let range = document.createRange();
+            range.selectNodeContents(output);
+            let sel = window.getSelection();
+            sel.removeAllRanges();
+            sel.addRange(range);
+            try {
+                document.execCommand('copy');
+            } catch (e) {}
+            sel.removeAllRanges();
+        }
+    </script>
+</body>
+</html>

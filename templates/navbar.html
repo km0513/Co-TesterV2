@@ -1,0 +1,105 @@
+<!-- Shared Navigation Bar Include -->
+<link rel="stylesheet" href="/static/navbar-tabs.css">
+<div class="navbar-outer">
+  <div class="header navbar-header" style="display: flex; align-items: center;">
+    <a href="/home" style="text-decoration: none; color: inherit;">
+      <div class="navbar-logo" style="flex: 0 0 auto; display: flex; align-items: center; padding: 0 24px 0 16px; font-size: 1.3em; font-weight: bold; white-space: nowrap;">
+        <span class="logo-emoji">🚀</span>
+        <span class="logo-text">Co-Tester</span>
+      </div>
+    </a>
+    <div style="flex: 1 1 auto; display: flex; align-items: center; min-width: 0;">
+      <button id="carouselLeft" style="background:none;border:none;font-size:1.5em;cursor:pointer;padding:0 0.5em;user-select:none;">&#8592;</button>
+      <div class="button-group tabs-container carousel-tabs" id="carouselTabs">
+        <a href="/home" class="tab{% if active_tab == 'home' %} active{% endif %}">Home</a>
+        <a href="/manual-co-test" class="tab{% if active_tab == 'manual' %} active{% endif %}">Test Gen<span class="ai-badge-navbar">🤖 AI</span></a>
+        <a href="/screen-analysis" class="tab{% if active_tab == 'screen-analysis' %} active{% endif %}">UI Analysis🔍<span class="ai-badge-navbar">🤖 AI</span></a>
+        <a href="/browseruse-automation" class="tab{% if active_tab == 'browseruse' %} active{% endif %}">UI Automation<span class="ai-badge-navbar">🤖 AI</span></a>
+        <a href="/data" class="tab{% if active_tab == 'data' %} active{% endif %}">Data Generator 📊</a>
+        {% if false %}
+        <a href="/code" class="tab{% if active_tab == 'api' %} active{% endif %}">API Co-Test 🧪</a>
+        <a href="/dom-extractor" class="tab{% if active_tab == 'ui' %} active{% endif %}">UI Co-Test 🖥️</a>
+        <a href="/pom-step-builder" class="tab{% if active_tab == 'pom-step-builder' %} active{% endif %}">POM Builder 🧩</a>
+        {% endif %}
+      </div>
+      <button id="carouselRight" style="background:none;border:none;font-size:1.5em;cursor:pointer;padding:0 0.5em;user-select:none;">&#8594;</button>
+    </div>
+  </div>
+</div>
+<style>
+.carousel-tabs {
+  display: flex;
+  overflow-x: auto;
+  white-space: nowrap;
+  gap: 0.5em;
+  padding: 0 16px 2px 16px;
+  scrollbar-width: none; /* Firefox */
+  position: relative;
+}
+.carousel-tabs::-webkit-scrollbar {
+  display: none; /* Chrome, Safari */
+}
+.tab {
+  flex: 0 0 auto;
+  min-width: 110px;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  white-space: nowrap;
+}
+#carouselLeft, #carouselRight {
+  background: #f2f8ff;
+  border: 1.5px solid #1976D2;
+  color: #1976D2;
+  border-radius: 50%;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s, box-shadow 0.2s, color 0.2s;
+  font-size: 1.5em;
+  cursor: pointer;
+  margin: 0 0.2em;
+}
+#carouselLeft:hover, #carouselRight:hover {
+  background: #1976D2;
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(25,118,210,0.12);
+}
+</style>
+<script>
+const carousel = document.getElementById('carouselTabs');
+const leftBtn = document.getElementById('carouselLeft');
+const rightBtn = document.getElementById('carouselRight');
+leftBtn.onclick = () => {
+  carousel.scrollBy({left: -150, behavior: 'smooth'});
+};
+rightBtn.onclick = () => {
+  carousel.scrollBy({left: 150, behavior: 'smooth'});
+};
+function updateArrows() {
+  leftBtn.style.visibility = carousel.scrollLeft > 5 ? 'visible' : 'hidden';
+  rightBtn.style.visibility = (carousel.scrollLeft + carousel.offsetWidth < carousel.scrollWidth - 5) ? 'visible' : 'hidden';
+}
+carousel.addEventListener('scroll', updateArrows);
+window.addEventListener('resize', updateArrows);
+updateArrows();
+
+// Ensure selected tab is scrolled into view on click
+// (If page reloads, this will only work for SPAs. For server-side, see below)
+document.querySelectorAll('.carousel-tabs .tab').forEach(tab => {
+  tab.addEventListener('click', function(e) {
+    setTimeout(() => {
+      this.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+    }, 100);
+  });
+});
+
+// If your app reloads the page on tab click, scroll the active tab into view on load
+window.addEventListener('DOMContentLoaded', function() {
+  const activeTab = document.querySelector('.carousel-tabs .tab.active');
+  if (activeTab) {
+    activeTab.scrollIntoView({ behavior: 'auto', inline: 'center', block: 'nearest' });
+  }
+});
+</script>

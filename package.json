@@ -1,0 +1,11 @@
+{
+  "scripts": {
+    "heroku-postbuild": "playwright install"
+  },
+  "dependencies": {
+    "playwright": "^1.43.1"
+  },
+  "engines": {
+    "node": "20.x"
+  }
+}
