@@ -1,6 +1,7 @@
 import os
 import base64
-os.environ["PLAYWRIGHT_HEADLESS"] = "true"
+# Configure browser visibility (false means browser will be visible)
+os.environ["PLAYWRIGHT_HEADLESS"] = "false"  # browseruse needs visible browser
 from dotenv import load_dotenv
 load_dotenv()  # This will load variables from .env into os.environ
 import logging

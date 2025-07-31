@@ -24,6 +24,14 @@ PLAYWRIGHT_HEADLESS = os.environ.get('PLAYWRIGHT_HEADLESS', 'true').lower() == '
 def browseruse_navigation_executor():
     """Handle browser automation requests from the frontend"""
     logger.info("Browser automation endpoint called")
+    logger.info(f"Running in {'production' if os.environ.get('FLASK_ENV') == 'production' else 'development'} mode")
+    logger.info(f"Playwright headless mode: {PLAYWRIGHT_HEADLESS}")
+    
+    # Log system information
+    import platform
+    logger.info(f"System: {platform.system()}")
+    logger.info(f"Platform: {platform.platform()}")
+    logger.info(f"Python version: {platform.python_version()}")
     
     try:
         # Check if Playwright is available (this should be defined in the main app)
@@ -61,7 +69,22 @@ def browseruse_navigation_executor():
         
         # Run browser automation
         with sync_playwright() as p:
-            browser = p.chromium.launch(headless=PLAYWRIGHT_HEADLESS)
+            # Configure browser launch options for both local and production
+            browser_options = {
+                'headless': PLAYWRIGHT_HEADLESS,  # True in prod, configurable locally
+                'args': [
+                    '--no-sandbox',
+                    '--disable-setuid-sandbox',
+                    '--disable-dev-shm-usage',
+                    '--disable-accelerated-2d-canvas',
+                    '--no-first-run',
+                    '--no-zygote',
+                    '--disable-gpu',
+                    '--disable-audio-output',
+                    '--window-size=1920,1080'
+                ]
+            }
+            browser = p.chromium.launch(**browser_options)
             context = browser.new_context()
             page = context.new_page()
             
