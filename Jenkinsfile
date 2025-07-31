@@ -1,4 +1,4 @@
-@Library('kh-cicd-repo@co-tester') _
+@Library('kh-cicd-repo') _
 // Define sample Data here, Test Cases: true/false
 def data = [
   "key": "value",
