@@ -1704,35 +1704,71 @@ def generate_testcases():
             context_chunks = list(chunk_text(context_text, chunk_size, overlap))
             for idx, chunk in enumerate(context_chunks):
                 chunk_prompt = (
-                    f"Context chunk {idx+1} of {len(context_chunks)}:\n"
-                    f"{chunk}\n\n"
-                    f"{visual_section if visual_section else ''}"
-                    "As a senior QA engineer specializing in functional testing, your task is to create a comprehensive and exhaustive set of manual test scenarios for the following functionality. "
-                    "Consider all relevant aspects, including API interactions (if applicable), UI/UX elements (if present), and underlying logic. "
-                    "Each test scenario must be represented as a JSON object with exactly three keys: "
-                    "'step' (describing the precise action to be performed or the initial system state), "
-                    "'expected' (detailing the exact, verifiable outcome), and "
-                    "'estimate_minutes' (a realistic estimate of how long it will take to execute the test manually, including setup, execution, validation, and evidence capture). "
-                    "IMPORTANT: The value of 'estimate_minutes' must be either 5, 10, or 15. No other values are allowed.\n\n"
-                    "Choose the time estimate based on complexity:\n"
-                    "- Use 5 minutes for very simple validations (e.g., filters, button visibility).\n"
-                    "- Use 10 minutes for moderate checks involving user actions and validations.\n"
-                    "- Use 15 minutes for end-to-end flows or multi-step functional scenarios.\n\n"
-                    "Your test scenarios should thoroughly cover:\n"
-                    "- Core functional workflows and happy path scenarios\n"
-                    "- Edge cases and boundary conditions\n"
-                    "- Negative test cases with invalid inputs or unexpected actions\n"
-                    "- Data validation (input/output)\n"
-                    "- API behavior (if applicable)\n"
-                    "- UI/UX expectations (element visibility, user feedback, error handling)\n"
-                    "- Any implicit logic or dependencies derived from the description\n\n"
-                    "Do NOT assume anything beyond the scope of the described functionality (e.g., login, unrelated modules).\n"
-                    "The final output MUST be a single JSON array containing only test case objects. Each object must strictly follow this format:\n"
-                    "{'step': '...', 'expected': '...', 'estimate_minutes': 15}\n"
-                    "Do NOT include extra fields, comments, headings, or explanations.\n\n"
-                    f"Scenario:\n{scenario}\n\n"
-                    "Test Cases:"
-                )
+    f"Context chunk {idx+1} of {len(context_chunks)}:\n"
+    f"{chunk}\n\n"
+    f"{visual_section if visual_section else ''}"
+    "You are a **Senior QA Engineer** responsible for ensuring deep functional coverage across API, UI, and data workflows.\n\n"
+    
+    "Your task is to generate a **thorough and exhaustive list of manual test scenarios** based on the following functionality.\n"
+    "Design tests that validate functionality from every angle — core workflows, edge behaviors, data conditions, and integrations.\n"
+    
+    "Each test case must be formatted as a **JSON object** with the following keys ONLY:\n"
+    "- 'step': Describes the exact user/system action or precondition\n"
+    "- 'expected': Describes the precise, observable, verifiable outcome\n"
+    "- 'estimate_minutes': A realistic duration to execute, including setup, execution, validation, and evidence collection\n\n"
+
+    "Allowed values for 'estimate_minutes' are: **5, 10, 15, 20, 30, 45, or 60** — based on the depth and complexity of the scenario. Choose wisely:\n"
+    "- 5 mins → Atomic checks (simple UI visibility, tooltip, toggle states)\n"
+    "- 10 mins → One-step validations (basic API, single-form validation)\n"
+    "- 15 mins → Medium-complex UI/API workflows (validation + feedback + transition)\n"
+    "- 20 mins → State-dependent logic or cross-condition checks\n"
+    "- 30 mins → Composite flows (multi-role or chained interaction across components)\n"
+    "- 45 mins → Partial end-to-end journeys or integration with environment dependency\n"
+    "- 60 mins → Full-scale integration flows involving multiple modules or roles\n\n"
+
+    "You are expected to generate **30–50 well-formed test cases**, ensuring coverage in the following categories:\n\n"
+    
+    "🔹 **API-Level Scenarios** (if applicable):\n"
+    "- Valid/invalid payloads\n"
+    "- Required vs optional fields\n"
+    "- Status codes (200, 400, 403, 404, 500, etc.)\n"
+    "- Header behavior and auth dependencies\n"
+    "- Data returned, field types, nullability, pagination, and contract schema\n\n"
+
+    "🔹 **UI and UX Scenarios** (if applicable):\n"
+    "- Element visibility, state changes (enabled/disabled)\n"
+    "- Input validation, field behavior, UI error/success messages\n"
+    "- Modal handling, transitions, scroll behavior, tab flow\n"
+    "- Accessibility implications (if implied)\n"
+
+    "🔹 **Data-Intensive Scenarios**:\n"
+    "- Input limits, boundary value tests, malformed values\n"
+    "- Data lifecycle (create, update, delete, restore)\n"
+    "- Pre-existing data states, data merging/overwrites\n"
+    "- Audit trails or log validation (if applicable)\n"
+
+    "🔹 **Negative, Role-Based, and Integration Scenarios**:\n"
+    "- Unauthorized actions, permission-denied responses\n"
+    "- Multi-role workflows (if scenario suggests)\n"
+    "- Cross-module dependencies or configuration-driven behaviors\n"
+    "- Conditional rendering, auto-calculated values, time-based rules\n\n"
+
+    "⚠️ **Constraints:**\n"
+    "- DO NOT assume anything outside the described scope (e.g., login, navigation, unrelated features)\n"
+    "- DO NOT add extra keys, markdown, explanation, comments, or grouping in the output\n"
+    "- DO NOT summarize — only return test cases\n\n"
+
+    "✅ **Your final output must be a single JSON array** like this:\n"
+    "[\n"
+    "  {'step': '...', 'expected': '...', 'estimate_minutes': 10},\n"
+    "  {'step': '...', 'expected': '...', 'estimate_minutes': 30},\n"
+    "  ...\n"
+    "]\n\n"
+
+    f"Scenario:\n{scenario}\n\n"
+    "Test Cases:"
+)
+
                 try:
                     api_key = os.environ.get("GOOGLE_API_KEY")
                     if not api_key:
@@ -1770,34 +1806,44 @@ def generate_testcases():
 
         # --- ORIGINAL LOGIC FOR SMALL CONTEXT OR NO CONTEXT ---
         prompt = (
-            (context_text + "\n\n" if context_text else "") +
-            (visual_section if visual_section else "") +
-            "As a senior QA engineer specializing in functional testing, your task is to create a comprehensive and exhaustive set of manual test scenarios for the following functionality. "
-            "Consider all relevant aspects, including API interactions (if applicable), UI/UX elements (if present), and underlying logic. "
-            "Each test scenario must be represented as a JSON object with exactly three keys: "
-            "'step' (describing the precise action to be performed or the initial system state), "
-            "'expected' (detailing the exact, verifiable outcome), and "
-            "'estimate_minutes' (a realistic estimate of how long it will take to execute the test manually, including setup, execution, validation, and evidence capture). "
-            "IMPORTANT: The value of 'estimate_minutes' must be either 5, 10, or 15. No other values are allowed.\n\n"
-            "Choose the time estimate based on complexity:\n"
-            "- Use 5 minutes for very simple validations (e.g., filters, button visibility).\n"
-            "- Use 10 minutes for moderate checks involving user actions and validations.\n"
-            "- Use 15 minutes for end-to-end flows or multi-step functional scenarios.\n\n"
-            "Your test scenarios should thoroughly cover:\n"
-            "- Core functional workflows and happy path scenarios\n"
-            "- Edge cases and boundary conditions\n"
-            "- Negative test cases with invalid inputs or unexpected actions\n"
-            "- Data validation (input/output)\n"
-            "- API behavior (if applicable)\n"
-            "- UI/UX expectations (element visibility, user feedback, error handling)\n"
-            "- Any implicit logic or dependencies derived from the description\n\n"
-            "Do NOT assume anything beyond the scope of the described functionality (e.g., login, unrelated modules).\n"
-            "The final output MUST be a single JSON array containing only test case objects. Each object must strictly follow this format:\n"
-            "{'step': '...', 'expected': '...', 'estimate_minutes': 15}\n"
-            "Do NOT include extra fields, comments, headings, or explanations.\n\n"
-            f"Scenario:\n{scenario}\n\n"
-            "Test Cases:"
-        )
+    (context_text + "\n\n" if context_text else "") +
+    (visual_section if visual_section else "") +
+    "You are a senior QA engineer with deep expertise in functional, UI, API, and data validation testing. "
+    "Your task is to create a **comprehensive, well-categorized, and exhaustive set of manual test scenarios** for the following functionality.\n\n"
+
+    "Each test case must be a **JSON object** with these exact keys:\n"
+    "- 'step': The specific user/system action or starting condition\n"
+    "- 'expected': The precise, verifiable, and observable system behavior\n"
+    "- 'estimate_minutes': A realistic execution time that includes setup, action, validation, and documentation\n\n"
+
+    "Allowed values for 'estimate_minutes': **5, 10, 15, 20, 30, 45, 60**\n"
+    "Use the following guidelines for estimates:\n"
+    "- 5 mins → Basic UI checks (e.g., visibility, button states, tooltips)\n"
+    "- 10 mins → Single interaction or API hit with straightforward validation\n"
+    "- 15 mins → Multi-step flows or validations with intermediate logic\n"
+    "- 20 mins → Tests involving multiple dependencies or permission-based conditions\n"
+    "- 30 mins → Full user workflows or partial integration checks\n"
+    "- 45–60 mins → End-to-end journeys with environment/data setup, multi-role interaction, or cross-module validation\n\n"
+
+    "Ensure your test cases **thoroughly cover the following dimensions**:\n"
+    "- Core happy path workflows and expected flows\n"
+    "- Edge and boundary conditions (length, values, state switches)\n"
+    "- Negative test cases (invalid inputs, forbidden actions, missing dependencies)\n"
+    "- Input/output data validation and transformation\n"
+    "- API responses, contract structure, and error handling (if applicable)\n"
+    "- UI/UX behaviors (feedback messages, element state, dynamic rendering)\n"
+    "- Role-based or conditional behaviors (if implied)\n"
+    "- Cross-module or integrated system logic (only if within scenario scope)\n\n"
+
+    "⚠️ Do **NOT** assume anything beyond the described functionality (e.g., login, unrelated features, system-wide settings).\n"
+    "⚠️ Your output must be a **single JSON array**. Each object must follow this format exactly:\n"
+    "{'step': '...', 'expected': '...', 'estimate_minutes': 15}\n"
+    "⚠️ Do **NOT** include headings, explanations, markdown, groupings, or extra fields.\n\n"
+
+    f"Scenario:\n{scenario}\n\n"
+    "Test Cases:"
+)
+
 
         prompt = prompt[:20000]  # Truncate prompt if too long
 
@@ -4060,16 +4106,5 @@ def browseruse_automation_page():
     """Serve the browseruse automation page"""
     return render_template('browseruse-automation-stepwise.html')
 
-def find_available_port():
-    """Find and return an available port by letting OS assign one"""
-    import socket
-    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    sock.bind(('', 0))
-    port = sock.getsockname()[1]
-    sock.close()
-    return port
-
 if __name__ == '__main__':
-    port = int(os.environ.get('PORT', find_available_port()))
-    print(f"Starting server on port {port}")
-    app.run(debug=True, host='0.0.0.0', port=port)
+    app.run(debug=True, host='0.0.0.0', port=5000)
