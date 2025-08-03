@@ -12,6 +12,7 @@
   --error: #C62828;
   --warning: #FFA000;
   --info: #1976D2;
+  --sidebar-width: 250px;
 }
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body {
@@ -376,4 +377,95 @@ h1, h2, h3, h4, h5, h6 {
   color: #1976D2;
   letter-spacing: 0.5px;
   white-space: nowrap;
+}
+
+/* Main Content Layout for Left Sidebar */
+.main-content {
+  margin-left: var(--sidebar-width);
+  min-height: 100vh;
+  padding-top: 1rem;
+  transition: margin-left 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  will-change: margin-left;
+  position: relative;
+}
+
+/* Prevent content shift during sidebar transitions */
+.main-content::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: transparent;
+  pointer-events: none;
+  z-index: -1;
+}
+
+@media (max-width: 768px) {
+  .main-content {
+    margin-left: 0;
+    padding-top: 4rem;
+  }
+}
+
+/* Adjust container margins for sidebar layout */
+.main-content .container {
+  margin-top: 1rem;
+}
+
+/* Hide the old navbar elements when using sidebar */
+.navbar-outer {
+  display: none;
+}
+
+/* === Dark Mode Styles === */
+body.dark-mode {
+  background: #181a1b !important;
+  color: #e0e0e0 !important;
+}
+body.dark-mode .container,
+body.dark-mode .header,
+body.dark-mode .navbar-header {
+  background: #23272b !important;
+  color: #e0e0e0 !important;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+}
+body.dark-mode .tab,
+body.dark-mode .tab.active {
+  background: #23272b !important;
+  color: #e0e0e0 !important;
+  border-color: #444 !important;
+}
+body.dark-mode .tab:not(.active):hover {
+  background: #2c3136 !important;
+}
+body.dark-mode .button-group .btn-primary,
+body.dark-mode .btn-primary {
+  background: #b71c1b !important;
+  color: #fff !important;
+}
+body.dark-mode .btn-secondary {
+  background: #23272b !important;
+  color: #e0e0e0 !important;
+  border-color: #444 !important;
+}
+body.dark-mode input,
+body.dark-mode textarea,
+body.dark-mode select {
+  background: #23272b !important;
+  color: #e0e0e0 !important;
+  border-color: #444 !important;
+}
+body.dark-mode pre {
+  background: #181a1b !important;
+  color: #e0e0e0 !important;
+}
+body.dark-mode .panel {
+  background: #23272b !important;
+  color: #e0e0e0 !important;
+}
+body.dark-mode .navbar-outer {
+  background: #23272b !important;
+  color: #e0e0e0 !important;
 }

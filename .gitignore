@@ -1,2 +1,26 @@
+@"
+# secrets & caches
+.env
+.env.*
+__pycache__/
+*.pyc
+uploads/
+
+# Python venv & caches
+.venv/
+venv/
+.pytest_cache/
+.cache/
+
+# Playwright/Coverage artifacts
+playwright-report/
+test-results/
+traces/
+coverage/
+*.log
+
+# Node
 node_modules/
-package-lock.json 
+npm-debug.log*
+"@ | Out-File -Encoding utf8 .gitignore -Append
+*.bak

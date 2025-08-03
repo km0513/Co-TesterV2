@@ -11,50 +11,1248 @@
     <link rel="stylesheet" href="/static/styles.css">
     <link rel="stylesheet" href="/static/navbar-tabs.css">
     <style>
-        body { background: #f8f9fa; font-family: 'Inter', 'Segoe UI', Arial, sans-serif; }
-        .container {
-          max-width: 1100px;
-          margin: 0 auto;
-          padding: 1.2rem;
+        :root {
+            --primary: #6366f1;
+            --primary-hover: #4f46e5;
+            --primary-light: #a5b4fc;
+            --accent: #7c3aed;
+            --accent-hover: #6d28d9;
+            --secondary: #1f2937;
+            --secondary-light: #374151;
+            --bg-light: #f8fafc;
+            --bg-dark: #0f172a;
+            --text-light: #64748b;
+            --text-dark: #0f172a;
+            --text-white: #ffffff;
+            --border: #e2e8f0;
+            --success: #10b981;
+            --error: #ef4444;
+            --warning: #f59e0b;
+            --info: #3b82f6;
+            --glass-bg: rgba(255, 255, 255, 0.7);
+            --glass-border: rgba(255, 255, 255, 0.2);
+            --shadow-xl: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+            --transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
         }
-        .ai-badge { font-size: 0.9em; color: #fff; background: #6f42c1; border-radius: 5px; padding: 2px 8px; }
-        .testcase-table { width: 100%; border-collapse: separate; border-spacing: 0; }
+
+        body { 
+            background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 50%, #cbd5e1 100%);
+            font-family: 'Inter', sans-serif;
+            min-height: 100vh;
+            color: var(--text-dark);
+            position: relative;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: radial-gradient(circle at 30% 20%, rgba(99, 102, 241, 0.05) 0%, transparent 50%),
+                        radial-gradient(circle at 70% 80%, rgba(139, 92, 246, 0.05) 0%, transparent 50%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .content-area {
+            position: relative;
+            z-index: 1;
+        }
+
+        .container {
+          max-width: 1200px;
+          margin: 0 auto;
+          padding: 2rem;
+          position: relative;
+          z-index: 1;
+        }
+
+        .ai-badge { 
+            font-size: 0.8rem; 
+            color: white; 
+            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 50%, #ffa726 100%);
+            border-radius: 12px; 
+            padding: 4px 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            animation: glow 2s ease-in-out infinite alternate;
+        }
+
+        @keyframes glow {
+            0% { box-shadow: 0 2px 8px rgba(255, 107, 107, 0.4); }
+            100% { box-shadow: 0 4px 16px rgba(255, 107, 107, 0.6); }
+        }
+
+        .testcase-table { 
+            width: 100%; 
+            border-collapse: separate; 
+            border-spacing: 0;
+            background: white;
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+        }
         .testcase-table td, .testcase-table th { 
-            padding: 8px; 
-            border: 1px solid #dee2e6; 
+            padding: 12px 16px; 
+            border-bottom: 1px solid var(--border); 
             vertical-align: top; 
         }
-        .testcase-table th { background-color: #f8f9fa; font-weight: 500; }
+        .testcase-table th { 
+            background: linear-gradient(135deg, var(--bg-light) 0%, #e2e8f0 100%);
+            font-weight: 600;
+            color: var(--text-dark);
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .testcase-table tr:hover {
+            background: rgba(99, 102, 241, 0.02);
+        }
         .testcase-table td[contenteditable="true"] { 
             min-height: 24px; 
             word-break: break-word; 
+            transition: var(--transition);
         }
         .testcase-table td[contenteditable="true"]:focus { 
-            outline: 1px solid #0d6efd; 
-            background-color: #f0f7ff; 
+            outline: 2px solid var(--primary);
+            background-color: rgba(99, 102, 241, 0.05);
+            border-radius: 8px;
         }
         #fullscreenLoader {
           display: none;
           position: fixed;
           top: 0; left: 0; width: 100vw; height: 100vh;
           z-index: 9999;
-          background: rgba(255,255,255,0.7);
+          background: rgba(0, 0, 0, 0.7);
+          backdrop-filter: blur(8px);
           align-items: center;
           justify-content: center;
         }
         #fullscreenLoader.active { display: flex; }
-        #testcasePagination button.btn.btn-sm { min-width: 2.2em; }
-        /* Make disabled buttons visually greyed out and unclickable */
-        button:disabled,
-        .btn:disabled,
-        button[disabled],
-        .btn[disabled] {
+        
+        .loader-content {
+            background: white;
+            border-radius: 20px;
+            padding: 3rem;
+            text-align: center;
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.3);
+            max-width: 400px;
+            margin: 0 1rem;
+        }
+        
+        .loader-spinner {
+            width: 50px;
+            height: 50px;
+            border: 4px solid var(--border);
+            border-top: 4px solid var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 1rem;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Modern Button Styling */
+        .btn {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-hover) 100%);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            padding: 0.75rem 1.5rem;
+            font-weight: 600;
+            transition: var(--transition);
+            box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3);
+        }
+        
+        .btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(99, 102, 241, 0.4);
+        }
+        
+        .btn-secondary {
+            background: var(--bg-light) !important;
+            color: var(--text-dark) !important;
+            border: 2px solid var(--border) !important;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1) !important;
+        }
+        
+        .btn-secondary:hover:not(:disabled) {
+            border-color: var(--primary) !important;
+            color: var(--primary) !important;
+        }
+        
+        .btn-success {
+            background: linear-gradient(135deg, var(--success) 0%, #059669 100%) !important;
+            box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3) !important;
+        }
+        
+        .btn-danger {
+            background: linear-gradient(135deg, var(--error) 0%, #dc2626 100%) !important;
+            box-shadow: 0 4px 15px rgba(239, 68, 68, 0.3) !important;
+        }
+
+        /* Small Button Styling for Edit/Delete */
+        .btn-sm {
+            padding: 0.4rem 0.8rem !important;
+            font-size: 0.85rem !important;
+            border-radius: 8px !important;
+            font-weight: 500 !important;
+            min-width: auto !important;
+            display: inline-flex !important;
+            align-items: center !important;
+            gap: 0.3rem !important;
+        }
+
+        .btn-sm:hover:not(:disabled) {
+            transform: translateY(-1px) !important;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+        }
+
+        /* Table Action Buttons */
+        .testcase-table .btn-sm {
+            margin: 0 0.2rem !important;
+        }
+
+        /* Pagination Styling */
+        #testcasePagination {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 0.5rem;
+            margin: 2rem 0;
+            padding: 1rem;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        #testcasePagination button {
+            min-width: 2.5rem !important;
+            height: 2.5rem !important;
+            padding: 0 !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            border-radius: 8px !important;
+            font-size: 0.9rem !important;
+            font-weight: 600 !important;
+        }
+
+        #testcasePagination .current-page {
+            background: var(--primary) !important;
+            color: white !important;
+            box-shadow: 0 2px 8px rgba(99, 102, 241, 0.3) !important;
+        }
+
+        /* Bottom Action Buttons */
+        .bottom-actions {
+            position: fixed;
+            bottom: 2rem;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 1rem;
+            z-index: 1000;
+            background: white;
+            padding: 1rem 2rem;
+            border-radius: 20px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+            border: 1px solid var(--border);
+        }
+
+        .bottom-actions .btn {
+            padding: 0.75rem 1.5rem !important;
+            font-size: 1rem !important;
+            border-radius: 12px !important;
+            display: flex !important;
+            align-items: center !important;
+            gap: 0.5rem !important;
+        }
+
+        /* PRD Section Styling */
+        .prd-upload-container {
+            padding: 2rem;
+            background: white;
+            border-radius: 20px;
+            border: 1px solid var(--border);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        .prd-upload-header {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+            padding-bottom: 1.5rem;
+            border-bottom: 2px solid var(--border);
+        }
+
+        .prd-icon {
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, var(--warning) 0%, #f59e0b 100%);
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.5rem;
+            flex-shrink: 0;
+        }
+
+        .prd-title h3 {
+            margin: 0 0 0.5rem 0;
+            color: var(--text-dark);
+            font-weight: 700;
+            font-size: 1.5rem;
+        }
+
+        .prd-title p {
+            margin: 0;
+            color: var(--text-light);
+            font-size: 1rem;
+        }
+
+        .prd-upload-area {
+            margin-bottom: 2rem;
+        }
+
+        .upload-zone {
+            border: 3px dashed var(--border);
+            border-radius: 16px;
+            padding: 3rem 2rem;
+            text-align: center;
+            background: var(--bg-light);
+            transition: var(--transition);
+            cursor: pointer;
+            position: relative;
+        }
+
+        .upload-zone:hover,
+        .upload-zone.dragover {
+            border-color: var(--warning);
+            background: rgba(245, 158, 11, 0.05);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(245, 158, 11, 0.1);
+        }
+
+        .upload-zone .upload-icon {
+            font-size: 3rem;
+            color: var(--warning);
+            margin-bottom: 1rem;
+        }
+
+        .upload-zone .upload-text h4 {
+            margin: 0 0 0.5rem 0;
+            color: var(--text-dark);
+            font-weight: 600;
+            font-size: 1.25rem;
+        }
+
+        .upload-zone .upload-text p {
+            margin: 0 0 1.5rem 0;
+            color: var(--text-light);
+        }
+
+        .upload-formats {
+            display: flex;
+            justify-content: center;
+            gap: 0.5rem;
+            margin-top: 1rem;
+        }
+
+        .format-badge {
+            background: var(--warning);
+            color: white;
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .file-input {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0;
+            cursor: pointer;
+        }
+
+        .prd-uploaded-file {
+            background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
+            border: 2px solid var(--success);
+            border-radius: 16px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .uploaded-file-info {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .file-icon {
+            width: 50px;
+            height: 50px;
+            background: var(--success);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.25rem;
+            flex-shrink: 0;
+        }
+
+        .file-details {
+            flex: 1;
+        }
+
+        .file-name {
+            font-weight: 600;
+            color: var(--text-dark);
+            font-size: 1.1rem;
+            margin-bottom: 0.25rem;
+        }
+
+        .file-status {
+            color: var(--text-light);
+            font-size: 0.9rem;
+        }
+
+        .clear-file-btn {
+            background: rgba(239, 68, 68, 0.1);
+            border: 2px solid var(--error);
+            color: var(--error);
+            border-radius: 8px;
+            padding: 0.5rem;
+            cursor: pointer;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 40px;
+            height: 40px;
+        }
+
+        .clear-file-btn:hover {
+            background: var(--error);
+            color: white;
+            transform: scale(1.1);
+        }
+
+        .prd-features {
+            border-top: 2px solid var(--border);
+            padding-top: 2rem;
+        }
+
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .feature-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 1rem;
+            padding: 1.5rem;
+            background: var(--bg-light);
+            border-radius: 16px;
+            border: 1px solid var(--border);
+            transition: var(--transition);
+        }
+
+        .feature-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+            border-color: var(--primary);
+        }
+
+        .feature-item .feature-icon {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-hover) 100%);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1rem;
+            flex-shrink: 0;
+        }
+
+        .feature-text h5 {
+            margin: 0 0 0.5rem 0;
+            color: var(--text-dark);
+            font-weight: 600;
+            font-size: 1rem;
+        }
+
+        .feature-text p {
+            margin: 0;
+            color: var(--text-light);
+            font-size: 0.9rem;
+            line-height: 1.4;
+        }
+
+        /* Jira Section Styling */
+        .jira-container {
+            padding: 2rem;
+            background: white;
+            border-radius: 20px;
+            border: 1px solid var(--border);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        .jira-header {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+            padding-bottom: 1.5rem;
+            border-bottom: 2px solid var(--border);
+        }
+
+        .jira-icon {
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, #0052CC 0%, #2684FF 100%);
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.5rem;
+            flex-shrink: 0;
+        }
+
+        .jira-title h3 {
+            margin: 0 0 0.5rem 0;
+            color: var(--text-dark);
+            font-weight: 700;
+            font-size: 1.5rem;
+        }
+
+        .jira-title p {
+            margin: 0;
+            color: var(--text-light);
+            font-size: 1rem;
+        }
+
+
+
+        /* Compact Jira Section */
+        .jira-container-compact {
+            margin-bottom: 1.5rem;
+        }
+
+        .jira-input-compact {
+            background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+            border-radius: 16px;
+            padding: 1.5rem;
+            border: 1px solid var(--border);
+        }
+
+        .input-group-compact {
+            display: flex;
+            align-items: center;
+            background: white;
+            border: 2px solid var(--border);
+            border-radius: 12px;
+            padding: 0.75rem;
+            gap: 0.75rem;
+            transition: var(--transition);
+            margin-bottom: 1rem;
+        }
+
+        .input-group-compact:focus-within {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+        }
+
+        .input-icon-compact {
+            color: #2684FF;
+            font-size: 1.2rem;
+            width: 24px;
+            display: flex;
+            justify-content: center;
+        }
+
+        .jira-input-compact {
+            flex: 1;
+            border: none;
+            outline: none;
+            font-size: 1rem;
+            padding: 0.5rem 0;
+            background: transparent;
+        }
+
+        .jira-input-compact::placeholder {
+            color: var(--text-light);
+        }
+
+        .fetch-btn-compact {
+            background: linear-gradient(135deg, #2684FF 0%, #0052CC 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 0.6rem 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            font-size: 0.9rem;
+        }
+
+        .fetch-btn-compact:hover:not(:disabled) {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 15px rgba(38, 132, 255, 0.3);
+        }
+
+        .clear-btn-compact {
+            background: rgba(239, 68, 68, 0.1);
+            color: var(--error);
+            border: 1px solid var(--error);
+            border-radius: 8px;
+            padding: 0.6rem;
+            cursor: pointer;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 36px;
+            height: 36px;
+        }
+
+        .clear-btn-compact:hover {
+            background: var(--error);
+            color: white;
+        }
+
+        .input-help-compact {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: var(--text-light);
+            font-size: 0.85rem;
+            margin-left: 1rem;
+        }
+
+        .input-help-compact i {
+            color: var(--info);
+        }
+
+        /* Compact PRD Section */
+        .prd-container-compact {
+            margin-bottom: 1.5rem;
+        }
+
+        .prd-upload-compact {
+            background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+            border: 2px dashed var(--success);
+            border-radius: 16px;
+            padding: 1.5rem;
+            cursor: pointer;
+            transition: var(--transition);
+            position: relative;
+        }
+
+        .prd-upload-compact:hover {
+            border-color: var(--primary);
+            background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+        }
+
+        .upload-group-compact {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .upload-icon-compact {
+            color: var(--success);
+            font-size: 2rem;
+            transition: var(--transition);
+        }
+
+        .prd-upload-compact:hover .upload-icon-compact {
+            color: var(--primary);
+        }
+
+        .upload-content-compact {
+            flex: 1;
+        }
+
+        .upload-text-compact {
+            font-weight: 600;
+            color: var(--text-dark);
+            margin-bottom: 0.5rem;
+        }
+
+        .upload-formats-compact {
+            color: var(--text-light);
+            font-size: 0.85rem;
+        }
+
+        .file-input-compact {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0;
+            cursor: pointer;
+        }
+
+        .prd-uploaded-compact {
+            background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+            border: 2px solid var(--success);
+            border-radius: 16px;
+            padding: 1.5rem;
+        }
+
+        .uploaded-info-compact {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .file-icon-compact {
+            color: var(--success);
+            font-size: 1.5rem;
+        }
+
+        .file-details-compact {
+            flex: 1;
+        }
+
+        .file-name-compact {
+            font-weight: 600;
+            color: var(--text-dark);
+            margin-bottom: 0.25rem;
+        }
+
+        .file-status-compact {
+            color: var(--text-light);
+            font-size: 0.85rem;
+        }
+
+        .clear-file-compact {
+            background: rgba(239, 68, 68, 0.1);
+            color: var(--error);
+            border: 1px solid var(--error);
+            border-radius: 8px;
+            padding: 0.5rem;
+            cursor: pointer;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 32px;
+            height: 32px;
+        }
+
+        .clear-file-compact:hover {
+            background: var(--error);
+            color: white;
+        }
+
+        .prd-help-compact {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: var(--text-light);
+            font-size: 0.85rem;
+        }
+
+        .prd-help-compact i {
+            color: var(--info);
+        }
+
+        /* Enhanced Description Section */
+        .description-section {
+            margin-top: 2rem;
+        }
+
+        .description-header {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .description-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.5rem;
+        }
+
+        .description-title h3 {
+            margin: 0 0 0.5rem 0;
+            color: var(--text-dark);
+            font-weight: 700;
+            font-size: 1.5rem;
+        }
+
+        .description-title p {
+            margin: 0;
+            color: var(--text-light);
+            font-size: 1rem;
+        }
+
+        .description-content {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .description-card {
+            background: linear-gradient(135deg, #fefefe 0%, #f8fafc 100%);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
+            transition: var(--transition);
+        }
+
+        .description-card:hover {
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            transform: translateY(-1px);
+        }
+
+        .card-header {
+            background: linear-gradient(135deg, var(--bg-light) 0%, #e2e8f0 100%);
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .card-header i {
+            color: var(--primary);
+            font-size: 1.1rem;
+        }
+
+        .card-header span {
+            font-weight: 600;
+            color: var(--text-dark);
+            font-size: 1rem;
+        }
+
+        .card-content {
+            padding: 1.5rem;
+        }
+
+        .enhanced-input {
+            width: 100%;
+            border: 2px solid var(--border);
+            border-radius: 12px;
+            padding: 1rem;
+            font-size: 1rem;
+            transition: var(--transition);
+            background: #fafbfc;
+        }
+
+        .enhanced-input:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+            outline: none;
+        }
+
+        .enhanced-textarea {
+            min-height: 120px;
+            max-height: 300px;
+            overflow-y: auto;
+            border: 2px solid var(--border);
+            border-radius: 12px;
+            padding: 1rem;
+            background: #fafbfc;
+            transition: var(--transition);
+            cursor: text;
+        }
+
+        .enhanced-textarea:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+            outline: none;
+        }
+
+        .placeholder-content {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 2rem;
+            color: var(--text-light);
+        }
+
+        .placeholder-content i {
+            font-size: 3rem;
+            color: var(--border);
+            margin-bottom: 1rem;
+        }
+
+        .placeholder-content p {
+            margin: 0;
+            font-style: italic;
+        }
+
+        .config-cards-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+        }
+
+        .config-card {
+            background: linear-gradient(135deg, #fefefe 0%, #f8fafc 100%);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
+            transition: var(--transition);
+        }
+
+        .config-card:hover {
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            transform: translateY(-1px);
+        }
+
+        .config-header {
+            background: linear-gradient(135deg, var(--bg-light) 0%, #e2e8f0 100%);
+            padding: 0.75rem 1rem;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .config-header i {
+            color: var(--primary);
+            font-size: 1rem;
+        }
+
+        .config-header span {
+            font-weight: 600;
+            color: var(--text-dark);
+            font-size: 0.95rem;
+        }
+
+        .config-content {
+            padding: 1rem;
+        }
+
+        .enhanced-select {
+            width: 100%;
+            border: 2px solid var(--border);
+            border-radius: 12px;
+            padding: 0.75rem;
+            font-size: 1rem;
+            transition: var(--transition);
+            background: white;
+            margin-bottom: 0.75rem;
+        }
+
+        .enhanced-select:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+            outline: none;
+        }
+
+        .attachment-area {
+            border: 2px dashed var(--border);
+            border-radius: 12px;
+            padding: 1rem;
+            text-align: center;
+            transition: var(--transition);
+            cursor: pointer;
+            position: relative;
+            margin-bottom: 0.75rem;
+        }
+
+        .attachment-area:hover {
+            border-color: var(--primary);
+            background: rgba(99, 102, 241, 0.02);
+        }
+
+        .enhanced-file-input {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0;
+            cursor: pointer;
+        }
+
+        .attachment-text {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            color: var(--text-light);
+            font-weight: 500;
+        }
+
+        .attachment-text i {
+            color: var(--primary);
+        }
+
+        .config-help {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: var(--text-light);
+            font-size: 0.8rem;
+        }
+
+        .config-help i {
+            color: var(--info);
+        }
+
+        /* File Preview Styles */
+        .files-preview {
+            margin-top: 1rem;
+            display: none;
+        }
+
+        .files-preview.show {
+            display: block;
+        }
+
+        .files-preview h4 {
+            font-size: 0.9rem;
+            color: var(--text-dark);
+            margin-bottom: 0.75rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .files-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+            gap: 0.75rem;
+        }
+
+        .file-item {
+            background: white;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 0.75rem;
+            text-align: center;
+            position: relative;
+            transition: var(--transition);
+        }
+
+        .file-item:hover {
+            border-color: var(--primary);
+            box-shadow: 0 2px 8px rgba(99, 102, 241, 0.1);
+        }
+
+        .file-icon {
+            font-size: 1.5rem;
+            color: var(--primary);
+            margin-bottom: 0.5rem;
+        }
+
+        .file-name {
+            font-size: 0.75rem;
+            color: var(--text-dark);
+            font-weight: 500;
+            word-break: break-word;
+            line-height: 1.2;
+        }
+
+        .file-size {
+            font-size: 0.65rem;
+            color: var(--text-light);
+            margin-top: 0.25rem;
+        }
+
+        .file-remove {
+            position: absolute;
+            top: -6px;
+            right: -6px;
+            background: var(--error);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 0.75rem;
+            transition: var(--transition);
+        }
+
+        .file-remove:hover {
+            background: #dc2626;
+            transform: scale(1.1);
+        }
+
+        .attachment-area.has-files {
+            border-color: var(--success);
+            background: rgba(16, 185, 129, 0.02);
+        }
+
+        .attachment-area.has-files .attachment-text {
+            color: var(--success);
+        }
+
+        .attachment-area.has-files .attachment-text i {
+            color: var(--success);
+        }
+
+        .generate-section {
+            margin-top: 1rem;
+        }
+
+        .generate-card {
+            background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+            border: 2px solid var(--primary);
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 8px 32px rgba(99, 102, 241, 0.15);
+        }
+
+        .generate-content {
+            padding: 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 2rem;
+        }
+
+        .generate-info {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+            flex: 1;
+        }
+
+        .generate-icon {
+            width: 64px;
+            height: 64px;
+            border-radius: 16px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 2rem;
+        }
+
+        .generate-text h4 {
+            margin: 0 0 0.5rem 0;
+            color: var(--text-dark);
+            font-weight: 700;
+            font-size: 1.25rem;
+        }
+
+        .generate-text p {
+            margin: 0;
+            color: var(--text-light);
+            font-size: 1rem;
+        }
+
+        .generate-button {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
+            color: #ffffff;
+            border: none;
+            border-radius: 16px;
+            padding: 1rem 2rem;
+            font-weight: 700;
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            box-shadow: 0 4px 20px rgba(99, 102, 241, 0.3);
+            text-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+        }
+
+        .generate-button:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 32px rgba(99, 102, 241, 0.4);
+        }
+
+        .generate-button:disabled {
+            opacity: 0.7 !important;
+            cursor: not-allowed !important;
+            transform: none !important;
+            box-shadow: 0 4px 20px rgba(99, 102, 241, 0.2) !important;
+            background: linear-gradient(135deg, #8b94db 0%, #9ca6e8 100%) !important;
+            color: rgba(255, 255, 255, 0.8) !important;
+            border: none !important;
+            text-shadow: none !important;
+            font-weight: 700 !important;
+        }
+
+        .generate-button:not(:disabled) {
+            background: linear-gradient(135deg, #059669 0%, #0d9488 100%) !important;
+            color: #ffffff !important;
+            opacity: 1 !important;
+            cursor: pointer !important;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.4) !important;
+            box-shadow: 0 4px 20px rgba(5, 150, 105, 0.4) !important;
+            font-weight: 800 !important;
+            border: 2px solid rgba(255, 255, 255, 0.3) !important;
+        }
+
+        @media (max-width: 768px) {
+            .config-cards-row {
+                grid-template-columns: 1fr;
+            }
+            
+            .generate-content {
+                flex-direction: column;
+                text-align: center;
+            }
+            
+            .generate-info {
+                flex-direction: column;
+                text-align: center;
+            }
+        }
+
+        /* Make disabled buttons visually greyed out and unclickable - except generate button */
+        button:disabled:not(.generate-button),
+        .btn:disabled:not(.generate-button),
+        button[disabled]:not(.generate-button),
+        .btn[disabled]:not(.generate-button) {
           opacity: 0.6 !important;
           cursor: not-allowed !important;
           pointer-events: none;
           background-color: #adb5bd !important;
           color: #fff !important;
           border-color: #adb5bd !important;
+          transform: none !important;
+          box-shadow: none !important;
         }
         @media (max-width: 767px) {
           .container {
@@ -112,8 +1310,15 @@
 </head>
 <body>
   {% set active_tab = 'manual' %}
-  {% include 'navbar.html' %}
-<div class="container">
+  {% include 'left-sidebar.html' %}
+  <div class="main-content">
+    {% set page_title = 'Test Generator <span class="ai-badge">AI</span>' %}
+    {% set page_subtitle = 'Generate comprehensive tests from Jira stories or PRD documents' %}
+    {% set allow_html = true %}
+    {% include 'page-header.html' %}
+    
+    <div class="content-area" style="width:100%; padding:1.5rem;">
+
     <!-- Instructions Panel -->
     <div style="background-color: #fff9e6; border: 1px solid #ffe066; border-radius: 6px; padding: 1rem 1.5rem; margin-bottom: 1.5rem;">
         <h5 style="color: #856404; margin-top: 0; margin-bottom: 0.75rem; font-weight: 600;">Instructions:</h5>
@@ -121,8 +1326,8 @@
             <li><strong>Jira Story</strong>: Connect to Jira, enter a Jira ID, and fetch the story details.</li>
             <li><strong>PRD Document</strong>: Upload a PDF, Word, or text document containing product requirements.</li>
             <li>Add context or screenshots if needed to enhance test generation.</li>
-            <li>Click <strong>Generate Tests</strong> to create test cases based on the provided information.</li>
-            <li>Edit, delete, or add test cases as needed before saving or creating Jira subtasks.</li>
+            <li>Click <strong>Generate Tests</strong> to create tests based on the provided information.</li>
+            <li>Edit, delete, or add tests as needed before saving or creating Jira subtasks.</li>
         </ol>
     </div>
     
@@ -135,61 +1340,346 @@
         /* Modern Tab Styling */
         .custom-tabs {
             border-bottom: none;
+            margin-bottom: 2rem;
+            display: flex;
+            gap: 1rem;
+            background: none;
+        }
+        .custom-tabs .nav-link {
+            padding: 1rem 2rem;
+            font-weight: 600;
+            border-radius: 16px;
+            border: 2px solid var(--border);
+            cursor: pointer;
+            color: var(--text-dark);
+            background: white;
+            transition: all 0.3s ease;
+            position: relative;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            text-decoration: none;
+            min-width: 180px;
+            justify-content: center;
+        }
+        .custom-tabs .nav-link:hover {
+            background: var(--bg-light);
+            border-color: var(--primary);
+            color: var(--primary);
+            box-shadow: 0 8px 12px -4px rgba(0, 0, 0, 0.15);
+            transform: translateY(-2px);
+        }
+        .custom-tabs .nav-link.active {
+            color: white;
+            background: linear-gradient(135deg, var(--primary), var(--primary-hover));
+            border-color: var(--primary);
+            box-shadow: 0 8px 16px -4px rgba(99, 102, 241, 0.4);
+        }
+        .custom-tabs .nav-link i {
+            font-size: 1.2rem;
+        }
+
+        /* Tab content styling */
+        .tab-content {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+            border: 1px solid var(--border);
+            padding: 2rem;
+            margin-bottom: 2rem;
+        }
+        
+        /* Modern Card Components */
+        .input-card, .upload-card {
+            background: white;
+            border-radius: 16px;
+            padding: 2rem;
+            border: 1px solid var(--border);
+            box-shadow: var(--shadow);
+        }
+        
+        .card-title {
+            display: flex;
+            align-items: center;
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--text-dark);
             margin-bottom: 1.5rem;
+        }
+        
+        .card-icon {
+            background: linear-gradient(135deg, var(--primary), var(--primary-hover));
+            color: white;
+            width: 40px;
+            height: 40px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 1rem;
+            font-size: 1.2rem;
+        }
+        
+        /* Modern Input Styling */
+        .input-group-modern {
+            margin-bottom: 1rem;
+        }
+        
+        .input-wrapper {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+        
+        .input-modern {
+            flex: 1;
+            padding: 0.875rem 1rem;
+            border: 2px solid var(--border);
+            border-radius: 12px;
+            font-size: 1rem;
+            transition: border-color 0.3s ease, box-shadow 0.3s ease;
+            background: white;
+        }
+        
+        .input-modern:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+        }
+        
+        .input-buttons {
             display: flex;
             gap: 0.5rem;
         }
-        .custom-tabs .nav-link {
-            padding: 0.75rem 1.5rem;
-            font-weight: 600;
-            border-radius: 6px;
+        
+        .btn-primary-modern {
+            background: linear-gradient(135deg, var(--primary), var(--primary-hover));
+            color: white;
             border: none;
+            border-radius: 12px;
+            padding: 0.875rem 1.5rem;
+            font-weight: 600;
             cursor: pointer;
-            color: #495057;
-            background-color: #f0f0f0;
-            transition: all 0.2s ease-in-out;
-            position: relative;
+            transition: all 0.3s ease;
             display: flex;
             align-items: center;
             gap: 0.5rem;
         }
-        .custom-tabs .nav-link:hover {
-            background-color: #e0e0e0;
-            color: #333;
+        
+        .btn-primary-modern:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px -4px rgba(99, 102, 241, 0.4);
         }
-        .custom-tabs .nav-link.active {
-            color: #fff;
-            background-color: #D32F2F; /* upGrad Brand Color */
-            box-shadow: 0 2px 5px rgba(211, 47, 47, 0.3);
+        
+        .btn-clear-modern {
+            background: #f1f5f9;
+            color: var(--text-light);
+            border: 2px solid var(--border);
+            border-radius: 12px;
+            padding: 0.875rem 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
         }
-        .custom-tabs .nav-link::before {
-            content: '';
-            display: inline-block;
-            width: 18px;
-            height: 18px;
-            background-size: contain;
-            background-repeat: no-repeat;
-            background-position: center;
+        
+        .btn-clear-modern:hover {
+            background: #e2e8f0;
+            color: var(--text-dark);
         }
-        #jira-tab::before {
-            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' width='18' height='18'%3E%3Cpath fill='currentColor' d='M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 4c1.86 0 3.41 1.28 3.86 3H8.14c.45-1.72 2-3 3.86-3zm0 14c-2.21 0-4-1.79-4-4h8c0 2.21-1.79 4-4 4z'/%3E%3C/svg%3E");
+        
+        /* Modern Upload Area */
+        .upload-area-modern {
+            border: 2px dashed var(--border);
+            border-radius: 16px;
+            padding: 3rem 2rem;
+            text-align: center;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            position: relative;
+            margin-bottom: 1rem;
         }
-        #prd-tab::before {
-            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' width='18' height='18'%3E%3Cpath fill='currentColor' d='M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z'/%3E%3C/svg%3E");
+        
+        .upload-area-modern:hover {
+            border-color: var(--primary);
+            background: rgba(99, 102, 241, 0.02);
         }
-        /* Tab content styling */
-        .tab-content {
-            background-color: #fff;
-            border-radius: 6px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        
+        .upload-area-modern.dragover {
+            border-color: var(--primary);
+            background: rgba(99, 102, 241, 0.05);
+        }
+        
+        .upload-content {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1rem;
+        }
+        
+        .upload-icon {
+            color: var(--primary);
+            font-size: 3rem;
+        }
+        
+        .upload-text {
+            font-size: 1.125rem;
+            font-weight: 600;
+            color: var(--text-dark);
+        }
+        
+        .upload-subtext {
+            color: var(--text-light);
+            font-size: 0.875rem;
+        }
+        
+        .upload-formats {
+            display: flex;
+            gap: 0.5rem;
+            margin: 0.5rem 0;
+        }
+        
+        .format-badge {
+            background: var(--bg-light);
+            color: var(--text-dark);
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+        
+        .browse-btn {
+            background: linear-gradient(135deg, var(--primary), var(--primary-hover));
+            color: white;
+            border: none;
+            border-radius: 12px;
+            padding: 0.75rem 1.5rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-top: 1rem;
+        }
+        
+        .browse-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px -4px rgba(99, 102, 241, 0.4);
+        }
+        
+        .file-input {
+            display: none;
+        }
+        
+        /* Uploaded File Card */
+        .uploaded-file-card {
+            background: var(--bg-light);
+            border-radius: 12px;
             padding: 1.5rem;
+            border: 1px solid var(--border);
+        }
+        
+        .file-info {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+        
+        .file-icon {
+            background: var(--success);
+            color: white;
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+        }
+        
+        .file-details {
+            flex: 1;
+        }
+        
+        .file-name {
+            font-weight: 600;
+            color: var(--text-dark);
+            margin-bottom: 0.25rem;
+        }
+        
+        .file-status {
+            color: var(--text-light);
+            font-size: 0.875rem;
+        }
+        
+        .ai-features {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: var(--primary);
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+        
+        .help-text {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: var(--text-light);
+            font-size: 0.875rem;
+            background: var(--bg-light);
+            padding: 1rem;
+            border-radius: 12px;
+        }
+        
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .custom-tabs {
+                flex-direction: column;
+                gap: 0.5rem;
+            }
+            
+            .custom-tabs .nav-link {
+                min-width: auto;
+                width: 100%;
+                justify-content: flex-start;
+            }
+            
+            .input-wrapper {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 1rem;
+            }
+            
+            .input-buttons {
+                justify-content: center;
+            }
+            
+            .upload-area-modern {
+                padding: 2rem 1rem;
+            }
+            
+        .tab-content {
+            padding: 1.5rem;
+            }
+            
+            .input-card, .upload-card {
+                padding: 1.5rem;
+            }
         }
     </style>
     
     <!-- Tab Navigation -->
     <div class="nav nav-tabs custom-tabs" id="testGenTabs" role="tablist">
-        <button class="nav-link active" id="jira-tab" data-bs-toggle="tab" data-bs-target="#jira-content" type="button" role="tab" aria-controls="jira-content" aria-selected="true">Jira Story</button>
-        <button class="nav-link" id="prd-tab" data-bs-toggle="tab" data-bs-target="#prd-content" type="button" role="tab" aria-controls="prd-content" aria-selected="false">PRD Document</button>
+        <button class="nav-link active" id="jira-tab" data-bs-toggle="tab" data-bs-target="#jira-content" type="button" role="tab" aria-controls="jira-content" aria-selected="true">
+            <i class="fab fa-jira"></i>
+            Jira Story
+        </button>
+        <button class="nav-link" id="prd-tab" data-bs-toggle="tab" data-bs-target="#prd-content" type="button" role="tab" aria-controls="prd-content" aria-selected="false">
+            <i class="fas fa-file-alt"></i>
+            PRD Document
+        </button>
     </div>
 
     <style>
@@ -237,61 +1727,197 @@
     <div class="tab-content tab-content-custom" id="testGenTabContent">
         <!-- Jira Tab -->
         <div class="tab-pane fade show active" id="jira-content" role="tabpanel" aria-labelledby="jira-tab">
-            <!-- Jira Connect Button -->
-            <div class="mb-3 d-flex gap-2 align-items-center">
-                <button type="button" id="connectJiraBtn" class="btn btn-primary btn-custom" style="display: flex; align-items: center; gap: 0.5em;">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 32 32" fill="none"><g><path d="M17.1 2.3a2.1 2.1 0 0 0-2.9 0L2.3 14.2a2.1 2.1 0 0 0 0 2.9l11.9 11.9a2.1 2.1 0 0 0 2.9 0l11.9-11.9a2.1 2.1 0 0 0 0-2.9L17.1 2.3z" fill="#2684FF"/><path d="M21.7 10.3a1.3 1.3 0 0 0-1.8 0l-9.6 9.6a1.3 1.3 0 0 0 0 1.8l6.5 6.5a1.3 1.3 0 0 0 1.8 0l9.6-9.6a1.3 1.3 0 0 0 0-1.8l-6.5-6.5z" fill="#0052CC"/></g></svg>
-                    Jira Connect
-                </button>
-                <button type="button" id="disconnectJiraBtn" class="btn btn-danger btn-custom" style="display:none;">Disconnect Jira</button>
+            <div class="input-card">
+                <div class="card-title">
+                    <div class="card-icon">
+                            <i class="fab fa-jira"></i>
             </div>
-            
-            <!-- Jira ID Input -->
-            <div class="input-group-custom">
-                <input type="text" id="jiraIdInput" class="form-control form-control-custom" style="max-width: 250px;" placeholder="Jira Story ID (e.g. IRA-62215)">
-                <button type="button" id="fetchJiraBtn" class="btn btn-primary btn-custom">Fetch from Jira</button>
-                <button type="button" id="clearJiraBtn" class="btn btn-outline-secondary btn-custom">Clear</button>
+                    Jira Story Integration
+                </div>
+                <div class="input-group-modern">
+                    <div class="input-wrapper">
+                        <input type="text" id="jiraIdInput" class="input-modern" placeholder="Enter Jira Story ID (e.g., PROJ-123 or full URL)">
+                        <div class="input-buttons">
+                            <button type="button" id="fetchJiraBtn" class="btn-primary-modern">
+                            <i class="fas fa-download"></i>
+                                Fetch Story
+                        </button>
+                            <button type="button" id="clearJiraBtn" class="btn-clear-modern">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    </div>
+                </div>
+                <div class="help-text">
+                    <i class="fas fa-info-circle"></i>
+                    Connected to Jira • Supports story keys and URLs • Auto-extracts requirements
+                </div>
             </div>
         </div>
 
         <!-- PRD Tab -->
         <div class="tab-pane fade" id="prd-content" role="tabpanel" aria-labelledby="prd-tab">
-            <div class="mb-3">
-                <label for="prdUpload" class="form-label" style="font-weight: 500; margin-bottom: 0.5rem;">Upload PRD Document</label>
-                <input type="file" id="prdUpload" class="form-control form-control-custom" style="max-width: 500px;" accept=".pdf,.doc,.docx,.txt">
-                <div class="form-text" style="margin-top: 0.5rem; font-size: 0.875rem; color: #6c757d;">Upload a PRD document to generate tests from (PDF, Word, or Text format)</div>
-                <button type="button" id="clearPrdBtn" class="btn btn-outline-secondary btn-custom mt-3">Clear</button>
+            <div class="upload-card">
+                <div class="card-title">
+                    <div class="card-icon">
+                            <i class="fas fa-file-alt"></i>
+                        </div>
+                    PRD Document Upload
+                            </div>
+                <div class="upload-area-modern" id="prdUploadArea">
+                    <div class="upload-content">
+                        <div class="upload-icon">
+                            <i class="fas fa-cloud-upload-alt"></i>
+                        </div>
+                        <div class="upload-text">Drop PRD document here</div>
+                        <div class="upload-subtext">or click to browse</div>
+                        <div class="upload-formats">
+                            <span class="format-badge">PDF</span>
+                            <span class="format-badge">DOC</span>
+                            <span class="format-badge">DOCX</span>
+                            <span class="format-badge">TXT</span>
+                    </div>
+                        <button type="button" class="browse-btn">
+                            <i class="fas fa-folder-open"></i>
+                            Browse Files
+                        </button>
+                    </div>
+                    <input type="file" id="prdUpload" class="file-input" accept=".pdf,.doc,.docx,.txt">
+                </div>
+                
+                <div class="uploaded-file-card" id="prdUploadedFile" style="display: none;">
+                    <div class="file-info">
+                        <div class="file-icon">
+                            <i class="fas fa-file-check"></i>
+                        </div>
+                        <div class="file-details">
+                            <div class="file-name" id="prdFileName"></div>
+                            <div class="file-status" id="prdFileStatus">Processing document...</div>
+                        </div>
+                        <button type="button" id="clearPrdBtn" class="btn-clear-modern">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    <div class="ai-features">
+                        <i class="fas fa-magic"></i>
+                        <span>AI analysis • Smart test generation • Time estimation</span>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 
     <form id="scenarioForm">
-        <!-- Common Fields Section -->
-        <div id="commonFields">
-            <!-- Summary field only shown for Jira tab -->
-            <div class="mb-3" id="summarySection">
-                <label for="summaryInput" class="form-label">Summary</label>
-                <input type="text" class="form-control" id="summaryInput" placeholder="Summary will appear here" readonly>
+        <!-- Enhanced Description Section -->
+        <div id="enhancedDescriptionSection" class="description-section">
+            <div class="description-header">
+                <div class="description-icon">
+                    <i class="fas fa-file-text"></i>
             </div>
-            <div class="mb-3">
-                <label for="scenarioInput" class="form-label">Description</label>
-                <div class="form-control" id="scenarioInput" style="min-height: 100px; max-height: 300px; overflow-y: auto; background: #f8f9fa; cursor: default;" readonly tabindex="0"></div>
+                <div class="description-title">
+                    <h3>Requirements Details</h3>
+                    <p>Review and enhance the extracted information before generating tests</p>
             </div>
-            <div class="mb-3">
-                <label for="contextSelect" class="form-label" style="font-weight:bold;">Context (optional)</label>
-                <select id="contextSelect" class="form-control w-auto" style="max-width: 180px; font-weight:bold;">
-                    <option value="">None</option>
-                    <option value="lxp">LXP</option>
+            </div>
+
+            <div class="description-content">
+                <!-- Summary Card - only shown for Jira -->
+                <div class="description-card" id="summarySection">
+                    <div class="card-header">
+                        <i class="fas fa-tag"></i>
+                        <span>Story Summary</span>
+                    </div>
+                    <div class="card-content">
+                        <input type="text" class="enhanced-input" id="summaryInput" placeholder="Story summary will appear here after fetching from Jira" readonly>
+                    </div>
+                </div>
+
+                <!-- Description Card -->
+                <div class="description-card">
+                    <div class="card-header">
+                        <i class="fas fa-align-left"></i>
+                        <span>Requirements & Description</span>
+                    </div>
+                    <div class="card-content">
+                        <div class="enhanced-textarea" id="scenarioInput" tabindex="0">
+                            <div class="placeholder-content">
+                                <i class="fas fa-lightbulb"></i>
+                                <p>Detailed requirements and acceptance criteria will appear here after fetching from Jira or uploading a PRD document.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Configuration Cards Row -->
+                <div class="config-cards-row">
+                    <!-- Context Card -->
+                    <div class="config-card">
+                        <div class="config-header">
+                            <i class="fas fa-layer-group"></i>
+                            <span>Test Context</span>
+                        </div>
+                        <div class="config-content">
+                            <select id="contextSelect" class="enhanced-select">
+                                <option value="">Select Context</option>
+                                <option value="lxp">LXP Platform</option>
                 </select>
+                            <div class="config-help">
+                                <i class="fas fa-info-circle"></i>
+                                <span>Optional: Choose platform context for targeted test generation</span>
             </div>
-            <div class="mb-3">
-                <label for="attachmentInput" class="form-label" style="font-weight:bold;">Attach Screenshot(s) or Visual Doc</label>
-                <input type="file" id="attachmentInput" class="form-control" multiple accept="image/*,application/pdf">
-                <div class="form-text">You may attach one or more screenshots (PNG, JPG) or a PDF document containing UI images.</div>
             </div>
-            <div class="mb-3 d-flex gap-2 align-items-center">
-                <br>
-                <button type="button" id="generateBtn" class="btn btn-primary" disabled>Generate Tests</button>
+                    </div>
+
+                    <!-- Attachments Card -->
+                    <div class="config-card">
+                        <div class="config-header">
+                            <i class="fas fa-paperclip"></i>
+                            <span>Visual Assets</span>
+                        </div>
+                        <div class="config-content">
+                            <div class="attachment-area" id="attachmentArea">
+                                <input type="file" id="attachmentInput" class="enhanced-file-input" multiple accept="image/*,application/pdf">
+                                <div class="attachment-text">
+                                    <i class="fas fa-images"></i>
+                                    <span>Upload screenshots or UI mockups</span>
+                                </div>
+                            </div>
+                            <div class="files-preview" id="filesPreview">
+                                <h4>
+                                    <i class="fas fa-file-check"></i>
+                                    Selected Files
+                                </h4>
+                                <div class="files-grid" id="filesGrid"></div>
+                            </div>
+                            <div class="config-help">
+                                <i class="fas fa-camera"></i>
+                                <span>Supports PNG, JPG, PDF • Enhances test case accuracy</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Generate Section -->
+                <div class="generate-section">
+                    <div class="generate-card">
+                        <div class="generate-content">
+                            <div class="generate-info">
+                                <div class="generate-icon">
+                                    <i class="fas fa-magic"></i>
+                                </div>
+                                <div class="generate-text">
+                                    <h4>Ready to Generate</h4>
+                                    <p>AI will analyze the requirements and create comprehensive tests with time estimates</p>
+                                </div>
+                            </div>
+                            <button type="button" id="generateBtn" class="generate-button" disabled>
+                                <i class="fas fa-rocket"></i>
+                                Generate Tests
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
             </div>
         </form>
         <div id="loading" class="my-3" style="display:none;">
@@ -313,16 +1939,28 @@
                         </tr>
                     </thead>
                     <tbody id="testcasesTableBody">
-                        <!-- Test cases will be inserted here -->
+                        <!-- Tests will be inserted here -->
                     </tbody>
                 </table>
                 <div id="testcasePagination" style="margin-top:1em;text-align:center;"></div>
-                <button class="btn btn-success" id="saveBtn">Save Test Cases</button>
-                <button class="btn btn-primary" id="createJiraSubtasksBtn" style="margin-left: 10px;">Create Jira Subtasks</button>
+        </div>
+        
+        <div class="bottom-actions" id="bottomActions" style="display: none;">
+            <button class="btn btn-success" id="saveBtn">
+                <i class="fas fa-save"></i>
+                Save Tests
+            </button>
+            <button class="btn btn-primary" id="createJiraSubtasksBtn">
+                <i class="fab fa-jira"></i>
+                Create Jira Subtasks
+            </button>
             </div>
         </div>
     </div>
 </div>
+
+{% include 'footer.html' %}
+
 <script>
 document.addEventListener('DOMContentLoaded', function() {
 // Assign all DOM elements FIRST
@@ -333,23 +1971,157 @@ const jiraIdInput = document.getElementById('jiraIdInput');
 const fetchJiraBtn = document.getElementById('fetchJiraBtn');
 const clearJiraBtn = document.getElementById('clearJiraBtn');
 const clearPrdBtn = document.getElementById('clearPrdBtn');
-const connectJiraBtn = document.getElementById('connectJiraBtn');
-const disconnectJiraBtn = document.getElementById('disconnectJiraBtn');
+// Jira connection is handled at the application level
 const prdUpload = document.getElementById('prdUpload');
 const summarySection = document.getElementById('summarySection');
 const jiraTab = document.getElementById('jira-tab');
 const prdTab = document.getElementById('prd-tab');
 const createJiraSubtasksBtn = document.getElementById('createJiraSubtasksBtn');
+const attachmentInput = document.getElementById('attachmentInput');
+const attachmentArea = document.getElementById('attachmentArea');
+const filesPreview = document.getElementById('filesPreview');
+const filesGrid = document.getElementById('filesGrid');
 
 // Initialize UI state
 let activeTab = 'jira'; // Default tab is Jira
 let jiraFetched = false;
 let prdUploaded = false;
+let testsGeneratedFrom = null; // Track which tab generated the current tests ('jira' or 'prd')
 
-// Tab switching logic
+// Helper function to check if user has entered data (excludes auto-fetched content)
+function hasUserData() {
+    const jiraInput = document.getElementById('jiraIdInput').value.trim();
+    const summaryInput = document.getElementById('summaryInput').value.trim();
+    const scenarioInput = document.getElementById('scenarioInput');
+    const scenarioText = scenarioInput.textContent || scenarioInput.innerText || '';
+    const contextSelected = document.getElementById('contextSelect').value;
+    const attachments = document.getElementById('attachmentInput').files.length;
+    
+    // Only check for manually entered data, not auto-fetched content
+    // Exclude placeholder content when checking scenario text
+    const hasScenarioText = scenarioText.trim() && 
+                          !scenarioText.includes('Detailed requirements and acceptance criteria will appear here');
+    
+    return jiraInput || summaryInput || hasScenarioText || contextSelected || attachments;
+}
+
+// Helper function to check if there are generated tests
+function hasGeneratedTests() {
+    return currentTestCases && currentTestCases.length > 0;
+}
+
+// Helper function to check if user has any data or generated tests that would be lost
+function hasDataToLose() {
+    return hasUserData() || hasGeneratedTests();
+}
+
+// Helper function to clear all data
+function clearAllData() {
+    // Clear Jira data
+    document.getElementById('jiraIdInput').value = '';
+    document.getElementById('summaryInput').value = '';
+    const scenarioInput = document.getElementById('scenarioInput');
+    scenarioInput.innerHTML = `
+        <div class="placeholder-content">
+            <i class="fas fa-lightbulb"></i>
+            <p>Detailed requirements and acceptance criteria will appear here after fetching from Jira or uploading a PRD document.</p>
+        </div>
+    `;
+    
+    // Clear context and attachments
+    document.getElementById('contextSelect').value = '';
+    clearAttachments();
+    
+    // Clear PRD data
+    window.currentPrdFile = null;
+    window.currentPrdContent = null;
+    const prdUploadArea = document.getElementById('prdUploadArea');
+    const prdUploadedFile = document.getElementById('prdUploadedFile');
+    if (prdUploadArea && prdUploadedFile) {
+        prdUploadArea.style.display = 'block';
+        prdUploadedFile.style.display = 'none';
+    }
+    
+    // Clear generated tests
+    clearGeneratedTests();
+    
+    // Reset flags
+    jiraFetched = false;
+    prdUploaded = false;
+    
+    updateGenerateBtnState();
+}
+
+// Helper function to clear generated tests section
+function clearGeneratedTests() {
+    // Clear the tests data
+    currentTestCases = [];
+    window.currentTestCases = [];
+    testsGeneratedFrom = null; // Reset the source tracking
+    
+    // Clear the table body
+    const tbody = document.getElementById('testcasesTableBody');
+    if (tbody) {
+        tbody.innerHTML = '';
+    }
+    
+    // Hide the entire test section
+    const testcasesSection = document.getElementById('testcasesSection');
+    if (testcasesSection) {
+        testcasesSection.style.display = 'none';
+    }
+    
+    // Hide bottom actions
+    const bottomActions = document.getElementById('bottomActions');
+    if (bottomActions) {
+        bottomActions.style.display = 'none';
+    }
+    
+    // Clear pagination
+    const pagination = document.getElementById('testcasePagination');
+    if (pagination) {
+        pagination.innerHTML = '';
+    }
+    
+    // Hide total estimated time
+    const totalTimeDiv = document.getElementById('totalEstimatedTime');
+    if (totalTimeDiv) {
+        totalTimeDiv.style.display = 'none';
+    }
+    
+    // Reset any test generation status
+    const generateBtn = document.getElementById('generateBtn');
+    if (generateBtn) {
+        generateBtn.innerHTML = '<i class="fas fa-magic"></i> Generate Tests';
+        generateBtn.disabled = true;
+    }
+    
+    // Reset the generated tests heading to generic title
+    const heading = document.getElementById('generatedTestsHeading');
+    if (heading) {
+        heading.textContent = 'Generated Tests';
+    }
+}
+
+// Tab switching logic with confirmation
 jiraTab.addEventListener('click', function(e) {
     e.preventDefault();
+    
+    // If switching from PRD to Jira and user has data or tests, ask for confirmation
+    if (activeTab === 'prd' && hasDataToLose()) {
+        const confirmed = confirm('Switching tabs will clear all entered data and any generated tests. Are you sure you want to continue?');
+        if (!confirmed) {
+            return; // Don't switch tabs
+        }
+        clearAllData();
+    }
+    
     activeTab = 'jira';
+    
+    // Safety measure: Clear tests when switching tabs (in case confirmation was bypassed)
+    if (hasGeneratedTests()) {
+        clearGeneratedTests();
+    }
     
     // Update tab UI
     jiraTab.classList.add('active');
@@ -363,13 +2135,35 @@ jiraTab.addEventListener('click', function(e) {
     
     // Show/hide elements specific to Jira tab
     summarySection.style.display = 'block';
+    
+    // Only show Create Jira Subtasks button if there are Jira-generated tests
+    if (hasGeneratedTests() && testsGeneratedFrom === 'jira') {
     createJiraSubtasksBtn.style.display = 'inline-block';
+    } else {
+        createJiraSubtasksBtn.style.display = 'none';
+    }
+    
     updateGenerateBtnState();
 });
 
 prdTab.addEventListener('click', function(e) {
     e.preventDefault();
+    
+    // If switching from Jira to PRD and user has data or tests, ask for confirmation
+    if (activeTab === 'jira' && hasDataToLose()) {
+        const confirmed = confirm('Switching tabs will clear all entered data and any generated tests. Are you sure you want to continue?');
+        if (!confirmed) {
+            return; // Don't switch tabs
+        }
+        clearAllData();
+    }
+    
     activeTab = 'prd';
+    
+    // Safety measure: Clear tests when switching tabs (in case confirmation was bypassed)
+    if (hasGeneratedTests()) {
+        clearGeneratedTests();
+    }
     
     // Update tab UI
     prdTab.classList.add('active');
@@ -384,6 +2178,24 @@ prdTab.addEventListener('click', function(e) {
     // Show/hide elements specific to PRD tab
     summarySection.style.display = 'none';
     createJiraSubtasksBtn.style.display = 'none';
+    
+    // Restore PRD state if file was previously uploaded
+    if (window.currentPrdFile && window.currentPrdContent) {
+        const prdUploadArea = document.getElementById('prdUploadArea');
+        const prdUploadedFile = document.getElementById('prdUploadedFile');
+        const prdFileName = document.getElementById('prdFileName');
+        const prdFileStatus = document.getElementById('prdFileStatus');
+        
+        if (prdUploadArea && prdUploadedFile && prdFileName && prdFileStatus) {
+            prdUploadArea.style.display = 'none';
+            prdUploadedFile.style.display = 'block';
+            prdFileName.textContent = window.currentPrdFile.name;
+            prdFileStatus.textContent = '✓ Document processed successfully';
+            prdFileStatus.style.color = 'var(--success)';
+            prdUploaded = true;
+        }
+    }
+    
     updateGenerateBtnState();
 });
 
@@ -404,25 +2216,102 @@ function updateGenerateBtnState() {
 
 // Handle PRD document upload
 if (prdUpload) {
-    prdUpload.addEventListener('change', async function(e) {
-        if (!this.files || !this.files[0]) return;
+    const prdUploadArea = document.getElementById('prdUploadArea');
+    const prdUploadedFile = document.getElementById('prdUploadedFile');
+    const prdFileName = document.getElementById('prdFileName');
+    const prdFileStatus = document.getElementById('prdFileStatus');
+    
+    // Flag to prevent duplicate processing - declare BEFORE event handlers
+    let isProcessingPrd = false;
+    
+    // Drag and drop functionality
+    prdUploadArea.addEventListener('dragover', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        this.classList.add('dragover');
+    });
+    
+    prdUploadArea.addEventListener('dragleave', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        this.classList.remove('dragover');
+    });
+    
+    prdUploadArea.addEventListener('drop', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        this.classList.remove('dragover');
+        const files = e.dataTransfer.files;
+        if (files.length > 0 && !isProcessingPrd) {
+            handlePrdFile(files[0]);
+        }
+    });
+    
+    // Click to upload
+    // Handle both upload area and browse button clicks
+    prdUploadArea.addEventListener('click', function(e) {
+        if (!isProcessingPrd) {
+            // If clicking the browse button specifically, let it handle the click
+            if (e.target.closest('.browse-btn')) {
+                return;
+            }
+        prdUpload.click();
+        }
+    });
+    
+    // Handle browse button clicks specifically
+    const browseBtnPrd = prdUploadArea.querySelector('.browse-btn');
+    if (browseBtnPrd) {
+        browseBtnPrd.addEventListener('click', function(e) {
+            e.stopPropagation();
+            if (!isProcessingPrd) {
+                prdUpload.click();
+            }
+        });
+    }
+    
+    prdUpload.addEventListener('change', function(e) {
+        if (e.target.files.length > 0 && !isProcessingPrd) {
+            const file = e.target.files[0];
+            console.log('PRD file selected:', file.name);
+            
+            // Don't clear the input immediately, let handlePrdFile do it after processing starts
+            handlePrdFile(file);
+        }
+    });
+    
+    async function handlePrdFile(file) {
+        // Prevent duplicate processing
+        if (isProcessingPrd) {
+            console.log('PRD file already being processed, ignoring duplicate request');
+            return;
+        }
         
-        const file = this.files[0];
-        const fileType = file.type;
-        const fileName = file.name;
+        console.log('Starting PRD file processing for:', file.name);
+        isProcessingPrd = true;
         
-        // Show loading indicator
-        const loadingSpan = document.createElement('span');
-        loadingSpan.id = 'prdLoadingIndicator';
-        loadingSpan.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true" style="margin-right:0.5em;"></span> Processing PRD document...';
-        loadingSpan.style.display = 'block';
-        loadingSpan.style.marginTop = '5px';
-        loadingSpan.style.color = '#0d6efd';
-        this.parentNode.appendChild(loadingSpan);
+        // Clear the file input to prevent re-triggering
+        prdUpload.value = '';
+        
+        const descriptionInput = document.getElementById('scenarioInput');
+        
+        // Disable the upload area to prevent additional clicks
+        prdUploadArea.style.pointerEvents = 'none';
+        prdUploadArea.style.opacity = '0.7';
+        
+        // Store the file reference globally to maintain state
+        window.currentPrdFile = file;
+        
+        // Show uploaded file info
+        prdFileName.textContent = file.name;
+        prdFileStatus.textContent = 'Processing document...';
+        prdFileStatus.style.color = 'var(--text-light)';
+        prdUploadArea.style.display = 'none';
+        prdUploadedFile.style.display = 'block';
         
         try {
             // For text files, read directly
-            if (fileType === 'text/plain') {
+            if (file.type === 'text/plain') {
                 const reader = new FileReader();
                 reader.onload = function(e) {
                     const prdContent = e.target.result;
@@ -430,9 +2319,16 @@ if (prdUpload) {
                     descriptionInput.innerHTML = prdContent;
                     prdUploaded = true;
                     updateGenerateBtnState();
-                    loadingSpan.innerHTML = '✓ PRD content loaded successfully';
-                    loadingSpan.style.color = 'green';
-                    setTimeout(() => loadingSpan.remove(), 3000);
+                    prdFileStatus.textContent = '✓ Document processed successfully';
+                    prdFileStatus.style.color = 'var(--success)';
+                    
+                    // Store content for persistence
+                    window.currentPrdContent = prdContent;
+                    
+                    // Reset processing flag and re-enable upload area
+                    isProcessingPrd = false;
+                    prdUploadArea.style.pointerEvents = 'auto';
+                    prdUploadArea.style.opacity = '1';
                 };
                 reader.readAsText(file);
             } else {
@@ -456,38 +2352,207 @@ if (prdUpload) {
                 descriptionInput.innerHTML = prdContent;
                 prdUploaded = true;
                 updateGenerateBtnState();
-                loadingSpan.innerHTML = '✓ PRD content loaded successfully';
-                loadingSpan.style.color = 'green';
-                setTimeout(() => loadingSpan.remove(), 3000);
+                prdFileStatus.textContent = '✓ Document processed successfully';
+                prdFileStatus.style.color = 'var(--success)';
+                
+                // Store content for persistence
+                window.currentPrdContent = prdContent;
+                
+                // Reset processing flag and re-enable upload area
+                isProcessingPrd = false;
+                prdUploadArea.style.pointerEvents = 'auto';
+                prdUploadArea.style.opacity = '1';
             }
         } catch (error) {
             console.error('Error processing PRD document:', error);
-            loadingSpan.innerHTML = '❌ Error processing document: ' + error.message;
-            loadingSpan.style.color = 'red';
-            setTimeout(() => loadingSpan.remove(), 5000);
+            prdFileStatus.textContent = '❌ Error processing document: ' + error.message;
+            prdFileStatus.style.color = 'var(--error)';
+            
+            // Reset on error
+            prdUploaded = false;
+            updateGenerateBtnState();
+            
+            // Reset processing flag and re-enable upload area
+            isProcessingPrd = false;
+            prdUploadArea.style.pointerEvents = 'auto';
+            prdUploadArea.style.opacity = '1';
+            
+            // Show upload area again on error
+            prdUploadArea.style.display = 'block';
+            prdUploadedFile.style.display = 'none';
+        }
+    }
+}
+
+// Handle Visual Assets Upload
+if (attachmentInput) {
+    // Store selected files array
+    let selectedFiles = [];
+    
+    // Handle file selection
+    attachmentInput.addEventListener('change', function(e) {
+        const files = Array.from(e.target.files);
+        selectedFiles = files;
+        updateFilesPreview();
+    });
+    
+    // Handle drag and drop
+    attachmentArea.addEventListener('dragover', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        attachmentArea.style.borderColor = 'var(--primary)';
+        attachmentArea.style.background = 'rgba(99, 102, 241, 0.05)';
+    });
+    
+    attachmentArea.addEventListener('dragleave', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        attachmentArea.style.borderColor = 'var(--border)';
+        attachmentArea.style.background = 'transparent';
+    });
+    
+    attachmentArea.addEventListener('drop', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        attachmentArea.style.borderColor = 'var(--border)';
+        attachmentArea.style.background = 'transparent';
+        
+        const files = Array.from(e.dataTransfer.files);
+        // Filter for accepted file types
+        const acceptedFiles = files.filter(file => 
+            file.type.startsWith('image/') || file.type === 'application/pdf'
+        );
+        
+        if (acceptedFiles.length > 0) {
+            selectedFiles = acceptedFiles;
+            updateAttachmentInput();
+            updateFilesPreview();
         }
     });
+    
+    function updateAttachmentInput() {
+        // Create new FileList-like object
+        const dt = new DataTransfer();
+        selectedFiles.forEach(file => dt.items.add(file));
+        attachmentInput.files = dt.files;
+    }
+    
+    function updateFilesPreview() {
+        if (selectedFiles.length === 0) {
+            filesPreview.classList.remove('show');
+            attachmentArea.classList.remove('has-files');
+            // Reset attachment area text
+            const attachmentText = attachmentArea.querySelector('.attachment-text span');
+            attachmentText.textContent = 'Upload screenshots or UI mockups';
+            return;
+        }
+        
+        filesPreview.classList.add('show');
+        attachmentArea.classList.add('has-files');
+        
+        // Update attachment area text
+        const attachmentText = attachmentArea.querySelector('.attachment-text span');
+        attachmentText.textContent = `${selectedFiles.length} file${selectedFiles.length > 1 ? 's' : ''} selected`;
+        
+        // Generate files grid
+        filesGrid.innerHTML = '';
+        selectedFiles.forEach((file, index) => {
+            const fileItem = createFileItem(file, index);
+            filesGrid.appendChild(fileItem);
+        });
+    }
+    
+    function createFileItem(file, index) {
+        const item = document.createElement('div');
+        item.className = 'file-item';
+        
+        const isImage = file.type.startsWith('image/');
+        const isPdf = file.type === 'application/pdf';
+        
+        let icon = 'fas fa-file';
+        if (isImage) icon = 'fas fa-image';
+        else if (isPdf) icon = 'fas fa-file-pdf';
+        
+        const size = formatFileSize(file.size);
+        const fileName = file.name.length > 15 ? file.name.substring(0, 15) + '...' : file.name;
+        
+        item.innerHTML = `
+            <div class="file-icon">
+                <i class="${icon}"></i>
+            </div>
+            <div class="file-name">${fileName}</div>
+            <div class="file-size">${size}</div>
+            <button class="file-remove" onclick="removeFile(${index})" title="Remove file">
+                <i class="fas fa-times"></i>
+            </button>
+        `;
+        
+        return item;
+    }
+    
+    function formatFileSize(bytes) {
+        if (bytes === 0) return '0 B';
+        const k = 1024;
+        const sizes = ['B', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+    }
+    
+    // Global function for remove button
+    window.removeFile = function(index) {
+        selectedFiles.splice(index, 1);
+        updateAttachmentInput();
+        updateFilesPreview();
+    };
+    
+    // Global function to clear all attachments
+    window.clearAttachments = function() {
+        selectedFiles = [];
+        attachmentInput.value = '';
+        updateFilesPreview();
+    };
+}
+
+// Fallback clearAttachments function if not defined above
+if (typeof window.clearAttachments === 'undefined') {
+    window.clearAttachments = function() {
+        document.getElementById('attachmentInput').value = '';
+    };
 }
 
 // Clear buttons functionality
 clearJiraBtn.onclick = function() {
-    if (confirm('Are you sure you want to clear the Jira ID, Summary, and Description fields?')) {
+    if (confirm('Are you sure you want to clear the Jira ID, Summary, Description fields, and any generated tests?')) {
         jiraIdInput.value = '';
         summaryInput.value = '';
         descriptionInput.innerHTML = '';
         jiraFetched = false;
+        clearGeneratedTests();
         updateGenerateBtnState();
         isDirty = false;
     }
 };
 
 clearPrdBtn.onclick = function() {
-    if (confirm('Are you sure you want to clear the uploaded PRD and Description field?')) {
+    if (confirm('Are you sure you want to clear the uploaded PRD, Description field, and any generated tests?')) {
         prdUpload.value = '';
         descriptionInput.innerHTML = '';
         prdUploaded = false;
+        clearGeneratedTests();
         updateGenerateBtnState();
         isDirty = false;
+        
+        // Clear stored file references
+        window.currentPrdFile = null;
+        window.currentPrdContent = null;
+        
+        // Reset the upload interface
+        const prdUploadArea = document.getElementById('prdUploadArea');
+        const prdUploadedFile = document.getElementById('prdUploadedFile');
+        if (prdUploadArea && prdUploadedFile) {
+            prdUploadArea.style.display = 'block';
+            prdUploadedFile.style.display = 'none';
+        }
         
         // Remove any existing loading indicator
         const loadingSpan = document.getElementById('prdLoadingIndicator');
@@ -562,14 +2627,33 @@ function renderTestCases(testcases, page = 1) {
     }
     pagination.innerHTML = html;
     isDirty = true;
+    
+    // Show/hide bottom actions based on whether there are tests
+    const bottomActions = document.getElementById('bottomActions');
+    const createJiraSubtasksBtn = document.getElementById('createJiraSubtasksBtn');
+    
+    if (testcases && testcases.length > 0) {
+        bottomActions.style.display = 'flex';
+        
+        // Only show Create Jira Subtasks button for Jira-generated tests
+        if (activeTab === 'jira' && testsGeneratedFrom === 'jira') {
+            createJiraSubtasksBtn.style.display = 'inline-block';
+        } else {
+            createJiraSubtasksBtn.style.display = 'none';
+        }
+    } else {
+        bottomActions.style.display = 'none';
+    }
 }
 
 let currentTestCases = [];
 
 function removeTestCase(idx) {
+    if (confirm('Are you sure you want to delete this test case? This action cannot be undone.')) {
     currentTestCases.splice(idx, 1);
     window.currentTestCases = currentTestCases;
     renderTestCases(currentTestCases, 1);
+    }
 }
 
 function editTestCase(idx) {
@@ -656,28 +2740,12 @@ clearJiraBtn.onclick = function() {
     }
 };
 
-// Handle Clear PRD button
-clearPrdBtn.onclick = function() {
-    if (confirm('Are you sure you want to clear the uploaded PRD document?')) {
-        prdUpload.value = '';
-        document.getElementById('scenarioInput').innerHTML = '';
-        prdUploaded = false;
-        updateGenerateBtnState();
-        isDirty = false;
-    }
-};
+
 
 // Spinner HTML
 const spinnerHtml = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true" style="margin-right:0.5em;"></span>';
 
-// --- Jira Connect Button ---
-connectJiraBtn.onclick = function() {
-    connectJiraBtn.disabled = true;
-    const original = connectJiraBtn.innerHTML;
-    connectJiraBtn.innerHTML = spinnerHtml + 'Connecting...';
-    window.location.href = '/api/jira/oauth/login';
-    setTimeout(() => { connectJiraBtn.innerHTML = original; connectJiraBtn.disabled = false; }, 3000); // fallback restore
-};
+// Jira connection is now handled at the application level via the sidebar
 
 // Helper: Normalize Jira ID input
 function normalizeJiraId(input) {
@@ -697,6 +2765,20 @@ let currentJiraKey = '';
 
 // --- Fetch Button ---
 fetchJiraBtn.onclick = async function() {
+    // First validate Jira connection
+    try {
+        const statusResponse = await fetch('/api/jira/status');
+        const statusData = await statusResponse.json();
+        if (!statusData.connected) {
+            alert('Please authenticate first using the sidebar to fetch story details.');
+            return;
+        }
+    } catch (error) {
+        console.error('Error checking Jira status:', error);
+        alert('Unable to verify authentication. Please ensure you are authenticated.');
+        return;
+    }
+    
     jiraFetched = false;
     updateGenerateBtnState();
     validationMsg.style.display = 'none';
@@ -813,15 +2895,18 @@ async function onGenerateTests() {
         return;
     }
     
-    // Set heading based on active tab
+    // Set heading based on active tab and track test source
     const heading = document.getElementById('generatedTestsHeading');
     if (activeTab === 'jira' && currentJiraKey) {
         heading.textContent = `Generated Tests for ${currentJiraKey}`;
+        testsGeneratedFrom = 'jira';
     } else if (activeTab === 'prd') {
         const prdFile = prdUpload.files[0];
         heading.textContent = prdFile ? `Generated Tests for ${prdFile.name}` : 'Generated Tests from PRD';
+        testsGeneratedFrom = 'prd';
     } else {
         heading.textContent = 'Generated Tests';
+        testsGeneratedFrom = null;
     }
     validationMsg.textContent = '';
     validationMsg.style.display = 'none';
@@ -905,19 +2990,25 @@ async function onGenerateTests() {
             document.getElementById('testcasesSection').style.display = 'block';
             document.getElementById('testcasesSection').scrollIntoView({ behavior: 'smooth', block: 'start' });
             const heading = document.getElementById('generatedTestsHeading');
-            if (currentJiraKey) {
+            if (activeTab === 'jira' && currentJiraKey) {
                 heading.textContent = `Generated Tests for ${currentJiraKey}`;
+                testsGeneratedFrom = 'jira';
+            } else if (activeTab === 'prd') {
+                const prdFile = window.currentPrdFile;
+                heading.textContent = prdFile ? `Generated Tests for ${prdFile.name}` : 'Generated Tests from PRD';
+                testsGeneratedFrom = 'prd';
             } else {
                 heading.textContent = 'Generated Tests';
+                testsGeneratedFrom = null;
             }
         } else {
             // Hide total estimated time if no testcases
             document.getElementById('totalEstimatedTime').style.display = 'none';
             document.getElementById('totalEstimatedTimeValue').textContent = '0';
-            alert(data.error || 'Failed to generate test cases.');
+            alert(data.error || 'Failed to generate tests.');
         }
     } catch (err) {
-        alert('Error generating test cases: ' + err);
+        alert('Error generating tests: ' + err);
     } finally {
         setButtonsForIdle();
         generateBtn.innerHTML = original;
@@ -929,6 +3020,9 @@ generateBtn.onclick = onGenerateTests;
 
 // --- Save Button ---
 document.getElementById('saveBtn').onclick = function() {
+    if (!confirm('Save all tests as a CSV file? This will download the file to your computer.')) {
+        return;
+    }
     const saveBtn = document.getElementById('saveBtn');
     saveBtn.disabled = true;
     const original = saveBtn.innerHTML;
@@ -948,7 +3042,7 @@ document.getElementById('saveBtn').onclick = function() {
             }
         });
         if (!currentTestCases.length) {
-            alert('No test cases to save!');
+            alert('No tests to save!');
             saveBtn.innerHTML = original;
             saveBtn.disabled = false;
             return;
@@ -980,6 +3074,9 @@ document.getElementById('saveBtn').onclick = function() {
 
 // --- Create Jira Subtasks Button ---
 document.getElementById('createJiraSubtasksBtn').onclick = function() {
+    if (!confirm('Create Jira subtasks for all tests? This will create subtasks in your connected Jira project.')) {
+        return;
+    }
     const createBtn = document.getElementById('createJiraSubtasksBtn');
     createBtn.disabled = true;
     const original = createBtn.innerHTML;
@@ -1000,7 +3097,7 @@ document.getElementById('createJiraSubtasksBtn').onclick = function() {
     });
     
     if (!currentTestCases.length) {
-        alert('No test cases to create subtasks for!');
+        alert('No tests to create subtasks for!');
         createBtn.innerHTML = original;
         createBtn.disabled = false;
         return;
@@ -1014,9 +3111,9 @@ document.getElementById('createJiraSubtasksBtn').onclick = function() {
         return;
     }
     
-    // Send the test cases to the server to create Jira subtasks
+    // Send the tests to the server to create Jira subtasks
     console.log('Creating subtasks for parent:', jiraId);
-    console.log('Number of test cases:', currentTestCases.length);
+    console.log('Number of tests:', currentTestCases.length);
     
     fetch('/api/jira/create-subtasks', {
         method: 'POST',
@@ -1080,7 +3177,6 @@ function setAllButtonsDisabled(disabled) {
     fetchJiraBtn.disabled = disabled;
     clearJiraBtn.disabled = disabled;
     clearPrdBtn.disabled = disabled;
-    if (!isJiraConnected) connectJiraBtn.disabled = disabled;
     const saveBtn = document.getElementById('saveBtn');
     if (saveBtn) saveBtn.disabled = disabled;
 }
@@ -1090,76 +3186,16 @@ function setButtonsForIdle() {
     clearJiraBtn.disabled = false;
     clearPrdBtn.disabled = false;
     updateGenerateBtnState();
-    if (!isJiraConnected) connectJiraBtn.disabled = false;
     const saveBtn = document.getElementById('saveBtn');
     if (saveBtn) saveBtn.disabled = false;
 }
 
-// Handle Connect to Jira button
-connectJiraBtn.onclick = function() {
-    window.location.href = '/api/jira/oauth/login';
-};
 
-// Jira SVG icon markup
-const jiraSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 32 32" fill="none" style="vertical-align:middle;margin-right:0.3em;"><g><path d="M17.1 2.3a2.1 2.1 0 0 0-2.9 0L2.3 14.2a2.1 2.1 0 0 0 0 2.9l11.9 11.9a2.1 2.1 0 0 0 2.9 0l11.9-11.9a2.1 2.1 0 0 0 0-2.9L17.1 2.3z" fill="#2684FF"/><path d="M21.7 10.3a1.3 1.3 0 0 0-1.8 0l-9.6 9.6a1.3 1.3 0 0 0 0 1.8l6.5 6.5a1.3 1.3 0 0 0 1.8 0l9.6-9.6a1.3 1.3 0 0 0 0-1.8l-6.5-6.5z" fill="#0052CC"/></g></svg>`;
 
-let isJiraConnected = false;
-function setJiraConnectBtn(status) {
-    if (status === 'connected') {
-        connectJiraBtn.innerHTML = jiraSvg + 'Jira Connected';
-        connectJiraBtn.className = 'btn btn-success';
-        connectJiraBtn.disabled = true;
-        isJiraConnected = true;
-    } else {
-        connectJiraBtn.innerHTML = jiraSvg + 'Jira Connect';
-        connectJiraBtn.className = 'btn btn-outline-primary';
-        connectJiraBtn.disabled = false;
-        isJiraConnected = false;
-    }
-}
-
-// Check Jira connection status and update button
-async function checkJiraConnection() {
-    try {
-        const resp = await fetch('/api/jira/status');
-        const data = await resp.json();
-        if (data.connected) {
-            setJiraConnectBtn('connected');
-        } else {
-            setJiraConnectBtn('connect');
-        }
-    } catch (e) {
-        setJiraConnectBtn('connect');
-    }
-}
-checkJiraConnection();
-
+// Jira connection is managed at the application level
 window.renderTestCases = renderTestCases;
 window.currentTestCases = currentTestCases;
 window.removeTestCase = removeTestCase;
-
-function updateJiraButtons(connected) {
-    if (connected) {
-        connectJiraBtn.style.display = 'none';
-        disconnectJiraBtn.style.display = '';
-        fetchJiraBtn.disabled = false;
-    } else {
-        connectJiraBtn.style.display = '';
-        disconnectJiraBtn.style.display = 'none';
-        fetchJiraBtn.disabled = true;
-    }
-}
-
-fetch('/api/jira/status').then(r => r.json()).then(data => {
-    updateJiraButtons(data.connected);
-});
-
-disconnectJiraBtn.onclick = function() {
-    fetch('/api/jira/disconnect', {method: 'POST'}).then(r => {
-        if (r.ok) location.reload();
-        else alert('Failed to disconnect Jira.');
-    });
-};
 
 // Add dirty page warning on navigation
 window.addEventListener('beforeunload', function(e) {
@@ -1171,5 +3207,6 @@ window.addEventListener('beforeunload', function(e) {
 });
 }); // End DOMContentLoaded
 </script>
+  </div>
 </body>
 </html>

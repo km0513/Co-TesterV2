@@ -31,9 +31,10 @@
     </style>
 </head>
 <body>
-{% set active_tab = 'browseruse' %}
-{% include 'navbar.html' %}
-<div class="container">
+  {% set active_tab = 'browseruse' %}
+  {% include 'left-sidebar.html' %}
+  <div class="main-content">
+  <div class="container">
   <div class="instructions" style="margin-bottom:1.2em; background: #fffbe7; border: 1.5px solid #ffe082; color: #7c5a00; border-radius: 7px; padding: 0.7em 1em; font-size: 0.98em; max-width:600px; margin-left:0; text-align:left; line-height:1.3;">
     <b>Instructions:</b>
     <ol style="margin:0.3em 0 0.3em 1.2em; padding:0;">
@@ -985,5 +986,6 @@ document.getElementById('downloadHtmlReportBtn').addEventListener('click', funct
   }, 100);
 });
 </script>
+  </div>
 </body>
 </html>

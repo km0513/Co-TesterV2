@@ -1,0 +1,1007 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none'><defs><linearGradient id='favGradient' x1='0%' y1='0%' x2='100%' y2='100%'><stop offset='0%' style='stop-color:%23f59e0b;stop-opacity:1' /><stop offset='100%' style='stop-color:%23d97706;stop-opacity:1' /></linearGradient></defs><path d='M12 2L13.09 8.26L20 9L13.09 9.74L12 16L10.91 9.74L4 9L10.91 8.26L12 2Z' fill='url(%23favGradient)'/><circle cx='12' cy='12' r='3' fill='none' stroke='url(%23favGradient)' stroke-width='1.8'/></svg>">
+  <title>My Details - Co-Tester</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="/static/styles.css">
+  <link rel="stylesheet" href="/static/styles-update.css">
+  <script src="/static/auth-utils.js"></script>
+  <style>
+    /* Spinner animation for loading state */
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    
+    .jira-dashboard {
+      padding: 2rem;
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+
+    .jira-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 2rem;
+      padding-bottom: 1rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .jira-title {
+      font-size: 2rem;
+      font-weight: 700;
+      color: var(--text-dark);
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .jira-title i {
+      color: #0052CC;
+    }
+
+    .jira-actions {
+      display: flex;
+      gap: 1rem;
+    }
+
+    .jira-card {
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+      border: 1px solid var(--border);
+      transition: all 0.3s ease;
+    }
+
+    .jira-card:hover {
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+      transform: translateY(-2px);
+    }
+
+    .jira-card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1rem;
+      padding-bottom: 0.75rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .jira-card-title {
+      font-size: 1.25rem;
+      font-weight: 600;
+      color: var(--text-dark);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .jira-card-title i {
+      color: #0052CC;
+    }
+
+    .jira-stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 1.5rem;
+      margin-bottom: 2rem;
+    }
+
+    .stat-card {
+      background: white;
+      border-radius: 12px;
+      padding: 1.25rem;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+      border: 1px solid var(--border);
+      transition: all 0.3s ease;
+    }
+
+    .stat-card:hover {
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+      transform: translateY(-2px);
+    }
+
+    .stat-title {
+      font-size: 0.875rem;
+      color: var(--text-light);
+      margin-bottom: 0.5rem;
+    }
+
+    .stat-value {
+      font-size: 1.75rem;
+      font-weight: 700;
+      color: var(--text-dark);
+    }
+
+    .stat-icon {
+      position: absolute;
+      top: 1rem;
+      right: 1rem;
+      font-size: 1.5rem;
+      opacity: 0.2;
+    }
+
+    .jira-issues {
+      margin-top: 2rem;
+    }
+
+    .issue-list {
+      margin-top: 1rem;
+    }
+
+    .issue-item {
+      display: flex;
+      padding: 1rem;
+      border-radius: 8px;
+      margin-bottom: 0.75rem;
+      background: white;
+      border: 1px solid var(--border);
+      transition: all 0.3s ease;
+    }
+
+    .issue-item:hover {
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      transform: translateX(2px);
+    }
+
+    .issue-key {
+      font-weight: 600;
+      color: #0052CC;
+      margin-right: 1rem;
+      min-width: 80px;
+    }
+
+    .issue-link {
+      color: #0052CC;
+      text-decoration: none;
+      font-weight: 600;
+      transition: all 0.3s ease;
+    }
+
+    .issue-link:hover {
+      color: #0747A6;
+      text-decoration: underline;
+    }
+
+    .issue-summary {
+      flex: 1;
+    }
+
+    .issue-status {
+      padding: 0.25rem 0.75rem;
+      border-radius: 12px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      margin-left: 1rem;
+    }
+
+    .status-todo {
+      background-color: #E9F2FF;
+      color: #0052CC;
+    }
+
+    .status-in-progress {
+      background-color: #DEEBFF;
+      color: #0747A6;
+    }
+
+    .status-done {
+      background-color: #E3FCEF;
+      color: #006644;
+    }
+
+    .jira-filters {
+      display: flex;
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+      flex-wrap: wrap;
+    }
+
+    .filter-input {
+      padding: 0.5rem 1rem;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      font-size: 0.875rem;
+      flex: 1;
+      min-width: 200px;
+    }
+
+    .filter-select {
+      padding: 0.5rem 1rem;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      font-size: 0.875rem;
+      min-width: 150px;
+    }
+
+    .filter-button {
+      padding: 0.5rem 1.25rem;
+      border-radius: 8px;
+      background: var(--primary);
+      color: white;
+      border: none;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    .filter-button:hover {
+      background: var(--primary-hover);
+    }
+
+    .jira-time-entries {
+      margin-top: 2rem;
+    }
+
+    .time-entry-list {
+      margin-top: 1rem;
+    }
+    
+    .time-filter-container {
+      display: flex;
+      align-items: flex-end;
+      gap: 10px;
+      margin-bottom: 20px;
+      padding: 15px;
+      background-color: #f5f5f5;
+      border-radius: 5px;
+    }
+    
+    .time-filter-container .form-group {
+      flex: 1;
+      margin-bottom: 0;
+    }
+    
+    .time-filter-container .submit-button {
+      height: 38px;
+      padding: 0 15px;
+      background-color: #0052CC;
+      color: white;
+      border: none;
+      border-radius: 3px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    .time-entries-summary {
+      margin-bottom: 10px;
+      padding: 10px;
+      background-color: #E3FCEF;
+      border-radius: 3px;
+      color: #006644;
+      font-weight: 500;
+    }
+    
+    .time-total-summary {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 15px;
+      margin-bottom: 15px;
+      background-color: #DEEBFF;
+      border-radius: 3px;
+      border-left: 4px solid #0052CC;
+    }
+    
+    .total-label {
+      font-weight: 500;
+      color: #172B4D;
+    }
+    
+    .total-value {
+      font-weight: 600;
+      font-size: 1.2rem;
+      color: #0052CC;
+    }
+
+    .time-entry-item {
+      display: grid;
+      grid-template-columns: 3fr 1fr 1fr;
+      grid-template-rows: auto auto;
+      gap: 5px;
+      padding: 12px;
+      border-bottom: 1px solid #e0e0e0;
+      align-items: center;
+    }
+    
+    .time-entry-item:hover {
+      background-color: #f5f5f5;
+    }
+    
+    .time-issue {
+      grid-column: 1;
+      grid-row: 1;
+      font-weight: 500;
+    }
+
+    .time-issue .issue-link {
+      margin-right: 8px;
+    }
+    
+    .time-summary {
+      font-weight: normal;
+      color: #6B778C;
+    }
+    
+    .time-duration {
+      grid-column: 2;
+      grid-row: 1;
+      font-weight: 500;
+      color: #0052CC;
+    }
+    
+    .time-date {
+      grid-column: 3;
+      grid-row: 1;
+      text-align: right;
+      color: #6B778C;
+      font-size: 0.9rem;
+    }
+    
+    .time-comment {
+      grid-column: 1 / span 3;
+      grid-row: 2;
+      color: #6B778C;
+      font-size: 0.9rem;
+      font-style: italic;
+      padding-top: 5px;
+    }
+
+    .time-action-btn {
+      width: 32px;
+      height: 32px;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #f1f5f9;
+      border: none;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    .time-action-btn:hover {
+      background: #e2e8f0;
+    }
+
+    .time-action-btn.edit {
+      color: #0052CC;
+    }
+
+    .time-action-btn.delete {
+      color: #DE350B;
+    }
+
+    .add-time-entry {
+      margin-top: 1.5rem;
+      padding: 1.5rem;
+      border: 2px dashed var(--border);
+      border-radius: 12px;
+      background: #f8fafc;
+    }
+
+    .add-time-form {
+      display: grid;
+      grid-template-columns: 1fr 1fr 120px auto;
+      gap: 1rem;
+      align-items: center;
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .form-label {
+      font-size: 0.875rem;
+      font-weight: 500;
+      color: var(--text-light);
+    }
+
+    .form-input, .form-select {
+      padding: 0.75rem 1rem;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      font-size: 0.875rem;
+    }
+
+    .form-submit {
+      align-self: flex-end;
+      padding: 0.75rem 1.5rem;
+      border-radius: 8px;
+      background: var(--primary);
+      color: white;
+      border: none;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      height: 42px;
+    }
+
+    .form-submit:hover {
+      background: var(--primary-hover);
+    }
+
+    .loading-spinner {
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      border: 3px solid rgba(255,255,255,.3);
+      border-radius: 50%;
+      border-top-color: #fff;
+      animation: spin 1s ease-in-out infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 3rem 1rem;
+      color: var(--text-light);
+    }
+
+    .empty-state-icon {
+      font-size: 3rem;
+      margin-bottom: 1rem;
+      opacity: 0.3;
+    }
+
+    .empty-state-text {
+      font-size: 1.1rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .empty-state-action {
+      display: inline-block;
+      padding: 0.75rem 1.5rem;
+      background: var(--primary);
+      color: white;
+      border-radius: 8px;
+      font-weight: 600;
+      text-decoration: none;
+      transition: all 0.3s ease;
+    }
+
+    .empty-state-action:hover {
+      background: var(--primary-hover);
+      transform: translateY(-2px);
+    }
+
+    /* Responsive adjustments */
+    @media (max-width: 768px) {
+      .jira-stats {
+        grid-template-columns: 1fr;
+      }
+      
+      .time-entry-item {
+        grid-template-columns: 1fr;
+      }
+      
+      .add-time-form {
+        grid-template-columns: 1fr;
+      }
+      
+      .jira-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1rem;
+      }
+      
+      .jira-actions {
+        width: 100%;
+      }
+    }
+
+    /* Jira status colors */
+    .status-pill {
+      padding: 0.25rem 0.75rem;
+      border-radius: 12px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+
+    .status-to-do {
+      background-color: #E9F2FF;
+      color: #0052CC;
+    }
+
+    .status-in-progress {
+      background-color: #DEEBFF;
+      color: #0747A6;
+    }
+
+    .status-done {
+      background-color: #E3FCEF;
+      color: #006644;
+    }
+
+    .status-review {
+      background-color: #FFF7D6;
+      color: #7A4E00;
+    }
+
+    .status-blocked {
+      background-color: #FFEBE6;
+      color: #DE350B;
+    }
+  </style>
+</head>
+<body>
+  {% set active_tab = 'jira' %}
+  {% include 'left-sidebar.html' %}
+  
+  <div class="main-content">
+    <!-- Standard Page Header -->
+    {% set page_title = '<i class="fas fa-user-circle"></i> My Details' %}
+    {% set page_subtitle = 'View your profile information, Jira issues, and worklog activity' %}
+    {% set allow_html = true %}
+    {% include 'page-header.html' %}
+    
+   
+    
+    <div class="jira-dashboard">
+
+      <!-- User Profile Card -->
+      <div class="jira-card">
+        <div class="jira-card-header">
+          <h2 class="jira-card-title">
+            <i class="fas fa-user-circle"></i> My Profile
+          </h2>
+        </div>
+        <div id="userProfileContent">
+          <!-- Auth Warning -->
+          <div id="authWarning" style="display: none; margin-bottom: 1rem; padding: 1rem; background: #fee2e2; border-radius: 8px; border-left: 4px solid #ef4444;">
+            <h4 style="margin-top: 0; color: #dc2626;">⚠️ Jira Authentication Required</h4>
+            <p style="margin-bottom: 1rem; color: #7f1d1d;">You need to log in to Jira to view this dashboard. Click the button below to authenticate.</p>
+            <button onclick="window.location.href='/api/jira/oauth/login'" style="background: #0052cc; color: white; border: none; padding: 0.5rem 1rem; border-radius: 4px; cursor: pointer;">
+              <i class="fab fa-jira"></i> Login to Jira
+            </button>
+          </div>
+          
+          <!-- User Profile Display -->
+          <div id="userProfileDisplay" style="display: none;">
+            <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1.5rem; padding: 1rem; background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%); border-radius: 12px; border: 1px solid #cbd5e1;">
+              <div style="width: 60px; height: 60px; border-radius: 50%; background: linear-gradient(135deg, #0052cc, #0747a6); display: flex; align-items: center; justify-content: center; color: white; font-size: 1.5rem; font-weight: bold; box-shadow: 0 4px 12px rgba(5, 82, 204, 0.3);">
+                <span id="userInitials">?</span>
+              </div>
+              <div style="flex: 1;">
+                <h3 id="displayName" style="margin: 0 0 0.25rem 0; font-size: 1.25rem; font-weight: 600; color: #1e293b;">Loading...</h3>
+                <p id="displayEmail" style="margin: 0; color: #64748b; font-size: 0.9rem;">Loading...</p>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Loading State -->
+          <div id="userProfileLoading" style="text-align: center; padding: 2rem;">
+            <div style="display: inline-block; width: 40px; height: 40px; border: 3px solid #e2e8f0; border-top: 3px solid #0052cc; border-radius: 50%; animation: spin 1s linear infinite;"></div>
+            <p style="margin-top: 1rem; color: #64748b;">Loading user profile...</p>
+          </div>
+          
+          <!-- Debug Info Section -->
+          <div id="debugInfo" style="margin-top: 1rem; padding: 1rem; background: #f8f9fa; border-radius: 8px; border-left: 4px solid #f59e0b; display: none;">
+            <h4 style="margin-top: 0; color: #d97706;">Debug Information</h4>
+            <pre id="debugContent" style="background: white; padding: 1rem; border-radius: 4px; overflow-x: auto; font-size: 0.8rem;"></pre>
+          </div>
+        </div>
+      </div>
+
+      <!-- Time Entries Card -->
+      <div class="jira-card jira-time-entries">
+        <div class="jira-card-header">
+          <h2 class="jira-card-title">
+            <i class="fas fa-clock"></i> My Time Entries
+          </h2>
+        </div>
+        
+        <div style="padding: 2rem; text-align: center;">
+          <div style="background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%); border-radius: 12px; padding: 2rem; border: 1px solid #cbd5e1;">
+            <div style="width: 80px; height: 80px; margin: 0 auto 1.5rem auto; background: linear-gradient(135deg, #f59e0b, #d97706); border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);">
+              <i class="fas fa-clock" style="color: white; font-size: 2rem;"></i>
+            </div>
+            <h3 style="margin: 0 0 0.5rem 0; font-size: 1.25rem; font-weight: 600; color: #1e293b;">
+              <i class="fas fa-rocket" style="color: #f59e0b; margin-right: 0.5rem;"></i>
+              Coming Soon
+            </h3>
+            <p style="margin: 0 0 1rem 0; color: #64748b; font-size: 0.95rem; line-height: 1.5;">
+              Jira time entries and worklog tracking will be available soon. We're working on expanding our Jira integration to include comprehensive time tracking features.
+            </p>
+            <div style="background: #fef3c7; color: #92400e; padding: 0.75rem 1rem; border-radius: 8px; font-size: 0.875rem; border: 1px solid #fbbf24;">
+              <i class="fas fa-info-circle" style="margin-right: 0.5rem;"></i>
+              <strong>Note:</strong> This feature requires additional Jira permissions that are currently being configured.
+            </div>
+          </div>
+        </div>
+      </div>
+      </div>
+
+      <!-- My Issues Card -->
+      <div class="jira-card jira-issues">
+        <div class="jira-card-header">
+          <h2 class="jira-card-title">
+            <i class="fas fa-tasks"></i> My Issues
+          </h2>
+        </div>
+        
+        <div class="jira-filters">
+          <input type="text" id="searchInput" class="filter-input" placeholder="Search issues...">
+          <select id="statusFilter" class="filter-select">
+            <option value="">All Statuses</option>
+            <option value="To Do">To Do</option>
+            <option value="In Progress">In Progress</option>
+            <option value="Done">Done</option>
+          </select>
+          <button id="searchButton" class="filter-button">Search</button>
+        </div>
+
+        <div id="issuesContainer" class="issue-list">
+          <!-- Issues will be loaded here -->
+          <div class="empty-state" id="emptyIssues">
+            <div class="empty-state-icon">
+              <i class="fas fa-clipboard-list"></i>
+            </div>
+            <div class="empty-state-text">No issues found</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {% include 'footer.html' %}
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      // Set today's date as default for the date input
+      // setDefaultDate(); // Disabled - no date picker in "Coming Soon" mode
+      
+      // Load user info
+      loadUserInfo();
+      
+      // Load issues
+      loadIssues();
+      
+      // Time entries disabled - showing "Coming Soon" message
+      // loadTimeEntriesForDate();
+      
+      // Set up event listeners
+      document.getElementById('refreshButton').addEventListener('click', function() {
+        loadUserInfo();
+        loadIssues();
+        // loadTimeEntriesForDate(); // Disabled - showing "Coming Soon"
+      });
+      
+      document.getElementById('searchButton').addEventListener('click', loadIssues);
+      
+      document.getElementById('debugButton').addEventListener('click', function() {
+        console.log('=== DEBUG: Checking session ===');
+        
+        // Show debug info section
+        const debugInfo = document.getElementById('debugInfo');
+        const debugContent = document.getElementById('debugContent');
+        debugInfo.style.display = 'block';
+        debugContent.textContent = 'Loading debug information...';
+        
+        Promise.all([
+          fetch('/api/jira/debug-session').then(r => r.json()),
+          fetch('/api/jira/user-info').then(r => r.json())
+        ])
+          .then(([sessionData, userInfoData]) => {
+            console.log('Debug session data:', sessionData);
+            console.log('User info data:', userInfoData);
+            
+            const debugOutput = {
+              session_data: sessionData,
+              user_info_response: userInfoData,
+              timestamp: new Date().toISOString()
+            };
+            
+            debugContent.textContent = JSON.stringify(debugOutput, null, 2);
+          })
+          .catch(error => {
+            console.error('Debug error:', error);
+            debugContent.textContent = 'Error loading debug info: ' + error.message;
+          });
+      });
+      
+      document.getElementById('refreshUserInfoButton').addEventListener('click', function() {
+        console.log('=== FORCE REFRESH: Refreshing user info ===');
+        fetch('/api/jira/refresh-user-info', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        })
+          .then(response => response.json())
+          .then(data => {
+            console.log('Refresh user info response:', data);
+            if (data.error) {
+              alert('Error refreshing user info: ' + data.error);
+            } else {
+              alert('User info refreshed successfully!');
+              // Reload user info after refresh
+              loadUserInfo();
+            }
+          })
+          .catch(error => {
+            console.error('Refresh user info error:', error);
+            alert('Failed to refresh user info. Check console for details.');
+          });
+      });
+      
+      document.getElementById('testSessionButton').addEventListener('click', function() {
+        console.log('=== TESTING SESSION: Basic session functionality ===');
+        
+        // First, store test data
+        fetch('/api/test-session', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        })
+          .then(response => response.json())
+          .then(storeData => {
+            console.log('Store test data response:', storeData);
+            
+            // Then, retrieve test data
+            return fetch('/api/test-session');
+          })
+          .then(response => response.json())
+          .then(retrieveData => {
+            console.log('Retrieve test data response:', retrieveData);
+            
+            const testWorking = retrieveData.test_data && 
+                               retrieveData.test_data.test_name === 'Test User' &&
+                               retrieveData.test_data.test_email === 'test@example.com';
+            
+            if (testWorking) {
+              alert('✅ Session is working correctly! The issue is specific to Jira OAuth.');
+            } else {
+              alert('❌ Session is NOT working! This explains the My Details page issue.');
+            }
+            
+            // Show debug info
+            const debugInfo = document.getElementById('debugInfo');
+            const debugContent = document.getElementById('debugContent');
+            debugInfo.style.display = 'block';
+            debugContent.textContent = JSON.stringify({
+              session_test: {
+                working: testWorking,
+                store_response: storeData,
+                retrieve_response: retrieveData
+              }
+            }, null, 2);
+          })
+          .catch(error => {
+            console.error('Session test error:', error);
+            alert('Session test failed: ' + error.message);
+          });
+      });
+
+    });
+    
+    // Global variable to store Jira domain
+    let jiraDomain = 'https://upgrad-jira.atlassian.net';
+    
+    // User info functions - completely rewritten
+    function loadUserInfo() {
+      console.log('🔄 Loading user profile...');
+      
+      // Show loading state
+      const loadingEl = document.getElementById('userProfileLoading');
+      const displayEl = document.getElementById('userProfileDisplay');
+      const authWarningEl = document.getElementById('authWarning');
+      
+      if (loadingEl) loadingEl.style.display = 'block';
+      if (displayEl) displayEl.style.display = 'none';
+      if (authWarningEl) authWarningEl.style.display = 'none';
+      
+      fetch('/api/jira/user-info')
+        .then(response => {
+          console.log('User info response status:', response.status);
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+          }
+          return response.json();
+        })
+        .then(data => {
+          console.log('✅ User info data received:', data);
+          
+          if (data.authenticated && data.user_name && data.user_email) {
+            console.log('🎉 Authenticated user found, updating profile display');
+            
+            // Hide loading and auth warning
+            if (loadingEl) loadingEl.style.display = 'none';
+            if (authWarningEl) authWarningEl.style.display = 'none';
+            
+            // Update profile display with completely new elements
+            const displayNameEl = document.getElementById('displayName');
+            const displayEmailEl = document.getElementById('displayEmail');
+            const userInitialsEl = document.getElementById('userInitials');
+            
+            if (displayNameEl) {
+              displayNameEl.textContent = data.user_name;
+              console.log('✅ Updated displayName:', data.user_name);
+            }
+            
+            if (displayEmailEl) {
+              displayEmailEl.textContent = data.user_email;
+              console.log('✅ Updated displayEmail:', data.user_email);
+            }
+            
+            if (userInitialsEl) {
+              const initials = data.user_name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2);
+              userInitialsEl.textContent = initials;
+              console.log('✅ Updated initials:', initials);
+            }
+            
+            // Store Jira domain for issue links
+            if (data.jira_domain) {
+              jiraDomain = data.jira_domain;
+            }
+            
+            // Store login time for session duration calculation
+            window.loginTimestamp = data.login_time ? data.login_time * 1000 : Date.now();
+            
+            // Show the profile display
+            if (displayEl) {
+              displayEl.style.display = 'block';
+              console.log('✅ Profile display now visible');
+            }
+            
+            console.log('🎉 User profile loaded successfully!');
+            
+          } else {
+            console.log('❌ User not authenticated or missing data');
+            if (loadingEl) loadingEl.style.display = 'none';
+            if (authWarningEl) authWarningEl.style.display = 'block';
+          }
+        })
+        .catch(error => {
+          console.error('❌ Error loading user info:', error);
+          if (loadingEl) loadingEl.style.display = 'none';
+          if (authWarningEl) authWarningEl.style.display = 'block';
+        });
+    }
+    
+    // Session duration timer - removed since login time/duration elements were removed
+    
+    // Issues functions
+    function loadIssues() {
+      const searchQuery = document.getElementById('searchInput').value;
+      const statusFilter = document.getElementById('statusFilter').value;
+      
+      // Show loading state
+      document.getElementById('issuesContainer').innerHTML = '<div class="empty-state"><div class="loading-spinner" style="margin: 0 auto;"></div><div class="empty-state-text">Loading issues...</div></div>';
+      
+      fetch(`/api/jira/issues?search=${encodeURIComponent(searchQuery)}&status=${encodeURIComponent(statusFilter)}`)
+        .then(response => response.json())
+        .then(data => {
+          const issuesContainer = document.getElementById('issuesContainer');
+          
+          // Update Jira domain if provided in response
+          if (data.jira_domain) {
+            jiraDomain = data.jira_domain;
+          }
+          
+          if (data.issues && data.issues.length > 0) {
+            let html = '';
+            
+            data.issues.forEach(issue => {
+              // Determine status class
+              let statusClass = 'status-to-do';
+              if (issue.status) {
+                const status = issue.status.toLowerCase();
+                if (status.includes('progress')) {
+                  statusClass = 'status-in-progress';
+                } else if (status.includes('done') || status.includes('complete')) {
+                  statusClass = 'status-done';
+                } else if (status.includes('review')) {
+                  statusClass = 'status-review';
+                } else if (status.includes('block')) {
+                  statusClass = 'status-blocked';
+                }
+              }
+              
+              // Create clickable Jira issue link
+              const issueUrl = `${jiraDomain}/browse/${issue.key}`;
+              
+              html += `
+                <div class="issue-item">
+                  <div class="issue-key">
+                    <a href="${issueUrl}" target="_blank" rel="noopener noreferrer" class="issue-link">
+                      ${issue.key}
+                    </a>
+                  </div>
+                  <div class="issue-summary">${issue.summary}</div>
+                  <div class="status-pill ${statusClass}">${issue.status || 'Unknown'}</div>
+                </div>
+              `;
+            });
+            
+            issuesContainer.innerHTML = html;
+          } else {
+            issuesContainer.innerHTML = `
+              <div class="empty-state" id="emptyIssues">
+                <div class="empty-state-icon">
+                  <i class="fas fa-clipboard-list"></i>
+                </div>
+                <div class="empty-state-text">No issues found</div>
+              </div>
+            `;
+          }
+        })
+        .catch(error => {
+          console.error('Error loading issues:', error);
+          document.getElementById('issuesContainer').innerHTML = `
+            <div class="empty-state">
+              <div class="empty-state-icon">
+                <i class="fas fa-exclamation-triangle"></i>
+              </div>
+              <div class="empty-state-text">Error loading issues</div>
+            </div>
+          `;
+        });
+    }
+    
+    // Time entries functions - DISABLED (showing "Coming Soon" message)
+    /*
+    function loadTimeEntriesForDate() {
+      // Function disabled - showing "Coming Soon" message instead
+      // This function will be re-enabled when Jira OAuth scopes are expanded
+    }
+    */
+    
+    // Set default date to today - DISABLED (no date picker in "Coming Soon" mode)
+    /*
+    function setDefaultDate() {
+      // Function disabled - no date picker needed for "Coming Soon" message
+    }
+    */
+    
+    // This initialization is now handled in the main DOMContentLoaded event listener above
+    
+    // Helper functions
+    function formatDateTime(date) {
+      return date.toLocaleString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit'
+      });
+    }
+    
+    function formatDate(date) {
+      return date.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric'
+      });
+    }
+    
+    function formatDuration(ms) {
+      const seconds = Math.floor(ms / 1000);
+      const minutes = Math.floor(seconds / 60);
+      const hours = Math.floor(minutes / 60);
+      
+      const displayHours = hours;
+      const displayMinutes = minutes % 60;
+      const displaySeconds = seconds % 60;
+      
+      return `${displayHours}h ${displayMinutes}m ${displaySeconds}s`;
+    }
+  </script>
+</body>
+</html>

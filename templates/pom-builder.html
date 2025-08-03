@@ -1,0 +1,1399 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none'><defs><linearGradient id='favGradient' x1='0%' y1='0%' x2='100%' y2='100%'><stop offset='0%' style='stop-color:%23f59e0b;stop-opacity:1' /><stop offset='100%' style='stop-color:%23d97706;stop-opacity:1' /></linearGradient></defs><path d='M12 2L13.09 8.26L20 9L13.09 9.74L12 16L10.91 9.74L4 9L10.91 8.26L12 2Z' fill='url(%23favGradient)'/><circle cx='12' cy='12' r='3' fill='none' stroke='url(%23favGradient)' stroke-width='1.8'/></svg>">
+  <title>POM Builder - Co-Tester</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="/static/styles.css">
+  <link rel="stylesheet" href="/static/styles-update.css">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { 
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      margin: 0;
+      padding: 0;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      color: #1f2937;
+    }
+    
+    .container-fluid {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 2rem;
+    }
+    
+    .pom-builder-header {
+      text-align: center;
+      margin-bottom: 2rem;
+      color: white;
+    }
+    
+    .pom-builder-header h1 {
+      font-size: 3rem;
+      margin-bottom: 0.5rem;
+      text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 1rem;
+    }
+    
+    .pom-builder-header p {
+      font-size: 1.2rem;
+      opacity: 0.9;
+    }
+    
+    .ai-badge {
+      background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
+      color: white;
+      padding: 0.3rem 0.8rem;
+      border-radius: 20px;
+      font-size: 0.8rem;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      box-shadow: 0 2px 8px rgba(238, 90, 36, 0.3);
+      text-transform: uppercase;
+    }
+    
+    .preview-badge {
+      background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+      color: white;
+      padding: 0.3rem 0.8rem;
+      border-radius: 20px;
+      font-size: 0.8rem;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      box-shadow: 0 2px 8px rgba(245, 158, 11, 0.3);
+      text-transform: uppercase;
+      margin-left: 0.5rem;
+    }
+    
+    .workflow-tabs {
+      display: flex;
+      background: white;
+      border-radius: 16px;
+      padding: 0.5rem;
+      margin-bottom: 2rem;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+      backdrop-filter: blur(10px);
+    }
+    
+    .workflow-tab {
+      flex: 1;
+      padding: 1rem 2rem;
+      border: none;
+      background: transparent;
+      border-radius: 12px;
+      cursor: pointer;
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: #6b7280;
+      transition: all 0.3s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.75rem;
+      position: relative;
+    }
+    
+    .workflow-tab:hover {
+      background: rgba(102, 126, 234, 0.1);
+      color: #374151;
+      transform: translateY(-2px);
+    }
+    
+    .workflow-tab.active {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      box-shadow: 0 4px 16px rgba(102, 126, 234, 0.4);
+      transform: translateY(-2px);
+    }
+    
+    .workflow-tab i {
+      font-size: 1.3rem;
+    }
+    
+    .workflow-content {
+      background: white;
+      border-radius: 16px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+      overflow: hidden;
+      min-height: 600px;
+    }
+    
+    .tab-pane {
+      display: none;
+      padding: 2rem;
+      animation: fadeIn 0.3s ease-in-out;
+    }
+    
+    .tab-pane.active {
+      display: block;
+    }
+    
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    
+    /* Element Extraction Styles */
+    .upload-section {
+      background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+      border-radius: 12px;
+      padding: 2rem;
+      margin-bottom: 2rem;
+      border: 2px dashed #cbd5e1;
+      text-align: center;
+      transition: all 0.3s ease;
+    }
+    
+    .upload-section:hover {
+      border-color: #667eea;
+      background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+    }
+    
+    .upload-section.dragover {
+      border-color: #667eea;
+      background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+      transform: scale(1.02);
+    }
+    
+    .upload-icon {
+      font-size: 3rem;
+      color: #667eea;
+      margin-bottom: 1rem;
+    }
+    
+    .btn-primary {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      border: none;
+      padding: 0.75rem 2rem;
+      border-radius: 10px;
+      font-weight: 600;
+      transition: all 0.3s ease;
+      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+    }
+    
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+    }
+    
+    .btn-success {
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      border: none;
+      padding: 0.75rem 2rem;
+      border-radius: 10px;
+      font-weight: 600;
+      transition: all 0.3s ease;
+      box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+    }
+    
+    .btn-success:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
+    }
+    
+    .btn-danger {
+      background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+      border: none;
+      padding: 0.5rem 1rem;
+      border-radius: 8px;
+      font-weight: 600;
+      transition: all 0.3s ease;
+    }
+    
+    .results-section {
+      margin-top: 2rem;
+    }
+    
+    .element-card {
+      background: white;
+      border: 1px solid #e5e7eb;
+      border-radius: 12px;
+      padding: 1.5rem;
+      margin-bottom: 1rem;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+      transition: all 0.3s ease;
+    }
+    
+    .element-card:hover {
+      box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+      transform: translateY(-2px);
+    }
+    
+    .element-type {
+      display: inline-block;
+      padding: 0.25rem 0.75rem;
+      border-radius: 20px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    
+    .element-type.button { background: #dbeafe; color: #1e40af; }
+    .element-type.input { background: #d1fae5; color: #065f46; }
+    .element-type.text { background: #fef3c7; color: #92400e; }
+    .element-type.link { background: #ede9fe; color: #5b21b6; }
+    .element-type.image { background: #fed7d7; color: #991b1b; }
+    
+    .code-section {
+      background: #1f2937;
+      color: #f9fafb;
+      border-radius: 12px;
+      padding: 1.5rem;
+      margin-top: 1rem;
+      font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+      font-size: 0.9rem;
+      line-height: 1.6;
+      overflow-x: auto;
+    }
+    
+    .code-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1rem;
+      padding-bottom: 0.5rem;
+      border-bottom: 1px solid #374151;
+    }
+    
+    .copy-btn {
+      background: #374151;
+      color: white;
+      border: none;
+      padding: 0.5rem 1rem;
+      border-radius: 6px;
+      font-size: 0.8rem;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    
+    .copy-btn:hover {
+      background: #4b5563;
+    }
+    
+    /* POM Generator Styles */
+    .step-builder {
+      background: #f8fafc;
+      border-radius: 12px;
+      padding: 2rem;
+      margin-bottom: 2rem;
+    }
+    
+    .step-row {
+      display: flex;
+      gap: 1rem;
+      margin-bottom: 1rem;
+      align-items: end;
+    }
+    
+    .form-group {
+      flex: 1;
+    }
+    
+    .form-group label {
+      display: block;
+      margin-bottom: 0.5rem;
+      font-weight: 600;
+      color: #374151;
+    }
+    
+    .form-control {
+      width: 100%;
+      padding: 0.75rem;
+      border: 1px solid #d1d5db;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      transition: border-color 0.2s;
+    }
+    
+    .form-control:focus {
+      outline: none;
+      border-color: #667eea;
+      box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    }
+    
+    .progress-indicator {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 2rem;
+      padding: 0 2rem;
+    }
+    
+    .progress-step {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      flex: 1;
+      position: relative;
+    }
+    
+    .progress-step:not(:last-child)::after {
+      content: '';
+      position: absolute;
+      top: 20px;
+      left: 60%;
+      right: -40%;
+      height: 2px;
+      background: #e5e7eb;
+      z-index: 1;
+    }
+    
+    .progress-step.active:not(:last-child)::after {
+      background: #667eea;
+    }
+    
+    .progress-circle {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: #e5e7eb;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 600;
+      color: #6b7280;
+      position: relative;
+      z-index: 2;
+    }
+    
+    .progress-step.active .progress-circle {
+      background: #667eea;
+      color: white;
+    }
+    
+    .progress-step.completed .progress-circle {
+      background: #10b981;
+      color: white;
+    }
+    
+    .progress-label {
+      margin-top: 0.5rem;
+      font-size: 0.8rem;
+      font-weight: 500;
+      color: #6b7280;
+    }
+    
+    .progress-step.active .progress-label {
+      color: #667eea;
+    }
+    
+    .alert {
+      padding: 1rem;
+      border-radius: 8px;
+      margin-bottom: 1rem;
+      border: 1px solid;
+    }
+    
+    .alert-success {
+      background: #d1fae5;
+      border-color: #10b981;
+      color: #065f46;
+    }
+    
+    .alert-warning {
+      background: #fef3c7;
+      border-color: #f59e0b;
+      color: #92400e;
+    }
+    
+    .alert-danger {
+      background: #fee2e2;
+      border-color: #ef4444;
+      color: #991b1b;
+    }
+
+    /* Loading States */
+    .loading-spinner {
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      border: 2px solid #f3f4f6;
+      border-top: 2px solid #667eea;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+    
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    
+    .btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none !important;
+    }
+
+    /* Responsive Design */
+    @media (max-width: 768px) {
+      .workflow-tabs {
+        flex-direction: column;
+        gap: 0.5rem;
+      }
+      
+      .workflow-tab {
+        text-align: center;
+      }
+      
+      .step-row {
+        flex-direction: column;
+      }
+      
+      .pom-builder-header h1 {
+        font-size: 2rem;
+        flex-direction: column;
+        gap: 0.5rem;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  {% set active_tab = 'pom-builder' %}
+  {% include 'left-sidebar.html' %}
+  
+  <div class="main-content">
+    <!-- Standard Page Header -->
+    {% set page_title = '<i class="fas fa-cubes"></i> POM Builder <span class="ai-badge">AI</span> <span class="preview-badge">Preview</span>' %}
+    {% set page_subtitle = 'Preview of integrated element extraction and POM generation - based on AutomationStudio components' %}
+    {% set allow_html = true %}
+    {% include 'page-header.html' %}
+    
+    <div class="container-fluid">
+      
+      <!-- Preview Notice -->
+      <div class="alert alert-warning mb-4" style="background: linear-gradient(135deg, #fef3c7 0%, #fed7aa 100%); border: 2px solid #f59e0b; border-radius: 12px; padding: 1.5rem;">
+        <div class="d-flex align-items-center">
+          <i class="fas fa-info-circle" style="font-size: 1.5rem; color: #d97706; margin-right: 1rem;"></i>
+          <div>
+            <h5 style="color: #92400e; margin-bottom: 0.5rem;">
+              <i class="fas fa-eye"></i> Preview Mode - AutomationStudio Components
+            </h5>
+            <p style="color: #92400e; margin-bottom: 0.5rem;">
+              This POM Builder is currently in preview mode, showcasing the integration concept. 
+              The functionality is based on existing AutomationStudio components:
+            </p>
+            <div style="margin-top: 1rem;">
+              <a href="/automation-studio-element-extractor" target="_blank" class="btn btn-sm" 
+                 style="background: #f59e0b; color: white; margin-right: 0.5rem; text-decoration: none;">
+                <i class="fas fa-external-link-alt"></i> Element Extractor HTML
+              </a>
+              <a href="/automation-studio-pom-generator" target="_blank" class="btn btn-sm" 
+                 style="background: #f59e0b; color: white; text-decoration: none;">
+                <i class="fas fa-external-link-alt"></i> POM Generator HTML
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Progress Indicator -->
+      <div class="progress-indicator">
+        <div class="progress-step active" id="step1">
+          <div class="progress-circle">1</div>
+          <div class="progress-label">Extract Elements</div>
+        </div>
+        <div class="progress-step" id="step2">
+          <div class="progress-circle">2</div>
+          <div class="progress-label">Build Methods</div>
+        </div>
+        <div class="progress-step" id="step3">
+          <div class="progress-circle">3</div>
+          <div class="progress-label">Generate Code</div>
+        </div>
+      </div>
+
+      <!-- Workflow Tabs -->
+      <div class="workflow-tabs">
+        <button class="workflow-tab active" data-tab="extract">
+          <i class="fas fa-search"></i>
+          Extract Elements
+        </button>
+        <button class="workflow-tab" data-tab="build">
+          <i class="fas fa-cogs"></i>
+          Build Methods
+        </button>
+        <button class="workflow-tab" data-tab="generate">
+          <i class="fas fa-code"></i>
+          Generate POM
+        </button>
+      </div>
+
+      <!-- Workflow Content -->
+      <div class="workflow-content">
+        
+        <!-- Element Extraction Tab -->
+        <div class="tab-pane active" id="extract-tab">
+          <h3><i class="fas fa-search"></i> Element Extraction</h3>
+          <p class="text-muted mb-4">Upload a screenshot or HTML file to extract UI elements automatically</p>
+          
+          <!-- File Upload Section -->
+          <div class="upload-section" id="uploadSection">
+            <div class="upload-icon">
+              <i class="fas fa-cloud-upload-alt"></i>
+            </div>
+            <h4>Upload Screenshot or HTML File</h4>
+            <p class="text-muted">Drag and drop your file here or click to browse</p>
+            <input type="file" id="fileInput" accept=".png,.jpg,.jpeg,.html,.htm" style="display: none;">
+            <button type="button" class="btn btn-primary" onclick="document.getElementById('fileInput').click();">
+              <i class="fas fa-upload"></i> Choose File
+            </button>
+          </div>
+          
+          <!-- URL Input Section -->
+          <div class="row mt-4">
+            <div class="col-md-8">
+              <label for="urlInput" class="form-label">Or enter a URL to capture:</label>
+              <input type="text" class="form-control" id="urlInput" placeholder="https://example.com">
+            </div>
+            <div class="col-md-4 d-flex align-items-end">
+              <button type="button" class="btn btn-success w-100" id="captureBtn">
+                <i class="fas fa-camera"></i> Capture Page
+              </button>
+            </div>
+          </div>
+          
+          <!-- Extraction Results -->
+          <div class="results-section" id="extractionResults" style="display: none;">
+            <h4><i class="fas fa-list"></i> Extracted Elements</h4>
+            <div id="elementsContainer"></div>
+            
+            <div class="d-flex justify-content-between mt-4">
+              <button type="button" class="btn btn-secondary" id="clearExtractionBtn">
+                <i class="fas fa-trash"></i> Clear Results
+              </button>
+              <button type="button" class="btn btn-primary" id="proceedToBuildBtn">
+                <i class="fas fa-arrow-right"></i> Proceed to Build Methods
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Method Building Tab -->
+        <div class="tab-pane" id="build-tab">
+          <h3><i class="fas fa-cogs"></i> Build POM Methods</h3>
+          <p class="text-muted mb-4">Define methods and actions for your Page Object Model</p>
+          
+          <!-- Elements Summary -->
+          <div class="alert alert-info" id="elementsSummary" style="display: none;">
+            <strong><i class="fas fa-info-circle"></i> Elements Available:</strong>
+            <span id="elementsCount">0</span> elements extracted from your file
+          </div>
+          
+          <!-- Method Builder -->
+          <div class="step-builder">
+            <h5><i class="fas fa-plus"></i> Add New Method</h5>
+            
+            <div class="step-row">
+              <div class="form-group">
+                <label for="methodName">Method Name</label>
+                <input type="text" class="form-control" id="methodName" placeholder="e.g., clickLoginButton">
+              </div>
+              <div class="form-group">
+                <label for="methodType">Action Type</label>
+                <select class="form-control" id="methodType">
+                  <option value="click">Click</option>
+                  <option value="type">Type Text</option>
+                  <option value="select">Select Option</option>
+                  <option value="verify">Verify Element</option>
+                  <option value="navigate">Navigate</option>
+                  <option value="wait">Wait For Element</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="elementSelector">Target Element</label>
+                <select class="form-control" id="elementSelector">
+                  <option value="">Select Element</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <button type="button" class="btn btn-success" id="addMethodBtn">
+                  <i class="fas fa-plus"></i> Add
+                </button>
+              </div>
+            </div>
+            
+            <!-- Additional Parameters -->
+            <div class="row" id="additionalParams" style="display: none;">
+              <div class="col-md-6">
+                <label for="methodValue">Value/Text</label>
+                <input type="text" class="form-control" id="methodValue" placeholder="Enter value or text">
+              </div>
+              <div class="col-md-6">
+                <label for="methodDescription">Description</label>
+                <input type="text" class="form-control" id="methodDescription" placeholder="Method description">
+              </div>
+            </div>
+          </div>
+          
+          <!-- Methods List -->
+          <div class="results-section" id="methodsList" style="display: none;">
+            <h5><i class="fas fa-list"></i> Defined Methods</h5>
+            <div id="methodsContainer"></div>
+            
+            <div class="d-flex justify-content-between mt-4">
+              <button type="button" class="btn btn-secondary" id="clearMethodsBtn">
+                <i class="fas fa-trash"></i> Clear Methods
+              </button>
+              <button type="button" class="btn btn-primary" id="proceedToGenerateBtn">
+                <i class="fas fa-arrow-right"></i> Generate POM Code
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Code Generation Tab -->
+        <div class="tab-pane" id="generate-tab">
+          <h3><i class="fas fa-code"></i> Generated POM Code</h3>
+          <p class="text-muted mb-4">Your Page Object Model code is ready for use</p>
+          
+          <!-- Generation Options -->
+          <div class="row mb-4">
+            <div class="col-md-4">
+              <label for="className">Class Name</label>
+              <input type="text" class="form-control" id="className" placeholder="e.g., LoginPage">
+            </div>
+            <div class="col-md-4">
+              <label for="codeLanguage">Language</label>
+              <select class="form-control" id="codeLanguage">
+                <option value="java">Java (Selenium)</option>
+                <option value="javascript">JavaScript (Playwright)</option>
+                <option value="python">Python (Selenium)</option>
+                <option value="csharp">C# (Selenium)</option>
+              </select>
+            </div>
+            <div class="col-md-4 d-flex align-items-end">
+              <button type="button" class="btn btn-primary w-100" id="generateCodeBtn">
+                <i class="fas fa-magic"></i> Generate Code
+              </button>
+            </div>
+          </div>
+          
+          <!-- Generated Code -->
+          <div id="generatedCodeSection" style="display: none;">
+            <div class="code-section">
+              <div class="code-header">
+                <h6><i class="fas fa-file-code"></i> <span id="codeTitle">Generated POM Code</span></h6>
+                <button type="button" class="copy-btn" id="copyCodeBtn">
+                  <i class="fas fa-copy"></i> Copy Code
+                </button>
+              </div>
+              <pre><code id="generatedCode"></code></pre>
+            </div>
+            
+            <!-- Download Options -->
+            <div class="d-flex justify-content-between mt-4">
+              <button type="button" class="btn btn-secondary" id="startOverBtn">
+                <i class="fas fa-redo"></i> Start Over
+              </button>
+              <div>
+                <button type="button" class="btn btn-success" id="downloadCodeBtn">
+                  <i class="fas fa-download"></i> Download File
+                </button>
+                <button type="button" class="btn btn-primary" id="saveToProjectBtn">
+                  <i class="fas fa-save"></i> Save to Project
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {% include 'footer.html' %}
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    // POM Builder State Management
+    class POMBuilder {
+      constructor() {
+        this.extractedElements = [];
+        this.definedMethods = [];
+        this.currentStep = 1;
+        this.generatedCode = '';
+        this.init();
+      }
+
+      init() {
+        this.setupEventListeners();
+        this.updateProgressIndicator();
+      }
+
+      setupEventListeners() {
+        // Tab navigation
+        document.querySelectorAll('.workflow-tab').forEach(tab => {
+          tab.addEventListener('click', (e) => {
+            const tabName = e.target.getAttribute('data-tab');
+            this.switchTab(tabName);
+          });
+        });
+
+        // File upload
+        const fileInput = document.getElementById('fileInput');
+        const uploadSection = document.getElementById('uploadSection');
+        
+        fileInput.addEventListener('change', (e) => {
+          if (e.target.files.length > 0) {
+            this.handleFileUpload(e.target.files[0]);
+          }
+        });
+
+        // Drag and drop
+        uploadSection.addEventListener('dragover', (e) => {
+          e.preventDefault();
+          uploadSection.classList.add('dragover');
+        });
+
+        uploadSection.addEventListener('dragleave', (e) => {
+          e.preventDefault();
+          uploadSection.classList.remove('dragover');
+        });
+
+        uploadSection.addEventListener('drop', (e) => {
+          e.preventDefault();
+          uploadSection.classList.remove('dragover');
+          if (e.dataTransfer.files.length > 0) {
+            this.handleFileUpload(e.dataTransfer.files[0]);
+          }
+        });
+
+        // URL capture
+        document.getElementById('captureBtn').addEventListener('click', () => {
+          this.captureURL();
+        });
+
+        // Method type change
+        document.getElementById('methodType').addEventListener('change', (e) => {
+          this.showAdditionalParams(e.target.value);
+        });
+
+        // Add method
+        document.getElementById('addMethodBtn').addEventListener('click', () => {
+          this.addMethod();
+        });
+
+        // Navigation buttons
+        document.getElementById('proceedToBuildBtn')?.addEventListener('click', () => {
+          this.switchTab('build');
+        });
+
+        document.getElementById('proceedToGenerateBtn')?.addEventListener('click', () => {
+          this.switchTab('generate');
+        });
+
+        // Code generation
+        document.getElementById('generateCodeBtn').addEventListener('click', () => {
+          this.generatePOMCode();
+        });
+
+        // Copy code
+        document.getElementById('copyCodeBtn').addEventListener('click', () => {
+          this.copyCode();
+        });
+
+        // Clear functions
+        document.getElementById('clearExtractionBtn')?.addEventListener('click', () => {
+          this.clearExtraction();
+        });
+
+        document.getElementById('clearMethodsBtn')?.addEventListener('click', () => {
+          this.clearMethods();
+        });
+
+        document.getElementById('startOverBtn')?.addEventListener('click', () => {
+          this.startOver();
+        });
+      }
+
+      switchTab(tabName) {
+        // Update tab buttons
+        document.querySelectorAll('.workflow-tab').forEach(tab => {
+          tab.classList.remove('active');
+        });
+        document.querySelector(`[data-tab="${tabName}"]`).classList.add('active');
+
+        // Update tab content
+        document.querySelectorAll('.tab-pane').forEach(pane => {
+          pane.classList.remove('active');
+        });
+        document.getElementById(`${tabName}-tab`).classList.add('active');
+
+        // Update progress
+        if (tabName === 'extract') this.currentStep = 1;
+        else if (tabName === 'build') this.currentStep = 2;
+        else if (tabName === 'generate') this.currentStep = 3;
+
+        this.updateProgressIndicator();
+
+        // Initialize tab-specific data
+        if (tabName === 'build') {
+          this.initializeBuildTab();
+        } else if (tabName === 'generate') {
+          this.initializeGenerateTab();
+        }
+      }
+
+      updateProgressIndicator() {
+        document.querySelectorAll('.progress-step').forEach((step, index) => {
+          step.classList.remove('active', 'completed');
+          if (index + 1 < this.currentStep) {
+            step.classList.add('completed');
+          } else if (index + 1 === this.currentStep) {
+            step.classList.add('active');
+          }
+        });
+      }
+
+      async handleFileUpload(file) {
+        const uploadSection = document.getElementById('uploadSection');
+        const extractionResults = document.getElementById('extractionResults');
+        
+        try {
+          uploadSection.innerHTML = `
+            <div class="upload-icon">
+              <div class="loading-spinner"></div>
+            </div>
+            <h4>Processing File...</h4>
+            <p class="text-muted">Extracting UI elements from your file</p>
+          `;
+
+          const formData = new FormData();
+          formData.append('file', file);
+
+          // Mock API call - replace with actual endpoint
+          const response = await fetch('/api/extract-elements', {
+            method: 'POST',
+            body: formData
+          });
+
+          if (response.ok) {
+            const data = await response.json();
+            this.extractedElements = data.elements || this.generateMockElements();
+            this.displayExtractionResults();
+          } else {
+            throw new Error('Failed to extract elements');
+          }
+        } catch (error) {
+          console.error('Error:', error);
+          this.extractedElements = this.generateMockElements();
+          this.displayExtractionResults();
+        }
+      }
+
+      async captureURL() {
+        const urlInput = document.getElementById('urlInput');
+        const captureBtn = document.getElementById('captureBtn');
+        const url = urlInput.value.trim();
+
+        if (!url) {
+          alert('Please enter a URL');
+          return;
+        }
+
+        try {
+          captureBtn.disabled = true;
+          captureBtn.innerHTML = '<div class="loading-spinner"></div> Capturing...';
+
+          const response = await fetch('/api/capture-url', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ url })
+          });
+
+          if (response.ok) {
+            const data = await response.json();
+            // Convert captured image to elements
+            this.extractedElements = this.generateMockElements();
+            this.displayExtractionResults();
+          } else {
+            throw new Error('Failed to capture URL');
+          }
+        } catch (error) {
+          console.error('Error:', error);
+          alert('Failed to capture URL: ' + error.message);
+        } finally {
+          captureBtn.disabled = false;
+          captureBtn.innerHTML = '<i class="fas fa-camera"></i> Capture Page';
+        }
+      }
+
+      generateMockElements() {
+        return [
+          { id: 1, type: 'button', text: 'Login', selector: '#login-btn', x: 100, y: 200, width: 80, height: 32 },
+          { id: 2, type: 'input', text: 'Username', selector: '#username', x: 50, y: 150, width: 200, height: 32 },
+          { id: 3, type: 'input', text: 'Password', selector: '#password', x: 50, y: 190, width: 200, height: 32 },
+          { id: 4, type: 'link', text: 'Forgot Password?', selector: 'a[href="/forgot"]', x: 260, y: 195, width: 120, height: 20 },
+          { id: 5, type: 'text', text: 'Welcome Back', selector: '.welcome-text', x: 50, y: 100, width: 300, height: 24 }
+        ];
+      }
+
+      displayExtractionResults() {
+        const uploadSection = document.getElementById('uploadSection');
+        const extractionResults = document.getElementById('extractionResults');
+        const elementsContainer = document.getElementById('elementsContainer');
+
+        // Reset upload section
+        uploadSection.innerHTML = `
+          <div class="upload-icon">
+            <i class="fas fa-check-circle" style="color: #10b981;"></i>
+          </div>
+          <h4>File Processed Successfully!</h4>
+          <p class="text-muted">${this.extractedElements.length} elements extracted</p>
+        `;
+
+        // Display elements
+        elementsContainer.innerHTML = this.extractedElements.map(element => `
+          <div class="element-card" data-element-id="${element.id}">
+            <div class="d-flex justify-content-between align-items-start mb-2">
+              <div>
+                <span class="element-type ${element.type}">${element.type}</span>
+                <h6 class="mt-2 mb-1">${element.text || 'No text'}</h6>
+              </div>
+              <button class="btn btn-sm btn-danger" onclick="pomBuilder.removeElement(${element.id})">
+                <i class="fas fa-times"></i>
+              </button>
+            </div>
+            <div class="text-muted small">
+              <strong>Selector:</strong> <code>${element.selector}</code><br>
+              <strong>Position:</strong> x: ${element.x}, y: ${element.y} (${element.width}×${element.height})
+            </div>
+          </div>
+        `).join('');
+
+        extractionResults.style.display = 'block';
+      }
+
+      removeElement(elementId) {
+        this.extractedElements = this.extractedElements.filter(el => el.id !== elementId);
+        this.displayExtractionResults();
+      }
+
+      initializeBuildTab() {
+        const elementSelector = document.getElementById('elementSelector');
+        const elementsSummary = document.getElementById('elementsSummary');
+        const elementsCount = document.getElementById('elementsCount');
+
+        // Update elements summary
+        elementsCount.textContent = this.extractedElements.length;
+        elementsSummary.style.display = this.extractedElements.length > 0 ? 'block' : 'none';
+
+        // Populate element selector
+        elementSelector.innerHTML = '<option value="">Select Element</option>' +
+          this.extractedElements.map(el => 
+            `<option value="${el.selector}">${el.text || el.type} (${el.selector})</option>`
+          ).join('');
+
+        // Display existing methods
+        if (this.definedMethods.length > 0) {
+          this.displayMethods();
+        }
+      }
+
+      showAdditionalParams(methodType) {
+        const additionalParams = document.getElementById('additionalParams');
+        const needsValue = ['type', 'select', 'verify'].includes(methodType);
+        additionalParams.style.display = needsValue ? 'block' : 'none';
+      }
+
+      addMethod() {
+        const methodName = document.getElementById('methodName').value.trim();
+        const methodType = document.getElementById('methodType').value;
+        const elementSelector = document.getElementById('elementSelector').value;
+        const methodValue = document.getElementById('methodValue').value.trim();
+        const methodDescription = document.getElementById('methodDescription').value.trim();
+
+        if (!methodName || !methodType || !elementSelector) {
+          alert('Please fill in all required fields');
+          return;
+        }
+
+        const method = {
+          id: Date.now(),
+          name: methodName,
+          type: methodType,
+          selector: elementSelector,
+          value: methodValue,
+          description: methodDescription || `${methodType} action on ${elementSelector}`
+        };
+
+        this.definedMethods.push(method);
+        this.displayMethods();
+        this.clearMethodForm();
+      }
+
+      displayMethods() {
+        const methodsList = document.getElementById('methodsList');
+        const methodsContainer = document.getElementById('methodsContainer');
+
+        methodsContainer.innerHTML = this.definedMethods.map(method => `
+          <div class="element-card" data-method-id="${method.id}">
+            <div class="d-flex justify-content-between align-items-start mb-2">
+              <div>
+                <h6 class="mb-1">${method.name}()</h6>
+                <span class="element-type ${method.type}">${method.type}</span>
+              </div>
+              <button class="btn btn-sm btn-danger" onclick="pomBuilder.removeMethod(${method.id})">
+                <i class="fas fa-times"></i>
+              </button>
+            </div>
+            <div class="text-muted small">
+              <strong>Selector:</strong> <code>${method.selector}</code><br>
+              ${method.value ? `<strong>Value:</strong> ${method.value}<br>` : ''}
+              <strong>Description:</strong> ${method.description}
+            </div>
+          </div>
+        `).join('');
+
+        methodsList.style.display = 'block';
+      }
+
+      removeMethod(methodId) {
+        this.definedMethods = this.definedMethods.filter(method => method.id !== methodId);
+        this.displayMethods();
+      }
+
+      clearMethodForm() {
+        document.getElementById('methodName').value = '';
+        document.getElementById('methodType').value = 'click';
+        document.getElementById('elementSelector').value = '';
+        document.getElementById('methodValue').value = '';
+        document.getElementById('methodDescription').value = '';
+        document.getElementById('additionalParams').style.display = 'none';
+      }
+
+      initializeGenerateTab() {
+        // Auto-fill class name if not set
+        const classNameInput = document.getElementById('className');
+        if (!classNameInput.value) {
+          classNameInput.value = 'MyPage';
+        }
+      }
+
+      generatePOMCode() {
+        const className = document.getElementById('className').value.trim() || 'MyPage';
+        const language = document.getElementById('codeLanguage').value;
+        const generateBtn = document.getElementById('generateCodeBtn');
+
+        if (this.definedMethods.length === 0) {
+          alert('Please define at least one method before generating code');
+          return;
+        }
+
+        generateBtn.disabled = true;
+        generateBtn.innerHTML = '<div class="loading-spinner"></div> Generating...';
+
+        // Simulate code generation
+        setTimeout(() => {
+          this.generatedCode = this.generateCodeByLanguage(className, language);
+          this.displayGeneratedCode();
+          generateBtn.disabled = false;
+          generateBtn.innerHTML = '<i class="fas fa-magic"></i> Generate Code';
+        }, 1500);
+      }
+
+      generateCodeByLanguage(className, language) {
+        switch (language) {
+          case 'java':
+            return this.generateJavaCode(className);
+          case 'javascript':
+            return this.generateJavaScriptCode(className);
+          case 'python':
+            return this.generatePythonCode(className);
+          case 'csharp':
+            return this.generateCSharpCode(className);
+          default:
+            return this.generateJavaCode(className);
+        }
+      }
+
+      generateJavaCode(className) {
+        const imports = `import org.openqa.selenium.WebDriver;
+import org.openqa.selenium.WebElement;
+import org.openqa.selenium.support.FindBy;
+import org.openqa.selenium.support.PageFactory;
+import org.openqa.selenium.support.ui.WebDriverWait;
+import org.openqa.selenium.support.ui.ExpectedConditions;`;
+
+        const elements = this.extractedElements.map(el => 
+          `    @FindBy(css = "${el.selector}")
+    private WebElement ${this.toCamelCase(el.text || el.type)};`
+        ).join('\n\n');
+
+        const methods = this.definedMethods.map(method => {
+          let methodCode = `    public void ${method.name}() {`;
+          
+          switch (method.type) {
+            case 'click':
+              methodCode += `\n        ${this.getElementVariable(method.selector)}.click();`;
+              break;
+            case 'type':
+              methodCode += `\n        ${this.getElementVariable(method.selector)}.clear();\n        ${this.getElementVariable(method.selector)}.sendKeys("${method.value}");`;
+              break;
+            case 'verify':
+              methodCode += `\n        return ${this.getElementVariable(method.selector)}.isDisplayed();`;
+              break;
+          }
+          
+          methodCode += '\n    }';
+          return methodCode;
+        }).join('\n\n');
+
+        return `${imports}
+
+public class ${className} {
+    private WebDriver driver;
+    private WebDriverWait wait;
+
+    public ${className}(WebDriver driver) {
+        this.driver = driver;
+        this.wait = new WebDriverWait(driver, 10);
+        PageFactory.initElements(driver, this);
+    }
+
+${elements}
+
+${methods}
+}`;
+      }
+
+      generateJavaScriptCode(className) {
+        const methods = this.definedMethods.map(method => {
+          let methodCode = `  async ${method.name}() {`;
+          
+          switch (method.type) {
+            case 'click':
+              methodCode += `\n    await this.page.click('${method.selector}');`;
+              break;
+            case 'type':
+              methodCode += `\n    await this.page.fill('${method.selector}', '${method.value}');`;
+              break;
+            case 'verify':
+              methodCode += `\n    return await this.page.isVisible('${method.selector}');`;
+              break;
+          }
+          
+          methodCode += '\n  }';
+          return methodCode;
+        }).join('\n\n');
+
+        return `class ${className} {
+  constructor(page) {
+    this.page = page;
+  }
+
+${methods}
+}
+
+module.exports = ${className};`;
+      }
+
+      generatePythonCode(className) {
+        const methods = this.definedMethods.map(method => {
+          let methodCode = `    def ${this.to_snake_case(method.name)}(self):`;
+          
+          switch (method.type) {
+            case 'click':
+              methodCode += `\n        self.driver.find_element(By.CSS_SELECTOR, "${method.selector}").click()`;
+              break;
+            case 'type':
+              methodCode += `\n        element = self.driver.find_element(By.CSS_SELECTOR, "${method.selector}")\n        element.clear()\n        element.send_keys("${method.value}")`;
+              break;
+            case 'verify':
+              methodCode += `\n        return self.driver.find_element(By.CSS_SELECTOR, "${method.selector}").is_displayed()`;
+              break;
+          }
+          
+          return methodCode;
+        }).join('\n\n');
+
+        return `from selenium import webdriver
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+
+class ${className}:
+    def __init__(self, driver):
+        self.driver = driver
+        self.wait = WebDriverWait(driver, 10)
+
+${methods}`;
+      }
+
+      generateCSharpCode(className) {
+        const methods = this.definedMethods.map(method => {
+          let methodCode = `        public void ${method.name}()
+        {`;
+          
+          switch (method.type) {
+            case 'click':
+              methodCode += `\n            driver.FindElement(By.CssSelector("${method.selector}")).Click();`;
+              break;
+            case 'type':
+              methodCode += `\n            var element = driver.FindElement(By.CssSelector("${method.selector}"));\n            element.Clear();\n            element.SendKeys("${method.value}");`;
+              break;
+            case 'verify':
+              methodCode += `\n            return driver.FindElement(By.CssSelector("${method.selector}")).Displayed;`;
+              break;
+          }
+          
+          methodCode += '\n        }';
+          return methodCode;
+        }).join('\n\n');
+
+        return `using OpenQA.Selenium;
+using OpenQA.Selenium.Support.UI;
+
+namespace PageObjects
+{
+    public class ${className}
+    {
+        private IWebDriver driver;
+        private WebDriverWait wait;
+
+        public ${className}(IWebDriver driver)
+        {
+            this.driver = driver;
+            this.wait = new WebDriverWait(driver, TimeSpan.FromSeconds(10));
+        }
+
+${methods}
+    }
+}`;
+      }
+
+      displayGeneratedCode() {
+        const codeSection = document.getElementById('generatedCodeSection');
+        const codeTitle = document.getElementById('codeTitle');
+        const generatedCode = document.getElementById('generatedCode');
+        const language = document.getElementById('codeLanguage').value;
+
+        const extensions = {
+          java: '.java',
+          javascript: '.js',
+          python: '.py',
+          csharp: '.cs'
+        };
+
+        codeTitle.textContent = `${document.getElementById('className').value}${extensions[language]}`;
+        generatedCode.textContent = this.generatedCode;
+        codeSection.style.display = 'block';
+      }
+
+      copyCode() {
+        navigator.clipboard.writeText(this.generatedCode).then(() => {
+          const copyBtn = document.getElementById('copyCodeBtn');
+          const originalText = copyBtn.innerHTML;
+          copyBtn.innerHTML = '<i class="fas fa-check"></i> Copied!';
+          setTimeout(() => {
+            copyBtn.innerHTML = originalText;
+          }, 2000);
+        });
+      }
+
+      // Utility functions
+      toCamelCase(str) {
+        return str.replace(/[^a-zA-Z0-9]/g, ' ')
+                 .replace(/\s(.)/g, (match, group1) => group1.toUpperCase())
+                 .replace(/\s/g, '')
+                 .replace(/^(.)/, (match, group1) => group1.toLowerCase());
+      }
+
+      to_snake_case(str) {
+        return str.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`).replace(/^_/, '');
+      }
+
+      getElementVariable(selector) {
+        const element = this.extractedElements.find(el => el.selector === selector);
+        return element ? this.toCamelCase(element.text || element.type) : 'element';
+      }
+
+      clearExtraction() {
+        this.extractedElements = [];
+        document.getElementById('extractionResults').style.display = 'none';
+        document.getElementById('uploadSection').innerHTML = `
+          <div class="upload-icon">
+            <i class="fas fa-cloud-upload-alt"></i>
+          </div>
+          <h4>Upload Screenshot or HTML File</h4>
+          <p class="text-muted">Drag and drop your file here or click to browse</p>
+          <input type="file" id="fileInput" accept=".png,.jpg,.jpeg,.html,.htm" style="display: none;">
+          <button type="button" class="btn btn-primary" onclick="document.getElementById('fileInput').click();">
+            <i class="fas fa-upload"></i> Choose File
+          </button>
+        `;
+        document.getElementById('fileInput').addEventListener('change', (e) => {
+          if (e.target.files.length > 0) {
+            this.handleFileUpload(e.target.files[0]);
+          }
+        });
+      }
+
+      clearMethods() {
+        this.definedMethods = [];
+        document.getElementById('methodsList').style.display = 'none';
+        this.clearMethodForm();
+      }
+
+      startOver() {
+        this.extractedElements = [];
+        this.definedMethods = [];
+        this.generatedCode = '';
+        this.currentStep = 1;
+        this.switchTab('extract');
+        this.clearExtraction();
+        this.clearMethods();
+        document.getElementById('generatedCodeSection').style.display = 'none';
+      }
+    }
+
+    // Initialize POM Builder
+    const pomBuilder = new POMBuilder();
+
+    // Additional utility functions
+    function downloadFile(content, filename, mimeType) {
+      const blob = new Blob([content], { type: mimeType });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+
+    // Download code button
+    document.getElementById('downloadCodeBtn')?.addEventListener('click', () => {
+      const className = document.getElementById('className').value || 'MyPage';
+      const language = document.getElementById('codeLanguage').value;
+      const extensions = {
+        java: '.java',
+        javascript: '.js',
+        python: '.py',
+        csharp: '.cs'
+      };
+      const mimeTypes = {
+        java: 'text/x-java-source',
+        javascript: 'application/javascript',
+        python: 'text/x-python',
+        csharp: 'text/plain'
+      };
+      
+      downloadFile(
+        pomBuilder.generatedCode,
+        `${className}${extensions[language]}`,
+        mimeTypes[language]
+      );
+    });
+  </script>
+</body>
+</html>

@@ -7,15 +7,311 @@
   <link rel="stylesheet" href="/static/styles.css">
   <link rel="stylesheet" href="/static/navbar-tabs.css">
   <style>
-    .data-gen-section { margin-bottom: 2.5rem; }
-    .data-gen-label { font-weight: 600; margin-right: 1em; }
-    .data-gen-actions { display: flex; gap: 1.2em; margin-top: 1em; }
-    .data-gen-output { background: #23272B; color: #fff; padding: 1rem; border-radius: 5px; overflow: auto; max-height: 300px; font-family: monospace; margin-top: 1em; }
+    :root {
+        --primary: #6366f1;
+        --primary-hover: #4f46e5;
+        --primary-light: #a5b4fc;
+        --secondary: #1f2937;
+        --secondary-light: #374151;
+        --bg-light: #f8fafc;
+        --bg-dark: #0f172a;
+        --text-light: #64748b;
+        --text-dark: #0f172a;
+        --text-white: #ffffff;
+        --border: #e2e8f0;
+        --success: #10b981;
+        --error: #ef4444;
+        --warning: #f59e0b;
+        --info: #3b82f6;
+        --glass-bg: rgba(255, 255, 255, 0.7);
+        --glass-border: rgba(255, 255, 255, 0.2);
+        --shadow-xl: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+        --transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    body {
+        background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 50%, #cbd5e1 100%);
+        font-family: 'Inter', sans-serif;
+        min-height: 100vh;
+        color: var(--text-dark);
+        position: relative;
+    }
+
+    body::before {
+        content: '';
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: radial-gradient(circle at 40% 20%, rgba(16, 185, 129, 0.05) 0%, transparent 50%),
+                    radial-gradient(circle at 60% 80%, rgba(59, 130, 246, 0.05) 0%, transparent 50%);
+        pointer-events: none;
+        z-index: 0;
+    }
+
+    .content-area {
+        position: relative;
+        z-index: 1;
+        background: white;
+        margin: 2rem;
+        border-radius: 24px;
+        padding: 2.5rem;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+        border: 1px solid var(--border);
+    }
+
+    .data-gen-section { 
+        margin-bottom: 2.5rem;
+        padding: 2rem;
+        background: var(--bg-light);
+        border-radius: 16px;
+        border: 1px solid var(--border);
+    }
+
+    .data-gen-label { 
+        font-weight: 600; 
+        margin-right: 1em;
+        color: var(--text-dark);
+        font-size: 1.1rem;
+    }
+
+    .data-gen-actions { 
+        display: flex; 
+        gap: 1.2em; 
+        margin-top: 1em; 
+        flex-wrap: wrap;
+    }
+
+    .data-gen-output { 
+        background: var(--bg-dark); 
+        color: #e2e8f0; 
+        padding: 1.5rem; 
+        border-radius: 16px; 
+        overflow: auto; 
+        max-height: 400px; 
+        font-family: 'Fira Code', 'Consolas', monospace; 
+        margin-top: 1em;
+        font-size: 0.9rem;
+        line-height: 1.5;
+        border: 1px solid #374151;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    }
+
+    /* Modern Form Styling */
+    input[type="checkbox"] {
+        accent-color: var(--primary);
+        width: 18px;
+        height: 18px;
+        margin-right: 0.5rem;
+    }
+
+    select {
+        padding: 0.5rem 1rem;
+        border: 2px solid var(--border);
+        border-radius: 8px;
+        font-family: inherit;
+        background: white;
+        transition: var(--transition);
+    }
+
+    select:focus {
+        outline: none;
+        border-color: var(--primary);
+        box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+    }
+
+    input[type="number"] {
+        padding: 0.75rem 1rem;
+        border: 2px solid var(--border);
+        border-radius: 12px;
+        font-size: 1rem;
+        font-weight: 600;
+        text-align: center;
+        background: white;
+        transition: var(--transition);
+        width: 120px;
+    }
+
+    input[type="number"]:focus {
+        outline: none;
+        border-color: var(--primary);
+        box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+    }
+
+    /* Modern Button Styling */
+    button {
+        background: linear-gradient(135deg, var(--primary) 0%, var(--primary-hover) 100%);
+        color: white;
+        border: none;
+        border-radius: 12px;
+        padding: 0.75rem 1.5rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: var(--transition);
+        box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3);
+        font-family: inherit;
+    }
+
+    button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(99, 102, 241, 0.4);
+    }
+
+    button:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+        transform: none;
+        box-shadow: none;
+    }
+
+    /* Instructions Styling */
+    .instructions {
+        background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+        border: 2px solid #f59e0b;
+        border-radius: 20px;
+        padding: 2rem;
+        margin-bottom: 2rem;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .instructions::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: linear-gradient(90deg, var(--warning), #f59e0b, var(--warning));
+        background-size: 200% 100%;
+        animation: shimmer 3s ease-in-out infinite;
+    }
+
+    @keyframes shimmer {
+        0%, 100% { background-position: 200% 0; }
+        50% { background-position: -200% 0; }
+    }
+
+    .instructions b {
+        color: #92400e;
+        font-weight: 700;
+    }
+
+    .instructions ol {
+        color: #92400e;
+        font-weight: 500;
+    }
+
+    /* Table Styling */
+    table {
+        background: white;
+        border-radius: 16px;
+        overflow: hidden;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0;
+    }
+
+    table th {
+        background: linear-gradient(135deg, var(--bg-light) 0%, #e2e8f0 100%);
+        padding: 1rem;
+        font-weight: 600;
+        color: var(--text-dark);
+        text-align: left;
+        font-size: 0.9rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    table td {
+        padding: 0.75rem 1rem;
+        border-bottom: 1px solid var(--border);
+        color: var(--text-dark);
+    }
+
+    table tr:hover {
+        background: rgba(99, 102, 241, 0.02);
+    }
+
+    /* Custom Column Styling */
+    .custom-col-row {
+        display: flex;
+        gap: 1rem;
+        align-items: center;
+        margin-bottom: 1rem;
+        padding: 1rem;
+        background: white;
+        border-radius: 12px;
+        border: 1px solid var(--border);
+    }
+
+    .custom-col-name, .custom-col-pattern {
+        padding: 0.5rem 1rem;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        font-family: inherit;
+        background: white;
+        transition: var(--transition);
+    }
+
+    .custom-col-name:focus, .custom-col-pattern:focus {
+        outline: none;
+        border-color: var(--primary);
+        box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+    }
+
+    /* Data Actions Styling */
+    #dataActions {
+        display: none;
+        gap: 1rem;
+        margin-top: 2rem;
+        padding-top: 2rem;
+        border-top: 2px solid var(--border);
+        justify-content: center;
+        flex-wrap: wrap;
+    }
+
+    #dataActions button {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    /* Column selection styling */
+    .data-gen-section label {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.75rem 1rem;
+        background: white;
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        cursor: pointer;
+        transition: var(--transition);
+        font-weight: 500;
+    }
+
+    .data-gen-section label:hover {
+        border-color: var(--primary);
+        box-shadow: 0 2px 8px rgba(99, 102, 241, 0.1);
+    }
+
+    .data-gen-section input[type="checkbox"]:checked + span {
+        color: var(--primary);
+        font-weight: 600;
+    }
   </style>
 </head>
 <body>
-  {% include 'navbar.html' %}
-  <div class="container">
+  {% set active_tab = 'data' %}
+  {% include 'left-sidebar.html' %}
+  <div class="main-content">
+    {% set page_title = 'Data Generator' %}
+    {% set page_subtitle = 'Generate realistic test data with customizable columns and formats' %}
+    {% include 'page-header.html' %}
+    
     <div class="content-area" style="width:100%; padding:1.5rem;">
       <div class="instructions" style="margin-bottom:1.2em; background: #fffbe7; border: 1.5px solid #ffe082; color: #7c5a00; border-radius: 7px; padding: 0.7em 1em; font-size: 0.98em; max-width:600px; margin-left:0; text-align:left; line-height:1.3;">
         <b>Instructions:</b>
@@ -84,9 +380,11 @@
           <div id="customColumns"></div>
           <button type="button" class="btn-secondary" onclick="addCustomColumn()">+ Add Custom Column</button>
         </div>
-        <div class="data-gen-section">
-          <label class="data-gen-label" for="rowCount">Rows to Generate:</label>
-          <input type="number" id="rowCount" min="1" max="1000" value="10" style="width:70px;">
+        <div class="data-gen-section" style="display: flex; justify-content: space-between; align-items: center;">
+          <div>
+            <label class="data-gen-label" for="rowCount">Rows to Generate:</label>
+            <input type="number" id="rowCount" min="1" max="1000" value="10" style="width:70px;">
+          </div>
           <button type="submit" class="btn-primary">Generate</button>
         </div>
       </form>
@@ -100,6 +398,9 @@
       <div id="dataTableWrap" style="margin-top:2em;"></div>
     </div>
   </div>
+
+  {% include 'footer.html' %}
+
   <script>
 // --- Preset Data ---
 const FIRST_NAMES = ["Amit", "Priya", "Rahul", "Sneha", "Kiran", "Neha", "Ravi", "Anjali", "Vikram", "Pooja"];
@@ -410,5 +711,6 @@ copyBtn.onclick = function() {
   }, 500);
 };
   </script>
+  </div>
 </body>
 </html>

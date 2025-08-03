@@ -1,0 +1,200 @@
+<!-- Page Header Component -->
+<div class="page-header">
+  <div class="page-header-content">
+    <div class="page-logo">
+      <span class="page-logo-icon">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="pageLogoGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" style="stop-color:#f59e0b;stop-opacity:1" />
+              <stop offset="100%" style="stop-color:#d97706;stop-opacity:1" />
+            </linearGradient>
+            <filter id="pageGlow">
+              <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
+              <feMerge> 
+                <feMergeNode in="coloredBlur"/>
+                <feMergeNode in="SourceGraphic"/>
+              </feMerge>
+            </filter>
+          </defs>
+          <path d="M12 2L13.09 8.26L20 9L13.09 9.74L12 16L10.91 9.74L4 9L10.91 8.26L12 2Z" fill="url(#pageLogoGradient)" filter="url(#pageGlow)"/>
+          <circle cx="12" cy="12" r="3" fill="none" stroke="url(#pageLogoGradient)" stroke-width="1.8"/>
+          <path d="M8.5 4.5L9.5 7.5" stroke="url(#pageLogoGradient)" stroke-width="1.8" stroke-linecap="round"/>
+          <path d="M15.5 4.5L14.5 7.5" stroke="url(#pageLogoGradient)" stroke-width="1.8" stroke-linecap="round"/>
+          <path d="M4.5 8.5L7.5 9.5" stroke="url(#pageLogoGradient)" stroke-width="1.8" stroke-linecap="round"/>
+          <path d="M19.5 8.5L16.5 9.5" stroke="url(#pageLogoGradient)" stroke-width="1.8" stroke-linecap="round"/>
+        </svg>
+      </span>
+      <span class="page-logo-text">Co-Tester</span>
+    </div>
+    <div class="page-title-section">
+      <h1 class="page-title" id="pageTitle">{% if allow_html %}{{ page_title | default('Co-Tester') | safe }}{% else %}{{ page_title | default('Co-Tester') }}{% endif %}</h1>
+      <p class="page-subtitle" id="pageSubtitle">{{ page_subtitle | default('AI-Powered QA Platform') }}</p>
+    </div>
+  </div>
+</div>
+
+<style>
+/* Page Header Styles */
+.page-header {
+  background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 50%, #cbd5e1 100%);
+  border-bottom: 1px solid var(--border);
+  padding: 1.5rem 2rem;
+  margin-bottom: 2rem;
+  position: relative;
+  overflow: hidden;
+}
+
+.page-header::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(45deg, transparent 30%, rgba(99, 102, 241, 0.03) 50%, transparent 70%);
+  animation: header-shimmer 6s ease-in-out infinite;
+}
+
+@keyframes header-shimmer {
+  0%, 100% { opacity: 0; }
+  50% { opacity: 1; }
+}
+
+.page-header-content {
+  display: flex;
+  align-items: center;
+  gap: 2rem;
+  max-width: 1200px;
+  margin: 0 auto;
+  position: relative;
+  z-index: 1;
+}
+
+.page-logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+  border: 1px solid rgba(245, 158, 11, 0.2);
+  border-radius: 16px;
+  backdrop-filter: blur(20px);
+  box-shadow: 0 8px 20px rgba(245, 158, 11, 0.2);
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.page-logo::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: linear-gradient(45deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+  animation: page-logo-shine 3s linear infinite;
+}
+
+@keyframes page-logo-shine {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.page-logo:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 30px rgba(245, 158, 11, 0.4);
+}
+
+.page-logo-icon {
+  font-size: 1.5rem;
+  animation: page-bounce 2s ease-in-out infinite;
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.page-logo-icon svg {
+  width: 28px;
+  height: 28px;
+  transition: all 0.3s ease;
+}
+
+@keyframes page-bounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-3px); }
+}
+
+.page-logo-text {
+  font-size: 1.25rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: white;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  position: relative;
+  z-index: 1;
+}
+
+.page-title-section {
+  flex: 1;
+}
+
+.page-title {
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--text-dark);
+  margin: 0 0 0.5rem 0;
+  line-height: 1.2;
+}
+
+.page-subtitle {
+  font-size: 1rem;
+  color: var(--text-light);
+  margin: 0;
+  line-height: 1.4;
+}
+
+/* Mobile Responsive */
+@media (max-width: 768px) {
+  .page-header {
+    padding: 1rem;
+    margin-bottom: 1.5rem;
+  }
+  
+  .page-header-content {
+    flex-direction: column;
+    text-align: center;
+    gap: 1rem;
+  }
+  
+  .page-title {
+    font-size: 1.5rem;
+  }
+  
+  .page-subtitle {
+    font-size: 0.9rem;
+  }
+  
+  .page-logo {
+    align-self: center;
+  }
+}
+
+@media (max-width: 480px) {
+  .page-logo-text {
+    font-size: 1rem;
+  }
+  
+  .page-logo-icon {
+    font-size: 1.25rem;
+  }
+  
+  .page-title {
+    font-size: 1.25rem;
+  }
+}
+</style>

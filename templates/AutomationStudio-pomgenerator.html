@@ -1,0 +1,2609 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🤖 Automation Studio - POM Generator</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { 
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      margin: 0;
+      padding: 0;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      color: #1f2937;
+    }
+    
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 2em;
+    }
+    
+    header {
+      text-align: center;
+      margin-bottom: 2em;
+      color: white;
+    }
+    
+    header h1 {
+      font-size: 3em;
+      margin-bottom: 0.5em;
+      text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+    }
+    
+    header p {
+      font-size: 1.2em;
+      opacity: 0.9;
+    }
+    
+    .tab-navigation {
+      display: flex;
+      background: white;
+      border-radius: 12px;
+      padding: 0.5em;
+      margin-bottom: 2em;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+    }
+    
+    .tab-button {
+      flex: 1;
+      padding: 1em 2em;
+      border: none;
+      background: transparent;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 1.1em;
+      font-weight: 600;
+      color: #6b7280;
+      transition: all 0.3s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5em;
+    }
+    
+    .tab-button:hover {
+      background: #f3f4f6;
+      color: #374151;
+    }
+    
+    .tab-button.active {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+    }
+    
+    .tab-container {
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+      overflow: hidden;
+    }
+    
+    .tab-content {
+      display: none;
+      padding: 2em;
+    }
+    
+    .tab-content.active {
+      display: block;
+    }
+    
+    /* POM Generator specific styles */
+    .step-row { margin-bottom: 15px; }
+    .method-card { margin-bottom: 20px; }
+    
+    #methodList .method-item {
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    
+    #methodList .method-item:hover {
+      background-color: #f3f4f6;
+    }
+    
+    #methodList .method-item.active {
+      background-color: #e9ecef;
+      border-left: 3px solid #667eea;
+    }
+    
+    .action-buttons {
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+    
+    .method-item:hover .action-buttons {
+      opacity: 1;
+    }
+    
+    .status-indicator {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      display: inline-block;
+      margin-right: 5px;
+    }
+    
+    .status-indicator.valid {
+      background-color: #198754;
+    }
+    
+    .status-indicator.invalid {
+      background-color: #dc3545;
+    }
+    
+    .btn-pulse {
+      animation: pulse 1.5s infinite;
+    }
+        
+        @keyframes pulse {
+            0% {
+                box-shadow: 0 0 0 0 rgba(40, 167, 69, 0.7);
+            }
+            70% {
+                box-shadow: 0 0 0 10px rgba(40, 167, 69, 0);
+            }
+            100% {
+                box-shadow: 0 0 0 0 rgba(40, 167, 69, 0);
+            }
+        }
+        #leftPane {
+            display: none;  /* Hidden by default */
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>🤖 Automation Studio - POM Generator</h1>
+    </header>
+    
+    <!-- Alert Container -->
+    <div id="alertContainer" class="container-fluid mt-2"></div>
+    
+    <!-- UI Auto-Healing Quick Start Guide -->
+<div class="section" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 12px; padding: 1.5em; margin-bottom: 1.5em;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1em;">
+      <h3 style="color: white; margin: 0;"><span>🚀</span> Quick Start Guide</h3>
+      <button id="toggleQuickStartBtn" onclick="toggleQuickStart()" style="background: rgba(255,255,255,0.2); color: white; border: none; border-radius: 6px; padding: 0.5em 1em; cursor: pointer;">
+        <span id="toggleQuickStartText">Hide Guide</span>
+      </button>
+    </div>
+    <div id="quickStartContent" class="grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5em;">
+      <div>
+        <h4 style="color: #e2e8f0; margin: 0 0 0.5em 0;">📝 Steps</h4>
+        <div style="background: rgba(255,255,255,0.1); padding: 1em; border-radius: 6px; color: #e2e8f0;">
+          <p><strong>1.</strong> Upload element JSON</p>
+          <p><strong>2.</strong> Create methods using elements</p>
+          <p><strong>3.</strong> Generate auto-healing code</p>
+        </div>
+      </div>
+      <div>
+        <h4 style="color: #e2e8f0; margin: 0 0 0.5em 0;">🔧 Auto-Healing Framework</h4>
+        <div style="background: rgba(255,255,255,0.1); padding: 1em; border-radius: 6px; color: #e2e8f0;">
+          <p><strong>Multiple Locators:</strong> Fallback strategies</p>
+          <p><strong>Priority-Based:</strong> Best locators tried first</p>
+          <p><strong>Smart Recovery:</strong> Automatic alternatives</p>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+    <!-- Tab Navigation -->
+    <div class="tab-navigation">
+      <button class="tab-button active" data-tab="elements">
+        <span>🎯</span> Elements
+      </button>
+      <button class="tab-button" data-tab="methods">
+        <span>📄</span> Methods
+      </button>
+      <button class="tab-button" data-tab="preview">
+        <span>⚙️</span> Generate POM
+      </button>
+    </div>
+
+    <!-- Tab Content -->
+    <div class="tab-container">
+
+      <!-- Elements Tab -->
+      <div class="tab-content active" id="elements">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="card">
+                                    <div class="card-header">
+                                        <h6 class="mb-0">Upload Elements JSON</h6>
+    </div>
+                                    <div class="card-body">
+                                        <div class="mb-3">
+                                            <input type="file" class="form-control" id="jsonFile" accept=".json">
+  </div>
+      </div>
+    </div>
+  </div>
+                            <div class="col-md-6">
+                                <div class="card">
+                                    <div class="card-header d-flex justify-content-between align-items-center">
+                                        <h6 class="mb-0">Elements Preview</h6>
+                                        <button class="btn btn-sm btn-primary" onclick="proceedToMethods()" id="proceedToMethodsBtn" disabled>
+                                            Next: Build Methods <i class="bi bi-arrow-right"></i>
+                                        </button>
+      </div>
+                                    <div class="card-body">
+                                        <div id="elementsList" class="list-group">
+                                            <!-- Elements will be listed here -->
+      </div>
+                                        <div class="mt-3">
+                                            <pre id="jsonPreview" class="bg-light p-3 rounded" style="max-height: 300px; overflow-y: auto;"></pre>
+    </div>
+                                    </div>
+                                </div>
+                            </div>
+    </div>
+  </div>
+  
+      <!-- Methods Tab -->
+      <div class="tab-content" id="methods">
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="card">
+                                    <div class="card-header d-flex justify-content-between align-items-center">
+                                        <h6 class="mb-0">Saved Methods</h6>
+                                        <span class="badge bg-primary" id="methodCount">0 Methods</span>
+    </div>
+                                    <div class="card-body">
+                                        <div id="savedMethodsList" class="list-group">
+                                            <!-- Saved methods will be listed here -->
+                                            <div class="text-muted text-center p-3" id="noMethodsMessage">
+                                                No methods added yet
+                                            </div>
+                                        </div>
+                                        <div class="mt-3 text-end">
+                                            <button class="btn btn-primary" onclick="proceedToPOMGeneration()" id="proceedToPOMBtn" disabled>
+                                                Next: Generate POM <i class="bi bi-arrow-right"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-8">
+                                <div class="card">
+                                    <div class="card-header">
+                                        <h6 class="mb-0">Method Details</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="mb-3">
+                                            <label for="methodName" class="form-label">Method Name <span class="text-danger">*</span></label>
+                                            <input type="text" class="form-control" id="methodName" placeholder="e.g., login, searchProduct">
+                                            <div class="invalid-feedback">Method name is required</div>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label for="methodDescription" class="form-label">Description (Optional)</label>
+                                            <textarea class="form-control" id="methodDescription" rows="2" placeholder="Brief description of what this method does"></textarea>
+                                        </div>
+                                        <div id="stepBuilder">
+                                            <div class="mb-3">
+                                                <label class="form-label">Saved Steps</label>
+                                                <div id="savedStepsPreview" class="list-group mb-3">
+                                                    <!-- Saved steps will be shown here -->
+                                                </div>
+                                                <label class="form-label d-flex justify-content-between align-items-center">
+                                                    <span>Add New Step</span>
+                                                    <button class="btn btn-sm btn-primary" onclick="addNewStep()">
+                                                        <i class="bi bi-plus"></i> Add Step
+                                                    </button>
+                                                </label>
+                                                <div id="stepsList" class="list-group">
+                                                    <!-- Steps will be added here -->
+                                                </div>
+                                            </div>
+                                            <div class="mb-3">
+                                                <button id="saveMethodBtn" class="btn btn-success" onclick="saveMethod()" disabled>
+                                                    <i class="bi bi-check-lg"></i> Save Method
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+  </div>
+  
+      <!-- Preview Tab -->
+      <div class="tab-content" id="preview">
+                        <div class="row mb-3">
+                            <div class="col-12">
+                                <div class="card">
+                                    <div class="card-header">
+                                        <h6 class="mb-0">POM Configuration</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="row g-3">
+                                            <div class="col-md-6">
+                                                <label for="pageName" class="form-label">Page Name</label>
+                                                <input type="text" class="form-control" id="pageName" placeholder="e.g., LoginPage">
+                                                <div class="form-text">This will be used as the POM class name</div>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <label for="className" class="form-label">Class Name</label>
+                                                <div class="input-group">
+                                                    <input type="text" class="form-control" id="className">
+                                                    <button class="btn btn-outline-secondary" onclick="resetClassName()">Reset</button>
+                                                </div>
+                                                <div class="form-text">The class name for your POM</div>
+                                            </div>
+                                            <div class="col-12 text-end">
+                                                <button class="btn btn-primary" onclick="generatePOMCode()">
+                                                    <i class="bi bi-code-square"></i> Generate Code
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-12">
+                                <div class="card">
+                                    <div class="card-header d-flex justify-content-between align-items-center">
+                                        <h6 class="mb-0">Generated POM Code</h6>
+                                        <div class="btn-group">
+                                            <button class="btn btn-sm btn-primary" onclick="copyGeneratedCode()">
+                                                <i class="bi bi-clipboard"></i> Copy Code
+                                            </button>
+                                            <button class="btn btn-sm btn-success" onclick="downloadGeneratedCode()">
+                                                <i class="bi bi-download"></i> Download
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div class="card-body">
+                                        <textarea id="generatedCode" class="form-control" rows="20" readonly style="font-family: monospace;"></textarea>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Step Template -->
+    <template id="stepTemplate">
+        <div class="step-row row align-items-center">
+            <div class="col-md-3">
+                <select class="form-select action-type" required>
+                    <option value="">Select Action</option>
+                    <optgroup label="Basic Interactions">
+                        <option value="click">Click</option>
+                        <option value="fill">Fill Text</option>
+                        <option value="type">Type Text</option>
+                        <option value="select">Select Option</option>
+                        <option value="check">Check</option>
+                        <option value="uncheck">Uncheck</option>
+                    </optgroup>
+                    <optgroup label="Advanced Interactions">
+                        <option value="doubleClick">Double Click</option>
+                        <option value="rightClick">Right Click</option>
+                        <option value="hover">Hover</option>
+                        <option value="dragAndDrop">Drag and Drop</option>
+                        <option value="uploadFile">Upload File</option>
+                    </optgroup>
+                    <optgroup label="Waits">
+                        <option value="waitForElement">Wait for Element</option>
+                        <option value="waitForNavigation">Wait for Navigation</option>
+                        <option value="waitForLoadState">Wait for Load State</option>
+                    </optgroup>
+                    <optgroup label="Assertions">
+                        <option value="assertVisible">Assert Visible</option>
+                        <option value="assertHidden">Assert Hidden</option>
+                        <option value="assertText">Assert Text</option>
+                        <option value="assertValue">Assert Value</option>
+                    </optgroup>
+                </select>
+      </div>
+            <div class="col-md-4">
+                <select class="form-select element-select">
+                    <option value="">Select Element</option>
+                </select>
+      </div>
+            <div class="col-md-4">
+                <div class="input-group">
+                    <input type="text" class="form-control value-input" placeholder="Value (if needed)">
+                    <span class="input-group-text help-tooltip" data-bs-toggle="tooltip" title="Help text will appear here">
+                        <i class="bi bi-question-circle"></i>
+                    </span>
+    </div>
+  </div>
+            <div class="col-md-1">
+                <button type="button" class="btn btn-outline-danger btn-sm delete-step">
+                    <i class="bi bi-trash"></i>
+                </button>
+            </div>
+        </div>
+    </template>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+  <script>
+        // Global state management
+        let state = {
+            methods: [],
+            currentMethodIndex: -1,
+            isMethodDirty: false,
+            elementsData: null
+        };
+
+        // Form field configurations
+        const FORM_FIELDS = {
+            methodName: {
+                id: 'methodName',
+                required: true,
+                validate: (value) => {
+                    if (!value.trim()) return 'Method name is required';
+                    // Check for method name uniqueness when saving a new method
+                    if (state.currentMethodIndex === -1 && state.methods.some(m => m.name === value.trim())) {
+                        return 'Method name must be unique';
+                    }
+                    return null;
+                }
+            },
+            methodDescription: {
+                id: 'methodDescription',
+                required: false,
+                validate: () => null // Optional field
+            },
+            methodSteps: {
+                id: 'methodSteps',
+                required: true,
+                validate: (value) => value.trim().length > 0 ? null : 'Method steps are required'
+            }
+        };
+
+        // Alert System
+        function showAlert(message, type = 'danger', duration = 3000) {
+            const alertContainer = document.getElementById('alertContainer');
+            if (!alertContainer) {
+                console.error('Alert container not found');
+                return;
+            }
+
+            const alertDiv = document.createElement('div');
+            alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
+            alertDiv.role = 'alert';
+            
+            alertDiv.innerHTML = `
+                ${escapeHtml(message)}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            `;
+            
+            alertContainer.appendChild(alertDiv);
+            
+            const bsAlert = new bootstrap.Alert(alertDiv);
+            
+            setTimeout(() => {
+                bsAlert.close();
+                alertDiv.addEventListener('closed.bs.alert', () => {
+                    alertDiv.remove();
+                });
+            }, duration);
+        }
+
+        // Tab Management
+        function initializeTabHandlers() {
+            const tabs = document.querySelectorAll('.nav-link');
+            tabs.forEach(tab => {
+                tab.addEventListener('click', function(e) {
+                    if (this.classList.contains('disabled')) {
+      e.preventDefault();
+                        if (this.id === 'method-tab' && !state.elementsData) {
+                            showAlert('Please upload elements JSON first');
+                        } else if (this.id === 'preview-tab' && state.methods.length === 0) {
+                            showAlert('Please create at least one valid method first');
+                        }
+                        return;
+                    }
+
+                    if (state.isMethodDirty) {
+                        e.preventDefault();
+                        if (!confirm('You have unsaved changes. Do you want to discard them?')) {
+                            return;
+                        }
+                        state.isMethodDirty = false;
+                        if (state.currentMethodIndex === -1) {
+                            clearMethodForm();
+                        } else {
+                            loadMethod(state.currentMethodIndex);
+                        }
+                    }
+
+                    const tab = new bootstrap.Tab(this);
+                    tab.show();
+                    
+                    setTimeout(updateLeftPane, 100);
+                });
+            });
+        }
+
+        function updateTabStates() {
+            const methodTab = document.getElementById('method-tab');
+            const previewTab = document.getElementById('preview-tab');
+
+            if (!methodTab || !previewTab) return;
+
+            // Enable method tab if elements are loaded
+            if (state.elementsData) {
+                methodTab.classList.remove('disabled');
+                methodTab.innerHTML = '2. Method Builder <span class="badge bg-success">Ready</span>';
+            } else {
+                methodTab.classList.add('disabled');
+                methodTab.innerHTML = '2. Method Builder';
+            }
+
+            // Enable preview tab if we have methods
+            if (state.methods.length > 0) {
+                previewTab.classList.remove('disabled');
+                previewTab.innerHTML = '3. Preview & Generate <span class="badge bg-success">Ready</span>';
+            } else {
+                previewTab.classList.add('disabled');
+                previewTab.innerHTML = '3. Preview & Generate';
+            }
+        }
+
+        // File Upload Handler
+        function handleFileUpload(event) {
+            const file = event.target.files[0];
+            if (!file) {
+                showAlert('No file selected', 'warning');
+        return;
+      }
+      
+            try {
+      const reader = new FileReader();
+                reader.onload = async function(e) {
+                    try {
+                        const fileContent = e.target.result;
+                        console.log('Raw file content:', fileContent);
+
+                        const jsonData = JSON.parse(fileContent);
+                        console.log('Parsed JSON data:', jsonData);
+
+                        if (!jsonData.elements || !Array.isArray(jsonData.elements)) {
+                            throw new Error('Invalid JSON format: missing elements array');
+                        }
+
+                        // Store the data
+                        state.elementsData = jsonData;
+                        
+                        // Update UI
+                        updateElementsList();
+                        updateJsonPreview(jsonData);
+                        
+                        // Update status
+                        const elementsStatus = document.getElementById('elementsStatus');
+                        if (elementsStatus) {
+                            elementsStatus.textContent = `${jsonData.elements.length} Elements`;
+                            elementsStatus.className = 'badge bg-success';
+                        }
+                        
+                        // Enable methods tab
+                        const methodsTab = document.getElementById('methods-tab');
+                        if (methodsTab) {
+                            methodsTab.disabled = false;
+                        }
+                        
+                        // Enable proceed button
+                        const proceedBtn = document.getElementById('proceedToMethodsBtn');
+                        if (proceedBtn) {
+                            proceedBtn.disabled = false;
+                        }
+
+                        // Update any existing method steps with new elements
+                        const stepsList = document.getElementById('stepsList');
+                        if (stepsList) {
+                            const elementSelects = stepsList.querySelectorAll('.step-element');
+                            elementSelects.forEach(select => {
+                                populateElementDropdown(select);
+                            });
+                        }
+                        
+                        showAlert('Elements JSON loaded successfully!', 'success');
+        } catch (error) {
+                        console.error('Error processing JSON:', error);
+                        showAlert('Error processing JSON: ' + error.message, 'danger');
+                        
+                        // Reset state
+                        state.elementsData = null;
+                        
+                        // Update UI to show error
+                        const elementsStatus = document.getElementById('elementsStatus');
+                        if (elementsStatus) {
+                            elementsStatus.textContent = 'Error';
+                            elementsStatus.className = 'badge bg-danger';
+                        }
+        }
+      };
+      reader.readAsText(file);
+            } catch (error) {
+                console.error('Error reading file:', error);
+                showAlert('Error reading file: ' + error.message, 'danger');
+            }
+        }
+
+        function updateJsonPreview(jsonData) {
+            const preElement = document.getElementById('jsonPreview');
+            if (preElement) {
+                preElement.textContent = JSON.stringify(jsonData, null, 2);
+            }
+        }
+
+        function enableMethodsTab() {
+            const methodsTab = document.getElementById('methods-tab');
+            if (methodsTab) {
+                methodsTab.disabled = false;
+            }
+        }
+
+        function proceedToMethods() {
+            const methodsTab = document.getElementById('methods-tab');
+            if (methodsTab) {
+                const tab = new bootstrap.Tab(methodsTab);
+                tab.show();
+                
+                // Initialize method builder state
+                initializeMethodBuilder();
+            }
+        }
+
+        function proceedToGenerate() {
+            const previewTab = document.getElementById('preview-tab');
+            if (previewTab) {
+                const tab = new bootstrap.Tab(previewTab);
+                tab.show();
+            }
+        }
+
+        function updateMethodsStatus() {
+            const methodsCount = state.methods?.length || 0;
+            const methodCount = document.getElementById('methodCount');
+            const proceedToPOMBtn = document.getElementById('proceedToPOMBtn');
+            const previewTab = document.getElementById('preview-tab');
+            
+            // Update method count badge
+            if (methodCount) {
+                methodCount.textContent = `${methodsCount} Methods`;
+            }
+            
+            // Enable/disable POM generation button and tab
+            if (proceedToPOMBtn) {
+                proceedToPOMBtn.disabled = methodsCount === 0;
+            }
+            
+            if (previewTab) {
+                if (methodsCount > 0) {
+                    previewTab.classList.remove('disabled');
+                    previewTab.removeAttribute('disabled');
+                } else {
+                    previewTab.classList.add('disabled');
+                    previewTab.setAttribute('disabled', 'disabled');
+                }
+            }
+        }
+
+        function downloadPOM() {
+            const code = document.getElementById('generatedCode').value;
+            if (!code) {
+                showAlert('Please generate the POM first');
+                return;
+            }
+
+            const pageName = state.elementsData?.page?.name || 'GeneratedPage';
+            const blob = new Blob([code], { type: 'text/javascript' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${pageName}.js`;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+        }
+
+        function updateElementsList() {
+            const elementsList = document.getElementById('elementsList');
+            if (!elementsList || !state.elementsData || !state.elementsData.elements) {
+                return;
+            }
+
+            elementsList.innerHTML = '';
+            state.elementsData.elements.forEach(element => {
+                const li = document.createElement('li');
+                li.className = 'list-group-item';
+                const strategies = Object.entries(element.locatorStrategies)
+                    .sort((a, b) => a[1].priority - b[1].priority)
+                    .map(([name, strategy]) => `<small class="text-muted d-block">${name}: ${strategy.selector}</small>`)
+                    .join('');
+
+                li.innerHTML = `
+                    <div>
+                        <strong>${element.name}</strong>
+                        <br>
+                        ${strategies}
+                    </div>
+                `;
+                elementsList.appendChild(li);
+            });
+        }
+
+        // Utility functions
+        function getFormField(fieldId) {
+            const element = document.getElementById(fieldId);
+            return element ? element.value || '' : '';
+        }
+
+        function validateForm() {
+            const errors = [];
+            Object.values(FORM_FIELDS).forEach(field => {
+                const value = getFormField(field.id);
+                const error = field.validate(value);
+                if (error) errors.push(error);
+            });
+            return errors;
+        }
+
+        function updateMethodList() {
+            const methodList = document.getElementById('methodList');
+            if (!methodList) return;
+
+            methodList.innerHTML = '';
+
+            state.methods.forEach((method, index) => {
+                const methodItem = document.createElement('a');
+                methodItem.href = '#';
+                methodItem.className = 'list-group-item list-group-item-action d-flex justify-content-between align-items-center';
+                if (index === state.currentMethodIndex) {
+                    methodItem.classList.add('active');
+                }
+
+                methodItem.innerHTML = `
+              <div>
+                        <h6 class="mb-1">${escapeHtml(method.name)}</h6>
+                        <small class="text-muted">${escapeHtml(method.description)}</small>
+              </div>
+              <div>
+                        <button class="btn btn-sm btn-outline-primary me-1" data-action="edit" data-index="${index}">
+                            <i class="bi bi-pencil"></i>
+                        </button>
+                        <button class="btn btn-sm btn-outline-danger" data-action="delete" data-index="${index}">
+                            <i class="bi bi-trash"></i>
+                        </button>
+        </div>
+      `;
+      
+                methodList.appendChild(methodItem);
+            });
+
+            // Update UI states
+            updateUIState();
+        }
+
+        function updateUIState() {
+            const methodList = document.getElementById('methodList');
+            const addMethodBtn = document.getElementById('addMethodBtn');
+            const previewTab = document.getElementById('preview-tab');
+
+            if (!methodList || !addMethodBtn || !previewTab) return;
+
+            // Update method list visibility
+            methodList.style.display = state.methods.length > 0 ? 'block' : 'none';
+
+            // Update add button visibility
+            addMethodBtn.style.display = state.isMethodDirty ? 'none' : 'block';
+
+            // Update preview tab state
+            if (state.methods.length > 0) {
+                previewTab.classList.remove('disabled');
+            } else {
+                previewTab.classList.add('disabled');
+            }
+        }
+
+        function escapeHtml(unsafe) {
+            return unsafe
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+
+        // Step Management
+        function addStep(stepData = null) {
+            const stepsContainer = document.getElementById('methodSteps');
+            if (!stepsContainer) {
+                console.error('Steps container not found');
+        return;
+      }
+      
+            let currentSteps = stepsContainer.value.split('\n').filter(Boolean);
+            
+            if (stepData) {
+                // Add provided step data
+                currentSteps.push(stepData);
+            } else {
+                // Add empty step template
+                currentSteps.push(`click | elementName | `);
+            }
+
+            // Update textarea with new steps
+            stepsContainer.value = currentSteps.join('\n');
+            
+            // Mark as dirty
+            state.isMethodDirty = true;
+            updateUIState();
+        }
+
+        function removeStep(index) {
+            const stepsContainer = document.getElementById('methodSteps');
+            if (!stepsContainer) {
+                console.error('Steps container not found');
+                return;
+            }
+
+            let currentSteps = stepsContainer.value.split('\n').filter(Boolean);
+            if (index >= 0 && index < currentSteps.length) {
+                currentSteps.splice(index, 1);
+                stepsContainer.value = currentSteps.join('\n');
+                state.isMethodDirty = true;
+                updateUIState();
+            }
+        }
+
+        function moveStep(fromIndex, toIndex) {
+            const stepsContainer = document.getElementById('methodSteps');
+            if (!stepsContainer) {
+                console.error('Steps container not found');
+                return;
+            }
+
+            let currentSteps = stepsContainer.value.split('\n').filter(Boolean);
+            if (fromIndex >= 0 && fromIndex < currentSteps.length && 
+                toIndex >= 0 && toIndex < currentSteps.length) {
+                const step = currentSteps[fromIndex];
+                currentSteps.splice(fromIndex, 1);
+                currentSteps.splice(toIndex, 0, step);
+                stepsContainer.value = currentSteps.join('\n');
+                state.isMethodDirty = true;
+                updateUIState();
+            }
+        }
+
+        // Update the clearMethodForm function to initialize with an empty step
+        function clearMethodForm() {
+            Object.values(FORM_FIELDS).forEach(field => {
+                const element = document.getElementById(field.id);
+                if (element) {
+                    element.value = '';
+                }
+            });
+            
+            // Add initial empty step
+            const stepsContainer = document.getElementById('methodSteps');
+            if (stepsContainer) {
+                stepsContainer.value = 'click | elementName | ';
+            }
+            
+            state.isMethodDirty = false;
+            updateUIState();
+        }
+
+        // Update loadMethod to properly handle steps
+        function loadMethod(index) {
+            try {
+                if (state.isMethodDirty && !confirm('You have unsaved changes. Do you want to discard them?')) {
+                    return;
+                }
+
+                const method = state.methods[index];
+                if (!method) {
+                    console.error('Method not found at index:', index);
+                    return;
+                }
+
+                // Update form fields
+                document.getElementById('methodName').value = method.name || '';
+                document.getElementById('methodDescription').value = method.description || '';
+                
+                // Update steps
+                const stepsContainer = document.getElementById('methodSteps');
+                if (stepsContainer) {
+                    stepsContainer.value = Array.isArray(method.steps) ? method.steps.join('\n') : '';
+                }
+
+                state.currentMethodIndex = index;
+                state.isMethodDirty = false;
+                updateMethodList();
+
+            } catch (error) {
+                console.error('Error loading method:', error);
+                showAlert(`Error loading method: ${error.message}`);
+            }
+        }
+
+        function validateMethodForm() {
+            let isValid = true;
+            const methodName = document.getElementById('methodName');
+            const stepsList = document.getElementById('stepsList');
+            const steps = stepsList.querySelectorAll('.list-group-item');
+            
+            // Validate method name
+            if (!methodName.value.trim()) {
+                methodName.classList.add('is-invalid');
+                isValid = false;
+            } else {
+                methodName.classList.remove('is-invalid');
+            }
+            
+            // Count valid steps (steps with both action and element selected)
+            let validStepsCount = 0;
+            steps.forEach((step, index) => {
+                const action = step.querySelector('.step-action');
+                const element = step.querySelector('.step-element');
+                
+                if (action.value && element.value) {
+                    validStepsCount++;
+                    action.classList.remove('is-invalid');
+                    element.classList.remove('is-invalid');
+                } else {
+                    action.classList.add('is-invalid');
+                    element.classList.add('is-invalid');
+                }
+            });
+            
+            // Check if we have at least one valid step
+            if (validStepsCount === 0) {
+                showAlert('Please complete at least one step with both action and element selected', 'danger');
+                isValid = false;
+            }
+            
+            return isValid;
+        }
+
+        function saveMethod() {
+            const methodName = document.getElementById('methodName').value.trim();
+            const methodDescription = document.getElementById('methodDescription').value.trim();
+            
+            if (!methodName) {
+                document.getElementById('methodName').classList.add('is-invalid');
+                showAlert('Please enter a method name', 'danger');
+                return;
+            }
+            
+            if (!state.currentMethod || state.currentMethod.savedSteps.length === 0) {
+                showAlert('Please save at least one step before saving the method', 'danger');
+                return;
+            }
+            
+            // Add method to state
+            state.methods.push({
+                name: methodName,
+                description: methodDescription,
+                steps: state.currentMethod.savedSteps
+            });
+            
+            // Update UI
+            updateSavedMethodsList();
+            updateMethodsStatus();
+            
+            // Clear form and state
+            document.getElementById('methodName').value = '';
+            document.getElementById('methodName').classList.remove('is-invalid');
+            document.getElementById('methodDescription').value = '';
+            document.getElementById('stepsList').innerHTML = '';
+            document.getElementById('savedStepsPreview').innerHTML = '';
+            
+            // Reset method state
+            state.currentMethod = {
+                name: '',
+                description: '',
+                savedSteps: []
+            };
+            
+            // Show empty state message
+            const stepsList = document.getElementById('stepsList');
+            if (stepsList) {
+                stepsList.innerHTML = `
+                    <div class="text-center p-3 text-muted">
+                        <i class="bi bi-plus-circle" style="font-size: 2rem;"></i>
+                        <p class="mt-2">Click "Add Step" to start building your method</p>
+                    </div>
+                `;
+            }
+            
+            // Disable save method button
+            document.querySelector('#saveMethodBtn').disabled = true;
+            
+            showAlert('Method saved successfully!', 'success');
+        }
+
+        function updateSavedMethodsList() {
+            const methodsList = document.getElementById('savedMethodsList');
+            const noMethodsMessage = document.getElementById('noMethodsMessage');
+            const methodCount = document.getElementById('methodCount');
+            
+            if (!methodsList || !state.methods) return;
+            
+            // Update method count
+            methodCount.textContent = `${state.methods.length} Methods`;
+            
+            // Show/hide no methods message
+            if (state.methods.length === 0) {
+                noMethodsMessage.style.display = 'block';
+                return;
+            }
+            
+            noMethodsMessage.style.display = 'none';
+            
+            // Clear existing list except the noMethodsMessage
+            while (methodsList.firstChild && methodsList.firstChild !== noMethodsMessage) {
+                methodsList.removeChild(methodsList.firstChild);
+            }
+            
+            // Add each method to the list
+            state.methods.forEach((method, index) => {
+                const methodItem = document.createElement('div');
+                methodItem.className = 'list-group-item list-group-item-action';
+                
+                // Create safe text content
+                const methodName = escapeHtml(method.name || '');
+                const methodDesc = escapeHtml(method.description || '');
+                const stepsCount = method.steps ? method.steps.length : 0;
+                
+                methodItem.innerHTML = `
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="mb-1">${methodName}</h6>
+                            <small class="text-muted">${methodDesc}</small>
+                            <div class="mt-1">
+                                <small class="text-primary">${stepsCount} steps</small>
+                            </div>
+                        </div>
+                        <div class="btn-group btn-group-sm">
+                            <button class="btn btn-outline-primary" onclick="editMethod(${index})">
+                                <i class="bi bi-pencil"></i>
+                            </button>
+                            <button class="btn btn-outline-danger" onclick="deleteMethod(${index})">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                `;
+                methodsList.insertBefore(methodItem, noMethodsMessage);
+            });
+        }
+
+        function editMethod(index) {
+            const method = state.methods[index];
+            if (!method) return;
+            
+            // Fill in method details
+            document.getElementById('methodName').value = method.name;
+            document.getElementById('methodDescription').value = method.description || '';
+            
+            // Clear existing steps
+            document.getElementById('stepsList').innerHTML = '';
+            
+            // Add each step
+          method.steps.forEach(step => {
+                const stepDiv = document.createElement('div');
+                stepDiv.className = 'list-group-item';
+                
+                const elementOptions = state.elementsData?.elements.map(el => 
+                    `<option value="${el.name}" ${el.name === step.element ? 'selected' : ''}>${el.name}</option>`
+                ).join('') || '';
+                
+                stepDiv.innerHTML = `
+                    <div class="row mb-3 method-step">
+                        <div class="col">
+                            <select class="form-select step-action" required onchange="validateStepInputs(this)">
+                                <option value="">Select Action</option>
+                                <option value="click" ${step.action === 'click' ? 'selected' : ''}>Click</option>
+                                <option value="fill" ${step.action === 'fill' ? 'selected' : ''}>Fill Text</option>
+                                <option value="type" ${step.action === 'type' ? 'selected' : ''}>Type Text</option>
+                                <option value="select" ${step.action === 'select' ? 'selected' : ''}>Select Option</option>
+                                <option value="check" ${step.action === 'check' ? 'selected' : ''}>Check</option>
+                                <option value="uncheck" ${step.action === 'uncheck' ? 'selected' : ''}>Uncheck</option>
+                                <option value="hover" ${step.action === 'hover' ? 'selected' : ''}>Hover</option>
+                                <option value="waitFor" ${step.action === 'waitFor' ? 'selected' : ''}>Wait For</option>
+                            </select>
+                            <div class="invalid-feedback">Please select an action</div>
+                        </div>
+                        <div class="col">
+                            <select class="form-select step-element" required>
+                                <option value="">Select Element</option>
+                                ${elementOptions}
+                            </select>
+                            <div class="invalid-feedback">Please select an element</div>
+                        </div>
+                        <div class="col">
+                            <input type="text" class="form-control step-value" style="display:none" placeholder="Enter value">
+                            <div class="invalid-feedback">Please enter a value</div>
+                        </div>
+                        <div class="col-auto">
+                            <button type="button" class="btn btn-danger" onclick="removeMethodStep(this)">×</button>
+                        </div>
+                    </div>
+                `;
+                
+                document.getElementById('stepsList').appendChild(stepDiv);
+            });
+            
+            // Remove the method from the list (it will be re-added when saved)
+            state.methods.splice(index, 1);
+            updateSavedMethodsList();
+        }
+
+        function deleteMethod(index) {
+            if (!confirm('Are you sure you want to delete this method?')) return;
+            
+            state.methods.splice(index, 1);
+            updateSavedMethodsList();
+            updateMethodsStatus();
+            showAlert('Method deleted successfully', 'success');
+        }
+
+        function addNewStep() {
+            const stepsList = document.getElementById('stepsList');
+            
+            // Clear the empty state message if it exists
+            if (stepsList.querySelector('.text-muted')) {
+                stepsList.innerHTML = '';
+            }
+            
+            const stepDiv = document.createElement('div');
+            stepDiv.className = 'list-group-item';
+            stepDiv.draggable = true;
+            stepDiv.setAttribute('data-step-index', stepsList.children.length);
+            
+            // Add drag and drop event listeners
+            stepDiv.addEventListener('dragstart', handleDragStart);
+            stepDiv.addEventListener('dragover', handleDragOver);
+            stepDiv.addEventListener('drop', handleDrop);
+            stepDiv.addEventListener('dragend', handleDragEnd);
+            
+            // Get available elements for the dropdown
+            const elementOptions = state.elementsData?.elements.map(el => 
+                `<option value="${escapeHtml(el.name)}">${escapeHtml(el.name)}</option>`
+            ).join('') || '';
+
+            stepDiv.innerHTML = `
+                <div class="row mb-3 method-step">
+                    <div class="col-auto">
+                        <i class="bi bi-grip-vertical" style="cursor: move;"></i>
+                    </div>
+                    <div class="col">
+                        <select class="form-select step-action" required onchange="validateStepInputs(this)">
+                            <option value="">Select Action</option>
+                        </select>
+                        <div class="invalid-feedback">Please select an action</div>
+                    </div>
+                    <div class="col">
+                        <select class="form-select step-element" required>
+                            <option value="">Select Element</option>
+                            ${elementOptions}
+                        </select>
+                        <div class="invalid-feedback">Please select an element</div>
+                    </div>
+                    <div class="col">
+                        <input type="text" class="form-control step-value" style="display:none" placeholder="Enter value">
+                        <div class="invalid-feedback">Please enter a value</div>
+                    </div>
+                    <div class="col-auto d-flex">
+                        <button type="button" class="btn btn-success me-2" onclick="saveStep(this)">Save Step</button>
+                        <button type="button" class="btn btn-danger" onclick="removeMethodStep(this)">×</button>
+                    </div>
+                </div>`;
+            
+            stepsList.appendChild(stepDiv);
+
+            // Populate the dropdowns
+            const actionSelect = stepDiv.querySelector('.step-action');
+            const elementSelect = stepDiv.querySelector('.step-element');
+            
+            populateActionDropdown(actionSelect);
+            populateElementDropdown(elementSelect);
+        }
+
+        // Drag and drop handlers
+        let dragSrcEl = null;
+
+        function handleDragStart(e) {
+            dragSrcEl = this;
+            e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('text/plain', this.getAttribute('data-step-index'));
+            this.classList.add('dragging');
+        }
+
+        function handleDragOver(e) {
+            if (e.preventDefault) {
+                e.preventDefault();
+            }
+            e.dataTransfer.dropEffect = 'move';
+            return false;
+        }
+
+        function handleDrop(e) {
+            if (e.stopPropagation) {
+                e.stopPropagation();
+            }
+
+            if (dragSrcEl !== this) {
+                const srcIndex = parseInt(dragSrcEl.getAttribute('data-step-index'));
+                const destIndex = parseInt(this.getAttribute('data-step-index'));
+                
+                // Update state
+                if (state.currentMethod && state.currentMethod.savedSteps) {
+                    const steps = state.currentMethod.savedSteps;
+                    const [removed] = steps.splice(srcIndex, 1);
+                    steps.splice(destIndex, 0, removed);
+                    
+                    // Update UI
+                    updateSavedStepsPreview();
+                }
+            }
+            return false;
+        }
+
+        function handleDragEnd(e) {
+            this.classList.remove('dragging');
+            dragSrcEl = null;
+        }
+
+        // Add CSS for drag and drop
+        const style = document.createElement('style');
+        style.textContent = `
+            .dragging {
+                opacity: 0.5;
+            }
+            .list-group-item {
+                cursor: move;
+            }
+            .list-group-item:hover {
+                background-color: #f8f9fa;
+            }
+        `;
+        document.head.appendChild(style);
+
+        // Add this new function to handle saved steps state
+        function initializeMethodBuilder() {
+            if (!state.currentMethod) {
+                state.currentMethod = {
+                    name: '',
+                    description: '',
+                    savedSteps: []
+                };
+            }
+            
+            // Show empty state message in stepsList
+            const stepsList = document.getElementById('stepsList');
+            if (stepsList) {
+                stepsList.innerHTML = `
+                    <div class="text-center p-3 text-muted">
+                        <i class="bi bi-plus-circle" style="font-size: 2rem;"></i>
+                        <p class="mt-2">Click "Add Step" to start building your method</p>
+                    </div>
+                `;
+            }
+        }
+
+        // Add this new function to save individual steps
+        function saveStep(button) {
+            const stepDiv = button.closest('.list-group-item');
+            const action = stepDiv.querySelector('.step-action').value;
+            const element = stepDiv.querySelector('.step-element').value;
+            const value = stepDiv.querySelector('.step-value').value;
+            
+            if (!action || !element) {
+                if (!action) stepDiv.querySelector('.step-action').classList.add('is-invalid');
+                if (!element) stepDiv.querySelector('.step-element').classList.add('is-invalid');
+                showAlert('Please select both action and element', 'danger');
+                return;
+            }
+
+            // Initialize method state if needed
+            initializeMethodBuilder();
+            
+            // Add step to saved steps
+            state.currentMethod.savedSteps.push({ action, element, value });
+            
+            // Update saved steps preview
+            updateSavedStepsPreview();
+            
+            // Clear the step inputs and prepare for next step
+            stepDiv.querySelector('.step-action').value = '';
+            stepDiv.querySelector('.step-element').value = '';
+            const valueInput = stepDiv.querySelector('.step-value');
+            valueInput.value = '';
+            valueInput.style.display = 'none';
+            
+            // Remove validation classes
+            stepDiv.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
+            
+            showAlert('Step saved successfully!', 'success');
+            
+            // Enable save method button if we have at least one step
+            document.querySelector('#saveMethodBtn').disabled = false;
+        }
+
+        function updateSavedStepsPreview() {
+            const savedStepsPreview = document.getElementById('savedStepsPreview');
+            if (!savedStepsPreview) return;
+            
+            savedStepsPreview.innerHTML = state.currentMethod.savedSteps.map((step, index) => `
+                <div class="list-group-item">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <strong>Step ${index + 1}:</strong> ${step.action} ${step.element} ${step.value ? `(${step.value})` : ''}
+                        </div>
+                        <button type="button" class="btn btn-sm btn-danger" onclick="removeStep(${index})">Remove</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function removeStep(index) {
+            if (!state.currentMethod) return;
+            
+            state.currentMethod.savedSteps.splice(index, 1);
+            updateSavedStepsPreview();
+            
+            // Disable save method button if no steps
+            document.querySelector('#saveMethodBtn').disabled = state.currentMethod.savedSteps.length === 0;
+        }
+
+        function validateStepInputs(actionSelect) {
+            const stepDiv = actionSelect.closest('.row');
+            const valueInput = stepDiv.querySelector('.step-value');
+            
+            if (!valueInput) {
+                console.warn('Value input field not found');
+                return;
+            }
+
+            const actionsRequiringValue = [
+                'fill', 'type', 'select', 'selectMultiple', 'pressKey', 'uploadFile',
+                'waitForLoadState', 'waitForTimeout',
+                'assertText', 'assertValue', 'assertAttribute',
+                'dragAndDrop'
+            ];
+            
+            if (actionsRequiringValue.includes(actionSelect.value)) {
+                valueInput.style.display = '';
+                valueInput.required = true;
+                
+                // Set appropriate placeholder based on action
+                switch(actionSelect.value) {
+                    case 'fill':
+        case 'type':
+                        valueInput.placeholder = 'Enter text value';
+                        break;
+                    case 'select':
+                        valueInput.placeholder = 'Enter option value';
+                        break;
+                    case 'selectMultiple':
+                        valueInput.placeholder = 'Enter comma-separated values';
+                        break;
+                    case 'pressKey':
+                        valueInput.placeholder = 'Enter key (e.g., Enter, Tab, ArrowDown)';
+                        break;
+                    case 'uploadFile':
+                        valueInput.placeholder = 'Enter file path';
+                        break;
+                    case 'waitForLoadState':
+                        valueInput.placeholder = 'Enter load state (networkidle, load, domcontentloaded)';
+                        break;
+                    case 'waitForTimeout':
+                        valueInput.placeholder = 'Enter timeout in milliseconds';
+                        break;
+                    case 'assertText':
+                    case 'assertValue':
+                        valueInput.placeholder = 'Enter expected value';
+                        break;
+                    case 'assertAttribute':
+                        valueInput.placeholder = 'Enter expected attribute value';
+                        break;
+                    case 'dragAndDrop':
+                        valueInput.placeholder = 'Enter target element selector';
+                        break;
+        default:
+                        valueInput.placeholder = 'Enter value';
+                }
+            } else {
+                valueInput.style.display = 'none';
+                valueInput.required = false;
+                valueInput.value = '';
+            }
+        }
+
+        function updateLeftPane() {
+            const leftPane = document.getElementById('leftPane');
+            const mainContent = document.getElementById('mainContent');
+            const methodTab = document.getElementById('method-tab');
+
+            if (!leftPane || !mainContent || !methodTab) return;
+
+            const isMethodTabActive = methodTab.classList.contains('active');
+
+            leftPane.style.display = isMethodTabActive ? 'block' : 'none';
+            mainContent.className = isMethodTabActive ? 'col-md-9' : 'col-md-12';
+
+            if (isMethodTabActive) {
+                updateUIState();
+            }
+        }
+
+        // Event Handlers
+        function initializeEventHandlers() {
+            // Form submission
+            const methodForm = document.getElementById('methodForm');
+            if (methodForm) {
+                methodForm.addEventListener('submit', saveMethod);
+            }
+
+            // Method list click handlers
+            const methodList = document.getElementById('methodList');
+            if (methodList) {
+                methodList.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    const target = e.target.closest('[data-action]');
+                    if (!target) return;
+
+                    const action = target.dataset.action;
+                    const index = parseInt(target.dataset.index, 10);
+
+                    if (action === 'edit') {
+                        loadMethod(index);
+                    } else if (action === 'delete') {
+                        deleteMethod(index);
+                    }
+                });
+            }
+
+            // Form field change tracking
+            Object.values(FORM_FIELDS).forEach(field => {
+                const element = document.getElementById(field.id);
+                if (element) {
+                    element.addEventListener('input', () => {
+                        state.isMethodDirty = true;
+                        updateUIState();
+                    });
+                }
+            });
+        }
+
+        // Initialize everything when DOM is ready
+        document.addEventListener('DOMContentLoaded', function() {
+            try {
+                // Initialize state
+                state = {
+                    methods: [],
+                    currentMethodIndex: -1,
+                    isMethodDirty: false,
+                    elementsData: null
+                };
+
+                // Initialize file upload handler
+                const fileInput = document.getElementById('jsonFile');
+                if (fileInput) {
+                    fileInput.addEventListener('change', handleFileUpload);
+                }
+
+                // Initialize preview tab
+                initializePreviewTab();
+
+                // Initialize tooltips
+                const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+                tooltipTriggerList.map(function (tooltipTriggerEl) {
+                    return new bootstrap.Tooltip(tooltipTriggerEl);
+                });
+
+                // Initialize tabs
+                const tabElements = document.querySelectorAll('a[data-bs-toggle="tab"]');
+                tabElements.forEach(tab => {
+                    tab.addEventListener('shown.bs.tab', function (e) {
+                        if (e.target.id === 'methods-tab') {
+                            // Refresh method steps when switching to methods tab
+                            const stepsContainer = document.getElementById('stepsList');
+                            if (stepsContainer && stepsContainer.children.length === 0) {
+                                addMethodStep();
+                            }
+                        } else if (e.target.id === 'preview-tab') {
+                            // Ensure preview tab is properly initialized
+                            initializePreviewTab();
+                        }
+                    });
+                });
+
+            } catch (error) {
+                console.error('Error during initialization:', error);
+                showAlert('Error initializing application: ' + error.message);
+            }
+        });
+
+        // Action types configuration
+        const ACTION_TYPES = {
+            click: { 
+                name: 'click', 
+                requiresElement: true,
+                requiresValue: false,
+                description: 'Click on an element'
+            },
+            type: {
+                name: 'type',
+                requiresElement: true,
+                requiresValue: true,
+                description: 'Type text into an input field'
+            },
+            select: {
+                name: 'select',
+                requiresElement: true,
+                requiresValue: true,
+                description: 'Select an option from a dropdown'
+            },
+            hover: {
+                name: 'hover',
+                requiresElement: true,
+                requiresValue: false,
+                description: 'Hover over an element'
+            },
+            waitForElement: {
+                name: 'waitForElement',
+                requiresElement: true,
+                requiresValue: false,
+                description: 'Wait for element to be visible'
+            },
+            waitForTimeout: {
+                name: 'waitForTimeout',
+                requiresElement: false,
+                requiresValue: true,
+                description: 'Wait for a specific time (milliseconds)'
+            },
+            pressKey: {
+                name: 'pressKey',
+                requiresElement: false,
+                requiresValue: true,
+                description: 'Press a keyboard key'
+            },
+            assert: {
+                name: 'assert',
+                requiresElement: true,
+                requiresValue: true,
+                description: 'Assert element contains text'
+            }
+        };
+
+        // Update the step builder UI
+        function updateStepBuilder() {
+            const stepBuilder = document.getElementById('stepBuilder');
+            if (!stepBuilder || !state.elementsData) return;
+
+            const elementOptions = state.elementsData.elements
+                .map(element => `<option value="${element.name}">${element.name}</option>`)
+                .join('');
+
+            stepBuilder.innerHTML = `
+                <div class="card">
+                    <div class="card-header">
+                        <h6 class="mb-0">Step Builder</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="row g-3 align-items-center mb-3">
+                            <div class="col">
+                                <select class="form-select" id="actionSelect">
+                                    <option value="click">Click</option>
+                                    <option value="type">Type</option>
+                                    <option value="select">Select</option>
+                                    <option value="hover">Hover</option>
+                                    <option value="waitForElement">Wait for Element</option>
+                                    <option value="waitForTimeout">Wait Timeout</option>
+                                    <option value="pressKey">Press Key</option>
+                                    <option value="assert">Assert Text</option>
+                                </select>
+                            </div>
+                            <div class="col">
+                                <select class="form-select" id="elementSelect">
+                                    <option value="">Select Element</option>
+                                    ${elementOptions}
+                                </select>
+                            </div>
+                            <div class="col">
+                                <input type="text" class="form-control" id="valueInput" placeholder="Value (if needed)">
+                            </div>
+                            <div class="col-auto">
+                                <button class="btn btn-primary" onclick="addStep()">Add Step</button>
+                            </div>
+                        </div>
+                        <div id="stepsList" class="list-group mb-3"></div>
+                        <div class="d-flex justify-content-between">
+                            <button class="btn btn-outline-primary" onclick="previewMethod()">Preview Method</button>
+                            <button class="btn btn-success" onclick="saveMethod()">Save Method</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // Add event listeners
+            const actionSelect = document.getElementById('actionSelect');
+            const valueInput = document.getElementById('valueInput');
+
+            actionSelect.addEventListener('change', () => {
+                const action = actionSelect.value;
+                valueInput.style.display = ['click', 'hover', 'waitForElement'].includes(action) ? 'none' : 'block';
+                if (action === 'waitForTimeout') {
+                    valueInput.placeholder = 'Timeout in milliseconds';
+                } else if (action === 'pressKey') {
+                    valueInput.placeholder = 'Key (e.g., Enter, Tab, etc.)';
+                } else {
+                    valueInput.placeholder = 'Value';
+                }
+            });
+
+            // Initial trigger
+            actionSelect.dispatchEvent(new Event('change'));
+        }
+
+        function addStep() {
+            const action = document.getElementById('actionSelect').value;
+            const element = document.getElementById('elementSelect').value;
+            const value = document.getElementById('valueInput').value;
+
+            if (!element && action !== 'waitForTimeout') {
+                showAlert('Please select an element');
+                return;
+            }
+
+            if (['type', 'select', 'assert', 'waitForTimeout', 'pressKey'].includes(action) && !value) {
+                showAlert('Please enter a value');
+                return;
+            }
+
+            const step = `${action}|${element}|${value}`;
+            state.currentSteps = state.currentSteps || [];
+            state.currentSteps.push(step);
+
+            updateStepsList();
+        }
+
+        function updateStepsList() {
+            const stepsList = document.getElementById('stepsList');
+            if (!stepsList) return;
+
+            stepsList.innerHTML = '';
+            state.currentSteps.forEach((step, index) => {
+                const [action, element, value] = step.split('|');
+                const li = document.createElement('div');
+                li.className = 'list-group-item d-flex justify-content-between align-items-center';
+                li.innerHTML = `
+                    <span>${index + 1}. ${action} ${element} ${value ? `(${value})` : ''}</span>
+                    <button class="btn btn-sm btn-outline-danger" onclick="removeStep(${index})">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                `;
+                stepsList.appendChild(li);
+            });
+        }
+
+        function removeStep(index) {
+            state.currentSteps.splice(index, 1);
+            updateStepsList();
+        }
+
+        function previewMethod() {
+            if (!state.currentSteps || state.currentSteps.length === 0) {
+                showAlert('Please add at least one step');
+                return;
+            }
+
+            const methodName = document.getElementById('methodName').value;
+            if (!methodName) {
+                showAlert('Please enter a method name');
+                return;
+            }
+
+            const code = generateMethodCode(methodName, state.currentSteps);
+            document.getElementById('methodPreview').value = code;
+        }
+
+        function generateMethodCode(methodName, steps) {
+            let code = `    async ${methodName}() {\n`;
+            code += '        try {\n';
+            code += '            await this.page.waitForLoadState(\'networkidle\');\n';
+            
+            steps.forEach(step => {
+                const [action, element, value] = step.split('|');
+                code += '            ' + generateStepCode(action, element, value);
+            });
+            
+            code += '        } catch (error) {\n';
+            code += `            console.error('Error in ${methodName}:', error);\n`;
+            code += '            throw error;\n';
+            code += '        }\n';
+            code += '    }';
+            
+            return code;
+        }
+
+        function generatePOMCode(elements, methods) {
+            const className = elements.page?.name || 'GeneratedPage';
+            let code = `const { Page } = require('@playwright/test');\n`;
+            code += `const { BasePage } = require('./BasePage');\n`;
+            code += `const { SmartLocator } = require('../utils/SmartLocator');\n\n`;
+            
+            // Add SmartLocator class
+            code += `// Smart Locator with AI-enhanced fallback strategies
+class SmartLocator {
+    constructor(page, strategies) {
+        this.page = page;
+        this.strategies = strategies;
+    }
+
+    async click() {
+        const strategies = Object.keys(this.strategies);
+        console.log(\`🔍 SmartLocator.click() - Trying strategies: \${JSON.stringify(strategies)}\`);
+        
+        for (const strategyName of strategies) {
+            try {
+                console.log(\`⚡ Trying strategy: \${strategyName}\`);
+                const locator = this.strategies[strategyName]();
+                const isVisible = await locator.isVisible();
+                if (isVisible) {
+                    await locator.click();
+                    console.log(\`✅ Strategy \${strategyName} succeeded!\`);
+                    return;
+                }
+      } catch (error) {
+                console.log(\`❌ Strategy \${strategyName} failed: \${error.message}\`);
+            }
+        }
+        throw new Error('All locator strategies failed');
+    }
+
+    async fill(text) {
+        const strategies = Object.keys(this.strategies);
+        console.log(\`🔍 SmartLocator.fill() - Trying strategies: \${JSON.stringify(strategies)}\`);
+        
+        for (const strategyName of strategies) {
+            try {
+                console.log(\`⚡ Trying strategy: \${strategyName}\`);
+                const locator = this.strategies[strategyName]();
+                await locator.fill(text);
+                console.log(\`✅ Strategy \${strategyName} succeeded!\`);
+                return;
+      } catch (error) {
+                console.log(\`❌ Strategy \${strategyName} failed: \${error.message}\`);
+            }
+        }
+        throw new Error('All locator strategies failed');
+    }
+
+    async isVisible() {
+        for (const [strategyName, strategy] of Object.entries(this.strategies)) {
+            try {
+                if (typeof strategy === 'function') {
+                    const locator = strategy();
+                    return await locator.isVisible();
+                }
+        } catch (error) {
+                console.log(\`❌ Strategy \${strategyName} failed: \${error.message}\`);
+                continue;
+            }
+        }
+        return false;
+    }
+}\n\n`;
+            
+            // Add page class
+            code += `class ${className} extends BasePage {\n`;
+            code += '    constructor(page) {\n';
+            code += '        super(page);\n';
+            code += '        this.page = page;\n';
+            code += '    }\n\n';
+            
+            // Add element getters with SmartLocator
+            elements.elements.forEach(element => {
+                code += `    get ${element.name}() {\n`;
+                code += '        return new SmartLocator(this.page, {\n';
+                
+                // Add all available locator strategies
+                Object.entries(element.locatorStrategies)
+                    .sort((a, b) => a[1].priority - b[1].priority)
+                    .forEach(([strategyName, strategy]) => {
+                        const strategyKey = strategyName.toLowerCase().replace(/[^a-z0-9]/g, '');
+                        code += `            ${strategyKey}: () => ${strategy.selector},\n`;
+                    });
+
+                // Add visual locator if available
+                if (element.visualData?.templateName) {
+                    code += `            visual: () => this.page.clickByImage('./${element.visualData.templateName}'),\n`;
+                }
+
+                // Add AI locator if available
+                if (element.visualData?.aiDescription) {
+                    code += `            ai: () => this.page.getByAI('${element.visualData.aiDescription}'),\n`;
+                }
+
+                code += '        });\n';
+                code += '    }\n\n';
+            });
+
+            // Add methods
+            methods.forEach(method => {
+                code += generateMethodCode(method.name, method.steps);
+                code += '\n\n';
+            });
+
+            code += '}\n\n';
+            code += `module.exports = ${className};\n`;
+
+            return code;
+        }
+
+        function generateStepCode(action, element, value) {
+            switch (action) {
+                case 'click':
+                    return `await this.click(this.${element});\n`;
+                
+                case 'type':
+                    return `await this.type(this.${element}, ${value || "''"});\n`;
+                
+                case 'select':
+                    return `await this.select(this.${element}, ${value || "''"});\n`;
+                
+                case 'hover':
+                    return `await this.hover(this.${element});\n`;
+                
+                case 'waitForElement':
+                    return `await this.waitForElement(this.${element});\n`;
+                
+                case 'waitForTimeout':
+                    return `await this.waitForTimeout(${value || "1000"});\n`;
+                
+                case 'pressKey':
+                    return `await this.pressKey(${value || "'Enter'"});\n`;
+                
+                case 'assert':
+                    return `await this.assertText(this.${element}, ${value || "''"});\n`;
+                
+                default:
+                    return `// Unknown action: ${action}\n`;
+            }
+        }
+
+        function generatePOM() {
+            try {
+                // Validate state
+                if (!state.elementsData || !state.elementsData.elements) {
+                    throw new Error('Elements data is not available');
+                }
+
+                if (!state.methods || state.methods.length === 0) {
+                    throw new Error('No methods have been created');
+                }
+
+                // Get class name from page data or use default
+                const pageName = state.elementsData?.page?.name || 'LoginPage';
+                const className = pageName.charAt(0).toUpperCase() + pageName.slice(1);
+
+                // Get page description with fallback
+                const pageDescription = state.elementsData?.page?.description || 'Generated Page Object Model';
+                
+                // Start generating code
+                let code = `const { Page } = require('@playwright/test');\n`;
+                code += `const { BasePage } = require('./BasePage');\n`;
+                code += `const { SmartLocator } = require('../utils/SmartLocator');\n\n`;
+                
+                // Add class JSDoc
+                code += '/**\n';
+                code += ` * ${pageDescription}\n`;
+                if (state.elementsData?.metadata) {
+                    code += ` * @version ${state.elementsData.metadata.version || '1.0'}\n`;
+                    code += ` * @generated ${state.elementsData.metadata.extractedAt || new Date().toISOString()}\n`;
+                    code += ` * @elements ${state.elementsData.metadata.totalElements || state.elementsData.elements.length}\n`;
+                    if (state.elementsData.metadata.aiFeatures?.enabled) {
+                        code += ' * @aiFeatures enabled\n';
+                    }
+                }
+                code += ' */\n';
+                
+                // Add class definition
+                code += `class ${className} extends BasePage {\n`;
+                code += '    constructor(page) {\n';
+                code += '        super(page);\n';
+                code += '        this.page = page;\n';
+                code += '    }\n\n';
+                
+                // Add elements with safe access
+                state.elementsData.elements.forEach(element => {
+                    if (!element || !element.name) {
+                        console.warn('Skipping invalid element:', element);
+                        return;
+                    }
+
+                    code += `    get ${element.name}() {\n`;
+                    code += '        return new SmartLocator(this.page, {\n';
+                    
+                    // Add locator strategies safely
+                    if (element.locatorStrategies) {
+                        Object.entries(element.locatorStrategies)
+                            .sort((a, b) => (a[1].priority || 0) - (b[1].priority || 0))
+                            .forEach(([strategyName, strategy]) => {
+                                if (strategy && strategy.selector) {
+                                    code += `            ${strategyName}: () => ${strategy.selector},\n`;
+                                }
+                            });
+                    }
+                    
+                    // Add visual strategy if available
+                    if (element.visualData?.templateName) {
+                        code += `            visual: () => this.page.clickByImage('./templates/${element.visualData.templateName}'),\n`;
+                    }
+                    
+                    // Add AI strategy if available
+                    if (element.visualData?.aiDescription) {
+                        code += `            aiDescription: () => this.page.getByAI('${element.visualData.aiDescription}'),\n`;
+                    }
+                    
+                    code += '        });\n';
+                    code += '    }\n\n';
+                });
+                
+                // Add methods with safe access
+                state.methods.forEach(method => {
+                    if (!method || !method.name) {
+                        console.warn('Skipping invalid method:', method);
+                        return;
+                    }
+
+                    code += `    async ${method.name}() {\n`;
+                    code += '        try {\n';
+                    code += '            await this.page.waitForLoadState(\'networkidle\');\n';
+                    
+                    // Add method steps safely
+                    if (Array.isArray(method.steps)) {
+                        method.steps.forEach(step => {
+                            if (!step || !step.action || !step.element) {
+                                console.warn('Skipping invalid step:', step);
+                                return;
+                            }
+                            
+                            const value = step.value ? `'${step.value}'` : null;
+                            switch (step.action) {
+                                case 'click':
+                                    code += `            await this.click(this.${step.element});\n`;
+                                    break;
+                                case 'fill':
+                                case 'type':
+                                    code += `            await this.fill(this.${step.element}, ${value || "''"});\n`;
+                                    break;
+                                default:
+                                    code += `            // Unknown action: ${step.action}\n`;
+                            }
+                        });
+                    }
+                    
+                    code += '        } catch (error) {\n';
+                    code += `            console.error('Error in ${method.name}:', error);\n`;
+                    code += '            throw error;\n';
+                    code += '        }\n';
+                    code += '    }\n\n';
+                });
+                
+                // Close class definition
+                code += '}\n\n';
+                // Export the class directly
+                code += `module.exports = ${className};\n`;
+                
+                // Update the generated code textarea safely
+                const generatedCodeElement = document.getElementById('generatedCode');
+                if (!generatedCodeElement) {
+                    throw new Error('Generated code textarea not found');
+                }
+                
+                generatedCodeElement.value = code;
+                showAlert('POM code generated successfully!', 'success');
+                
+            } catch (error) {
+                console.error('Error generating POM:', error);
+                showAlert('Error generating POM: ' + error.message, 'danger');
+            }
+        }
+
+        function copyToClipboard() {
+            const codeElement = document.getElementById('generatedCode');
+            if (!codeElement) return;
+
+            try {
+                // Select the text
+                codeElement.select();
+                codeElement.setSelectionRange(0, 99999); // For mobile devices
+
+                // Copy to clipboard
+                navigator.clipboard.writeText(codeElement.value).then(() => {
+                    showAlert('Code copied to clipboard!', 'success');
+                    
+                    // Visual feedback on the button
+                    const copyButton = document.querySelector('[onclick="copyGeneratedCode()"]');
+                    if (copyButton) {
+                        const originalText = copyButton.innerHTML;
+                        copyButton.innerHTML = '<i class="bi bi-clipboard-check"></i> Copied!';
+                        copyButton.classList.add('btn-success');
+                        copyButton.classList.remove('btn-primary');
+                        
+      setTimeout(() => {
+                            copyButton.innerHTML = originalText;
+                            copyButton.classList.remove('btn-success');
+                            copyButton.classList.add('btn-primary');
+                        }, 2000);
+                    }
+                }).catch(err => {
+                    console.error('Failed to copy:', err);
+                    showAlert('Failed to copy code to clipboard', 'danger');
+                });
+            } catch (error) {
+                console.error('Error copying to clipboard:', error);
+                showAlert('Error copying to clipboard', 'danger');
+                
+                // Fallback for older browsers
+                try {
+                    document.execCommand('copy');
+                    showAlert('Code copied to clipboard!', 'success');
+                } catch (err) {
+                    console.error('Fallback copy failed:', err);
+                    showAlert('Failed to copy code to clipboard', 'danger');
+                }
+            }
+        }
+
+        function initializePreviewTab() {
+            const previewTab = document.getElementById('preview');
+            if (!previewTab) {
+                console.error('Preview tab container not found');
+                return false;
+            }
+
+            // Create the container structure if it doesn't exist
+            let container = previewTab.querySelector('.card');
+            if (!container) {
+                container = document.createElement('div');
+                container.className = 'card';
+                
+                const header = document.createElement('div');
+                header.className = 'card-header d-flex justify-content-between align-items-center';
+                header.innerHTML = `
+                    <h6 class="mb-0">Generated POM Code</h6>
+                    <div class="btn-group">
+                        <button class="btn btn-sm btn-primary" onclick="copyGeneratedCode()">
+                            <i class="bi bi-clipboard"></i> Copy Code
+                        </button>
+                        <button class="btn btn-sm btn-success" onclick="downloadPOM()">
+                            <i class="bi bi-download"></i> Download
+                        </button>
+                    </div>
+                `;
+                container.appendChild(header);
+
+                const body = document.createElement('div');
+                body.className = 'card-body';
+                container.appendChild(body);
+
+                previewTab.appendChild(container);
+            }
+
+            // Ensure the textarea exists
+            let codeTextarea = previewTab.querySelector('#generatedCode');
+            if (!codeTextarea) {
+                codeTextarea = document.createElement('textarea');
+                codeTextarea.id = 'generatedCode';
+                codeTextarea.className = 'form-control';
+                codeTextarea.setAttribute('rows', '20');
+                codeTextarea.readOnly = true;
+                codeTextarea.style.fontFamily = 'monospace';
+                container.querySelector('.card-body').appendChild(codeTextarea);
+            }
+
+            return true;
+        }
+
+        function proceedToPOMGeneration() {
+            try {
+                // Validate that we have elements and methods
+                if (!state.elementsData?.elements?.length) {
+                    throw new Error('No elements defined');
+                }
+                if (!state.methods?.length) {
+                    throw new Error('No methods defined');
+                }
+
+                // Initialize the preview tab content before switching
+                const previewTab = document.querySelector('#preview-tab');
+                if (!previewTab) {
+                    throw new Error('Preview tab not found');
+                }
+
+                // Initialize page name and class name if not already set
+                const pageNameInput = document.getElementById('pageName');
+                const classNameInput = document.getElementById('className');
+                
+                if (pageNameInput && !pageNameInput.value) {
+                    pageNameInput.value = state.elementsData?.page?.name || 'LoginPage';
+                }
+                
+                if (classNameInput && !classNameInput.value) {
+                    classNameInput.value = getDefaultClassName();
+                }
+
+                // Clear any existing generated code
+                const codeElement = document.getElementById('generatedCode');
+                if (codeElement) {
+                    codeElement.value = '';
+                }
+
+                // Create a new Bootstrap Tab instance and show it
+                const bootstrapTab = new bootstrap.Tab(previewTab);
+                bootstrapTab.show();
+
+            } catch (error) {
+                console.error('Error proceeding to POM generation:', error);
+                showAlert('Error: ' + error.message, 'danger');
+            }
+        }
+
+        // Remove the onTabShown event listener and update the DOMContentLoaded event
+        document.addEventListener('DOMContentLoaded', function() {
+            const previewTab = document.getElementById('preview-tab');
+            if (previewTab) {
+                previewTab.addEventListener('show.bs.tab', function (e) {
+                    try {
+                        const pageNameInput = document.getElementById('pageName');
+                        const classNameInput = document.getElementById('className');
+                        
+                        // Only set default values if fields are empty
+                        if (pageNameInput && !pageNameInput.value) {
+                            pageNameInput.value = state.elementsData?.page?.name || 'LoginPage';
+                        }
+                        
+                        if (classNameInput && !classNameInput.value) {
+                            classNameInput.value = getDefaultClassName();
+                        }
+
+                        // Clear any existing generated code
+                        const codeElement = document.getElementById('generatedCode');
+                        if (codeElement) {
+                            codeElement.value = '';
+                        }
+                    } catch (error) {
+                        console.error('Error in preview tab show handler:', error);
+                        showAlert('Error initializing form: ' + error.message, 'danger');
+                    }
+                });
+            }
+        });
+
+        function generatePOMCode() {
+            try {
+                const pageName = document.getElementById('pageName').value.trim();
+                const className = document.getElementById('className').value.trim();
+
+                if (!pageName) {
+                    throw new Error('Page name is required');
+                }
+                if (!className) {
+                    throw new Error('Class name is required');
+                }
+
+                // Update state with the new page name
+                if (state.elementsData?.page) {
+                    state.elementsData.page.name = pageName;
+                }
+
+                // Generate the POM code
+                generatePOM();
+                showAlert('POM code generated successfully!', 'success');
+            } catch (error) {
+                console.error('Error generating POM code:', error);
+                showAlert('Error generating code: ' + error.message, 'danger');
+            }
+        }
+
+        // Update preview tab content
+        function updatePreviewTab() {
+            const codeElement = document.getElementById('generatedCode');
+            if (codeElement) {
+                codeElement.value = '';
+            }
+        }
+
+        // Update the getDefaultClassName function to be more robust
+        function getDefaultClassName() {
+            try {
+                // Get page name from JSON and capitalize first letter
+                const pageName = state.elementsData?.page?.name || 'GeneratedPage';
+                // Convert to PascalCase and append 'Page' if not already present
+                let className = pageName
+                    .split(/[-_\s]+/)
+                    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+                    .join('');
+                
+                if (!className.toLowerCase().endsWith('page')) {
+                    className += 'Page';
+                }
+                return className;
+            } catch (error) {
+                console.error('Error generating default class name:', error);
+                return 'GeneratedPage';
+            }
+        }
+
+        function resetClassName() {
+            const defaultName = getDefaultClassName();
+            document.getElementById('className').value = defaultName;
+            generatePOM(); // Regenerate with default name
+        }
+
+        function removeMethodStep(button) {
+            const stepDiv = button.closest('.list-group-item');
+            if (stepDiv) {
+                stepDiv.remove();
+            }
+        }
+
+        function populateActionDropdown(selectElement) {
+            const actionGroups = {
+                'Basic Actions': [
+                    { value: 'click', label: 'Click' },
+                    { value: 'doubleClick', label: 'Double Click' },
+                    { value: 'rightClick', label: 'Right Click' },
+                    { value: 'hover', label: 'Hover' },
+                    { value: 'focus', label: 'Focus' },
+                    { value: 'blur', label: 'Blur' }
+                ],
+                'Input Actions': [
+                    { value: 'fill', label: 'Fill Text' },
+                    { value: 'type', label: 'Type Text' },
+                    { value: 'clear', label: 'Clear Text' },
+                    { value: 'selectText', label: 'Select Text' },
+                    { value: 'pressKey', label: 'Press Key' },
+                    { value: 'uploadFile', label: 'Upload File' }
+                ],
+                'Form Actions': [
+                    { value: 'check', label: 'Check' },
+                    { value: 'uncheck', label: 'Uncheck' },
+                    { value: 'select', label: 'Select Option' },
+                    { value: 'selectMultiple', label: 'Select Multiple Options' }
+                ],
+                'Wait Actions': [
+                    { value: 'waitForElement', label: 'Wait For Element' },
+                    { value: 'waitForVisible', label: 'Wait For Visible' },
+                    { value: 'waitForHidden', label: 'Wait For Hidden' },
+                    { value: 'waitForEnabled', label: 'Wait For Enabled' },
+                    { value: 'waitForDisabled', label: 'Wait For Disabled' },
+                    { value: 'waitForNavigation', label: 'Wait For Navigation' },
+                    { value: 'waitForLoadState', label: 'Wait For Load State' },
+                    { value: 'waitForTimeout', label: 'Wait For Timeout' }
+                ],
+                'Assertions': [
+                    { value: 'assertVisible', label: 'Assert Visible' },
+                    { value: 'assertHidden', label: 'Assert Hidden' },
+                    { value: 'assertEnabled', label: 'Assert Enabled' },
+                    { value: 'assertDisabled', label: 'Assert Disabled' },
+                    { value: 'assertText', label: 'Assert Text' },
+                    { value: 'assertValue', label: 'Assert Value' },
+                    { value: 'assertChecked', label: 'Assert Checked' },
+                    { value: 'assertUnchecked', label: 'Assert Unchecked' },
+                    { value: 'assertAttribute', label: 'Assert Attribute' }
+                ],
+                'Advanced Actions': [
+                    { value: 'dragAndDrop', label: 'Drag and Drop' },
+                    { value: 'scrollIntoView', label: 'Scroll Into View' },
+                    { value: 'screenshot', label: 'Take Screenshot' },
+                    { value: 'highlight', label: 'Highlight Element' }
+                ]
+            };
+
+            selectElement.innerHTML = '<option value="">Select Action</option>';
+            
+            Object.entries(actionGroups).forEach(([groupName, actions]) => {
+                const optgroup = document.createElement('optgroup');
+                optgroup.label = groupName;
+                
+                actions.forEach(action => {
+                    const option = document.createElement('option');
+                    option.value = action.value;
+                    option.textContent = action.label;
+                    optgroup.appendChild(option);
+                });
+                
+                selectElement.appendChild(optgroup);
+            });
+        }
+
+        function populateElementDropdown(selectElement) {
+            selectElement.innerHTML = '<option value="">Select Element</option>';
+            
+            if (state.elementsData && state.elementsData.elements) {
+                state.elementsData.elements.forEach(element => {
+                    const option = document.createElement('option');
+                    option.value = element.name;
+                    option.textContent = element.name;
+                    selectElement.appendChild(option);
+                });
+            }
+        }
+
+        function addMethodStep() {
+            const stepsContainer = document.getElementById('stepsList');
+            if (!stepsContainer) return;
+
+            const stepDiv = document.createElement('div');
+            stepDiv.className = 'row mb-3 method-step';
+            
+            stepDiv.innerHTML = `
+                <div class="col">
+                    <select class="form-select step-action" required onchange="validateStepInputs(this)">
+                        <option value="">Select Action</option>
+                    </select>
+                    <div class="invalid-feedback">Please select an action</div>
+                </div>
+                <div class="col">
+                    <select class="form-select step-element" required>
+                        <option value="">Select Element</option>
+                    </select>
+                    <div class="invalid-feedback">Please select an element</div>
+                </div>
+                <div class="col">
+                    <input type="text" class="form-control step-value" style="display:none" placeholder="Enter value">
+                    <div class="invalid-feedback">Please enter a value</div>
+                </div>
+                <div class="col-auto">
+                    <button type="button" class="btn btn-danger" onclick="removeMethodStep(this)">×</button>
+                </div>`;
+
+            stepsContainer.appendChild(stepDiv);
+
+            // Populate the dropdowns
+            const actionSelect = stepDiv.querySelector('.step-action');
+            const elementSelect = stepDiv.querySelector('.step-element');
+            
+            populateActionDropdown(actionSelect);
+            populateElementDropdown(elementSelect);
+        }
+
+        function copyGeneratedCode() {
+            const codeElement = document.getElementById('generatedCode');
+            if (!codeElement) return;
+
+            try {
+                // Select the text
+                codeElement.select();
+                codeElement.setSelectionRange(0, 99999); // For mobile devices
+
+                // Copy to clipboard
+                navigator.clipboard.writeText(codeElement.value).then(() => {
+                    showAlert('Code copied to clipboard!', 'success');
+                    
+                    // Visual feedback on the button
+                    const copyButton = document.querySelector('[onclick="copyGeneratedCode()"]');
+                    if (copyButton) {
+                        const originalText = copyButton.innerHTML;
+                        copyButton.innerHTML = '<i class="bi bi-clipboard-check"></i> Copied!';
+                        copyButton.classList.add('btn-success');
+                        copyButton.classList.remove('btn-primary');
+                        
+      setTimeout(() => {
+                            copyButton.innerHTML = originalText;
+                            copyButton.classList.remove('btn-success');
+                            copyButton.classList.add('btn-primary');
+                        }, 2000);
+                    }
+                }).catch(err => {
+                    console.error('Failed to copy:', err);
+                    showAlert('Failed to copy code to clipboard', 'danger');
+                });
+            } catch (error) {
+                console.error('Error copying to clipboard:', error);
+                showAlert('Error copying to clipboard', 'danger');
+                
+                // Fallback for older browsers
+                try {
+                    document.execCommand('copy');
+                    showAlert('Code copied to clipboard!', 'success');
+                } catch (err) {
+                    console.error('Fallback copy failed:', err);
+                    showAlert('Failed to copy code to clipboard', 'danger');
+                }
+            }
+        }
+
+        // Add sample JSON data
+        const SAMPLE_JSON = {
+            "page": {
+                "name": "LoginPage",
+                "description": "Login page object model"
+            },
+            "elements": [
+                {
+                    "name": "usernameInput",
+                    "locatorStrategies": {
+                        "id": {
+                            "selector": "this.page.locator('#username')",
+                            "priority": 1
+                        },
+                        "name": {
+                            "selector": "this.page.locator('[name=\"username\"]')",
+                            "priority": 2
+                        },
+                        "placeholder": {
+                            "selector": "this.page.locator('[placeholder=\"Enter username\"]')",
+                            "priority": 3
+                        }
+                    }
+                },
+                {
+                    "name": "passwordInput",
+                    "locatorStrategies": {
+                        "id": {
+                            "selector": "this.page.locator('#password')",
+                            "priority": 1
+                        },
+                        "name": {
+                            "selector": "this.page.locator('[name=\"password\"]')",
+                            "priority": 2
+                        },
+                        "placeholder": {
+                            "selector": "this.page.locator('[placeholder=\"Enter password\"]')",
+                            "priority": 3
+                        }
+                    }
+                },
+                {
+                    "name": "loginButton",
+                    "locatorStrategies": {
+                        "id": {
+                            "selector": "this.page.locator('#loginBtn')",
+                            "priority": 1
+                        },
+                        "text": {
+                            "selector": "this.page.getByRole('button', { name: 'Login' })",
+                            "priority": 2
+                        }
+                    }
+                },
+                {
+                    "name": "errorMessage",
+                    "locatorStrategies": {
+                        "id": {
+                            "selector": "this.page.locator('#error-msg')",
+                            "priority": 1
+                        },
+                        "class": {
+                            "selector": "this.page.locator('.error-message')",
+                            "priority": 2
+                        }
+                    }
+                }
+            ]
+        };
+
+        function loadSampleJSON() {
+            try {
+                // Store the data
+                state.elementsData = SAMPLE_JSON;
+                
+                // Update UI
+                updateElementsList();
+                updateJsonPreview(SAMPLE_JSON);
+                
+                // Update status
+                const elementsStatus = document.getElementById('elementsStatus');
+                if (elementsStatus) {
+                    elementsStatus.textContent = `${SAMPLE_JSON.elements.length} Elements`;
+                    elementsStatus.className = 'badge bg-success';
+                }
+                
+                // Enable methods tab
+                const methodsTab = document.getElementById('methods-tab');
+                if (methodsTab) {
+                    methodsTab.disabled = false;
+                }
+                
+                // Enable proceed button
+                const proceedBtn = document.getElementById('proceedToMethodsBtn');
+                if (proceedBtn) {
+                    proceedBtn.disabled = false;
+                }
+
+                showAlert('Sample JSON loaded successfully!', 'success');
+            } catch (error) {
+                console.error('Error loading sample JSON:', error);
+                showAlert('Error loading sample JSON: ' + error.message, 'danger');
+            }
+        }
+
+        // Add Load Sample button to the UI
+        document.addEventListener('DOMContentLoaded', function() {
+            const uploadCard = document.querySelector('#elements .card:first-child .card-body');
+            if (uploadCard) {
+                const sampleButton = document.createElement('button');
+                sampleButton.className = 'btn btn-outline-primary mt-2';
+                sampleButton.onclick = loadSampleJSON;
+                sampleButton.innerHTML = '<i class="bi bi-file-earmark-code"></i> Load Sample JSON';
+                uploadCard.appendChild(sampleButton);
+            }
+            
+            // Setup tab navigation
+            setupTabNavigation();
+        });
+        
+        // Tab navigation functionality
+        function setupTabNavigation() {
+            const tabButtons = document.querySelectorAll('.tab-button');
+            const tabContents = document.querySelectorAll('.tab-content');
+            
+            tabButtons.forEach(button => {
+                button.addEventListener('click', () => {
+                    const tabId = button.getAttribute('data-tab');
+                    
+                    // Update active tab button
+                    tabButtons.forEach(btn => btn.classList.remove('active'));
+                    button.classList.add('active');
+                    
+                    // Show selected tab content
+                    tabContents.forEach(content => {
+                        if (content.id === tabId) {
+                            content.classList.add('active');
+                        } else {
+                            content.classList.remove('active');
+                        }
+                    });
+                });
+            });
+        }
+        
+        // Function to handle tab transitions programmatically
+        function switchToTab(tabId) {
+            const tabButton = document.querySelector(`.tab-button[data-tab="${tabId}"]`);
+            if (tabButton) {
+                tabButton.click();
+            }
+        }
+        
+        // Function to toggle Quick Start Guide visibility
+        function toggleQuickStart() {
+            const content = document.getElementById('quickStartContent');
+            const toggleText = document.getElementById('toggleQuickStartText');
+            
+            if (content.style.display === 'none') {
+                content.style.display = 'grid';
+                toggleText.textContent = 'Hide Guide';
+            } else {
+                content.style.display = 'none';
+                toggleText.textContent = 'Show Guide';
+            }
+        }
+        
+        // Function to proceed to Methods tab
+        function proceedToMethods() {
+            switchToTab('methods');
+        }
+        
+        // Function to proceed to POM Generation tab
+        function proceedToPOMGeneration() {
+            switchToTab('preview');
+        }
+  </script>
+</body>
+</html> 
+

@@ -261,6 +261,12 @@ def analyze_screen():
         screenshot_data = data.get('screenshot')
         prompt = data.get('prompt', '')
         ocr_enabled = data.get('ocr', True)
+        options = data.get('options', {})
+        
+        # Check for Figma comparison request
+        figma_compare = options.get('figmaCompare', False)
+        figma_design = data.get('figmaDesign', None)
+        comparison_focus = data.get('comparisonFocus', {})
         
         if not screenshot_data:
             return jsonify({'error': 'No screenshot provided'}), 400
@@ -323,53 +329,214 @@ def analyze_screen():
             if misspellings:
                 analysis_prompt += f"\nPotential unusual words or misspellings detected: {', '.join(misspellings)}\n"
         
-        # Call Gemini API
-        try:
-            model = genai.GenerativeModel(model_name)
-            
-            # Create image part from the file
-            image_part = {"mime_type": "image/png", "data": image_data}
-            
-            # Generate content with both text and image
-            response = model.generate_content([analysis_prompt, image_part])
-            
-            # Extract the response text
-            ai_response = response.text
-            
-            # Try to parse as JSON
+        # Prepare for Figma comparison if requested
+        figma_comparison_results = None
+        if figma_compare and figma_design:
             try:
-                result = json.loads(ai_response)
-            except json.JSONDecodeError:
-                # If JSON parsing fails, try to extract structured data manually
-                logger.warning("Failed to parse AI response as JSON, extracting manually")
-                extracted_issues = extract_issues_manually(ai_response)
+                # Process Figma design data
+                figma_type = figma_design.get('type')
+                figma_data = figma_design.get('data')
                 
-                result = {
-                    "issues": extracted_issues,
-                    "summary": "Analysis completed, but structured output was not available. See raw output for details."
+                # Create a prompt for Figma comparison
+                comparison_prompt = f"""
+                Compare this UI screenshot with the provided Figma design specification and identify meaningful mismatches.
+                Focus on issues that affect design fidelity or user experience, not minor pixel-level differences.
+                
+                Comparison areas to focus on:
+                {"Missing or extra UI elements" if comparison_focus.get('elements', True) else ""}
+                {"Text value differences" if comparison_focus.get('textValues', True) else ""}
+                {"Layout and alignment issues" if comparison_focus.get('layout', True) else ""}
+                {"Font property differences" if comparison_focus.get('fonts', True) else ""}
+                {"Color and styling differences" if comparison_focus.get('colors', True) else ""}
+                
+                For each issue found, provide:
+                1. A brief summary of the issue
+                2. Severity level (Critical, Major, or Minor)
+                3. Element details (what component has the issue)
+                4. Expected design (from Figma)
+                5. Actual implementation (from screenshot)
+                6. Brief rationale for why this matters to users or design fidelity
+                
+                For alignment issues, provide specific measurements or coordinates when possible.
+                
+                Also calculate an overall design match percentage and category-specific percentages.
+                
+                Format your response as a JSON object with this structure:
+                {{"summary": "Overall comparison summary",
+                 "metrics": {{"overall": "85", "elements": "90%", "text": "85%", "layout": "80%", "style": "85%"}},
+                 "issues": [
+                    {{"summary": "Issue summary",
+                     "severity": "Critical|Major|Minor",
+                     "element": "Element description",
+                     "expected": "Expected design",
+                     "actual": "Actual implementation",
+                     "description": "Why this matters"}},
+                    ...
+                 ]}}
+                """
+                
+                # Call Gemini API for comparison
+                genai.configure(api_key=GOOGLE_API_KEY)
+                model = genai.GenerativeModel('gemini-pro-vision')
+                
+                # Create image parts for the model
+                image_parts = [{
+                    'mime_type': 'image/png',
+                    'data': image_data
+                }]
+                
+                # Add Figma design as second image if it's an image
+                if figma_type == 'image':
+                    # Extract base64 data if needed
+                    if ',' in figma_data:
+                        figma_data = figma_data.split(',')[1]
+                    
+                    # Decode the image
+                    figma_image_data = base64.b64decode(figma_data)
+                    
+                    # Add to image parts
+                    image_parts.append({
+                        'mime_type': 'image/png',  # Assuming PNG, adjust if needed
+                        'data': figma_image_data
+                    })
+                    
+                    # Generate comparison content
+                    comparison_response = model.generate_content([comparison_prompt, *image_parts])
+                    comparison_text = comparison_response.text
+                elif figma_type == 'json':
+                    # For JSON data, extract design specs and include in prompt
+                    figma_specs = json.dumps(figma_data, indent=2)
+                    figma_prompt = f"{comparison_prompt}\n\nFigma Design Specifications:\n{figma_specs}"
+                    
+                    # Generate comparison content
+                    comparison_response = model.generate_content([figma_prompt, *image_parts])
+                    comparison_text = comparison_response.text
+                else:
+                    # Text data, use as is
+                    figma_prompt = f"{comparison_prompt}\n\nFigma Design Specifications:\n{figma_data}"
+                    
+                    # Generate comparison content
+                    comparison_response = model.generate_content([figma_prompt, *image_parts])
+                    comparison_text = comparison_response.text
+                
+                # Try to parse JSON from the comparison response
+                try:
+                    # Extract JSON from markdown code blocks if present
+                    json_match = re.search(r'```(?:json)?\s*({[\s\S]*?})\s*```', comparison_text)
+                    if json_match:
+                        json_str = json_match.group(1)
+                        figma_comparison_results = json.loads(json_str)
+                    else:
+                        # Try to find any JSON-like structure
+                        json_pattern = r'{[\s\S]*?"issues"[\s\S]*?}'
+                        json_match = re.search(json_pattern, comparison_text)
+                        if json_match:
+                            json_str = json_match.group(0)
+                            figma_comparison_results = json.loads(json_str)
+                        else:
+                            # Create a basic structure if no JSON found
+                            figma_comparison_results = {
+                                'summary': 'Comparison completed but structured results could not be extracted.',
+                                'issues': [{
+                                    'summary': 'Unstructured comparison results',
+                                    'severity': 'Minor',
+                                    'description': comparison_text,
+                                    'element': 'N/A',
+                                    'expected': 'See description',
+                                    'actual': 'See description'
+                                }]
+                            }
+                except json.JSONDecodeError:
+                    # Create a basic structure if JSON parsing fails
+                    figma_comparison_results = {
+                        'summary': 'Comparison completed but structured results could not be parsed.',
+                        'issues': [{
+                            'summary': 'Unstructured comparison results',
+                            'severity': 'Minor',
+                            'description': comparison_text,
+                            'element': 'N/A',
+                            'expected': 'See description',
+                            'actual': 'See description'
+                        }]
+                    }
+            except Exception as e:
+                logger.error(f"Figma comparison error: {str(e)}")
+                figma_comparison_results = {
+                    'summary': f"Error performing Figma comparison: {str(e)}",
+                    'issues': []
                 }
+        
+        # Call Gemini API for standard UI analysis
+        try:
+            genai.configure(api_key=GOOGLE_API_KEY)
+            model = genai.GenerativeModel('gemini-pro-vision')
             
-            # Add OCR text to the response if available
-            if ocr_text:
-                result["ocr_text"] = ocr_text
-                result["potential_misspellings"] = misspellings
+            # Create image parts for the model
+            image_parts = [{
+                'mime_type': 'image/png',
+                'data': image_data
+            }]
             
-            # Add raw response for debugging
-            result["raw_response"] = ai_response
+            # Generate content
+            response = model.generate_content([analysis_prompt, *image_parts])
+            response_text = response.text
             
-            # Clean up the temporary file
+            # Try to parse JSON from the response
             try:
-                os.remove(temp_image_path)
-            except:
-                pass
+                # Extract JSON from markdown code blocks if present
+                json_match = re.search(r'```(?:json)?\s*({[\s\S]*?})\s*```', response_text)
+                if json_match:
+                    json_str = json_match.group(1)
+                    analysis_results = json.loads(json_str)
+                else:
+                    # Try to find any JSON-like structure
+                    json_pattern = r'{[\s\S]*?"issues"[\s\S]*?}'
+                    json_match = re.search(json_pattern, response_text)
+                    if json_match:
+                        json_str = json_match.group(0)
+                        analysis_results = json.loads(json_str)
+                    else:
+                        # Fall back to manual extraction
+                        issues = extract_issues_manually(response_text)
+                        analysis_results = {
+                            'issues': issues,
+                            'summary': 'AI analysis complete. Issues extracted from text response.',
+                            'recommendations': []
+                        }
+            except json.JSONDecodeError:
+                # Fall back to manual extraction
+                issues = extract_issues_manually(response_text)
+                analysis_results = {
+                    'issues': issues,
+                    'summary': 'AI analysis complete. Issues extracted from text response.',
+                    'recommendations': []
+                }
                 
-            return jsonify(result)
+            # Add OCR text to results
+            analysis_results['ocr_text'] = ocr_text
+            
+            # Add misspellings to results if found
+            if misspellings:
+                analysis_results['potential_misspellings'] = misspellings
+            
+            # Add Figma comparison results if available
+            if figma_comparison_results:
+                analysis_results['figmaComparison'] = figma_comparison_results
+            
+            # Clean up temporary file
+            if os.path.exists(temp_image_path):
+                os.remove(temp_image_path)
+                
+            return jsonify(analysis_results)
             
         except Exception as e:
-            logger.error(f"Error calling Gemini API: {str(e)}")
+            logger.error(f"Gemini API error: {str(e)}")
+            if os.path.exists(temp_image_path):
+                os.remove(temp_image_path)
             return jsonify({
-                'error': f"Error calling Gemini API: {str(e)}",
-                'ocr_text': ocr_text if ocr_text else "No OCR text available"
+                'error': f"AI analysis error: {str(e)}",
+                'ocr_text': ocr_text,
+                'figmaComparison': figma_comparison_results
             }), 500
             
     except Exception as e:

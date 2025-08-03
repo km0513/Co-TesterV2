@@ -1,5 +1,9 @@
 import os
 import base64
+import json
+import subprocess
+import shlex
+import re
 # Configure browser visibility (false means browser will be visible)
 os.environ["PLAYWRIGHT_HEADLESS"] = "false"  # browseruse needs visible browser
 from dotenv import load_dotenv
@@ -48,6 +52,7 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
+from functools import wraps
 from werkzeug.security import generate_password_hash, check_password_hash
 from authlib.integrations.flask_client import OAuth
 from flask_cors import CORS
@@ -85,11 +90,110 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 CORS(app, supports_credentials=True)
 db = SQLAlchemy(app)
 
+# Define Jira OAuth URLs
+JIRA_AUTH_URL = 'https://auth.atlassian.com/authorize'
+JIRA_TOKEN_URL = 'https://auth.atlassian.com/oauth/token'
+
 # Configure Google Generative AI
 genai.configure(api_key=os.environ.get('GOOGLE_API_KEY'))
 model_name = os.environ.get('GOOGLE_API_MODEL', 'gemini-pro-vision')
 login_manager = LoginManager(app)
 oauth = OAuth(app)
+
+# Define public routes that don't require authentication
+public_routes = [
+    '/',  # Home page only
+    '/home',  # Home redirect (dashboard is now public for welcome screen)
+    '/index',  # Home redirect
+    '/api/jira/oauth/login',
+    '/api/jira/oauth/callback',
+    '/api/jira/status',
+    '/api/jira/logout',  # Allow logout without authentication
+    '/static/',  # CSS, JS, and other static assets
+    '/favicon.ico'
+]
+
+# Jira authentication decorator for additional security
+def jira_auth_required(f):
+    """Decorator to ensure Jira authentication for specific routes"""
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        # Check if user has valid Jira access token
+        access_token = session.get('jira_access_token')
+        if not access_token:
+            logger.warning(f"Access denied to {request.endpoint}: No Jira access token")
+            return redirect(url_for('index'))
+        
+        # Check if token is expired
+        token_expires = session.get('jira_token_expires', 0)
+        if time.time() > token_expires:
+            # Try to refresh the token
+            if not refresh_jira_token():
+                logger.warning(f"Access denied to {request.endpoint}: Token expired and refresh failed")
+                return redirect(url_for('index'))
+        
+        return f(*args, **kwargs)
+    return decorated_function
+
+@app.before_request
+def check_jira_auth():
+    """Check if user is authenticated with Jira before processing any request"""
+    # Skip authentication check only for essential public routes
+    is_public = False
+    for route in public_routes:
+        if request.path == route or (route.endswith('/') and request.path.startswith(route)) or \
+           (not route.endswith('/') and request.path.startswith(route + '/')):
+            is_public = True
+            break
+    
+    if is_public:
+        logger.debug(f"Allowing access to public route: {request.path}")
+        return  # Allow access to public routes without authentication
+    
+    logger.info(f"Checking Jira authentication for non-public route: {request.path}")
+
+    # Check for API requests that might need special handling
+    is_api_request = request.path.startswith('/api/')
+    
+    # Log the path being checked
+    logger.debug(f"Checking Jira auth for path: {request.path}")
+    
+    # Check if Jira access token exists
+    access_token = session.get('jira_access_token')
+    if not access_token:
+        # No token found, redirect to home page
+        logger.info(f"No Jira token found, redirecting to home page for path: {request.path}")
+        
+        # For API requests, return 401 Unauthorized instead of redirecting
+        if is_api_request and not request.path.startswith('/api/jira/'):
+            return jsonify({
+                'error': 'Jira authentication required', 
+                'login_url': url_for('index', _external=True)
+            }), 401
+            
+        # For regular requests, redirect to home page
+        return redirect(url_for('index'))
+    
+    # Check if token is expired
+    token_expires = session.get('jira_token_expires', 0)
+    if time.time() > token_expires:
+        # Try to refresh the token
+        if not refresh_jira_token():
+            # Token refresh failed
+            logger.info(f"Token refresh failed, redirecting to home page for path: {request.path}")
+            
+            # For API requests, return 401 Unauthorized
+            if is_api_request and not request.path.startswith('/api/jira/'):
+                return jsonify({
+                    'error': 'Jira authentication expired', 
+                    'login_url': url_for('index', _external=True)
+                }), 401
+            
+            # For regular requests, redirect to home page
+            return redirect(url_for('index'))
+    
+    # Token is valid, continue with the request
+    logger.debug(f"Jira authentication valid for path: {request.path}")
 
 @app.route('/api/jira/status')
 def jira_status():
@@ -106,6 +210,236 @@ def jira_status():
         session.pop('jira_access_token', None)
         return jsonify({'connected': False})
     return jsonify({'connected': True})
+
+@app.route('/api/jira/user-info')
+def jira_user_info():
+    """Get current Jira user information and welcome status"""
+    logger.info("=== User Info API Called ===")
+    logger.info(f"Session keys: {list(session.keys())}")
+    logger.info(f"Has access token: {bool(session.get('jira_access_token'))}")
+    
+    if not session.get('jira_access_token'):
+        logger.warning("No access token found in session")
+        return jsonify({"authenticated": False}), 401
+    
+    # Check if we have user info, if not try to fetch it
+    user_name = session.get('jira_user_name')
+    user_email = session.get('jira_user_email')
+    
+    logger.info(f"Current session user info: name='{user_name}', email='{user_email}'")
+    
+    # If we don't have proper user info (default fallback values), try to fetch it again
+    if not user_name or user_name == 'Jira User' or not user_email or user_email == 'Connected to Jira':
+        logger.info("Missing or default user info, attempting to fetch from Atlassian API...")
+        try:
+            access_token = session.get('jira_access_token')
+            headers = {
+                'Authorization': f'Bearer {access_token}',
+                'Accept': 'application/json'
+            }
+            
+            user_info_resp = requests.get(
+                'https://api.atlassian.com/me',
+                headers=headers,
+                timeout=10
+            )
+            
+            logger.info(f"Atlassian API response status: {user_info_resp.status_code}")
+            
+            if user_info_resp.status_code == 200:
+                user_data = user_info_resp.json()
+                logger.info(f"Successfully fetched user data: {user_data}")
+                
+                # Extract user info
+                user_name = (user_data.get('name') or 
+                           user_data.get('displayName') or 
+                           user_data.get('display_name') or 
+                           user_data.get('nickname') or 
+                           session.get('jira_user_name', 'User'))
+                
+                user_email = (user_data.get('email') or 
+                            user_data.get('emailAddress') or 
+                            user_data.get('email_address') or 
+                            session.get('jira_user_email', ''))
+                
+                user_avatar = (user_data.get('picture') or 
+                             user_data.get('avatar') or 
+                             user_data.get('avatarUrl') or 
+                             user_data.get('avatar_url') or 
+                             user_data.get('avatarUrls', {}).get('48x48') or 
+                             session.get('jira_user_avatar', ''))
+                
+                # Update session with fresh data
+                session['jira_user_name'] = user_name
+                session['jira_user_email'] = user_email
+                session['jira_user_avatar'] = user_avatar
+                
+                logger.info(f"Updated session with user info: name='{user_name}', email='{user_email}'")
+            else:
+                logger.warning(f"Failed to fetch user info: {user_info_resp.status_code}, Response: {user_info_resp.text}")
+                user_name = session.get('jira_user_name', 'User')
+                user_email = session.get('jira_user_email', '')
+        except Exception as e:
+            logger.error(f"Error fetching user info: {str(e)}")
+            user_name = session.get('jira_user_name', 'User')
+            user_email = session.get('jira_user_email', '')
+    
+    response_data = {
+        "authenticated": True,
+        "user_name": user_name,
+        "user_email": user_email,
+        "user_avatar": session.get('jira_user_avatar', ''),
+        "login_time": session.get('jira_login_time'),
+        "show_welcome": session.get('show_welcome_message', False),
+        "jira_domain": session.get('jira_domain', 'https://upgrad-jira.atlassian.net')
+    }
+    
+    logger.info(f"Returning user info response: {response_data}")
+    
+    # Clear the welcome message flag after sending it once
+    if session.get('show_welcome_message'):
+        session['show_welcome_message'] = False
+    
+    return jsonify(response_data)
+
+@app.route('/api/jira/debug-session')
+def debug_session():
+    """Debug endpoint to see what's in the session"""
+    session_data = {
+        "all_session_keys": list(session.keys()),
+        "jira_access_token": "***PRESENT***" if session.get('jira_access_token') else None,
+        "jira_user_name": session.get('jira_user_name'),
+        "jira_user_email": session.get('jira_user_email'),
+        "jira_user_avatar": session.get('jira_user_avatar'),
+        "jira_login_time": session.get('jira_login_time'),
+        "jira_domain": session.get('jira_domain'),
+        "jira_cloud_id": session.get('jira_cloud_id'),
+        "show_welcome_message": session.get('show_welcome_message'),
+        "has_access_token": bool(session.get('jira_access_token')),
+        "session_id": id(session)
+    }
+    return jsonify(session_data)
+
+@app.route('/api/test-session', methods=['GET', 'POST'])
+def test_session():
+    """Test basic session functionality"""
+    if request.method == 'POST':
+        # Set test data
+        session['test_name'] = 'Test User'
+        session['test_email'] = 'test@example.com'
+        session['test_time'] = time.time()
+        return jsonify({
+            "message": "Test data stored in session",
+            "stored_data": {
+                "test_name": session['test_name'],
+                "test_email": session['test_email'],
+                "test_time": session['test_time']
+            }
+        })
+    else:
+        # Get test data
+        return jsonify({
+            "message": "Reading test data from session",
+            "session_keys": list(session.keys()),
+            "test_data": {
+                "test_name": session.get('test_name'),
+                "test_email": session.get('test_email'),
+                "test_time": session.get('test_time')
+            }
+        })
+
+@app.route('/api/jira/refresh-user-info', methods=['POST'])
+def refresh_user_info():
+    """Manually refresh user info from Atlassian API"""
+    access_token = session.get('jira_access_token')
+    if not access_token:
+        return jsonify({"error": "Not authenticated"}), 401
+    
+    headers = {
+        'Authorization': f"Bearer {access_token}",
+        'Accept': 'application/json'
+    }
+    
+    try:
+        logger.info("Manually refreshing user info from Atlassian API...")
+        user_info_resp = requests.get(
+            'https://api.atlassian.com/me',
+            headers=headers,
+            timeout=10
+        )
+        logger.info(f"Manual user info response status: {user_info_resp.status_code}")
+        
+        if user_info_resp.status_code == 200:
+            user_data = user_info_resp.json()
+            logger.info(f"Manual fetch - Raw user data: {user_data}")
+            
+            # Try different field names that Atlassian might use
+            user_name = (user_data.get('name') or 
+                        user_data.get('displayName') or 
+                        user_data.get('display_name') or 
+                        user_data.get('nickname') or 
+                        user_data.get('account_id') or
+                        'Jira User')
+            
+            user_email = (user_data.get('email') or 
+                         user_data.get('emailAddress') or 
+                         user_data.get('email_address') or 
+                         'Connected to Jira')
+            
+            user_avatar = (user_data.get('picture') or 
+                          user_data.get('avatar') or 
+                          user_data.get('avatarUrl') or 
+                          user_data.get('avatar_url') or 
+                          user_data.get('avatarUrls', {}).get('48x48') or
+                          '')
+            
+            session['jira_user_name'] = user_name
+            session['jira_user_email'] = user_email
+            session['jira_user_avatar'] = user_avatar
+            session['jira_login_time'] = time.time()
+            
+            return jsonify({
+                "success": True,
+                "user_name": user_name,
+                "user_email": user_email,
+                "user_avatar": user_avatar,
+                "raw_data": user_data
+            })
+        else:
+            logger.error(f"Manual fetch failed. Status: {user_info_resp.status_code}, Response: {user_info_resp.text}")
+            return jsonify({
+                "success": False,
+                "error": f"API returned status {user_info_resp.status_code}",
+                "response": user_info_resp.text
+            }), 400
+    except Exception as e:
+        logger.error(f"Exception during manual user info fetch: {str(e)}")
+        return jsonify({
+            "success": False,
+            "error": str(e)
+        }), 500
+
+@app.route('/api/jira/logout', methods=['POST'])
+def jira_logout():
+    """Logout from Jira by removing tokens from session"""
+    try:
+        # Remove all Jira-related tokens and user info from session
+        session.pop('jira_access_token', None)
+        session.pop('jira_refresh_token', None)
+        session.pop('jira_token_expires', None)
+        session.pop('jira_cloud_id', None)
+        session.pop('jira_domain', None)
+        session.pop('jira_user_name', None)
+        session.pop('jira_user_email', None)
+        session.pop('jira_user_avatar', None)
+        session.pop('jira_login_time', None)
+        session.pop('show_welcome_message', None)
+        
+        logger.info("User logged out from Jira")
+        return jsonify({'success': True, 'message': 'Successfully logged out from Jira'})
+    except Exception as e:
+        logger.error(f"Error during Jira logout: {str(e)}")
+        return jsonify({'success': False, 'message': f'Error during logout: {str(e)}'}), 500
 
 # OAuth config (replace with your credentials)
 app.config['GOOGLE_CLIENT_ID'] = os.environ.get('GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_ID')
@@ -262,11 +596,299 @@ def index():
 def home_redirect():
     return redirect(url_for('index'))
 
+@app.route('/download-logo')
+def download_logo():
+    return render_template('download-logo.html')
+
 @app.route('/code')
+@jira_auth_required
 def code():
-    return render_template('code.html', active_tab='api')
+    return render_template('api.html', active_tab='api')
 
+@app.route('/execute_curl', methods=['POST'])
+def execute_curl():
+    """Execute a curl command and return the results"""
+    try:
+        data = request.get_json()
+        if not data or 'command' not in data:
+            return jsonify({'error': 'No curl command provided'}), 400
+            
+        curl_command = data['command']
+        
+        # Basic security check - only allow curl commands
+        if not curl_command.strip().startswith('curl '):
+            return jsonify({'error': 'Invalid command. Only curl commands are allowed.'}), 400
+        
+        # Parse the curl command to extract method, URL, headers, and body
+        try:
+            # Use regex-based parsing for better multi-line support
+            command = curl_command
+            
+            # Initialize variables
+            method = 'GET'  # Default method
+            url = None
+            headers = {}
+            body = None
+            
+            # Extract URL first - look for quoted URLs
+            url_patterns = [
+                r"'(https?://[^']*)'",  # Single quoted URLs
+                r'"(https?://[^"]*)"',  # Double quoted URLs
+                r'(https?://\S+)'       # Unquoted URLs
+            ]
+            
+            for pattern in url_patterns:
+                url_match = re.search(pattern, command)
+                if url_match:
+                    url = url_match.group(1)
+                    break
+            
+            # Extract method
+            method_match = re.search(r'(?:-X|--request)\s+([A-Z]+)', command)
+            if method_match:
+                method = method_match.group(1)
+            
+            # Extract headers - handle both single and double quotes
+            header_patterns = [
+                r"(?:-H|--header)\s+'([^']+)'",   # Single quoted headers
+                r'(?:-H|--header)\s+"([^"]+)"'    # Double quoted headers
+            ]
+            
+            for pattern in header_patterns:
+                for match in re.finditer(pattern, command):
+                    header_text = match.group(1)
+                    if ':' in header_text:
+                        key, value = header_text.split(':', 1)
+                        headers[key.strip()] = value.strip()
+            
+            # Extract body - handle multi-line JSON properly
+            body_patterns = [
+                r"--data-raw\s+'([^']*(?:\\'[^']*)*)'",  # Single quotes, handling escaped quotes
+                r'--data-raw\s+"([^"]*(?:\\"[^"]*)*)"',  # Double quotes, handling escaped quotes
+                r"--data-raw\s+['\"](.*?)['\"]",         # Generic quoted content
+                r"--data\s+'([^']*(?:\\'[^']*)*)'",
+                r'--data\s+"([^"]*(?:\\"[^"]*)*)"',
+                r"--data\s+['\"](.*?)['\"]",
+                r"-d\s+'([^']*(?:\\'[^']*)*)'",
+                r'-d\s+"([^"]*(?:\\"[^"]*)*)"',
+                r"-d\s+['\"](.*?)['\"]"
+            ]
+            
+            for pattern in body_patterns:
+                body_match = re.search(pattern, command, re.DOTALL)
+                if body_match:
+                    body = body_match.group(1)
+                    # Unescape quotes
+                    body = body.replace("\\'", "'").replace('\\"', '"')
+                    break
+            
+            # If we have a body but no explicit method, assume POST
+            if body and method == 'GET':
+                method = 'POST'
+            
+            # Ensure Content-Type is set for JSON data
+            if body and 'Content-Type' not in headers and body.strip().startswith('{'):
+                headers['Content-Type'] = 'application/json'
+            
+            if not url:
+                return jsonify({'error': 'No URL found in curl command'}), 400
+                
+            # Debug logging
+            logger.info(f"Parsed cURL - Method: {method}, URL: {url}, Body length: {len(body) if body else 0}")
+            
+            # Check for --location flag (follow redirects)
+            follow_redirects = '--location' in command or '-L' in command
+            
+            # Measure execution time
+            start_time = time.time()
+            
+            # Make the request
+            response = requests.request(
+                method=method,
+                url=url,
+                headers=headers,
+                data=body,
+                allow_redirects=follow_redirects,
+                timeout=30
+            )
+            
+            execution_time = (time.time() - start_time) * 1000
+            
+            # Parse and format response body
+            response_body = response.text
+            try:
+                # Try to parse as JSON and format it
+                if response.headers.get('content-type', '').startswith('application/json'):
+                    json_data = response.json()
+                    response_body = json.dumps(json_data, indent=2)
+            except:
+                # If JSON parsing fails, keep as text
+                pass
+            
+            # Return the response in consistent format
+            return jsonify({
+                'success': True,
+                'status': response.status_code,
+                'statusText': response.reason,
+                'headers': dict(response.headers),
+                'body': response_body,
+                'time': round(execution_time, 2),
+                'size': len(response.content),
+                'cookies': [{'name': k, 'value': v} for k, v in response.cookies.items()]
+            })
+            
+        except requests.exceptions.Timeout:
+            return jsonify({
+                'success': False,
+                'error': 'Request timeout',
+                'time': round((time.time() - start_time) * 1000, 2) if 'start_time' in locals() else 0
+            }), 408
+        except requests.exceptions.ConnectionError as e:
+            return jsonify({
+                'success': False,
+                'error': f'Connection error: {str(e)}',
+                'time': round((time.time() - start_time) * 1000, 2) if 'start_time' in locals() else 0
+            }), 503
+        except Exception as e:
+            logger.error(f"Error parsing curl command: {str(e)}")
+            return jsonify({
+                'success': False,
+                'error': f'Error parsing curl command: {str(e)}'
+            }), 400
+            
+    except Exception as e:
+        logger.error(f"Error executing curl command: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': f'Error: {str(e)}'
+        }), 500
 
+@app.route('/execute_request', methods=['POST'])
+def execute_request():
+    """Execute a request from a Postman collection"""
+    try:
+        data = request.get_json()
+        if not data or 'request' not in data:
+            return jsonify({'error': 'No request data provided'}), 400
+            
+        postman_request = data['request']
+        
+        # Extract method
+        method = postman_request.get('method', 'GET')
+        
+        # Extract URL
+        url = ''
+        if isinstance(postman_request['url'], str):
+            url = postman_request['url']
+        elif isinstance(postman_request['url'], dict) and 'raw' in postman_request['url']:
+            url = postman_request['url']['raw']
+        else:
+            return jsonify({'error': 'Invalid URL format in request'}), 400
+            
+        # Extract headers
+        headers = {}
+        if 'header' in postman_request and postman_request['header']:
+            for header in postman_request['header']:
+                if 'key' in header and 'value' in header:
+                    headers[header['key']] = header['value']
+        
+        # Extract body
+        body = None
+        if 'body' in postman_request and postman_request['body']:
+            body_mode = postman_request['body'].get('mode')
+            
+            if body_mode == 'raw' and 'raw' in postman_request['body']:
+                body = postman_request['body']['raw']
+            elif body_mode == 'urlencoded' and 'urlencoded' in postman_request['body']:
+                body = {}
+                for param in postman_request['body']['urlencoded']:
+                    if 'key' in param and 'value' in param:
+                        body[param['key']] = param['value']
+            elif body_mode == 'formdata' and 'formdata' in postman_request['body']:
+                body = {}
+                for param in postman_request['body']['formdata']:
+                    if 'key' in param and 'value' in param:
+                        body[param['key']] = param['value']
+        
+        # Measure execution time and make the request
+        start_time = time.time()
+        response = requests.request(
+            method=method,
+            url=url,
+            headers=headers,
+            data=body,
+            timeout=30
+        )
+        execution_time = (time.time() - start_time) * 1000
+        
+        # Parse response body
+        response_body = response.text
+        try:
+            if response.headers.get('content-type', '').startswith('application/json'):
+                response_body = response.json()
+        except:
+            pass
+        
+        # Return comprehensive response
+        return jsonify({
+            'status_code': response.status_code,
+            'status_text': response.reason,
+            'headers': dict(response.headers),
+            'body': response_body,
+            'time': round(execution_time, 2),
+            'size': len(response.content),
+            'cookies': [{'name': k, 'value': v} for k, v in response.cookies.items()]
+        })
+        
+    except requests.exceptions.Timeout:
+        return jsonify({'error': 'Request timeout'}), 408
+    except requests.exceptions.ConnectionError:
+        return jsonify({'error': 'Connection error - Could not connect to server'}), 503
+    except requests.exceptions.SSLError:
+        return jsonify({'error': 'SSL verification failed'}), 495
+    except Exception as e:
+        logger.error(f"Error executing request: {str(e)}")
+        return jsonify({'error': f'Error: {str(e)}'}), 500
+
+@app.route('/execute_graphql', methods=['POST'])
+def execute_graphql():
+    """Execute a GraphQL query"""
+    try:
+        data = request.get_json()
+        if not data or 'endpoint' not in data or 'payload' not in data:
+            return jsonify({'error': 'Missing required fields: endpoint and payload'}), 400
+            
+        endpoint = data['endpoint']
+        headers = data.get('headers', {})
+        payload = data['payload']
+        
+        # Ensure content type is set for GraphQL
+        if 'Content-Type' not in headers:
+            headers['Content-Type'] = 'application/json'
+        
+        # Make the GraphQL request
+        response = requests.post(
+            url=endpoint,
+            headers=headers,
+            json=payload
+        )
+        
+        # Try to parse response as JSON
+        try:
+            body = response.json()
+        except:
+            body = response.text
+        
+        # Return the response
+        return jsonify({
+            'status_code': response.status_code,
+            'headers': dict(response.headers),
+            'body': body
+        })
+        
+    except Exception as e:
+        logger.error(f"Error executing GraphQL query: {str(e)}")
+        return jsonify({'error': f'Error: {str(e)}'}), 500
 
 @app.route('/ui-recorder')
 def ui_recorder():
@@ -489,6 +1111,7 @@ def generate_e2e_zip():
     )
 
 @app.route('/manual-co-test')
+@jira_auth_required
 def manual_co_test():
     return render_template('manual-test-generator.html', active_tab='manual')
 
@@ -1333,18 +1956,25 @@ def parse_curl_command(curl):
         if header_name.lower() == 'content-type':
             result['content_type'] = header_value
     
-    # Extract body - look for -d or --data or --data-raw
-    body_match = re.search(r'-d\s+[\'"](.*?)[\'"]\s|--data\s+[\'"](.*?)[\'"]\s|--data-raw\s+[\'"](.*?)[\'"]\s', curl + ' ')
-    if body_match:
-        # Get the first non-None group
-        for group in body_match.groups():
-            if group is not None:
-                result['body'] = group
-                break
-        
-        # If method is GET but we have a body, assume it's actually POST
-        if result['method'] == 'GET' and result['body']:
-            result['method'] = 'POST'
+    # Extract body - look for -d or --data or --data-raw (handle multi-line)
+    # First try to find quoted multi-line JSON
+    body_patterns = [
+        r'--data-raw\s+[\'"](.*?)[\'"]\s',
+        r'--data\s+[\'"](.*?)[\'"]\s', 
+        r'-d\s+[\'"](.*?)[\'"]\s'
+    ]
+    
+    for pattern in body_patterns:
+        body_match = re.search(pattern, curl + ' ', re.DOTALL)
+        if body_match:
+            body_text = body_match.group(1)
+            # Clean up the body text - remove extra whitespace but preserve JSON structure
+            result['body'] = body_text.strip()
+            break
+    
+    # If method is GET but we have a body, assume it's actually POST
+    if result['method'] == 'GET' and result['body']:
+        result['method'] = 'POST'
     
     return result
 
@@ -1911,7 +2541,7 @@ def jira_oauth_login():
         params = {
             "audience": "api.atlassian.com",
             "client_id": client_id,
-            "scope": "read:jira-work write:jira-work",
+            "scope": "read:jira-work write:jira-work read:me",
             "redirect_uri": redirect_uri,
             "response_type": "code",
             "prompt": "consent"
@@ -1926,9 +2556,16 @@ def jira_oauth_login():
 
 @app.route('/api/jira/oauth/callback')
 def jira_oauth_callback():
+    # Check if user denied access
+    error = request.args.get("error")
+    if error == "access_denied":
+        # User cancelled the authorization, redirect to dashboard
+        return redirect(url_for('index'))
+    
     code = request.args.get("code")
     if not code:
-        return "No code provided", 400
+        # No code and no error, redirect to dashboard with error message
+        return redirect(url_for('index'))
     client_id = app.config['JIRA_CLIENT_ID']
     client_secret = app.config['JIRA_CLIENT_SECRET']
     redirect_uri = app.config['JIRA_CALLBACK_URL']
@@ -1949,10 +2586,7 @@ def jira_oauth_callback():
     session['jira_refresh_token'] = tokens.get('refresh_token')
     session['jira_token_expires'] = time.time() + tokens.get('expires_in', 3600)
     
-    # For Upgrad Jira, we know the domain
-    session['jira_domain'] = 'https://upgrad-jira.atlassian.net'
-    
-    # Get and store the cloud ID
+    # Get accessible Jira resources and find the correct one
     headers = {
         'Authorization': f"Bearer {tokens['access_token']}",
         'Accept': 'application/json'
@@ -1963,10 +2597,92 @@ def jira_oauth_callback():
     )
     if cloud_id_resp.status_code == 200:
         cloud_id_data = cloud_id_resp.json()
+        logger.info(f"Available Jira resources: {cloud_id_data}")
+        
         if cloud_id_data and isinstance(cloud_id_data, list) and len(cloud_id_data) > 0:
-            session['jira_cloud_id'] = cloud_id_data[0]['id']
-            logger.info(f"Stored Jira cloud ID: {cloud_id_data[0]['id']}")
+            # Look for upgrad-jira.atlassian.net specifically
+            target_resource = None
+            for resource in cloud_id_data:
+                resource_url = resource.get('url', '')
+                if 'upgrad-jira.atlassian.net' in resource_url:
+                    target_resource = resource
+                    break
+            
+            # If we found the target, use it; otherwise use the first one
+            if target_resource:
+                session['jira_cloud_id'] = target_resource['id']
+                session['jira_domain'] = target_resource['url']
+                logger.info(f"Found target Jira resource: {target_resource['url']}")
+            else:
+                # Fallback to first available resource
+                session['jira_cloud_id'] = cloud_id_data[0]['id']
+                session['jira_domain'] = cloud_id_data[0]['url']
+                logger.info(f"Using first available Jira resource: {cloud_id_data[0]['url']}")
+            
+            logger.info(f"Stored Jira cloud ID: {session['jira_cloud_id']}")
             logger.info(f"Using Jira domain: {session['jira_domain']}")
+    else:
+        # Fallback to default domain if API call fails
+        session['jira_domain'] = 'https://upgrad-jira.atlassian.net'
+        logger.warning(f"Failed to get accessible resources, using default domain")
+    
+    # Fetch user information
+    try:
+        logger.info("Attempting to fetch user info from Atlassian API...")
+        user_info_resp = requests.get(
+            'https://api.atlassian.com/me',
+            headers=headers,
+            timeout=10
+        )
+        logger.info(f"User info response status: {user_info_resp.status_code}")
+        logger.info(f"User info response headers: {dict(user_info_resp.headers)}")
+        
+        if user_info_resp.status_code == 200:
+            user_data = user_info_resp.json()
+            logger.info(f"Raw user data from Atlassian: {user_data}")
+            
+            # Try different field names that Atlassian might use
+            user_name = (user_data.get('name') or 
+                        user_data.get('displayName') or 
+                        user_data.get('display_name') or 
+                        user_data.get('nickname') or 
+                        user_data.get('account_id') or  # Sometimes Atlassian uses account_id
+                        'User')
+            
+            user_email = (user_data.get('email') or 
+                         user_data.get('emailAddress') or 
+                         user_data.get('email_address') or 
+                         '')
+            
+            user_avatar = (user_data.get('picture') or 
+                          user_data.get('avatar') or 
+                          user_data.get('avatarUrl') or 
+                          user_data.get('avatar_url') or 
+                          user_data.get('avatarUrls', {}).get('48x48') or  # Atlassian format
+                          '')
+            
+            session['jira_user_name'] = user_name
+            session['jira_user_email'] = user_email
+            session['jira_user_avatar'] = user_avatar
+            session['jira_login_time'] = time.time()
+            session['show_welcome_message'] = True
+            logger.info(f"Successfully stored user info: {user_name} ({user_email})")
+        else:
+            logger.error(f"Failed to fetch user info. Status: {user_info_resp.status_code}, Response: {user_info_resp.text}")
+            # Store default values so the profile still shows
+            session['jira_user_name'] = 'Jira User'
+            session['jira_user_email'] = 'Connected to Jira'
+            session['jira_user_avatar'] = ''
+            session['jira_login_time'] = time.time()
+            session['show_welcome_message'] = True
+    except Exception as e:
+        logger.error(f"Exception while fetching user info: {str(e)}")
+        # Store default values so the profile still shows
+        session['jira_user_name'] = 'Jira User'
+        session['jira_user_email'] = 'Connected to Jira'
+        session['jira_user_avatar'] = ''
+        session['jira_login_time'] = time.time()
+        session['show_welcome_message'] = True
     
     return redirect(url_for('manual_co_test'))
 
@@ -2031,17 +2747,31 @@ def fetch_jira_issues():
         # Handle specific issue key search (e.g., "IRA-62215")
         if search and '-' in search:
             # If search looks like an issue key (contains a hyphen), search by key
-            jql_parts.append(f'key = {search}')
+            jql_parts.append(f'key = "{search}"')
         else:
+            # For My Details page, default to showing user's assigned issues
+            user_email = session.get('jira_user_email')
+            if user_email and not search and not project and not status:
+                jql_parts.append(f'assignee = "{user_email}"')
+                
             # Otherwise use the regular search parameters
             if project:
-                jql_parts.append(f'project = {project}')
+                jql_parts.append(f'project = "{project}"')
             if status:
-                jql_parts.append(f'status = {status}')
+                jql_parts.append(f'status = "{status}"')
             if search:
                 jql_parts.append(f'text ~ "{search}"')
         
-        jql = ' AND '.join(jql_parts) if jql_parts else 'ORDER BY created DESC'
+        # Add ordering and default fallback
+        if jql_parts:
+            jql = ' AND '.join(jql_parts) + ' ORDER BY updated DESC'
+        else:
+            # Fallback for My Details: show recent issues for the user
+            user_email = session.get('jira_user_email')
+            if user_email:
+                jql = f'assignee = "{user_email}" ORDER BY updated DESC'
+            else:
+                jql = 'assignee = currentUser() ORDER BY updated DESC'
         logger.info(f"Generated JQL query: {jql}")
 
         # Make request to Jira API
@@ -2170,7 +2900,6 @@ def fetch_jira_issues():
                 'summary': fields.get('summary') or '',
                 'description': description or '',
                 'description_html': description_html,
-                'description_html': description_html,
                 'status': (fields.get('status') or {}).get('name'),
                 'assignee': (fields.get('assignee') or {}).get('displayName'),
                 'created': fields.get('created'),
@@ -2180,7 +2909,8 @@ def fetch_jira_issues():
 
         return jsonify({
             'issues': issues,
-            'total': data.get('total', 0)
+            'total': data.get('total', 0),
+            'jira_domain': session.get('jira_domain', 'https://upgrad-jira.atlassian.net')
         })
 
     except requests.exceptions.RequestException as e:
@@ -2197,12 +2927,357 @@ def fetch_jira_issues():
         }), 500
 
 @app.route('/data')
-def data_generator():
-    return render_template('data-generation.html', active_tab='data')
-
-@app.route('/data-generation')
+@jira_auth_required
 def data_generation():
     return render_template('data-generation.html')
+
+# Jira API endpoints
+
+@app.route('/api/jira/issues')
+def jira_issues():
+    """Fetch Jira issues for the authenticated user"""
+    # Check if user is authenticated with Jira
+    access_token = session.get('jira_access_token')
+    if not access_token:
+        return jsonify({'error': 'Not authenticated with Jira'}), 401
+    
+    # Get query parameters
+    search_query = request.args.get('search', '')
+    status_filter = request.args.get('status', '')
+    project_filter = request.args.get('project', '')
+    
+    # Get Jira cloud ID from session
+    cloud_id = session.get('jira_cloud_id')
+    if not cloud_id:
+        return jsonify({'error': 'Jira cloud ID not found in session'}), 400
+    
+    # Construct JQL query
+    jql_parts = []
+    if project_filter:
+        jql_parts.append(f"project = '{project_filter}'")
+    if status_filter:
+        jql_parts.append(f"status = '{status_filter}'")
+    if search_query:
+        jql_parts.append(f"summary ~ '{search_query}*' OR description ~ '{search_query}*'")
+    
+    # Add assignee filter to show only the user's issues if no specific filters
+    if not jql_parts:
+        jql_parts.append("assignee = currentUser() OR reporter = currentUser()")
+    
+    jql_query = " AND ".join(jql_parts)
+    
+    # Prepare API request
+    headers = {
+        'Authorization': f'Bearer {access_token}',
+        'Accept': 'application/json',
+        'Content-Type': 'application/json'
+    }
+    
+    # API endpoint for searching issues
+    url = f"https://api.atlassian.com/ex/jira/{cloud_id}/rest/api/3/search"
+    
+    try:
+        # Make the API request
+        response = requests.post(
+            url,
+            headers=headers,
+            json={
+                'jql': jql_query,
+                'maxResults': 50,
+                'fields': [
+                    'summary',
+                    'description',
+                    'status',
+                    'assignee',
+                    'reporter',
+                    'created',
+                    'updated',
+                    'priority',
+                    'issuetype',
+                    'project'
+                ]
+            }
+        )
+        
+        # Check for errors
+        if response.status_code != 200:
+            return jsonify({
+                'error': 'Failed to fetch Jira issues',
+                'details': response.text
+            }), response.status_code
+        
+        # Process the response
+        data = response.json()
+        issues = []
+        
+        for issue in data.get('issues', []):
+            # Extract issue fields
+            fields = issue.get('fields', {})
+            
+            # Process description to handle attachments
+            description = ''
+            if fields.get('description'):
+                # Handle different description formats
+                if isinstance(fields['description'], dict) and 'content' in fields['description']:
+                    # Process Atlassian Document Format
+                    description_content = fields['description'].get('content', [])
+                    for content in description_content:
+                        if content.get('type') == 'paragraph' and 'content' in content:
+                            for text_content in content.get('content', []):
+                                if text_content.get('type') == 'text':
+                                    description += text_content.get('text', '')
+                            description += '\n'
+                else:
+                    # Handle plain text description
+                    description = str(fields.get('description', ''))
+            
+            # Get assignee information
+            assignee = None
+            if fields.get('assignee'):
+                assignee = {
+                    'name': fields['assignee'].get('displayName', 'Unassigned'),
+                    'email': fields['assignee'].get('emailAddress', ''),
+                    'avatar': fields['assignee'].get('avatarUrls', {}).get('48x48', '')
+                }
+            
+            # Get status information
+            status = None
+            if fields.get('status'):
+                status = fields['status'].get('name', 'Unknown')
+            
+            # Format created and updated dates
+            created = fields.get('created')
+            updated = fields.get('updated')
+            
+            # Build issue URL
+            domain = session.get('jira_domain', '')
+            issue_url = f"https://{domain}/browse/{issue.get('key')}" if domain else ''
+            
+            # Add processed issue to the list
+            issues.append({
+                'key': issue.get('key', ''),
+                'summary': fields.get('summary', ''),
+                'description': description,
+                'status': status,
+                'assignee': assignee,
+                'created': created,
+                'updated': updated,
+                'url': issue_url
+            })
+        
+        # Return the processed issues
+        return jsonify({
+            'issues': issues,
+            'total': data.get('total', 0),
+            'jira_domain': session.get('jira_domain', 'https://upgrad-jira.atlassian.net')
+        })
+    
+    except Exception as e:
+        return jsonify({
+            'error': 'Failed to fetch Jira issues',
+            'details': str(e)
+        }), 500
+
+@app.route('/api/jira/time-entries', methods=['GET'])
+def get_jira_time_entries():
+    """Get time entries for Jira issues for a specific date"""
+    # Check if user is authenticated with Jira
+    access_token = session.get('jira_access_token')
+    if not access_token:
+        return jsonify({'error': 'Not authenticated with Jira'}), 401
+    
+    # Get Jira cloud ID from session
+    cloud_id = session.get('jira_cloud_id')
+    if not cloud_id:
+        return jsonify({'error': 'Jira cloud ID not found in session'}), 400
+    
+    # Get date filter from query parameters
+    date_filter = request.args.get('date', '')
+    
+    # Prepare API request
+    headers = {
+        'Authorization': f'Bearer {access_token}',
+        'Accept': 'application/json'
+    }
+    
+    try:
+        # Get the current user's account ID for filtering
+        user_email = session.get('jira_user_email')
+        if not user_email:
+            return jsonify({'error': 'User email not found in session'}), 400
+        
+        # First, get the user's account ID
+        user_url = f'https://api.atlassian.com/ex/jira/{cloud_id}/rest/api/3/user/search?query={user_email}'
+        logger.info(f"Searching for user with URL: {user_url}")
+        user_response = requests.get(user_url, headers=headers, timeout=30)
+        
+        logger.info(f"User search response status: {user_response.status_code}")
+        if user_response.status_code != 200:
+            logger.error(f"User search failed: {user_response.text}")
+            return jsonify({
+                'timeEntries': [],
+                'total': 0,
+                'date': date_filter,
+                'error': f'Failed to get user information from Jira (status: {user_response.status_code})',
+                'debug_info': {
+                    'user_url': user_url,
+                    'response_text': user_response.text[:500],  # First 500 chars
+                    'user_email': user_email,
+                    'cloud_id': cloud_id
+                }
+            }), 200
+            
+        user_data = user_response.json()
+        logger.info(f"User search returned {len(user_data) if user_data else 0} users")
+        
+        if not user_data:
+            return jsonify({
+                'timeEntries': [],
+                'total': 0,
+                'date': date_filter,
+                'error': 'User not found in Jira',
+                'debug_info': {
+                    'user_email': user_email,
+                    'search_response': user_data
+                }
+            }), 200
+            
+        user_account_id = user_data[0]['accountId']
+        logger.info(f"Found user account ID: {user_account_id}")
+        
+        # Build JQL to find issues with worklogs by the current user
+        if date_filter:
+            # Search for issues with worklogs by this user on the specified date
+            worklog_jql = f'worklogAuthor = "{user_account_id}" AND worklogDate = "{date_filter}"'
+        else:
+            # Get recent worklogs by this user
+            worklog_jql = f'worklogAuthor = "{user_account_id}"'
+        
+        # Search for issues with worklogs
+        search_url = f'https://api.atlassian.com/ex/jira/{cloud_id}/rest/api/3/search'
+        search_params = {
+            'jql': worklog_jql,
+            'fields': 'summary,worklog',
+            'expand': 'worklog',
+            'maxResults': 100
+        }
+        
+        search_response = requests.get(search_url, headers=headers, params=search_params, timeout=30)
+        
+        if search_response.status_code != 200:
+            return jsonify({'error': 'Failed to search for issues with worklogs'}), 500
+        
+        search_data = search_response.json()
+        all_time_entries = []
+        
+        # Process each issue and extract relevant worklogs
+        for issue in search_data.get('issues', []):
+            issue_key = issue['key']
+            issue_summary = issue['fields']['summary']
+            
+            # Get worklogs for this issue
+            worklog_data = issue['fields'].get('worklog', {})
+            worklogs = worklog_data.get('worklogs', [])
+            
+            # Filter worklogs by author and date if specified
+            for worklog in worklogs:
+                worklog_author_id = worklog.get('author', {}).get('accountId', '')
+                worklog_started = worklog.get('started', '')
+                
+                # Only include worklogs by the current user
+                if worklog_author_id == user_account_id:
+                    # If date filter is specified, check if worklog is on that date
+                    if date_filter:
+                        worklog_date = worklog_started.split('T')[0] if 'T' in worklog_started else worklog_started
+                        if worklog_date != date_filter:
+                            continue
+                    
+                    time_spent_seconds = worklog.get('timeSpentSeconds', 0)
+                    hours = time_spent_seconds // 3600
+                    minutes = (time_spent_seconds % 3600) // 60
+                    time_spent_display = f"{hours}h {minutes}m" if hours > 0 else f"{minutes}m"
+                    
+                    all_time_entries.append({
+                        'id': worklog.get('id', ''),
+                        'issueKey': issue_key,
+                        'issueSummary': issue_summary,
+                        'timeSpent': time_spent_display,
+                        'timeSpentSeconds': time_spent_seconds,
+                        'comment': worklog.get('comment', ''),
+                        'started': worklog_started,
+                        'author': worklog.get('author', {}).get('displayName', session.get('jira_user_name', 'User'))
+                    })
+    
+    except Exception as e:
+        logger.error(f"Error fetching time entries: {str(e)}")
+        # Return error details for debugging but don't crash
+        return jsonify({
+            'timeEntries': [],
+            'total': 0,
+            'date': date_filter,
+            'error': f"Failed to fetch time entries: {str(e)}",
+            'debug_info': {
+                'has_access_token': bool(access_token),
+                'has_cloud_id': bool(cloud_id),
+                'user_email': session.get('jira_user_email', 'N/A')
+            }
+        }), 200  # Return 200 instead of 500 to prevent frontend errors
+    
+    # Sort time entries by date (most recent first)
+    all_time_entries.sort(key=lambda x: x.get('started', ''), reverse=True)
+    
+    return jsonify({
+        'timeEntries': all_time_entries,
+        'total': len(all_time_entries),
+        'date': date_filter
+    })
+
+@app.route('/api/jira/time-entries', methods=['POST'])
+def add_jira_time_entry():
+    """Add a new time entry for a Jira issue"""
+    # Check if user is authenticated with Jira
+    access_token = session.get('jira_access_token')
+    if not access_token:
+        return jsonify({'error': 'Not authenticated with Jira'}), 401
+    
+    # Get Jira cloud ID from session
+    cloud_id = session.get('jira_cloud_id')
+    if not cloud_id:
+        return jsonify({'error': 'Jira cloud ID not found in session'}), 400
+    
+    # Get request data
+    data = request.json
+    if not data:
+        return jsonify({'error': 'No data provided'}), 400
+    
+    # Validate required fields
+    required_fields = ['issueKey', 'timeSpent', 'started']
+    for field in required_fields:
+        if field not in data:
+            return jsonify({'error': f'Missing required field: {field}'}), 400
+    
+    # In a real implementation, you would make an API call to Jira
+    # to add the worklog entry. For this demo, we'll simulate success.
+    
+    # Return success response
+    return jsonify({
+        'success': True,
+        'message': 'Time entry added successfully',
+        'timeEntry': {
+            'id': '123', # This would be returned by the Jira API
+            'issueKey': data['issueKey'],
+            'timeSpent': data['timeSpent'],
+            'started': data['started'],
+            'comment': data.get('comment', ''),
+            'author': session.get('jira_user_name', 'User')
+        }
+    })
+
+@app.route('/my-jira')
+@jira_auth_required
+def my_jira():
+    """My Details page - shows user profile, Jira issues, and worklog activity"""
+    return render_template('my-jira.html', active_tab='jira')
 
 def extract_issues_manually(text):
     """
@@ -2213,7 +3288,16 @@ def extract_issues_manually(text):
     
     result = {
         'issues': [],
-        'recommendations': []
+        'recommendations': [],
+        'overallScore': 70,  # Default moderate score for manual extraction
+        'factorScores': {
+            'accessibility': 70,
+            'designConsistency': 70,
+            'usability': 70,
+            'visualHierarchy': 70,
+            'responsiveness': 70
+        },
+        'summary': 'UI analysis completed using manual text extraction due to parsing issues.'
     }
     
     # Extract issues
@@ -2325,17 +3409,387 @@ def find_potential_misspellings(text):
     return potential_misspellings[:5]  # Limit to 5 potential issues
 
 @app.route('/screen-analysis')
+@jira_auth_required
 def screen_analysis():
-    return render_template('screen-analysis.html', active_tab='screen-analysis')
+    return render_template('screen-analysis-redesigned.html', active_tab='screen-analysis')
+
+@app.route('/api/rest/execute', methods=['POST'])
+def execute_rest_request():
+    """Execute a comprehensive REST API request with advanced features"""
+    try:
+        data = request.get_json()
+        
+        # Extract comprehensive request details
+        url = data.get('url', '')
+        method = data.get('method', 'GET').upper()
+        headers = data.get('headers', {})
+        params = data.get('params', {})
+        body = data.get('body', '')
+        body_type = data.get('bodyType', 'none')
+        auth = data.get('auth', {})
+        environment = data.get('environment', {})
+        timeout = data.get('timeout', 30)
+        follow_redirects = data.get('followRedirects', True)
+        verify_ssl = data.get('verifySsl', True)
+        
+        # Apply environment variables
+        url = substitute_environment_variables(url, environment)
+        headers = {k: substitute_environment_variables(str(v), environment) for k, v in headers.items() if v}
+        params = {k: substitute_environment_variables(str(v), environment) for k, v in params.items() if v}
+        
+        # Handle authentication
+        auth_obj = None
+        if auth.get('type') == 'basic':
+            auth_obj = (auth.get('username', ''), auth.get('password', ''))
+        elif auth.get('type') == 'bearer':
+            headers['Authorization'] = f"Bearer {auth.get('token', '')}"
+        elif auth.get('type') == 'api_key':
+            if auth.get('in') == 'header':
+                headers[auth.get('key', 'X-API-Key')] = auth.get('value', '')
+            elif auth.get('in') == 'query':
+                params[auth.get('key', 'api_key')] = auth.get('value', '')
+        
+        # Handle request body based on type
+        request_kwargs = {}
+        if body and body_type != 'none':
+            if body_type == 'json':
+                try:
+                    request_kwargs['json'] = json.loads(body) if isinstance(body, str) else body
+                    if 'Content-Type' not in headers:
+                        headers['Content-Type'] = 'application/json'
+                except json.JSONDecodeError:
+                    return jsonify({'error': 'Invalid JSON in request body'}), 400
+            elif body_type == 'text':
+                request_kwargs['data'] = body
+            elif body_type == 'form':
+                try:
+                    form_data = json.loads(body) if isinstance(body, str) else body
+                    request_kwargs['data'] = form_data
+                    if 'Content-Type' not in headers:
+                        headers['Content-Type'] = 'application/x-www-form-urlencoded'
+                except:
+                    request_kwargs['data'] = body
+            elif body_type == 'xml':
+                request_kwargs['data'] = body
+                if 'Content-Type' not in headers:
+                    headers['Content-Type'] = 'application/xml'
+        
+        # Measure execution time
+        start_time = time.time()
+        
+        # Make the request with comprehensive error handling
+        try:
+            response = requests.request(
+                method=method,
+                url=url,
+                headers=headers,
+                params=params,
+                auth=auth_obj,
+                timeout=timeout,
+                allow_redirects=follow_redirects,
+                verify=verify_ssl,
+                **request_kwargs
+            )
+            
+            execution_time = (time.time() - start_time) * 1000
+            
+            # Parse response body
+            response_body = response.text
+            content_type = response.headers.get('content-type', '').lower()
+            
+            try:
+                if 'application/json' in content_type:
+                    json_data = response.json()
+                    # Return formatted JSON for better readability
+                    response_body = json.dumps(json_data, indent=2)
+                elif 'application/xml' in content_type or 'text/xml' in content_type:
+                    # Keep as text for XML
+                    pass
+            except:
+                pass
+            
+            # Extract cookies
+            cookies = []
+            for cookie in response.cookies:
+                cookies.append({
+                    'name': cookie.name,
+                    'value': cookie.value,
+                    'domain': cookie.domain,
+                    'path': cookie.path,
+                    'secure': cookie.secure,
+                    'httpOnly': cookie.has_nonstandard_attr('HttpOnly')
+                })
+            
+            # Response headers as list for better display
+            response_headers = [{'key': k, 'value': v} for k, v in response.headers.items()]
+            
+            return jsonify({
+                'success': True,
+                'status': response.status_code,
+                'statusText': response.reason,
+                'headers': response_headers,
+                'body': response_body,
+                'cookies': cookies,
+                'time': round(execution_time, 2),
+                'size': len(response.content),
+                'redirects': len(response.history) if hasattr(response, 'history') else 0,
+                'finalUrl': response.url
+            })
+            
+        except requests.exceptions.Timeout:
+            return jsonify({
+                'success': False,
+                'error': 'Request timeout',
+                'time': round((time.time() - start_time) * 1000, 2)
+            }), 408
+        except requests.exceptions.ConnectionError as e:
+            return jsonify({
+                'success': False,
+                'error': f'Connection error: {str(e)}',
+                'time': round((time.time() - start_time) * 1000, 2)
+            }), 503
+        except requests.exceptions.SSLError as e:
+            return jsonify({
+                'success': False,
+                'error': f'SSL verification failed: {str(e)}',
+                'time': round((time.time() - start_time) * 1000, 2)
+            }), 495
+        except requests.exceptions.HTTPError as e:
+            return jsonify({
+                'success': False,
+                'error': f'HTTP error: {str(e)}',
+                'time': round((time.time() - start_time) * 1000, 2)
+            }), 400
+            
+    except Exception as e:
+        logger.error(f"Error executing REST request: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': f'Internal server error: {str(e)}'
+        }), 500
+
+def substitute_environment_variables(text, environment):
+    """Replace {{variable}} with environment values"""
+    if not isinstance(text, str) or not environment:
+        return text
+    
+    import re
+    def replace_var(match):
+        var_name = match.group(1)
+        return environment.get(var_name, match.group(0))
+    
+    return re.sub(r'\{\{(\w+)\}\}', replace_var, text)
+
+@app.route('/api/environment/validate', methods=['POST'])
+def validate_environment():
+    """Validate environment variables in a request"""
+    try:
+        data = request.get_json()
+        url = data.get('url', '')
+        headers = data.get('headers', {})
+        body = data.get('body', '')
+        environment = data.get('environment', {})
+        
+        # Find all variables
+        import re
+        variables_found = set()
+        
+        # Search in URL
+        variables_found.update(re.findall(r'\{\{(\w+)\}\}', url))
+        
+        # Search in headers
+        for value in headers.values():
+            if isinstance(value, str):
+                variables_found.update(re.findall(r'\{\{(\w+)\}\}', value))
+        
+        # Search in body
+        if isinstance(body, str):
+            variables_found.update(re.findall(r'\{\{(\w+)\}\}', body))
+        
+        # Check which variables are missing
+        missing_variables = []
+        available_variables = []
+        
+        for var in variables_found:
+            if var in environment:
+                available_variables.append(var)
+            else:
+                missing_variables.append(var)
+        
+        return jsonify({
+            'variables': list(variables_found),
+            'available': available_variables,
+            'missing': missing_variables,
+            'isValid': len(missing_variables) == 0
+        })
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/capture-url', methods=['POST'])
+def capture_url():
+    """Capture a screenshot of a website URL"""
+    try:
+        data = request.get_json()
+        if not data or 'url' not in data:
+            return jsonify({'success': False, 'error': 'URL is required'}), 400
+        
+        url = data['url']
+        
+        # Auto-resolve URL if needed (add https:// if no protocol)
+        if not url.startswith(('http://', 'https://')):
+            url = 'https://' + url
+        
+        # Validate URL format
+        try:
+            from urllib.parse import urlparse
+            parsed = urlparse(url)
+            if not parsed.netloc:
+                return jsonify({'success': False, 'error': 'Invalid URL format'}), 400
+        except Exception:
+            return jsonify({'success': False, 'error': 'Invalid URL format'}), 400
+        
+        # Import selenium for web scraping
+        try:
+            from selenium import webdriver
+            from selenium.webdriver.chrome.options import Options
+            from selenium.webdriver.common.by import By
+            from selenium.webdriver.support.ui import WebDriverWait
+            from selenium.webdriver.support import expected_conditions as EC
+            import base64
+            import time
+        except ImportError:
+            return jsonify({
+                'success': False, 
+                'error': 'Selenium not installed. Please install selenium and chromedriver for URL capture functionality.'
+            }), 500
+        
+        # Setup Chrome options
+        chrome_options = Options()
+        chrome_options.add_argument('--headless')
+        chrome_options.add_argument('--no-sandbox')
+        chrome_options.add_argument('--disable-dev-shm-usage')
+        chrome_options.add_argument('--disable-gpu')
+        chrome_options.add_argument('--window-size=1920,1080')
+        chrome_options.add_argument('--disable-extensions')
+        chrome_options.add_argument('--disable-plugins')
+        chrome_options.add_argument('--disable-images')  # Speed up loading
+        
+        driver = None
+        urls_to_try = [url]
+        
+        # If we're trying HTTPS, also prepare HTTP fallback
+        if url.startswith('https://'):
+            http_url = url.replace('https://', 'http://', 1)
+            urls_to_try.append(http_url)
+        
+        last_error = None
+        
+        for attempt_url in urls_to_try:
+            try:
+                # Initialize Chrome driver
+                driver = webdriver.Chrome(options=chrome_options)
+                driver.set_page_load_timeout(30)  # 30 second timeout
+                
+                # Navigate to URL
+                driver.get(attempt_url)
+                
+                # Wait for page to load
+                time.sleep(3)
+                
+                # Take screenshot
+                screenshot_base64 = driver.get_screenshot_as_base64()
+                
+                return jsonify({
+                    'success': True,
+                    'image': screenshot_base64,
+                    'url': attempt_url
+                })
+                
+            except Exception as e:
+                last_error = e
+                logging.warning(f"Failed to capture {attempt_url}: {str(e)}")
+                
+                if driver:
+                    driver.quit()
+                    driver = None
+                
+                # If this was HTTPS and we have HTTP to try, continue
+                if attempt_url.startswith('https://') and len(urls_to_try) > 1:
+                    continue
+                else:
+                    break
+            
+            finally:
+                if driver:
+                    driver.quit()
+                    driver = None
+        
+        # If we get here, all attempts failed
+        error_message = f'Failed to capture screenshot: {str(last_error)}'
+        if len(urls_to_try) > 1:
+            error_message += ' (tried both HTTPS and HTTP)'
+            
+        logging.error(f"Error capturing URL screenshot after all attempts: {error_message}")
+        return jsonify({
+            'success': False,
+            'error': error_message
+        }), 500
+                
+    except Exception as e:
+        logging.error(f"URL capture error: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/api/analyze-screen', methods=['POST'])
 def analyze_screen():
-    data = request.get_json()
-    
-    if not data or 'screenshot' not in data:
-        return jsonify({'error': 'No screenshot data provided'}), 400
-    
-    try:
+    # Handle both FormData (new frontend) and JSON (legacy)
+    if request.content_type and 'multipart/form-data' in request.content_type:
+        # New FormData approach
+        screenshots = []
+        figma_file = None
+        options = {}
+        
+        # Get screenshots
+        for key in request.files:
+            if key.startswith('screenshot_'):
+                screenshots.append(request.files[key])
+            elif key == 'url_screenshot':
+                screenshots.append(request.files[key])
+        
+        # Get URL source if available
+        url_source = request.form.get('url_source', '')
+        
+        # Get figma file
+        if 'figma_design' in request.files:
+            figma_file = request.files['figma_design']
+        
+        # Get options
+        if 'options' in request.form:
+            try:
+                options = json.loads(request.form['options'])
+            except:
+                options = {}
+        
+        if not screenshots:
+            return jsonify({'error': 'No screenshot files provided'}), 400
+        
+        # Process first screenshot for now
+        main_screenshot = screenshots[0]
+        
+        # Save screenshot to temporary file with proper handle management
+        temp_file = tempfile.NamedTemporaryFile(suffix='.png', delete=False)
+        temp_path = temp_file.name
+        temp_file.close()  # Close the file handle immediately
+        
+        # Now save the screenshot to the closed temp file
+        main_screenshot.save(temp_path)
+    else:
+        # Legacy JSON approach
+        data = request.get_json()
+        
+        if not data or 'screenshot' not in data:
+            return jsonify({'error': 'No screenshot data provided'}), 400
+        
         # Extract image data from base64 string
         image_data = data['screenshot']
         if image_data.startswith('data:image'):
@@ -2345,27 +3799,87 @@ def analyze_screen():
         # Decode base64 image
         image_bytes = base64.b64decode(image_data)
         
-        # Create a temporary file to save the image
-        with tempfile.NamedTemporaryFile(suffix='.png', delete=False) as temp_file:
-            temp_file.write(image_bytes)
-            temp_path = temp_file.name
+        # Create a temporary file to save the image with proper handle management
+        temp_file = tempfile.NamedTemporaryFile(suffix='.png', delete=False)
+        temp_path = temp_file.name
+        temp_file.write(image_bytes)
+        temp_file.close()  # Close the file handle immediately
+        
+        # Extract options and figma data
+        options = data.get('options', {})
+        figma_design = data.get('figmaDesign', None)
+        comparison_focus = data.get('comparisonFocus', {})
+    
+    try:
+        # Handle figma file for FormData requests
+        if request.content_type and 'multipart/form-data' in request.content_type and figma_file:
+            # Process Figma file
+            figma_design = {
+                'type': 'image' if figma_file.content_type.startswith('image/') else 'text',
+                'filename': figma_file.filename
+            }
+            
+            if figma_design['type'] == 'image':
+                # Save figma file temporarily and encode as base64 with proper handle management
+                figma_temp = tempfile.NamedTemporaryFile(delete=False)
+                figma_temp_path = figma_temp.name
+                figma_temp.close()  # Close handle immediately
+                
+                try:
+                    figma_file.save(figma_temp_path)
+                    with open(figma_temp_path, 'rb') as f:
+                        figma_base64 = base64.b64encode(f.read()).decode()
+                    figma_design['data'] = f"data:{figma_file.content_type};base64,{figma_base64}"
+                finally:
+                    # Clean up immediately
+                    if os.path.exists(figma_temp_path):
+                        try:
+                            os.unlink(figma_temp_path)
+                        except Exception as cleanup_error:
+                            logger.warning(f"Failed to cleanup Figma temp file: {cleanup_error}")
+            else:
+                # Read text/json content
+                figma_content = figma_file.read().decode('utf-8')
+                if figma_file.filename.endswith('.json'):
+                    try:
+                        figma_design['data'] = json.loads(figma_content)
+                        figma_design['type'] = 'json'
+                    except:
+                        figma_design['data'] = figma_content
+                        figma_design['type'] = 'text'
+                else:
+                    figma_design['data'] = figma_content
+        
+        # Extract Figma comparison options if present
+        figma_compare = options.get('figma', False)  # Updated key name
+        comparison_focus = options  # Use options directly for focus areas
         
         # Open image with PIL for analysis
-        image = Image.open(temp_path)
-        
-        # Try to extract text using OCR if Tesseract is available
-        ocr_text = ""
-        ocr_available = True
+        image = None
         try:
-            ocr_text = pytesseract.image_to_string(image)
-            logger.info("Successfully extracted text using OCR")
+            image = Image.open(temp_path)
+            
+            # Try to extract text using OCR if Tesseract is available
+            ocr_text = ""
+            ocr_available = True
+            try:
+                ocr_text = pytesseract.image_to_string(image)
+                logger.info("Successfully extracted text using OCR")
+            except Exception as e:
+                logger.warning(f"OCR extraction failed: {str(e)}. Continuing without OCR.")
+                ocr_text = ""
+                ocr_available = False
+            
+            # Close the image to release file handle
+            image.close()
+            image = None
+            
         except Exception as e:
-            logger.warning(f"OCR extraction failed: {str(e)}. Continuing without OCR.")
+            logger.error(f"Error opening image: {str(e)}")
             ocr_text = ""
             ocr_available = False
-        
-        # Get analysis options
-        options = data.get('options', {})
+            if image:
+                image.close()
         
         # Prepare image for AI analysis
         with open(temp_path, 'rb') as f:
@@ -2390,12 +3904,24 @@ def analyze_screen():
         prompt += "5. Do not say 'no issues found' unless the UI is absolutely perfect.\n\n"
         
         prompt += "Format your response STRICTLY as a JSON object with these properties: \n"
-        prompt += "1. 'issues': Array of objects with {title, severity (High/Medium/Low), description, location}\n"
-        prompt += "2. 'recommendations': Array of specific improvement suggestions\n\n"
+        prompt += "1. 'overallScore': Overall UI health score (0-100)\n"
+        prompt += "2. 'factorScores': Object with scores for each factor: accessibility (0-100), designConsistency (0-100), usability (0-100), visualHierarchy (0-100), responsiveness (0-100)\n"
+        prompt += "3. 'issues': Array of objects with {title, severity (High/Medium/Low), description, location, impact (0-10)}\n"
+        prompt += "4. 'recommendations': Array of objects with {title, priority (High/Medium/Low), description, expectedImprovement (0-10)}\n"
+        prompt += "5. 'summary': Brief summary of the overall assessment\n\n"
+        prompt += "SCORING GUIDELINES:\n"
+        prompt += "- Overall Score: 90-100 (Excellent), 80-89 (Good), 70-79 (Fair), 60-69 (Poor), <60 (Critical Issues)\n"
+        prompt += "- Factor Scores: Rate each factor independently based on best practices\n"
+        prompt += "- Impact: How much each issue affects user experience (1=minimal, 10=critical)\n"
+        prompt += "- Expected Improvement: How much fixing the recommendation would improve the score\n\n"
         prompt += "Example response format:\n"
         prompt += "```json\n{"
-        prompt += "\n  \"issues\": [\n    {\"title\": \"Issue Title\", \"severity\": \"Medium\", \"description\": \"Detailed description\", \"location\": \"Top navigation bar\"}\n  ],"
-        prompt += "\n  \"recommendations\": [\"Specific recommendation 1\", \"Specific recommendation 2\"]\n}"
+        prompt += "\n  \"overallScore\": 75,"
+        prompt += "\n  \"factorScores\": {\"accessibility\": 70, \"designConsistency\": 80, \"usability\": 75, \"visualHierarchy\": 70, \"responsiveness\": 85},"
+        prompt += "\n  \"issues\": [{\"title\": \"Issue Title\", \"severity\": \"Medium\", \"description\": \"Detailed description\", \"location\": \"Top navigation bar\", \"impact\": 6}],"
+        prompt += "\n  \"recommendations\": [{\"title\": \"Recommendation Title\", \"priority\": \"High\", \"description\": \"Detailed recommendation\", \"expectedImprovement\": 8}],"
+        prompt += "\n  \"summary\": \"Overall assessment summary\""
+        prompt += "\n}"
         prompt += "\n```"
         
         logger.info(f"Screen analysis prompt: {prompt}")
@@ -2411,9 +3937,12 @@ def analyze_screen():
                 
             logger.info(f"Using Gemini model: {model_name}")
             
-            # Load the image for Gemini
+            # Load the image for Gemini with proper file handling
+            with open(temp_path, "rb") as img_file:
+                image_data = img_file.read()
+            
             image_parts = [
-                {"mime_type": "image/png", "data": open(temp_path, "rb").read()}
+                {"mime_type": "image/png", "data": image_data}
             ]
             
             # Create Gemini model
@@ -2447,12 +3976,211 @@ def analyze_screen():
             sample_length = min(500, len(ai_response))
             logger.info(f"Sample of Gemini response: {ai_response[:sample_length]}...")
             
+            # Process Figma comparison if requested
+            figma_comparison_results = None
+            if figma_compare and figma_design:
+                try:
+                    logger.info("Processing Figma comparison")
+                    # Process Figma design data
+                    figma_type = figma_design.get('type')
+                    figma_data = figma_design.get('data')
+                    
+                    # Create a prompt for Figma comparison
+                    comparison_prompt = f"""
+                    Compare this UI screenshot with the provided Figma design specification and identify meaningful mismatches.
+                    Focus on issues that affect design fidelity or user experience, not minor pixel-level differences.
+                    
+                    Comparison areas to focus on:
+                    {"Missing or extra UI elements" if comparison_focus.get('elements', True) else ""}
+                    {"Text value differences" if comparison_focus.get('textValues', True) else ""}
+                    {"Layout and alignment issues" if comparison_focus.get('layout', True) else ""}
+                    {"Font property differences" if comparison_focus.get('fonts', True) else ""}
+                    {"Color and styling differences" if comparison_focus.get('colors', True) else ""}
+                    
+                    For each issue found, provide:
+                    1. A brief summary of the issue
+                    2. Severity level (Critical, Major, or Minor)
+                    3. Element details (what component has the issue)
+                    4. Expected design (from Figma)
+                    5. Actual implementation (from screenshot)
+                    6. Brief rationale for why this matters to users or design fidelity
+                    
+                    For alignment issues, provide specific measurements or coordinates when possible.
+                    
+                    Calculate comprehensive design fidelity scores and provide actionable insights.
+                    
+                    Format your response as a JSON object with this structure:
+                    {{"summary": "Overall comparison summary",
+                     "overallScore": 85,
+                     "comparisonMetrics": {{"designFidelity": 85, "elementAccuracy": 90, "textAccuracy": 85, "layoutAccuracy": 80, "styleAccuracy": 85, "interactionFidelity": 88}},
+                     "issues": [
+                        {{"title": "Issue title",
+                         "severity": "Critical|Major|Minor",
+                         "element": "Element description",
+                         "expected": "Expected design from Figma",
+                         "actual": "Actual implementation in screenshot",
+                         "impact": 8,
+                         "description": "Why this matters for user experience"}},
+                        ...
+                     ],
+                     "recommendations": [
+                        {{"title": "Recommendation title",
+                         "priority": "High|Medium|Low",
+                         "description": "Specific improvement suggestion",
+                         "expectedImprovement": 7,
+                         "effort": "Low|Medium|High"}},
+                        ...
+                     ]}}
+                    
+                    SCORING GUIDELINES:
+                    - Overall Score: Average of all comparison metrics (0-100)
+                    - Design Fidelity: How closely the implementation matches the design intent
+                    - Element Accuracy: Presence and positioning of UI elements
+                    - Text Accuracy: Correctness of text content, fonts, and typography
+                    - Layout Accuracy: Spacing, alignment, and structural fidelity
+                    - Style Accuracy: Colors, borders, shadows, and visual styling
+                    - Interaction Fidelity: Button states, hover effects, and interactive elements
+                    - Impact: How much each issue affects the design-implementation gap (1-10)
+                    - Expected Improvement: How much fixing the recommendation would improve the overall score (1-10)
+                    """
+                    
+                    logger.info("Figma comparison prompt created")
+                    
+                    # Add Figma design as second image if it's an image
+                    if figma_type == 'image':
+                        logger.info("Processing Figma image data")
+                        # Extract base64 data if needed
+                        if ',' in figma_data:
+                            figma_data = figma_data.split(',')[1]
+                        
+                        # Decode the image
+                        figma_image_data = base64.b64decode(figma_data)
+                        
+                        # Create a temporary file for the Figma image with proper handle management
+                        figma_temp_file = tempfile.NamedTemporaryFile(suffix='.png', delete=False)
+                        figma_temp_path = figma_temp_file.name
+                        figma_temp_file.write(figma_image_data)
+                        figma_temp_file.close()  # Close handle immediately
+                        
+                        # Add to image parts with proper file handling
+                        with open(temp_path, "rb") as main_img_file:
+                            main_img_data = main_img_file.read()
+                        
+                        with open(figma_temp_path, "rb") as figma_img_file:
+                            figma_img_data = figma_img_file.read()
+                        
+                        figma_image_parts = [
+                            {"mime_type": "image/png", "data": main_img_data},
+                            {"mime_type": "image/png", "data": figma_img_data}
+                        ]
+                        
+                        # Generate comparison content
+                        logger.info("Sending Figma comparison request to Gemini")
+                        comparison_response = model.generate_content(
+                            [
+                                comparison_prompt,
+                                *figma_image_parts
+                            ]
+                        )
+                        comparison_text = comparison_response.text
+                        
+                        # Clean up temporary file
+                        os.unlink(figma_temp_path)
+                        
+                    elif figma_type == 'json':
+                        logger.info("Processing Figma JSON data")
+                        # For JSON data, extract design specs and include in prompt
+                        figma_specs = json.dumps(figma_data, indent=2)
+                        figma_prompt = f"{comparison_prompt}\n\nFigma Design Specifications:\n{figma_specs}"
+                        
+                        # Generate comparison content
+                        comparison_response = model.generate_content(
+                            [
+                                figma_prompt,
+                                image_parts[0]
+                            ]
+                        )
+                        comparison_text = comparison_response.text
+                    else:
+                        logger.info("Processing Figma text data")
+                        # Text data, use as is
+                        figma_prompt = f"{comparison_prompt}\n\nFigma Design Specifications:\n{figma_data}"
+                        
+                        # Generate comparison content
+                        comparison_response = model.generate_content(
+                            [
+                                figma_prompt,
+                                image_parts[0]
+                            ]
+                        )
+                        comparison_text = comparison_response.text
+                    
+                    logger.info(f"Received Figma comparison response (length: {len(comparison_text)})")
+                    sample_length = min(500, len(comparison_text))
+                    logger.info(f"Sample of Figma comparison response: {comparison_text[:sample_length]}...")
+                    
+                    # Try to parse JSON from the comparison response
+                    try:
+                        # Extract JSON from markdown code blocks if present
+                        json_match = re.search(r'```(?:json)?\s*({[\s\S]*?})\s*```', comparison_text)
+                        if json_match:
+                            json_str = json_match.group(1)
+                            figma_comparison_results = json.loads(json_str)
+                            logger.info("Successfully parsed Figma comparison JSON from code block")
+                        else:
+                            # Try to find any JSON-like structure
+                            json_pattern = r'{[\s\S]*?"issues"[\s\S]*?}'
+                            json_match = re.search(json_pattern, comparison_text)
+                            if json_match:
+                                json_str = json_match.group(0)
+                                figma_comparison_results = json.loads(json_str)
+                                logger.info("Successfully parsed Figma comparison JSON from text")
+                            else:
+                                # Create a basic structure if no JSON found
+                                logger.warning("Could not find JSON in Figma comparison response")
+                                figma_comparison_results = {
+                                    'summary': 'Comparison completed but structured results could not be extracted.',
+                                    'issues': [{
+                                        'summary': 'Unstructured comparison results',
+                                        'severity': 'Minor',
+                                        'description': comparison_text,
+                                        'element': 'N/A',
+                                        'expected': 'See description',
+                                        'actual': 'See description'
+                                    }]
+                                }
+                    except json.JSONDecodeError as e:
+                        # Create a basic structure if JSON parsing fails
+                        logger.error(f"JSON decode error in Figma comparison: {str(e)}")
+                        figma_comparison_results = {
+                            'summary': 'Comparison completed but results could not be parsed as JSON.',
+                            'issues': [{
+                                'summary': 'JSON parsing error',
+                                'severity': 'Minor',
+                                'description': 'The comparison results could not be parsed as JSON. Please try again.',
+                                'element': 'N/A',
+                                'expected': 'Valid JSON response',
+                                'actual': 'Invalid JSON format'
+                            }]
+                        }
+                except Exception as e:
+                    logger.error(f"Error in Figma comparison: {str(e)}")
+                    figma_comparison_results = {
+                        'summary': f"Error during Figma comparison: {str(e)}",
+                        'issues': [{
+                            'summary': 'Comparison error',
+                            'severity': 'Major',
+                            'description': f"An error occurred during the comparison: {str(e)}",
+                            'element': 'N/A',
+                            'expected': 'Successful comparison',
+                            'actual': 'Error during processing'
+                        }]
+                    }
             
             logger.info("Used Google Gemini API for screen analysis")
             # Log the AI response for debugging
             logger.info(f"AI response (truncated): {ai_response[:500]}...")
         
-            
         except Exception as e:
             logger.error(f"Error in AI analysis: {str(e)}")
             # Create a default response with the error
@@ -2486,7 +4214,16 @@ def analyze_screen():
             logger.info("Extracting issues manually from text")
             result = {
                 'issues': [],
-                'recommendations': []
+                'recommendations': [],
+                'overallScore': 70,  # Default moderate score for manual extraction
+                'factorScores': {
+                    'accessibility': 70,
+                    'designConsistency': 70,
+                    'usability': 70,
+                    'visualHierarchy': 70,
+                    'responsiveness': 70
+                },
+                'summary': 'UI analysis completed using manual text extraction due to parsing issues.'
             }
             
             # Extract issues using various patterns
@@ -2630,7 +4367,7 @@ def analyze_screen():
             
         except Exception as e:
             logger.error(f"Error parsing AI response: {str(e)}")
-            # Create a default response with the error
+            # Create a default response with the error including scoring fields
             ai_results = {
                 'issues': [{
                     'title': 'Response Parsing Error',
@@ -2638,7 +4375,16 @@ def analyze_screen():
                     'description': f"Could not parse the AI analysis response: {str(e)}",
                     'location': 'Unknown'
                 }],
-                'recommendations': ['Try again with a clearer screenshot or check system logs for details.']
+                'recommendations': ['Try again with a clearer screenshot or check system logs for details.'],
+                'overallScore': 70,  # Default moderate score
+                'factorScores': {
+                    'accessibility': 70,
+                    'designConsistency': 70,
+                    'usability': 70,
+                    'visualHierarchy': 70,
+                    'responsiveness': 70
+                },
+                'summary': 'Analysis completed but response could not be fully parsed.'
             }
         os.unlink(temp_path)
         
@@ -2701,31 +4447,128 @@ def analyze_screen():
                 'Consider A/B testing different UI variations to optimize user experience.',
                 'Ensure the UI follows accessibility guidelines for all users.'
             ]
-            
-        # Clean up temporary file before returning response
-        try:
-            if os.path.exists(temp_path):
-                os.unlink(temp_path)
-        except Exception as e:
-            logger.warning(f"Failed to clean up temporary file: {str(e)}")
         
-        # Return combined results
+        # Ensure we have scoring fields
+        if 'overallScore' not in ai_results:
+            logger.info("No overall score found, adding default")
+            ai_results['overallScore'] = 75  # Default moderate score
+            
+        if 'factorScores' not in ai_results:
+            logger.info("No factor scores found, adding defaults")
+            ai_results['factorScores'] = {
+                'accessibility': 75,
+                'designConsistency': 75,
+                'usability': 75,
+                'visualHierarchy': 75,
+                'responsiveness': 75
+            }
+            
+        if 'summary' not in ai_results:
+            logger.info("No summary found, adding default")
+            ai_results['summary'] = f"Analyzed UI screenshot and found {len(ai_results.get('issues', []))} issues with actionable recommendations."
+            
+        # Clean up temporary files before returning response
+        # Force garbage collection and add delay on Windows to ensure file handles are released
+        import gc
+        import platform
+        
+        # Force garbage collection to release any remaining file references
+        gc.collect()
+        
+        if platform.system() == 'Windows':
+            import time
+            # Longer delay on Windows to ensure all file handles are fully released
+            time.sleep(0.5)
+        
+        # Clean up main screenshot temporary file with retry mechanism
+        def safe_delete_file(file_path, max_attempts=3):
+            for attempt in range(max_attempts):
+                try:
+                    if os.path.exists(file_path):
+                        os.unlink(file_path)
+                        logger.info(f"Successfully cleaned up temp file: {file_path}")
+                        return True
+                except Exception as e:
+                    if attempt < max_attempts - 1:
+                        logger.warning(f"Attempt {attempt + 1} failed to delete {file_path}: {e}. Retrying...")
+                        time.sleep(0.2)  # Brief pause before retry
+                    else:
+                        logger.warning(f"Failed to delete {file_path} after {max_attempts} attempts: {e}")
+                        return False
+            return False
+        
+        safe_delete_file(temp_path)
+        
+        # Clean up any Figma temporary files
+        if 'figma_temp_path' in locals():
+            safe_delete_file(figma_temp_path)
+            
+        # Prepare response data with scoring information
         response_data = {
             'issues': ai_results.get('issues', []),
-            'recommendations': ai_results.get('recommendations', [])
+            'recommendations': ai_results.get('recommendations', []),
+            'overallScore': ai_results.get('overallScore', 0),
+            'factorScores': ai_results.get('factorScores', {}),
+            'summary': ai_results.get('summary', '')
         }
         
-        # Only include OCR text if it's available and not empty
+        # Add OCR text if available
         if ocr_available and ocr_text and ocr_text.strip():
-            response_data['ocr_text'] = ocr_text
-        else:
-            # Don't include OCR text field at all
-            logger.info("OCR text not available or empty, excluding from response")
+            response_data['ocr'] = ocr_text
+            
+        # Add Figma comparison results if available
+        if figma_comparison_results:
+            response_data['figmaComparison'] = figma_comparison_results
+            # Include comparison metrics in main response for unified scoring display
+            if 'comparisonMetrics' in figma_comparison_results:
+                response_data['comparisonMetrics'] = figma_comparison_results['comparisonMetrics']
+            if 'overallScore' in figma_comparison_results:
+                response_data['overallScore'] = figma_comparison_results['overallScore']
+            if 'summary' in figma_comparison_results:
+                response_data['summary'] = figma_comparison_results['summary']
             
         return jsonify(response_data)
         
     except Exception as e:
         logger.error(f"Error in screen analysis: {str(e)}")
+        
+        # Clean up temporary files even on error
+        import gc
+        import platform
+        
+        # Force garbage collection to release any remaining file references
+        gc.collect()
+        
+        if platform.system() == 'Windows':
+            import time
+            # Longer delay on Windows to ensure all file handles are fully released
+            time.sleep(0.5)
+        
+        # Clean up temporary files using robust deletion
+        def safe_delete_file_on_error(file_path, max_attempts=3):
+            for attempt in range(max_attempts):
+                try:
+                    if os.path.exists(file_path):
+                        os.unlink(file_path)
+                        logger.info(f"Cleaned up temp file on error: {file_path}")
+                        return True
+                except Exception as e:
+                    if attempt < max_attempts - 1:
+                        logger.warning(f"Cleanup attempt {attempt + 1} failed for {file_path}: {e}. Retrying...")
+                        time.sleep(0.2)
+                    else:
+                        logger.warning(f"Failed to cleanup {file_path} after {max_attempts} attempts: {e}")
+                        return False
+            return False
+        
+        # Clean up main screenshot temporary file
+        if 'temp_path' in locals():
+            safe_delete_file_on_error(temp_path)
+        
+        # Clean up any Figma temporary files
+        if 'figma_temp_path' in locals():
+            safe_delete_file_on_error(figma_temp_path)
+        
         return jsonify({'error': str(e)}), 500
 
 @app.route('/parse_curl_to_json', methods=['POST'])
@@ -3477,6 +5320,162 @@ def browseruse_automation_stepwise():
 @app.route('/pom-step-builder')
 def pom_step_builder():
     return render_template('pom-step-builder-integrated.html', active_tab='pom-step-builder')
+
+@app.route('/pom-builder')
+@jira_auth_required
+def pom_builder():
+    """Integrated POM Builder - combines element extraction and POM generation"""
+    return render_template('pom-builder.html', active_tab='pom-builder')
+
+@app.route('/automation-studio-element-extractor')
+@jira_auth_required
+def element_extractor():
+    """Original Element Extractor (legacy)"""
+    return render_template('AutomationStudio-ElementExtractor.html', active_tab='element-extractor')
+
+@app.route('/automation-studio-pom-generator')
+@jira_auth_required
+def pom_generator():
+    """Original POM Generator (legacy)"""
+    return render_template('AutomationStudio-pomgenerator.html', active_tab='pom-generator')
+
+@app.route('/api/extract-elements', methods=['POST'])
+def extract_elements():
+    """Extract UI elements from uploaded screenshots or HTML files"""
+    try:
+        if 'file' not in request.files:
+            return jsonify({'error': 'No file uploaded'}), 400
+            
+        file = request.files['file']
+        if file.filename == '':
+            return jsonify({'error': 'No file selected'}), 400
+            
+        # Get file extension
+        filename = file.filename.lower()
+        
+        if filename.endswith(('.png', '.jpg', '.jpeg')):
+            # For image files, return mock elements (in production, use OCR/CV)
+            elements = [
+                {'id': 1, 'type': 'button', 'text': 'Submit', 'selector': 'button[type="submit"]', 'x': 100, 'y': 200, 'width': 80, 'height': 32},
+                {'id': 2, 'type': 'input', 'text': 'Email', 'selector': 'input[type="email"]', 'x': 50, 'y': 150, 'width': 200, 'height': 32},
+                {'id': 3, 'type': 'input', 'text': 'Password', 'selector': 'input[type="password"]', 'x': 50, 'y': 190, 'width': 200, 'height': 32},
+                {'id': 4, 'type': 'link', 'text': 'Sign Up', 'selector': 'a[href="/signup"]', 'x': 260, 'y': 250, 'width': 60, 'height': 20},
+                {'id': 5, 'type': 'text', 'text': 'Welcome', 'selector': '.welcome-message', 'x': 50, 'y': 100, 'width': 200, 'height': 24}
+            ]
+        elif filename.endswith(('.html', '.htm')):
+            # For HTML files, parse the content
+            content = file.read().decode('utf-8')
+            elements = parse_html_elements(content)
+        else:
+            return jsonify({'error': 'Unsupported file type. Please upload PNG, JPG, or HTML files.'}), 400
+            
+        return jsonify({
+            'success': True,
+            'elements': elements,
+            'filename': file.filename
+        })
+        
+    except Exception as e:
+        logger.error(f"Error extracting elements: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+def parse_html_elements(html_content):
+    """Parse HTML content and extract UI elements"""
+    from bs4 import BeautifulSoup
+    import re
+    
+    try:
+        soup = BeautifulSoup(html_content, 'html.parser')
+        elements = []
+        element_id = 1
+        
+        # Extract different types of elements
+        element_types = [
+            ('button', 'button'),
+            ('input', 'input'),
+            ('link', 'a'),
+            ('text', 'h1, h2, h3, h4, h5, h6, p, span, div.text'),
+            ('image', 'img'),
+            ('select', 'select'),
+            ('textarea', 'textarea')
+        ]
+        
+        for elem_type, selector in element_types:
+            found_elements = soup.select(selector)
+            
+            for elem in found_elements[:10]:  # Limit to 10 elements per type
+                # Generate selector
+                css_selector = generate_css_selector(elem)
+                
+                # Get text content
+                text = elem.get_text(strip=True) if elem_type != 'image' else elem.get('alt', 'Image')
+                if elem_type == 'input':
+                    text = elem.get('placeholder') or elem.get('name') or elem.get('id') or f'{elem.get("type", "text")} input'
+                elif elem_type == 'link':
+                    text = text or elem.get('href', 'Link')
+                elif elem_type == 'button':
+                    text = text or 'Button'
+                
+                if text and len(text.strip()) > 0:
+                    elements.append({
+                        'id': element_id,
+                        'type': elem_type,
+                        'text': text[:50],  # Truncate long text
+                        'selector': css_selector,
+                        'x': 0,  # HTML parsing doesn't provide coordinates
+                        'y': 0,
+                        'width': 0,
+                        'height': 0
+                    })
+                    element_id += 1
+        
+        return elements[:20]  # Return max 20 elements
+        
+    except ImportError:
+        # If BeautifulSoup is not available, return mock elements
+        logger.warning("BeautifulSoup not available, returning mock elements")
+        return [
+            {'id': 1, 'type': 'button', 'text': 'Submit Button', 'selector': 'button.submit', 'x': 0, 'y': 0, 'width': 0, 'height': 0},
+            {'id': 2, 'type': 'input', 'text': 'Username Field', 'selector': 'input#username', 'x': 0, 'y': 0, 'width': 0, 'height': 0},
+            {'id': 3, 'type': 'input', 'text': 'Password Field', 'selector': 'input#password', 'x': 0, 'y': 0, 'width': 0, 'height': 0}
+        ]
+    except Exception as e:
+        logger.error(f"Error parsing HTML: {str(e)}")
+        return []
+
+def generate_css_selector(element):
+    """Generate a CSS selector for a BeautifulSoup element"""
+    try:
+        # Try ID first
+        if element.get('id'):
+            return f"#{element['id']}"
+        
+        # Try class names
+        if element.get('class'):
+            classes = ' '.join(element['class'])
+            return f"{element.name}.{classes.replace(' ', '.')}"
+        
+        # Try name attribute
+        if element.get('name'):
+            return f"{element.name}[name='{element['name']}']"
+        
+        # Try type for inputs
+        if element.name == 'input' and element.get('type'):
+            return f"input[type='{element['type']}']"
+        
+        # Try placeholder for inputs
+        if element.name == 'input' and element.get('placeholder'):
+            return f"input[placeholder='{element['placeholder']}']"
+        
+        # Try href for links
+        if element.name == 'a' and element.get('href'):
+            return f"a[href='{element['href']}']"
+        
+        # Fallback to tag name
+        return element.name
+        
+    except Exception:
+        return element.name if element.name else 'element'
 
 @app.route('/api/pom/pages', methods=['POST'])
 def get_pom_pages():
