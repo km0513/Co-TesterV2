@@ -9,6 +9,8 @@ os.environ["PLAYWRIGHT_HEADLESS"] = "false"  # browseruse needs visible browser
 from dotenv import load_dotenv
 load_dotenv()  # This will load variables from .env into os.environ
 import logging
+from datetime import datetime, timedelta
+from collections import defaultdict
 
 # Configure logging
 logging.basicConfig(
@@ -458,6 +460,145 @@ else:
     app.config['JIRA_CLIENT_SECRET'] = os.environ.get('JIRA_CLIENT_SECRET', 'JIRA_CLIENT_SECRET')
     app.config['JIRA_CALLBACK_URL'] = os.environ.get('JIRA_CALLBACK_URL', 'JIRA_CALLBACK_URL')
 
+# LLM Rate Limiting Configuration
+DAILY_LLM_LIMIT = int(os.environ.get('DAILY_LLM_LIMIT', '20'))  # 20 calls per user per day
+user_llm_usage = defaultdict(lambda: {'count': 0, 'date': None})
+
+def get_user_identifier():
+    """Get a unique identifier for the current user"""
+    # Try to get Jira user email first (most reliable for authenticated users)
+    user_email = session.get('jira_user_email')
+    if user_email and user_email != 'Connected to Jira':
+        return user_email
+    
+    # Check if user has Jira access token (they're authenticated but email might not be set yet)
+    access_token = session.get('jira_access_token')
+    if access_token:
+        # Try to get user info from Jira to get the email
+        try:
+            # If they have an access token, they should have a jira_user_name too
+            user_name = session.get('jira_user_name')
+            if user_name:
+                # Create a stable identifier based on their Jira user name
+                # This should be consistent across login sessions
+                return f"jira_user_{user_name.lower().replace(' ', '_')}"
+        except:
+            pass
+    
+    # For truly anonymous users, generate or get session ID
+    if 'persistent_user_id' not in session:
+        import uuid
+        session['persistent_user_id'] = f"user_{uuid.uuid4().hex[:12]}"
+    
+    return session.get('persistent_user_id')
+
+def migrate_user_usage_if_needed():
+    """Migrate usage from old session ID to new stable identifier if user just authenticated"""
+    current_id = get_user_identifier()
+    
+    # If current ID is email or jira-based, check for old session data to migrate
+    if '@' in current_id or current_id.startswith('jira_user_'):
+        # Look for any session-based usage data for this session that we can migrate
+        old_session_id = session.get('persistent_user_id')
+        if old_session_id and old_session_id != current_id and old_session_id in user_llm_usage:
+            # Migrate the usage data from the old session ID to the new stable ID
+            old_data = user_llm_usage[old_session_id]
+            today = datetime.now().strftime('%Y-%m-%d')
+            
+            # Only migrate if it's from today
+            if old_data.get('date') == today:
+                current_data = user_llm_usage.get(current_id, {'count': 0, 'date': today})
+                # Take the maximum count to avoid losing usage
+                current_data['count'] = max(current_data.get('count', 0), old_data['count'])
+                current_data['date'] = today
+                user_llm_usage[current_id] = current_data
+                
+                # Remove the old session data
+                del user_llm_usage[old_session_id]
+                logger.info(f"Migrated LLM usage from {old_session_id} to {current_id}: {current_data['count']} requests")
+
+def get_user_display_info():
+    """Get user information for display purposes"""
+    user_id = get_user_identifier()
+    user_email = session.get('jira_user_email')
+    
+    if user_email and user_email != 'Connected to Jira':
+        return {
+            'user_id': user_id,
+            'display_name': user_email,
+            'user_type': 'authenticated',
+            'jira_connected': True
+        }
+    else:
+        return {
+            'user_id': user_id,
+            'display_name': f"Anonymous User ({user_id})",
+            'user_type': 'anonymous',
+            'jira_connected': False
+        }
+
+def check_and_increment_llm_usage(user_id=None):
+    """Check if user has exceeded daily LLM limit and increment usage"""
+    if user_id is None:
+        user_id = get_user_identifier()
+    
+    # Try to migrate old usage data if user just authenticated
+    migrate_user_usage_if_needed()
+    
+    today = datetime.now().strftime('%Y-%m-%d')
+    user_data = user_llm_usage[user_id]
+    
+    # Reset count if it's a new day
+    if user_data['date'] != today:
+        user_data['count'] = 0
+        user_data['date'] = today
+    
+    # Check if limit exceeded
+    if user_data['count'] >= DAILY_LLM_LIMIT:
+        return False, user_data['count']
+    
+    # Increment usage
+    user_data['count'] += 1
+    logger.info(f"LLM usage for user {user_id}: {user_data['count']}/{DAILY_LLM_LIMIT}")
+    return True, user_data['count']
+
+def get_user_llm_usage(user_id=None):
+    """Get current LLM usage for user"""
+    if user_id is None:
+        user_id = get_user_identifier()
+    
+    # Try to migrate old usage data if user just authenticated
+    migrate_user_usage_if_needed()
+    
+    today = datetime.now().strftime('%Y-%m-%d')
+    user_data = user_llm_usage[user_id]
+    
+    # Reset count if it's a new day
+    if user_data['date'] != today:
+        user_data['count'] = 0
+        user_data['date'] = today
+    
+    return user_data['count'], DAILY_LLM_LIMIT
+
+def llm_rate_limit(f):
+    """Decorator to apply LLM rate limiting to endpoints"""
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        allowed, current_count = check_and_increment_llm_usage()
+        if not allowed:
+            logger.warning(f"LLM rate limit exceeded for user {get_user_identifier()}: {current_count}/{DAILY_LLM_LIMIT}")
+            return jsonify({
+                'error': f'Daily LLM usage limit exceeded ({DAILY_LLM_LIMIT} calls per day). Current usage: {current_count}',
+                'rate_limit': {
+                    'limit': DAILY_LLM_LIMIT,
+                    'used': current_count,
+                    'remaining': 0,
+                    'reset_time': 'Next day at 00:00 UTC'
+                }
+            }), 429  # Too Many Requests
+        return f(*args, **kwargs)
+    return decorated_function
+
 google = oauth.register(
     name='google',
     client_id=app.config['GOOGLE_CLIENT_ID'],
@@ -600,10 +741,115 @@ def home_redirect():
 def download_logo():
     return render_template('download-logo.html')
 
+@app.route('/api-co-test')
+@jira_auth_required
+def api_co_test():
+    return render_template('api.html', active_tab='api')
+
+# Keep old route for backward compatibility
 @app.route('/code')
 @jira_auth_required
 def code():
-    return render_template('api.html', active_tab='api')
+    return redirect('/api-co-test', code=301)
+
+def detect_graphql_request(url, headers, body):
+    """Detect if a cURL request is a GraphQL request"""
+    # Check URL patterns
+    url_indicators = [
+        '/graphql' in url.lower(),
+        url.lower().endswith('/graphql'),
+        '/gql' in url.lower(),
+        url.lower().endswith('/gql')
+    ]
+    
+    # Check headers for GraphQL content type or specific headers
+    header_indicators = []
+    if headers:
+        content_type = headers.get('Content-Type', '').lower()
+        header_indicators = [
+            'application/json' in content_type and any(url_indicators),
+            any('graphql' in str(v).lower() for v in headers.values())
+        ]
+    
+    # Check body for GraphQL query structure
+    body_indicators = []
+    if body:
+        try:
+            # Try to parse as JSON and check for GraphQL structure
+            import json
+            body_json = json.loads(body)
+            body_indicators = [
+                'query' in body_json,
+                'mutation' in body_json,
+                any(key in body_json for key in ['query', 'mutation', 'subscription'])
+            ]
+        except (json.JSONDecodeError, TypeError):
+            # Check raw body for GraphQL keywords
+            body_lower = body.lower()
+            body_indicators = [
+                'query' in body_lower and ('{' in body_lower or 'mutation' in body_lower),
+                'mutation' in body_lower and '{' in body_lower,
+                'subscription' in body_lower and '{' in body_lower
+            ]
+    
+    # Return True if any strong indicators are present
+    return any(url_indicators) or any(header_indicators) or any(body_indicators)
+
+def process_graphql_request(body, headers):
+    """Process and validate GraphQL request body and headers"""
+    import json
+    
+    # Ensure Content-Type is set for GraphQL
+    if 'Content-Type' not in headers:
+        headers['Content-Type'] = 'application/json'
+    
+    if body:
+        try:
+            # Try to parse and validate the JSON structure
+            body_json = json.loads(body)
+            
+            # Ensure the body has a proper GraphQL structure
+            if 'query' not in body_json and 'mutation' not in body_json and 'subscription' not in body_json:
+                # If raw GraphQL query is provided, wrap it in proper JSON structure
+                if isinstance(body_json, str) or (isinstance(body_json, dict) and len(body_json) == 0):
+                    body_json = {'query': body.strip('"\'') if isinstance(body, str) else str(body_json)}
+            
+            # Ensure variables field exists if not present
+            if 'variables' not in body_json:
+                body_json['variables'] = {}
+                
+            # Convert back to JSON string
+            body = json.dumps(body_json)
+            
+        except json.JSONDecodeError:
+            # If body is not valid JSON, try to construct proper GraphQL request
+            body_clean = body.strip().strip('"\'')
+            if body_clean.startswith(('query', 'mutation', 'subscription')):
+                body = json.dumps({
+                    'query': body_clean,
+                    'variables': {}
+                })
+    
+    return body, headers
+
+def format_graphql_response(json_data):
+    """Format GraphQL response with proper error highlighting"""
+    import json
+    
+    # Check if this is a GraphQL response with errors
+    if isinstance(json_data, dict) and 'errors' in json_data:
+        # Highlight errors in the response
+        formatted_response = {
+            "🚨 GraphQL Errors": json_data.get('errors', []),
+            "data": json_data.get('data'),
+            "extensions": json_data.get('extensions')
+        }
+        # Remove None values
+        formatted_response = {k: v for k, v in formatted_response.items() if v is not None}
+        return json.dumps(formatted_response, indent=2)
+    else:
+        # Standard JSON formatting for successful responses
+        return json.dumps(json_data, indent=2)
 
 @app.route('/execute_curl', methods=['POST'])
 def execute_curl():
@@ -693,8 +939,15 @@ def execute_curl():
             if not url:
                 return jsonify({'error': 'No URL found in curl command'}), 400
                 
+            # Detect if this is a GraphQL request
+            is_graphql_request = detect_graphql_request(url, headers, body)
+            
+            # Handle GraphQL-specific processing
+            if is_graphql_request:
+                body, headers = process_graphql_request(body, headers)
+            
             # Debug logging
-            logger.info(f"Parsed cURL - Method: {method}, URL: {url}, Body length: {len(body) if body else 0}")
+            logger.info(f"Parsed cURL - Method: {method}, URL: {url}, Body length: {len(body) if body else 0}, GraphQL: {is_graphql_request}")
             
             # Check for --location flag (follow redirects)
             follow_redirects = '--location' in command or '-L' in command
@@ -720,7 +973,12 @@ def execute_curl():
                 # Try to parse as JSON and format it
                 if response.headers.get('content-type', '').startswith('application/json'):
                     json_data = response.json()
-                    response_body = json.dumps(json_data, indent=2)
+                    
+                    # Special handling for GraphQL responses
+                    if is_graphql_request:
+                        response_body = format_graphql_response(json_data)
+                    else:
+                        response_body = json.dumps(json_data, indent=2)
             except:
                 # If JSON parsing fails, keep as text
                 pass
@@ -1110,10 +1368,16 @@ def generate_e2e_zip():
         download_name='e2e-tests.zip'
     )
 
+@app.route('/test-generator')
+@jira_auth_required
+def test_generator():
+    return render_template('manual-test-generator.html', active_tab='manual', is_development=FLASK_ENV == 'development')
+
+# Keep old route for backward compatibility
 @app.route('/manual-co-test')
 @jira_auth_required
 def manual_co_test():
-    return render_template('manual-test-generator.html', active_tab='manual')
+    return redirect('/test-generator', code=301)
 
 @app.route('/api/scheduled-jobs', methods=['GET', 'POST'])
 def handle_scheduled_jobs():
@@ -2290,6 +2554,7 @@ def chunk_text(text, chunk_size=15000, overlap=1000):
         start += chunk_size - overlap  # overlap to preserve context continuity
 
 @app.route('/api/generate-testcases', methods=['POST'])
+@llm_rate_limit
 def generate_testcases():
     import logging
     import json
@@ -2684,7 +2949,7 @@ def jira_oauth_callback():
         session['jira_login_time'] = time.time()
         session['show_welcome_message'] = True
     
-    return redirect(url_for('manual_co_test'))
+    return redirect(url_for('index'))
 
 def refresh_jira_token():
     """Refresh the Jira access token using the refresh token."""
@@ -2926,10 +3191,16 @@ def fetch_jira_issues():
             'details': str(e)
         }), 500
 
+@app.route('/data-generator')
+@jira_auth_required
+def data_generator():
+    return render_template('data-generation.html')
+
+# Keep old route for backward compatibility
 @app.route('/data')
 @jira_auth_required
-def data_generation():
-    return render_template('data-generation.html')
+def data():
+    return redirect('/data-generator', code=301)
 
 # Jira API endpoints
 
@@ -3273,11 +3544,17 @@ def add_jira_time_entry():
         }
     })
 
+@app.route('/my-details')
+@jira_auth_required
+def my_details():
+    """My Details page - shows user profile, Jira issues, and worklog activity"""
+    return render_template('my-jira.html', active_tab='jira')
+
+# Keep old route for backward compatibility
 @app.route('/my-jira')
 @jira_auth_required
 def my_jira():
-    """My Details page - shows user profile, Jira issues, and worklog activity"""
-    return render_template('my-jira.html', active_tab='jira')
+    return redirect('/my-details', code=301)
 
 def extract_issues_manually(text):
     """
@@ -3408,10 +3685,16 @@ def find_potential_misspellings(text):
     
     return potential_misspellings[:5]  # Limit to 5 potential issues
 
+@app.route('/ui-analyzer')
+@jira_auth_required
+def ui_analyzer():
+    return render_template('screen-analysis-redesigned.html', active_tab='screen-analysis')
+
+# Keep old route for backward compatibility
 @app.route('/screen-analysis')
 @jira_auth_required
 def screen_analysis():
-    return render_template('screen-analysis-redesigned.html', active_tab='screen-analysis')
+    return redirect('/ui-analyzer', code=301)
 
 @app.route('/api/rest/execute', methods=['POST'])
 def execute_rest_request():
@@ -3741,6 +4024,7 @@ def capture_url():
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/api/analyze-screen', methods=['POST'])
+@llm_rate_limit
 def analyze_screen():
     # Handle both FormData (new frontend) and JSON (legacy)
     if request.content_type and 'multipart/form-data' in request.content_type:
@@ -3789,7 +4073,7 @@ def analyze_screen():
         
         if not data or 'screenshot' not in data:
             return jsonify({'error': 'No screenshot data provided'}), 400
-        
+    
         # Extract image data from base64 string
         image_data = data['screenshot']
         if image_data.startswith('data:image'):
@@ -3804,7 +4088,6 @@ def analyze_screen():
         temp_path = temp_file.name
         temp_file.write(image_bytes)
         temp_file.close()  # Close the file handle immediately
-        
         # Extract options and figma data
         options = data.get('options', {})
         figma_design = data.get('figmaDesign', None)
@@ -3869,7 +4152,10 @@ def analyze_screen():
                 logger.warning(f"OCR extraction failed: {str(e)}. Continuing without OCR.")
                 ocr_text = ""
                 ocr_available = False
-            
+        except Exception as e:
+            logger.error(f"Error opening image: {str(e)}")
+            return jsonify({'error': 'Failed to process image'}), 500
+        
             # Close the image to release file handle
             image.close()
             image = None
@@ -4447,7 +4733,7 @@ def analyze_screen():
                 'Consider A/B testing different UI variations to optimize user experience.',
                 'Ensure the UI follows accessibility guidelines for all users.'
             ]
-        
+            
         # Ensure we have scoring fields
         if 'overallScore' not in ai_results:
             logger.info("No overall score found, adding default")
@@ -4698,6 +4984,10 @@ def disconnect_jira():
 @app.route('/api/jira/create-subtasks', methods=['POST'])
 def create_jira_subtasks():
     """Create subtasks in Jira for each test case"""
+    # Check if feature is enabled (development mode only)
+    if FLASK_ENV != 'development':
+        return jsonify({'error': 'Create subtasks feature is only available in development mode.'}), 403
+    
     # Check if user is authenticated with Jira
     access_token = session.get('jira_access_token')
     cloud_id = session.get('jira_cloud_id')
@@ -5042,6 +5332,7 @@ def step_to_description(step):
         return f"{action}: {step}" if action else str(step)
 
 @app.route('/api/browseruse/navigation', methods=['POST'])
+@llm_rate_limit
 def browseruse_navigation():
     print("DEBUG: /api/browseruse/navigation endpoint was called")
     import os
@@ -5673,6 +5964,7 @@ def get_pom_functions():
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/pom/generate-steps', methods=['POST'])
+@llm_rate_limit
 def generate_ai_steps():
     data = request.json
     steps = data.get('steps')
@@ -5954,6 +6246,7 @@ def extract_text_from_document():
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/browseruse/navigation', methods=['POST'])
+@llm_rate_limit
 def browseruse_navigation_executor():
     """Handle browser automation requests from the frontend"""
     logger.info("Browser automation endpoint called")
@@ -6104,6 +6397,139 @@ def browseruse_navigation_executor():
 def browseruse_automation_page():
     """Serve the browseruse automation page"""
     return render_template('browseruse-automation-stepwise.html')
+
+@app.route('/api/llm-usage', methods=['GET'])
+def check_llm_usage():
+    """Check current LLM usage for the user"""
+    try:
+        user_id = get_user_identifier()
+        current_usage, limit = get_user_llm_usage()
+        remaining = max(0, limit - current_usage)
+        
+        user_info = get_user_display_info()
+        return jsonify({
+            'user': user_info,
+            'usage': {
+                'used': current_usage,
+                'limit': limit,
+                'remaining': remaining,
+                'percentage': (current_usage / limit) * 100 if limit > 0 else 0
+            },
+            'reset_time': 'Next day at 00:00 UTC',
+            'date': datetime.now().strftime('%Y-%m-%d')
+        })
+    except Exception as e:
+        logger.error(f"Error checking LLM usage: {str(e)}")
+        return jsonify({'error': 'Failed to check LLM usage'}), 500
+
+@app.route('/api/llm-usage/reset', methods=['POST'])
+def reset_llm_usage():
+    """Reset LLM usage for the current user (admin only in production)"""
+    try:
+        # Only allow reset in development mode for now
+        if FLASK_ENV != 'development':
+            return jsonify({'error': 'Usage reset is only available in development mode'}), 403
+        
+        user_id = get_user_identifier()
+        today = datetime.now().strftime('%Y-%m-%d')
+        
+        # Reset the user's usage
+        user_llm_usage[user_id] = {'count': 0, 'date': today}
+        
+        logger.info(f"LLM usage reset for user {user_id}")
+        user_info = get_user_display_info()
+        return jsonify({
+            'message': 'LLM usage has been reset successfully',
+            'user': user_info,
+            'usage': {
+                'new_usage': 0,
+                'limit': DAILY_LLM_LIMIT,
+                'remaining': DAILY_LLM_LIMIT
+            },
+            'reset_time': datetime.now().strftime('%Y-%m-%d %H:%M:%S UTC')
+        })
+    except Exception as e:
+        logger.error(f"Error resetting LLM usage: {str(e)}")
+        return jsonify({'error': 'Failed to reset LLM usage'}), 500
+
+@app.route('/api/llm-usage/user/<user_id>', methods=['GET'])
+def check_llm_usage_for_user(user_id):
+    """Check LLM usage for a specific user ID"""
+    try:
+        # Validate user_id parameter
+        if not user_id or len(user_id.strip()) == 0:
+            return jsonify({'error': 'User ID is required'}), 400
+        
+        user_id = user_id.strip()
+        today = datetime.now().strftime('%Y-%m-%d')
+        user_data = user_llm_usage.get(user_id, {'count': 0, 'date': None})
+        
+        # Reset count if it's a new day for this user
+        if user_data['date'] != today:
+            user_data = {'count': 0, 'date': today}
+            user_llm_usage[user_id] = user_data
+        
+        current_usage = user_data['count']
+        limit = DAILY_LLM_LIMIT
+        remaining = max(0, limit - current_usage)
+        
+        return jsonify({
+            'target_user': {
+                'user_id': user_id,
+                'display_name': f'User: {user_id}',
+                'query_type': 'specific_user'
+            },
+            'usage': {
+                'used': current_usage,
+                'limit': limit,
+                'remaining': remaining,
+                'percentage': (current_usage / limit) * 100 if limit > 0 else 0
+            },
+            'reset_time': 'Next day at 00:00 UTC',
+            'date': today,
+            'status': 'within_limit' if remaining > 0 else 'limit_exceeded'
+        })
+    except Exception as e:
+        logger.error(f"Error checking LLM usage for user {user_id}: {str(e)}")
+        return jsonify({'error': 'Failed to check LLM usage for user'}), 500
+
+@app.route('/api/llm-usage/reset/<user_id>', methods=['POST'])
+def reset_llm_usage_for_user(user_id):
+    """Reset LLM usage for a specific user ID (development mode only)"""
+    try:
+        # Check if feature is enabled (development mode only)
+        if FLASK_ENV != 'development':
+            return jsonify({'error': 'Reset user usage feature is only available in development mode.'}), 403
+        
+        # Validate user_id parameter
+        if not user_id or len(user_id.strip()) == 0:
+            return jsonify({'error': 'User ID is required'}), 400
+        
+        user_id = user_id.strip()
+        today = datetime.now().strftime('%Y-%m-%d')
+        
+        # Reset the user's usage
+        user_llm_usage[user_id] = {'count': 0, 'date': today}
+        
+        logger.info(f"LLM usage reset for user {user_id} by admin")
+        return jsonify({
+            'message': f'LLM usage has been reset successfully for user: {user_id}',
+            'target_user': {
+                'user_id': user_id,
+                'display_name': f'User: {user_id}',
+                'reset_by': 'administrator'
+            },
+            'usage': {
+                'new_usage': 0,
+                'limit': DAILY_LLM_LIMIT,
+                'remaining': DAILY_LLM_LIMIT
+            },
+            'reset_time': datetime.now().strftime('%Y-%m-%d %H:%M:%S UTC'),
+            'environment': FLASK_ENV
+        })
+    except Exception as e:
+        logger.error(f"Error resetting LLM usage for user {user_id}: {str(e)}")
+        return jsonify({'error': 'Failed to reset LLM usage for user'}), 500
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)

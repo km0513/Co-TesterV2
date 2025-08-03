@@ -1950,10 +1950,12 @@
                 <i class="fas fa-save"></i>
                 Save Tests
             </button>
+            {% if is_development %}
             <button class="btn btn-primary" id="createJiraSubtasksBtn">
                 <i class="fab fa-jira"></i>
                 Create Jira Subtasks
             </button>
+            {% endif %}
             </div>
         </div>
     </div>
@@ -2137,10 +2139,12 @@ jiraTab.addEventListener('click', function(e) {
     summarySection.style.display = 'block';
     
     // Only show Create Jira Subtasks button if there are Jira-generated tests
-    if (hasGeneratedTests() && testsGeneratedFrom === 'jira') {
+    if (createJiraSubtasksBtn) {
+        if (hasGeneratedTests() && testsGeneratedFrom === 'jira') {
     createJiraSubtasksBtn.style.display = 'inline-block';
-    } else {
-        createJiraSubtasksBtn.style.display = 'none';
+        } else {
+            createJiraSubtasksBtn.style.display = 'none';
+        }
     }
     
     updateGenerateBtnState();
@@ -2177,7 +2181,9 @@ prdTab.addEventListener('click', function(e) {
     
     // Show/hide elements specific to PRD tab
     summarySection.style.display = 'none';
+    if (createJiraSubtasksBtn) {
     createJiraSubtasksBtn.style.display = 'none';
+    }
     
     // Restore PRD state if file was previously uploaded
     if (window.currentPrdFile && window.currentPrdContent) {
@@ -2202,7 +2208,9 @@ prdTab.addEventListener('click', function(e) {
 // Initialize the UI based on active tab on page load
 if (activeTab === 'prd') {
     summarySection.style.display = 'none';
+    if (createJiraSubtasksBtn) {
     createJiraSubtasksBtn.style.display = 'none';
+    }
 }
 
 // Update generate button state based on active tab
@@ -2636,10 +2644,12 @@ function renderTestCases(testcases, page = 1) {
         bottomActions.style.display = 'flex';
         
         // Only show Create Jira Subtasks button for Jira-generated tests
-        if (activeTab === 'jira' && testsGeneratedFrom === 'jira') {
-            createJiraSubtasksBtn.style.display = 'inline-block';
-        } else {
-            createJiraSubtasksBtn.style.display = 'none';
+        if (createJiraSubtasksBtn) {
+            if (activeTab === 'jira' && testsGeneratedFrom === 'jira') {
+                createJiraSubtasksBtn.style.display = 'inline-block';
+            } else {
+                createJiraSubtasksBtn.style.display = 'none';
+            }
         }
     } else {
         bottomActions.style.display = 'none';
@@ -3073,7 +3083,9 @@ document.getElementById('saveBtn').onclick = function() {
 };
 
 // --- Create Jira Subtasks Button ---
-document.getElementById('createJiraSubtasksBtn').onclick = function() {
+const createJiraSubtasksBtnElement = document.getElementById('createJiraSubtasksBtn');
+if (createJiraSubtasksBtnElement) {
+    createJiraSubtasksBtnElement.onclick = function() {
     if (!confirm('Create Jira subtasks for all tests? This will create subtasks in your connected Jira project.')) {
         return;
     }
@@ -3155,6 +3167,7 @@ document.getElementById('createJiraSubtasksBtn').onclick = function() {
         createBtn.disabled = false;
     });
 };
+}
 
 // Create validation message element
 const validationMsg = document.createElement('div');

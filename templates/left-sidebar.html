@@ -5,7 +5,7 @@
 
 
 
-<div class="sidebar" id="sidebar">
+<div class="sidebar" id="sidebar" style="display: none;">
   <!-- Toggle Button -->
   <button class="sidebar-toggle" id="sidebarToggle" title="Toggle Sidebar">
     <i class="fas fa-chevron-left"></i>
@@ -59,13 +59,13 @@
 
    
     
-    <a href="#" data-href="/manual-co-test" class="nav-link sidebar-item{% if active_tab == 'manual' %} active{% endif %}">
+    <a href="#" data-href="/test-generator" class="nav-link sidebar-item{% if active_tab == 'manual' %} active{% endif %}">
       <span class="sidebar-icon"><i class="fas fa-magic"></i></span>
       <span class="sidebar-label">Test Generator <span class="ai-badge">AI</span></span>
       
     </a>
     
-    <a href="#" data-href="/screen-analysis" class="nav-link sidebar-item{% if active_tab == 'screen-analysis' %} active{% endif %}">
+    <a href="#" data-href="/ui-analyzer" class="nav-link sidebar-item{% if active_tab == 'screen-analysis' %} active{% endif %}">
       <span class="sidebar-icon"><i class="fas fa-search-plus"></i></span>
       <span class="sidebar-label">UI Analyzer <span class="ai-badge">AI</span></span>
       
@@ -73,7 +73,7 @@
 
     
    
-    <a href="#" data-href="/code" class="nav-link sidebar-item{% if active_tab == 'api' %} active{% endif %}">
+    <a href="#" data-href="/api-co-test" class="nav-link sidebar-item{% if active_tab == 'api' %} active{% endif %}">
       <span class="sidebar-icon"><i class="fas fa-code"></i></span>
       <span class="sidebar-label">API Co-Test</span>
     </a>
@@ -83,12 +83,12 @@
       <span class="sidebar-label">POM Builder <span class="ai-badge">AI</span></span>
     </a>
     
-    <a href="#" data-href="/data" class="nav-link sidebar-item{% if active_tab == 'data' %} active{% endif %}">
+    <a href="#" data-href="/data-generator" class="nav-link sidebar-item{% if active_tab == 'data' %} active{% endif %}">
       <span class="sidebar-icon"><i class="fas fa-database"></i></span>
       <span class="sidebar-label">Data Generator</span>
     </a>
     
-    <a href="#" data-href="/my-jira" class="nav-link sidebar-item{% if active_tab == 'jira' %} active{% endif %}">
+    <a href="#" data-href="/my-details" class="nav-link sidebar-item{% if active_tab == 'jira' %} active{% endif %}">
       <span class="sidebar-icon"><i class="fas fa-user-circle"></i></span>
       <span class="sidebar-label">My Details</span>
     </a>
@@ -427,20 +427,65 @@
       }
     }
     
-    // Hide user profile and show login section
+    // Hide user profile and show login section - HIDE ENTIRE SIDEBAR when not authenticated
     function hideUserProfile() {
       const userProfileSection = document.getElementById('userProfileSection');
       const loginProfileSection = document.getElementById('loginProfileSection');
+      const sidebar = document.getElementById('sidebar');
+      const mainContent = document.querySelector('.main-content');
+      const quotesHeader = document.querySelector('.quotes-header');
       
+      // Hide the entire sidebar when not authenticated
+      sidebar.style.display = 'none';
+      
+      // Adjust main content to take full width
+      if (mainContent) {
+        mainContent.style.marginLeft = '0px';
+        mainContent.style.transition = 'margin-left 0.4s cubic-bezier(0.4, 0, 0.2, 1)';
+      }
+      
+      // Trigger authentication state change event for quotes header
+      window.dispatchEvent(new CustomEvent('authStateChanged', { 
+        detail: { authenticated: false, sidebarVisible: false } 
+      }));
+      
+      // Keep the original profile switching logic for when sidebar is shown
       userProfileSection.style.display = 'none';
       loginProfileSection.style.display = 'block';
     }
     
-    // Show user profile and hide login section
+    // Show user profile and hide login section - SHOW ENTIRE SIDEBAR when authenticated
     function showUserProfile() {
       const userProfileSection = document.getElementById('userProfileSection');
       const loginProfileSection = document.getElementById('loginProfileSection');
+      const sidebar = document.getElementById('sidebar');
+      const mainContent = document.querySelector('.main-content');
+      const quotesHeader = document.querySelector('.quotes-header');
       
+      // Show the entire sidebar when authenticated
+      sidebar.style.display = 'flex';
+      
+      // Restore main content margin based on sidebar state
+      const isCollapsed = sidebar.classList.contains('collapsed');
+      const isMobile = window.innerWidth <= 768;
+      
+      if (mainContent) {
+        let newMargin;
+        if (isMobile) {
+          newMargin = isCollapsed ? '80px' : '280px';
+        } else {
+          newMargin = isCollapsed ? '80px' : '280px';
+        }
+        mainContent.style.marginLeft = newMargin;
+        mainContent.style.transition = 'margin-left 0.4s cubic-bezier(0.4, 0, 0.2, 1)';
+      }
+      
+      // Trigger authentication state change event for quotes header
+      window.dispatchEvent(new CustomEvent('authStateChanged', { 
+        detail: { authenticated: true, sidebarVisible: true, collapsed: isCollapsed } 
+      }));
+      
+      // Show user profile and hide login section
       userProfileSection.style.display = 'block';
       loginProfileSection.style.display = 'none';
     }

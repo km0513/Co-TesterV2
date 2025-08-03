@@ -567,7 +567,7 @@
             <p style="margin-bottom: 1rem; color: #7f1d1d;">You need to log in to Jira to view this dashboard. Click the button below to authenticate.</p>
             <button onclick="window.location.href='/api/jira/oauth/login'" style="background: #0052cc; color: white; border: none; padding: 0.5rem 1rem; border-radius: 4px; cursor: pointer;">
               <i class="fab fa-jira"></i> Login to Jira
-            </button>
+          </button>
           </div>
           
           <!-- User Profile Display -->
@@ -580,9 +580,9 @@
                 <h3 id="displayName" style="margin: 0 0 0.25rem 0; font-size: 1.25rem; font-weight: 600; color: #1e293b;">Loading...</h3>
                 <p id="displayEmail" style="margin: 0; color: #64748b; font-size: 0.9rem;">Loading...</p>
               </div>
-            </div>
-          </div>
-          
+        </div>
+      </div>
+
           <!-- Loading State -->
           <div id="userProfileLoading" style="text-align: center; padding: 2rem;">
             <div style="display: inline-block; width: 40px; height: 40px; border: 3px solid #e2e8f0; border-top: 3px solid #0052cc; border-radius: 50%; animation: spin 1s linear infinite;"></div>
@@ -593,6 +593,96 @@
           <div id="debugInfo" style="margin-top: 1rem; padding: 1rem; background: #f8f9fa; border-radius: 8px; border-left: 4px solid #f59e0b; display: none;">
             <h4 style="margin-top: 0; color: #d97706;">Debug Information</h4>
             <pre id="debugContent" style="background: white; padding: 1rem; border-radius: 4px; overflow-x: auto; font-size: 0.8rem;"></pre>
+          </div>
+        </div>
+      </div>
+
+      <!-- LLM Usage Card -->
+      <div class="jira-card">
+        <div class="jira-card-header">
+          <h2 class="jira-card-title">
+            <i class="fas fa-brain"></i> LLM Usage
+          </h2>
+        </div>
+        <div id="llmUsageContent">
+          <!-- Loading State -->
+          <div id="llmUsageLoading" style="text-align: center; padding: 2rem;">
+            <div style="display: inline-block; width: 40px; height: 40px; border: 3px solid #e2e8f0; border-top: 3px solid #f59e0b; border-radius: 50%; animation: spin 1s linear infinite;"></div>
+            <p style="margin-top: 1rem; color: #64748b;">Loading usage data...</p>
+            </div>
+          
+          <!-- Usage Display -->
+          <div id="llmUsageDisplay" style="display: none;">
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
+              <!-- Usage Stats -->
+              <div style="background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%); border-radius: 12px; padding: 1.5rem; border: 1px solid #cbd5e1; text-align: center;">
+                <div style="width: 50px; height: 50px; margin: 0 auto 1rem auto; background: linear-gradient(135deg, #3b82f6, #1d4ed8); border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);">
+                  <i class="fas fa-chart-line" style="color: white; font-size: 1.25rem;"></i>
+            </div>
+                <h4 style="margin: 0 0 0.5rem 0; font-size: 0.875rem; color: #64748b; font-weight: 500; text-transform: uppercase; letter-spacing: 0.05em;">Requests Used</h4>
+                <p id="llmUsedCount" style="margin: 0; font-size: 2rem; font-weight: 700; color: #1e293b;">-</p>
+            </div>
+              
+              <!-- Remaining Stats -->
+              <div style="background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%); border-radius: 12px; padding: 1.5rem; border: 1px solid #cbd5e1; text-align: center;">
+                <div style="width: 50px; height: 50px; margin: 0 auto 1rem auto; background: linear-gradient(135deg, #10b981, #059669); border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);">
+                  <i class="fas fa-battery-three-quarters" style="color: white; font-size: 1.25rem;"></i>
+            </div>
+                <h4 style="margin: 0 0 0.5rem 0; font-size: 0.875rem; color: #64748b; font-weight: 500; text-transform: uppercase; letter-spacing: 0.05em;">Remaining</h4>
+                <p id="llmRemainingCount" style="margin: 0; font-size: 2rem; font-weight: 700; color: #1e293b;">-</p>
+          </div>
+              
+              <!-- Daily Limit -->
+              <div style="background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%); border-radius: 12px; padding: 1.5rem; border: 1px solid #cbd5e1; text-align: center;">
+                <div style="width: 50px; height: 50px; margin: 0 auto 1rem auto; background: linear-gradient(135deg, #f59e0b, #d97706); border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);">
+                  <i class="fas fa-shield-alt" style="color: white; font-size: 1.25rem;"></i>
+                </div>
+                <h4 style="margin: 0 0 0.5rem 0; font-size: 0.875rem; color: #64748b; font-weight: 500; text-transform: uppercase; letter-spacing: 0.05em;">Daily Limit</h4>
+                <p id="llmLimitCount" style="margin: 0; font-size: 2rem; font-weight: 700; color: #1e293b;">-</p>
+        </div>
+      </div>
+
+            <!-- Progress Bar -->
+            <div style="margin-bottom: 1.5rem;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                <span style="font-size: 0.875rem; font-weight: 600; color: #374151;">Usage Progress</span>
+                <span id="llmPercentage" style="font-size: 0.875rem; font-weight: 600; color: #6b7280;">-</span>
+              </div>
+              <div style="width: 100%; height: 8px; background: #e5e7eb; border-radius: 4px; overflow: hidden;">
+                <div id="llmProgressBar" style="height: 100%; background: linear-gradient(135deg, #3b82f6, #1d4ed8); width: 0%; transition: width 0.3s ease-in-out; border-radius: 4px;"></div>
+              </div>
+            </div>
+            
+            <!-- Reset Time Info -->
+            <div style="background: #f3f4f6; border-radius: 8px; padding: 1rem; border-left: 4px solid #6366f1;">
+              <div style="display: flex; align-items: center; gap: 0.75rem;">
+                <i class="fas fa-clock" style="color: #6366f1; font-size: 1.125rem;"></i>
+                <div>
+                  <p style="margin: 0 0 0.25rem 0; font-weight: 600; color: #374151; font-size: 0.875rem;">Next Reset</p>
+                  <p id="llmResetTime" style="margin: 0; color: #6b7280; font-size: 0.8rem;">Daily at 00:00 UTC</p>
+                </div>
+              </div>
+            </div>
+            
+            <!-- User Info -->
+            <div id="llmUserInfo" style="margin-top: 1rem; padding: 1rem; background: #fefce8; border-radius: 8px; border-left: 4px solid #facc15; display: none;">
+              <div style="display: flex; align-items: center; gap: 0.75rem;">
+                <i class="fas fa-user" style="color: #ca8a04; font-size: 1.125rem;"></i>
+                <div>
+                  <p style="margin: 0 0 0.25rem 0; font-weight: 600; color: #374151; font-size: 0.875rem;">User ID</p>
+                  <p id="llmUserId" style="margin: 0; color: #6b7280; font-size: 0.8rem;">-</p>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Error State -->
+          <div id="llmUsageError" style="display: none; margin: 1rem; padding: 1rem; background: #fee2e2; border-radius: 8px; border-left: 4px solid #ef4444;">
+            <h4 style="margin-top: 0; color: #dc2626;">⚠️ Unable to Load Usage Data</h4>
+            <p style="margin-bottom: 1rem; color: #7f1d1d;">There was an error loading your LLM usage information.</p>
+            <button onclick="loadLLMUsage()" style="background: #ef4444; color: white; border: none; padding: 0.5rem 1rem; border-radius: 4px; cursor: pointer;">
+              <i class="fas fa-redo"></i> Retry
+            </button>
           </div>
         </div>
       </div>
@@ -609,7 +699,7 @@
           <div style="background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%); border-radius: 12px; padding: 2rem; border: 1px solid #cbd5e1;">
             <div style="width: 80px; height: 80px; margin: 0 auto 1.5rem auto; background: linear-gradient(135deg, #f59e0b, #d97706); border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);">
               <i class="fas fa-clock" style="color: white; font-size: 2rem;"></i>
-            </div>
+          </div>
             <h3 style="margin: 0 0 0.5rem 0; font-size: 1.25rem; font-weight: 600; color: #1e293b;">
               <i class="fas fa-rocket" style="color: #f59e0b; margin-right: 0.5rem;"></i>
               Coming Soon
@@ -620,7 +710,7 @@
             <div style="background: #fef3c7; color: #92400e; padding: 0.75rem 1rem; border-radius: 8px; font-size: 0.875rem; border: 1px solid #fbbf24;">
               <i class="fas fa-info-circle" style="margin-right: 0.5rem;"></i>
               <strong>Note:</strong> This feature requires additional Jira permissions that are currently being configured.
-            </div>
+        </div>
           </div>
         </div>
       </div>
@@ -668,6 +758,9 @@
       // Load user info
       loadUserInfo();
       
+      // Load LLM usage
+      loadLLMUsage();
+      
       // Load issues
       loadIssues();
       
@@ -677,6 +770,7 @@
       // Set up event listeners
       document.getElementById('refreshButton').addEventListener('click', function() {
         loadUserInfo();
+        loadLLMUsage();
         loadIssues();
         // loadTimeEntriesForDate(); // Disabled - showing "Coming Soon"
       });
@@ -875,6 +969,97 @@
     }
     
     // Session duration timer - removed since login time/duration elements were removed
+    
+    // LLM Usage functions
+    function loadLLMUsage() {
+      console.log('🔄 Loading LLM usage data...');
+      
+      // Show loading state
+      const loadingEl = document.getElementById('llmUsageLoading');
+      const displayEl = document.getElementById('llmUsageDisplay');
+      const errorEl = document.getElementById('llmUsageError');
+      
+      if (loadingEl) loadingEl.style.display = 'block';
+      if (displayEl) displayEl.style.display = 'none';
+      if (errorEl) errorEl.style.display = 'none';
+      
+      fetch('/api/llm-usage')
+        .then(response => {
+          console.log('LLM usage response status:', response.status);
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+          }
+          return response.json();
+        })
+        .then(data => {
+          console.log('✅ LLM usage data received:', data);
+          
+          // Hide loading
+          if (loadingEl) loadingEl.style.display = 'none';
+          
+          // Show display
+          if (displayEl) displayEl.style.display = 'block';
+          
+          // Update usage statistics
+          const usedEl = document.getElementById('llmUsedCount');
+          const remainingEl = document.getElementById('llmRemainingCount');
+          const limitEl = document.getElementById('llmLimitCount');
+          const percentageEl = document.getElementById('llmPercentage');
+          const progressBarEl = document.getElementById('llmProgressBar');
+          const resetTimeEl = document.getElementById('llmResetTime');
+          const userInfoEl = document.getElementById('llmUserInfo');
+          const userIdEl = document.getElementById('llmUserId');
+          
+          if (data.usage) {
+            if (usedEl) usedEl.textContent = data.usage.used || 0;
+            if (remainingEl) remainingEl.textContent = data.usage.remaining || 0;
+            if (limitEl) limitEl.textContent = data.usage.limit || 0;
+            
+            const percentage = data.usage.percentage || 0;
+            if (percentageEl) percentageEl.textContent = percentage.toFixed(1) + '%';
+            if (progressBarEl) {
+              progressBarEl.style.width = percentage + '%';
+              
+              // Change color based on usage
+              if (percentage >= 90) {
+                progressBarEl.style.background = 'linear-gradient(135deg, #ef4444, #dc2626)'; // Red
+              } else if (percentage >= 70) {
+                progressBarEl.style.background = 'linear-gradient(135deg, #f59e0b, #d97706)'; // Orange
+              } else {
+                progressBarEl.style.background = 'linear-gradient(135deg, #3b82f6, #1d4ed8)'; // Blue
+              }
+            }
+          }
+          
+          // Update reset time
+          if (resetTimeEl && data.reset_time) {
+            resetTimeEl.textContent = data.reset_time;
+          }
+          
+          // Update user info
+          if (data.user && userInfoEl && userIdEl) {
+            userIdEl.textContent = data.user.display_name || data.user.user_id || 'Unknown';
+            
+            // Show user info only for anonymous users or if user ID is useful to display
+            if (data.user.user_type === 'anonymous' || data.user.user_id.includes('user_')) {
+              userInfoEl.style.display = 'block';
+            } else {
+              userInfoEl.style.display = 'none';
+            }
+          }
+          
+          console.log('🎉 LLM usage display updated successfully');
+        })
+        .catch(error => {
+          console.error('❌ Error loading LLM usage:', error);
+          
+          // Hide loading
+          if (loadingEl) loadingEl.style.display = 'none';
+          
+          // Show error
+          if (errorEl) errorEl.style.display = 'block';
+        });
+    }
     
     // Issues functions
     function loadIssues() {

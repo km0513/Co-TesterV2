@@ -13,12 +13,12 @@
       <button id="carouselLeft" style="background:none;border:none;font-size:1.5em;cursor:pointer;padding:0 0.5em;user-select:none;">&#8592;</button>
       <div class="button-group tabs-container carousel-tabs" id="carouselTabs">
         <a href="/home" class="tab{% if active_tab == 'home' %} active{% endif %}" data-no-auth="true">Home</a>
-        <a href="#" data-href="/manual-co-test" class="navbar-nav-link tab{% if active_tab == 'manual' %} active{% endif %}">Test Gen<span class="ai-badge-navbar">🤖 AI</span></a>
-        <a href="#" data-href="/screen-analysis" class="navbar-nav-link tab{% if active_tab == 'screen-analysis' %} active{% endif %}">UI Analysis🔍<span class="ai-badge-navbar">🤖 AI</span></a>
+        <a href="#" data-href="/test-generator" class="navbar-nav-link tab{% if active_tab == 'manual' %} active{% endif %}">Test Gen<span class="ai-badge-navbar">🤖 AI</span></a>
+        <a href="#" data-href="/ui-analyzer" class="navbar-nav-link tab{% if active_tab == 'screen-analysis' %} active{% endif %}">UI Analysis🔍<span class="ai-badge-navbar">🤖 AI</span></a>
         <a href="#" data-href="/browseruse-automation" class="navbar-nav-link tab{% if active_tab == 'browseruse' %} active{% endif %}">UI Automation<span class="ai-badge-navbar">🤖 AI</span></a>
-        <a href="#" data-href="/data" class="navbar-nav-link tab{% if active_tab == 'data' %} active{% endif %}">Data Generator 📊</a>
+        <a href="#" data-href="/data-generator" class="navbar-nav-link tab{% if active_tab == 'data' %} active{% endif %}">Data Generator 📊</a>
         {% if false %}
-        <a href="#" data-href="/code" class="navbar-nav-link tab{% if active_tab == 'api' %} active{% endif %}">API Co-Test 🧪</a>
+        <a href="#" data-href="/api-co-test" class="navbar-nav-link tab{% if active_tab == 'api' %} active{% endif %}">API Co-Test 🧪</a>
         <a href="#" data-href="/dom-extractor" class="navbar-nav-link tab{% if active_tab == 'ui' %} active{% endif %}">UI Co-Test 🖥️</a>
         <a href="#" data-href="/pom-step-builder" class="navbar-nav-link tab{% if active_tab == 'pom-step-builder' %} active{% endif %}">POM Builder 🧩</a>
         {% endif %}
