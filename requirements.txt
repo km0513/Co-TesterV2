@@ -86,5 +86,5 @@ playwright
 PyPDF2==3.0.1
 selenium==4.27.1
 beautifulsoup4==4.12.3
-langchain-openai==0.3.28
+langchain-openai==0.3.27
 # trigger rebuild
