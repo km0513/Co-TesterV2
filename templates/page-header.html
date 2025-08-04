@@ -29,7 +29,7 @@
     </div>
     <div class="page-title-section">
       <h1 class="page-title" id="pageTitle">{% if allow_html %}{{ page_title | default('Co-Tester') | safe }}{% else %}{{ page_title | default('Co-Tester') }}{% endif %}</h1>
-      <p class="page-subtitle" id="pageSubtitle">{{ page_subtitle | default('AI-Powered QA Platform') }}</p>
+      <p class="page-subtitle" id="pageSubtitle">{% if allow_html %}{{ page_subtitle | default('AI-Powered QA Platform') | safe }}{% else %}{{ page_subtitle | default('AI-Powered QA Platform') }}{% endif %}</p>
     </div>
   </div>
 </div>

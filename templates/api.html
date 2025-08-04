@@ -616,8 +616,9 @@
   {% include 'left-sidebar.html' %}
   
   <div class="main-content">
-    {% set page_title = 'API Co-Test' %}
-    {% set page_subtitle = 'Professional API testing suite with cURL runner, collection management, Postman integration, and comprehensive REST & GraphQL support.' %}
+    {% set allow_html = true %}
+    {% set page_title = 'API Co-Test <span style="background: linear-gradient(45deg, #3b82f6, #1d4ed8); color: white; padding: 0.25rem 0.75rem; border-radius: 8px; font-size: 0.8rem; font-weight: 600; margin-left: 0.75rem; vertical-align: middle; box-shadow: 0 2px 6px rgba(59, 130, 246, 0.3);">Partially Complete</span>' %}
+    {% set page_subtitle = 'Professional API testing suite with cURL runner, collection management, Postman integration, and comprehensive REST & GraphQL support. <strong>Note:</strong> This feature is currently under active development with more tools and enhancements coming soon!' %}
     {% include 'page-header.html' %}
     
     <div class="api-container">

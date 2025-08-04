@@ -194,6 +194,49 @@
       margin-right: auto;
     }
 
+    .beta-badge {
+      display: inline-block;
+      background: linear-gradient(45deg, #f59e0b, #d97706);
+      color: white !important;
+      padding: 0.25rem 0.75rem;
+      border-radius: 12px;
+      font-size: 0.875rem;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      margin-left: 1rem;
+      vertical-align: top;
+      box-shadow: 0 2px 8px rgba(245, 158, 11, 0.3);
+      animation: pulse-glow 2s ease-in-out infinite;
+      -webkit-text-fill-color: white !important;
+      -webkit-background-clip: initial !important;
+      background-clip: initial !important;
+    }
+
+    @keyframes pulse-glow {
+      0%, 100% { 
+        transform: scale(1);
+        box-shadow: 0 2px 8px rgba(245, 158, 11, 0.3);
+      }
+      50% { 
+        transform: scale(1.05);
+        box-shadow: 0 4px 16px rgba(245, 158, 11, 0.5);
+      }
+    }
+
+    .progress-badge {
+      display: inline-block;
+      background: linear-gradient(45deg, #3b82f6, #1d4ed8);
+      color: white;
+      padding: 0.2rem 0.6rem;
+      border-radius: 8px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      letter-spacing: 0.025em;
+      margin-left: 0.5rem;
+      vertical-align: middle;
+      box-shadow: 0 1px 4px rgba(59, 130, 246, 0.3);
+    }
+
     .hero-cta {
       display: inline-flex;
       align-items: center;
@@ -795,7 +838,10 @@
         <span class="hero-logo-text">Co-Tester</span>
       </div>
       
-      <h1 class="hero-title">AI-Powered QA Platform</h1>
+      <h1 class="hero-title">
+        AI-Powered QA Platform
+        <span class="beta-badge">BETA</span>
+      </h1>
       <p class="hero-subtitle">
         Supercharge your quality assurance with intelligent testing tools, 
         automated workflows, and seamless integrations.
@@ -858,10 +904,14 @@
           <div class="feature-icon">
             <i class="fas fa-rocket"></i>
           </div>
-          <h3 class="feature-title">API Co-Test</h3>
+          <h3 class="feature-title">
+            API Co-Test
+            <span class="progress-badge">In Progress</span>
+          </h3>
           <p class="feature-description">
             Complete API testing suite with cURL runner, collection management, 
             Postman integration, and support for REST & GraphQL.
+            <em>More features coming soon!</em>
           </p>
           <a href="#" data-href="/code" data-auth-required class="feature-link">
             Test APIs <i class="fas fa-arrow-right"></i>
