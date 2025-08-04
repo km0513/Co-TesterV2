@@ -1,0 +1,510 @@
+<!-- Daily QA Quotes Header -->
+<div class="quotes-header">
+    <div class="quotes-container">
+        <div class="quotes-content">
+            <span class="quotes-icon">💭</span>
+            <span class="quotes-text" id="dailyQuote">Loading quote of the day...</span>
+            <span class="quotes-category" id="quoteCategory">QA Wisdom</span>
+        </div>
+    </div>
+</div>
+
+<style>
+.quotes-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 8px 0;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    z-index: 1000;
+}
+
+.quotes-header::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+    animation: quotesShimmer 3s infinite;
+}
+
+@keyframes quotesShimmer {
+    0% { left: -100%; }
+    100% { left: 100%; }
+}
+
+.quotes-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 20px;
+}
+
+.quotes-content {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    text-align: center;
+    min-height: 36px;
+}
+
+.quotes-icon {
+    font-size: 1.2em;
+    animation: quotesFloat 2s ease-in-out infinite alternate;
+}
+
+@keyframes quotesFloat {
+    0% { transform: translateY(0px); }
+    100% { transform: translateY(-2px); }
+}
+
+.quotes-text {
+    font-size: 0.95em;
+    font-weight: 500;
+    font-style: italic;
+    flex: 1;
+    max-width: 800px;
+    line-height: 1.4;
+    opacity: 0;
+    animation: quoteFadeIn 1s ease-in-out 0.5s forwards;
+}
+
+@keyframes quoteFadeIn {
+    0% { 
+        opacity: 0; 
+        transform: translateY(10px);
+    }
+    100% { 
+        opacity: 1; 
+        transform: translateY(0);
+    }
+}
+
+.quotes-category {
+    font-size: 0.75em;
+    background: rgba(255,255,255,0.2);
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border: 1px solid rgba(255,255,255,0.3);
+}
+
+/* Sidebar responsive adjustments */
+.quotes-header {
+    margin-left: 0px; /* Default to no margin when sidebar is hidden */
+    transition: margin-left 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    z-index: 999; /* Ensure it's below sidebar but above main content */
+}
+
+/* Sidebar state classes applied by JavaScript */
+.quotes-header.sidebar-hidden {
+    margin-left: 0px; /* No sidebar, full width */
+}
+
+.quotes-header.sidebar-collapsed {
+    margin-left: 80px; /* Collapsed sidebar width */
+}
+
+.quotes-header.sidebar-collapsed .quotes-text {
+    font-size: 1rem; /* Slightly larger when more space available */
+    max-width: 900px; /* Wider when sidebar is collapsed */
+}
+
+.quotes-header.sidebar-collapsed .quotes-icon {
+    font-size: 1.3em; /* Slightly larger icon */
+}
+
+.quotes-header.sidebar-expanded {
+    margin-left: 280px; /* Expanded sidebar width */
+}
+
+/* Smooth transitions for text size changes */
+.quotes-text, .quotes-icon {
+    transition: font-size 0.3s ease, max-width 0.3s ease;
+}
+
+/* Mobile responsive adjustments */
+@media (max-width: 768px) {
+    .quotes-header,
+    .quotes-header.sidebar-collapsed,
+    .quotes-header.sidebar-expanded {
+        margin-left: 0 !important; /* No sidebar margin on mobile */
+    }
+    
+    .quotes-content {
+        flex-direction: column;
+        gap: 8px;
+        padding: 4px 0;
+    }
+    
+    .quotes-text,
+    .quotes-header.sidebar-collapsed .quotes-text,
+    .quotes-header.sidebar-expanded .quotes-text {
+        font-size: 0.85em !important;
+        max-width: 100% !important;
+    }
+    
+    .quotes-icon,
+    .quotes-header.sidebar-collapsed .quotes-icon,
+    .quotes-header.sidebar-expanded .quotes-icon {
+        font-size: 1.2em !important;
+    }
+    
+    .quotes-category {
+        font-size: 0.7em;
+        padding: 2px 6px;
+    }
+    
+    .quotes-container {
+        padding: 0 15px; /* Reduced padding on mobile */
+    }
+}
+
+@media (max-width: 480px) {
+    .quotes-header {
+        padding: 6px 0;
+    }
+    
+    .quotes-content {
+        gap: 6px;
+    }
+    
+    .quotes-text {
+        font-size: 0.8em;
+    }
+    
+    .quotes-icon {
+        font-size: 1em;
+    }
+}
+
+/* Dark mode support */
+body.dark-mode .quotes-header {
+    background: linear-gradient(135deg, #2d1b69 0%, #11998e 100%);
+}
+
+body.dark-mode .quotes-category {
+    background: rgba(255,255,255,0.15);
+    border: 1px solid rgba(255,255,255,0.25);
+}
+</style>
+
+<script>
+// Daily QA Quotes Collection
+const qaQuotes = [
+    {
+        text: "Quality is not an act, it is a habit. Every bug caught today prevents ten bugs tomorrow.",
+        category: "Quality Focus"
+    },
+    {
+        text: "Testing is not just finding bugs; it's about building confidence in what we ship.",
+        category: "Testing Philosophy"
+    },
+    {
+        text: "A good tester is like a detective - curious, persistent, and always asking 'what if?'",
+        category: "Tester Mindset"
+    },
+    {
+        text: "Automation is not about replacing testers; it's about freeing them to think deeper.",
+        category: "Test Automation"
+    },
+    {
+        text: "The best time to think about test cases is when writing the first line of code.",
+        category: "Shift Left"
+    },
+    {
+        text: "Every user story should have a testing story. Quality starts with planning.",
+        category: "Test Planning"
+    },
+    {
+        text: "A bug found in production is a lesson learned for the entire team.",
+        category: "Continuous Learning"
+    },
+    {
+        text: "Test early, test often, and test with purpose. Quality cannot be tested in.",
+        category: "Testing Strategy"
+    },
+    {
+        text: "The most expensive bug is the one your user finds. Prevent it before it ships.",
+        category: "User Experience"
+    },
+    {
+        text: "Good tests tell a story about how the system should behave.",
+        category: "Test Design"
+    },
+    {
+        text: "In testing, negative scenarios often reveal the most critical insights.",
+        category: "Edge Cases"
+    },
+    {
+        text: "A tester's job is not to break things, but to reveal what's already broken.",
+        category: "QA Mindset"
+    },
+    {
+        text: "Documentation is not just about processes; it's about preserving knowledge.",
+        category: "Documentation"
+    },
+    {
+        text: "The fastest test is the one that finds the bug. Speed without accuracy is meaningless.",
+        category: "Efficiency"
+    },
+    {
+        text: "Communication between dev and QA is not optional; it's the foundation of quality.",
+        category: "Collaboration"
+    },
+    {
+        text: "Every failed test is a successful discovery. Embrace the findings.",
+        category: "Growth Mindset"
+    },
+    {
+        text: "Risk-based testing: Focus your energy where failure hurts the most.",
+        category: "Risk Management"
+    },
+    {
+        text: "A good bug report is a gift to developers - clear, actionable, and respectful.",
+        category: "Bug Reporting"
+    },
+    {
+        text: "Performance testing is not just about speed; it's about user satisfaction.",
+        category: "Performance"
+    },
+    {
+        text: "Security testing is everyone's responsibility. Quality includes being secure.",
+        category: "Security"
+    },
+    {
+        text: "Test data is as important as test cases. Good data tells better stories.",
+        category: "Test Data"
+    },
+    {
+        text: "Regression testing is not punishment; it's insurance for your product.",
+        category: "Regression Testing"
+    },
+    {
+        text: "The best testers are curious enough to break things and patient enough to report them well.",
+        category: "Professional Skills"
+    },
+    {
+        text: "Exploratory testing is where creativity meets methodology. Let your mind wander with purpose.",
+        category: "Exploratory Testing"
+    },
+    {
+        text: "Code reviews are testing in disguise. Two pairs of eyes see what one misses.",
+        category: "Code Quality"
+    },
+    {
+        text: "Quality metrics should drive decisions, not just fill dashboards.",
+        category: "Metrics"
+    },
+    {
+        text: "A defect prevented is worth ten defects detected.",
+        category: "Prevention"
+    },
+    {
+        text: "Test environments should mirror production, not approximate it.",
+        category: "Test Environment"
+    },
+    {
+        text: "Continuous testing enables continuous delivery. Quality at the speed of development.",
+        category: "CI/CD"
+    },
+    {
+        text: "The user doesn't care about your internal quality process; they care about their experience.",
+        category: "User Focus"
+    },
+    {
+        text: "Great QA engineers are translators between user needs and technical reality.",
+        category: "QA Role"
+    },
+    {
+        text: "QA professionals are the guardians of user experience - they ensure every click, tap, and swipe delights.",
+        category: "QA Heroes"
+    },
+    {
+        text: "Behind every reliable software is a QA team that cared enough to break it first.",
+        category: "QA Impact"
+    },
+    {
+        text: "Quality Assurance: Where perfectionism meets pragmatism to create exceptional software.",
+        category: "QA Excellence"
+    },
+    {
+        text: "QA engineers don't just test software - they craft confidence, reliability, and user trust.",
+        category: "QA Value"
+    },
+    {
+        text: "The world runs on software, and software runs better because of dedicated QA professionals.",
+        category: "QA Importance"
+    },
+    {
+        text: "Every successful product launch has QA fingerprints all over it - invisible but indispensable.",
+        category: "QA Recognition"
+    },
+    {
+        text: "Software without QA is like a ship without a compass - it might float, but it won't reach its destination.",
+        category: "QA Necessity"
+    },
+    {
+        text: "QA engineers are the unsung heroes who turn 'it works on my machine' into 'it works everywhere.'",
+        category: "QA Heroes"
+    },
+    {
+        text: "In a world of infinite possibilities, QA provides the boundaries that make software predictable and reliable.",
+        category: "QA Foundation"
+    },
+    {
+        text: "Quality is the bridge between what developers build and what users need - QA engineers are the architects.",
+        category: "QA Bridge"
+    },
+    {
+        text: "Celebrate QA: The profession that turns chaos into confidence, one test at a time.",
+        category: "QA Celebration"
+    },
+    {
+        text: "QA professionals don't just find problems - they discover opportunities for software to shine brighter.",
+        category: "QA Mindset"
+    },
+    {
+        text: "The best software feels effortless to users because QA made the complex look simple.",
+        category: "QA Magic"
+    },
+    {
+        text: "QA is not just a phase in development - it's the conscience of the entire software lifecycle.",
+        category: "QA Philosophy"
+    },
+    {
+        text: "Every time a user says 'this just works,' remember - there's a QA engineer who made sure it would.",
+        category: "QA Pride"
+    }
+];
+
+// Function to get quote of the day based on current date
+function getDailyQuote() {
+    const today = new Date();
+    const dayOfYear = Math.floor((today - new Date(today.getFullYear(), 0, 0)) / 1000 / 60 / 60 / 24);
+    const quoteIndex = dayOfYear % qaQuotes.length;
+    return qaQuotes[quoteIndex];
+}
+
+// Function to update the quote display
+function updateDailyQuote() {
+    const quote = getDailyQuote();
+    const quoteTextElement = document.getElementById('dailyQuote');
+    const quoteCategoryElement = document.getElementById('quoteCategory');
+    
+    if (quoteTextElement && quoteCategoryElement) {
+        // Add fade out effect
+        quoteTextElement.style.opacity = '0';
+        
+        setTimeout(() => {
+            quoteTextElement.textContent = `"${quote.text}"`;
+            quoteCategoryElement.textContent = quote.category;
+            
+            // Fade in effect
+            quoteTextElement.style.opacity = '1';
+        }, 200);
+    }
+}
+
+// Function to update quotes header position based on sidebar state
+function updateQuotesHeaderPosition() {
+    const quotesHeader = document.querySelector('.quotes-header');
+    const sidebar = document.querySelector('.sidebar');
+    
+    if (quotesHeader) {
+        const isMobile = window.innerWidth <= 768;
+        
+        // Remove existing state classes
+        quotesHeader.classList.remove('sidebar-collapsed', 'sidebar-expanded', 'sidebar-hidden');
+        
+        if (!isMobile && sidebar) {
+            // Check if sidebar is visible
+            const sidebarStyle = window.getComputedStyle(sidebar);
+            const isSidebarVisible = sidebarStyle.display !== 'none';
+            
+            if (isSidebarVisible) {
+                // Sidebar is visible, check if it's collapsed or expanded
+                const isCollapsed = sidebar.classList.contains('collapsed');
+                if (isCollapsed) {
+                    quotesHeader.classList.add('sidebar-collapsed');
+                } else {
+                    quotesHeader.classList.add('sidebar-expanded');
+                }
+            } else {
+                // Sidebar is hidden (not authenticated)
+                quotesHeader.classList.add('sidebar-hidden');
+            }
+        } else if (!sidebar) {
+            // No sidebar element found, treat as hidden
+            quotesHeader.classList.add('sidebar-hidden');
+        }
+        // On mobile, no classes are added, so CSS default (margin-left: 0) applies
+    }
+}
+
+// Initialize quote when DOM is ready
+document.addEventListener('DOMContentLoaded', function() {
+    // Small delay to ensure smooth loading
+    setTimeout(updateDailyQuote, 100);
+    
+    // Initialize quotes header position
+    setTimeout(updateQuotesHeaderPosition, 150);
+    
+    // Listen for sidebar toggle events
+    const sidebar = document.querySelector('.sidebar');
+    if (sidebar) {
+        // Use MutationObserver to watch for class and style changes on sidebar
+        const observer = new MutationObserver(function(mutations) {
+            mutations.forEach(function(mutation) {
+                if (mutation.attributeName === 'class' || mutation.attributeName === 'style') {
+                    updateQuotesHeaderPosition();
+                }
+            });
+        });
+        observer.observe(sidebar, { attributes: true, attributeFilter: ['class', 'style'] });
+        
+        // Also watch for authentication state changes by observing sidebar visibility changes
+        const resizeObserver = new ResizeObserver(function(entries) {
+            // This will fire when sidebar becomes visible/hidden
+            updateQuotesHeaderPosition();
+        });
+        resizeObserver.observe(sidebar);
+    }
+    
+    // Also listen for authentication state changes globally
+    window.addEventListener('authStateChanged', function() {
+        setTimeout(updateQuotesHeaderPosition, 50);
+    });
+    
+    // Listen for window resize to handle mobile/desktop transitions
+    window.addEventListener('resize', function() {
+        clearTimeout(window.quotesResizeTimeout);
+        window.quotesResizeTimeout = setTimeout(updateQuotesHeaderPosition, 100);
+    });
+});
+
+// Update quote at midnight (for users who keep the app open)
+function scheduleNextQuoteUpdate() {
+    const now = new Date();
+    const tomorrow = new Date(now);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    tomorrow.setHours(0, 0, 0, 0);
+    
+    const msUntilMidnight = tomorrow.getTime() - now.getTime();
+    
+    setTimeout(() => {
+        updateDailyQuote();
+        // Schedule the next update
+        scheduleNextQuoteUpdate();
+    }, msUntilMidnight);
+}
+
+// Start the scheduling
+scheduleNextQuoteUpdate();
+</script>

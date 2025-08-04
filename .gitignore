@@ -1,4 +1,3 @@
-@"
 # secrets & caches
 .env
 .env.*
@@ -22,5 +21,6 @@ coverage/
 # Node
 node_modules/
 npm-debug.log*
-"@ | Out-File -Encoding utf8 .gitignore -Append
+
+# Backup files
 *.bak

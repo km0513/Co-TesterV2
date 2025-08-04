@@ -558,6 +558,57 @@
         flex-wrap: wrap;
       }
     }
+
+    .curl-examples {
+      display: flex;
+      gap: 10px;
+    }
+
+    .example-btn {
+      padding: 6px 12px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: white;
+      color: var(--text-dark);
+      font-size: 12px;
+      cursor: pointer;
+      transition: var(--transition);
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .example-btn:hover {
+      background: var(--primary-light);
+      color: white;
+      border-color: var(--primary);
+    }
+
+    .curl-controls {
+      display: flex;
+      gap: 10px;
+      margin-top: 15px;
+      align-items: center;
+    }
+
+    .clear-btn {
+      padding: 10px 20px;
+      border: 1px solid #dc3545;
+      border-radius: 8px;
+      background: white;
+      color: #dc3545;
+      font-size: 14px;
+      cursor: pointer;
+      transition: var(--transition);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .clear-btn:hover {
+      background: #dc3545;
+      color: white;
+    }
   </style>
 </head>
 <body>
@@ -573,18 +624,18 @@
       
       <!-- Main Tabs -->
       <div class="api-tabs">
-        <button class="api-tab active" data-tab="rest">
-          <i class="fas fa-globe"></i>
-          REST API
-        </button>
-        <button class="api-tab" data-tab="graphql">
-          <i class="fas fa-layer-group"></i>
-          GraphQL
-        </button>
-        <button class="api-tab" data-tab="curl">
-          <i class="fas fa-terminal"></i>
-          cURL Runner
-        </button>
+              <button class="api-tab" data-tab="rest">
+        <i class="fas fa-globe"></i>
+        REST API
+      </button>
+      <button class="api-tab" data-tab="graphql">
+        <i class="fas fa-layer-group"></i>
+        GraphQL
+      </button>
+      <button class="api-tab active" data-tab="curl">
+        <i class="fas fa-terminal"></i>
+        cURL Runner
+      </button>
         <button class="api-tab" data-tab="collections">
           <i class="fas fa-folder-open"></i>
           Collections
@@ -592,7 +643,7 @@
       </div>
 
       <!-- REST API Tab -->
-      <div class="tab-content active" id="rest-tab">
+      <div class="tab-content" id="rest-tab">
         <div class="request-builder">
           <h4><i class="fas fa-paper-plane"></i> REST API Request</h4>
           
@@ -775,21 +826,43 @@
       </div>
 
       <!-- cURL Runner Tab -->
-      <div class="tab-content" id="curl-tab">
+      <div class="tab-content active" id="curl-tab">
         <div class="request-builder">
           <h4><i class="fas fa-terminal"></i> cURL Command Runner</h4>
+          <p style="color: var(--text-light); margin-bottom: 20px;">
+            <i class="fas fa-info-circle"></i> 
+            Supports both REST and GraphQL requests. Auto-detects GraphQL patterns.
+          </p>
           
           <div class="curl-section">
-            <h5><i class="fas fa-paste"></i> Paste your cURL command</h5>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+              <h5><i class="fas fa-paste"></i> Paste your cURL command</h5>
+              <div class="curl-examples">
+                <button class="example-btn" onclick="loadRestExample()">
+                  <i class="fas fa-globe"></i> REST Example
+                </button>
+                <button class="example-btn" onclick="loadGraphQLExample()">
+                  <i class="fas fa-layer-group"></i> GraphQL Example
+                </button>
+              </div>
+            </div>
             <textarea class="curl-input" id="curl-command" placeholder="curl -X GET https://api.example.com/users \
   -H 'Authorization: Bearer token' \
   -H 'Content-Type: application/json' \
   -d '{\"key\": \"value\"}'"></textarea>
           </div>
           
-          <button class="send-btn" id="curl-send">
-            <i class="fas fa-play"></i> Execute cURL
-          </button>
+          <div class="curl-controls">
+            <button class="send-btn" id="curl-send">
+              <i class="fas fa-play"></i> Execute cURL
+            </button>
+            <button class="format-btn" onclick="formatCurlCommand()">
+              <i class="fas fa-magic"></i> Format
+            </button>
+            <button class="clear-btn" onclick="clearCurlCommand()">
+              <i class="fas fa-eraser"></i> Clear
+            </button>
+          </div>
         </div>
 
         <div class="response-section">
@@ -2092,6 +2165,64 @@ ${typeof result.body === 'object' ? JSON.stringify(result.body, null, 2) : (resu
       linkElement.click();
       
       showMessage('collection-response-meta', 'Collection exported successfully', 'success');
+    }
+
+    // cURL utility functions
+    function loadRestExample() {
+      const restExample = `curl -X GET 'https://jsonplaceholder.typicode.com/users' \\
+  -H 'Accept: application/json' \\
+  -H 'Authorization: Bearer your-token-here'`;
+      
+      document.getElementById('curl-command').value = restExample;
+      showMessage('curl-response-meta', 'REST example loaded', 'success');
+    }
+
+    function loadGraphQLExample() {
+      const graphqlExample = `curl -X POST 'https://api.example.com/graphql' \\
+  -H 'Content-Type: application/json' \\
+  -H 'Authorization: Bearer your-token-here' \\
+  -d '{
+    "query": "query GetUsers($limit: Int) { users(limit: $limit) { id name email } }",
+    "variables": { "limit": 5 }
+  }'`;
+      
+      document.getElementById('curl-command').value = graphqlExample;
+      showMessage('curl-response-meta', 'GraphQL example loaded', 'success');
+    }
+
+    function formatCurlCommand() {
+      const curlInput = document.getElementById('curl-command');
+      let command = curlInput.value.trim();
+      
+      if (!command) {
+        showMessage('curl-response-meta', 'No command to format', 'error');
+        return;
+      }
+
+      // Basic formatting: add line breaks for better readability
+      command = command.replace(/\s+-/g, ' \\\n  -');
+      command = command.replace(/\s+--/g, ' \\\n  --');
+      
+      // Format JSON in data if present
+      const jsonMatch = command.match(/-d\s+['"](.*?)['"](\s|$)/s);
+      if (jsonMatch) {
+        try {
+          const jsonData = JSON.parse(jsonMatch[1]);
+          const formattedJson = JSON.stringify(jsonData, null, 2).replace(/\n/g, '\\n  ');
+          command = command.replace(jsonMatch[1], formattedJson);
+        } catch (e) {
+          // If JSON parsing fails, leave as is
+        }
+      }
+      
+      curlInput.value = command;
+      showMessage('curl-response-meta', 'Command formatted', 'success');
+    }
+
+    function clearCurlCommand() {
+      document.getElementById('curl-command').value = '';
+      document.getElementById('curl-response-body').textContent = 'Response will appear here...';
+      showMessage('curl-response-meta', 'Command cleared', 'success');
     }
   </script>
 </body>

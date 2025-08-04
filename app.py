@@ -85,7 +85,10 @@ if not logger.hasHandlers():
 scheduler = BackgroundScheduler()
 scheduler.start()
 
-app = Flask(__name__, static_folder='static', static_url_path='/static')
+app = Flask(__name__, 
+                static_folder=os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static'), 
+                static_url_path='/static',
+                template_folder=os.path.join(os.path.dirname(os.path.abspath(__file__)), 'templates'))
 app.secret_key = os.environ.get('SECRET_KEY', 'devsecret')
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///db.sqlite3'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
