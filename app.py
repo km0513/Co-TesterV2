@@ -744,6 +744,10 @@ def home_redirect():
 def download_logo():
     return render_template('download-logo.html')
 
+@app.route('/learning-resources')
+def learning_resources():
+    return render_template('learning-resources.html', active_tab='learning')
+
 @app.route('/api-co-test')
 @jira_auth_required
 def api_co_test():
