@@ -5667,29 +5667,115 @@ import pytesseract
 from PIL import Image
 import requests
 from flask import request, jsonify
-# If Tesseract is not in PATH, uncomment and set the path below:
-# pytesseract.pytesseract.tesseract_cmd = r'C:\\Program Files\\Tesseract-OCR\\tesseract.exe'
+# Configure Tesseract path - try to find it in common locations
+import platform
+import os.path
+
+# Auto-detect Tesseract path based on platform
+if platform.system() == 'Windows':
+    tesseract_paths = [
+        r'C:\Program Files\Tesseract-OCR\tesseract.exe',
+        r'C:\Program Files (x86)\Tesseract-OCR\tesseract.exe'
+    ]
+    for path in tesseract_paths:
+        if os.path.exists(path):
+            pytesseract.pytesseract.tesseract_cmd = path
+            logger.info(f"Found Tesseract at: {path}")
+            break
+elif platform.system() == 'Linux':
+    # On Linux, it's typically in PATH already, but we can check common locations
+    tesseract_paths = [
+        '/usr/bin/tesseract',
+        '/usr/local/bin/tesseract'
+    ]
+    for path in tesseract_paths:
+        if os.path.exists(path):
+            pytesseract.pytesseract.tesseract_cmd = path
+            logger.info(f"Found Tesseract at: {path}")
+            break
 
 @app.route('/api/image-to-text', methods=['POST'])
+@jira_auth_required
 def image_to_text():
-    data = request.json
-    image_url = data.get('image_url')
-    if not image_url:
-        return jsonify({'error': 'No image_url provided'}), 400
     try:
-        img = Image.open(requests.get(image_url, stream=True).raw)
-        text = pytesseract.image_to_string(img)
-        if text.strip():
-            return jsonify({'text': text.strip(), 'source': 'ocr'})
-        # Fallback: Vision API (dummy)
-        caption = call_vision_api(image_url)
-        return jsonify({'text': caption, 'source': 'vision'})
+        data = request.json
+        if not data:
+            logger.error("No JSON data received in image-to-text request")
+            return jsonify({'error': 'No JSON data provided'}), 400
+            
+        image_url = data.get('image_url')
+        if not image_url:
+            logger.error("No image_url provided in image-to-text request")
+            return jsonify({'error': 'No image_url provided'}), 400
+            
+        logger.info(f"Processing image-to-text request for URL: {image_url}")
+        
+        # Handle both direct URLs and Jira attachment URLs
+        try:
+            # For Jira attachments, we need to use the session with auth
+            if 'jira' in image_url.lower() and 'attachment' in image_url.lower():
+                logger.info("Detected Jira attachment URL, using authenticated session")
+                # Get Jira access token from session
+                access_token = session.get('jira_access_token')
+                if not access_token:
+                    logger.error("No Jira access token found in session")
+                    return jsonify({'error': 'Jira authentication required'}), 401
+                    
+                # Make request with authorization header
+                headers = {'Authorization': f'Bearer {access_token}'}
+                response = requests.get(image_url, headers=headers, stream=True)
+            else:
+                # Regular URL
+                response = requests.get(image_url, stream=True)
+                
+            response.raise_for_status()  # Raise exception for 4XX/5XX responses
+            img = Image.open(response.raw)
+            
+        except requests.exceptions.RequestException as e:
+            logger.error(f"Error fetching image from URL: {str(e)}")
+            return jsonify({'error': f'Error fetching image: {str(e)}'}), 500
+            
+        # Check if pytesseract is properly configured
+        if not hasattr(pytesseract, 'image_to_string'):
+            logger.error("Pytesseract not properly installed or configured")
+            return jsonify({'error': 'OCR engine not available'}), 500
+            
+        # Process with OCR
+        try:
+            logger.info("Performing OCR on image")
+            text = pytesseract.image_to_string(img)
+            
+            if text and text.strip():
+                logger.info(f"OCR successful, extracted {len(text.strip())} characters")
+                return jsonify({'text': text.strip(), 'source': 'ocr'})
+                
+            # Fallback to Vision API if OCR returns no text
+            logger.info("OCR returned no text, falling back to Vision API")
+            caption = call_vision_api(image_url)
+            return jsonify({'text': caption, 'source': 'vision'})
+            
+        except Exception as e:
+            logger.error(f"OCR processing error: {str(e)}")
+            return jsonify({'error': f'OCR processing error: {str(e)}'}), 500
+            
     except Exception as e:
+        logger.error(f"Unexpected error in image-to-text: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
 def call_vision_api(image_url):
-    # TODO: Integrate with a real vision API if needed
-    return "No text found, and vision API not implemented."
+    # Try to use Google Vision API if configured
+    try:
+        if genai and os.getenv('GOOGLE_API_KEY'):
+            logger.info("Attempting to use Google Generative AI for image description")
+            model = genai.GenerativeModel('gemini-pro-vision')
+            image_data = requests.get(image_url).content
+            response = model.generate_content(["Describe all text visible in this image", image_data])
+            if response and hasattr(response, 'text'):
+                return response.text
+    except Exception as e:
+        logger.error(f"Error calling Vision API: {str(e)}")
+    
+    return "No text found in image. Vision API fallback not available or failed."
 # --- End OCR and Vision API Hybrid Endpoint ---
 
 def step_to_description(step):
