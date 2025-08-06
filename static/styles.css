@@ -412,6 +412,8 @@ h1, h2, h3, h4, h5, h6 {
 /* Adjust container margins for sidebar layout */
 .main-content .container {
   margin-top: 1rem;
+  margin-left: 0;
+  padding-left: 0;
 }
 
 /* Hide the old navbar elements when using sidebar */

@@ -723,6 +723,30 @@ class E2ETest(db.Model):
     created_by = db.Column(db.String(150), nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
+# Test Context Model
+class TestContext(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    name = db.Column(db.String(100), nullable=False)
+    description = db.Column(db.String(500))
+    context_data = db.Column(db.Text)  # JSON string
+    # Structured fields for better querying
+    feature_summary = db.Column(db.Text)
+    requirements = db.Column(db.Text)  # JSON string of array
+    user_flows = db.Column(db.Text)  # JSON string of array
+    validation_points = db.Column(db.Text)  # JSON string of array
+    dependencies = db.Column(db.Text)  # JSON string of array
+    edge_cases = db.Column(db.Text)  # JSON string of array
+    data_requirements = db.Column(db.Text)  # JSON string of array
+    # New fields from enhanced prompt
+    performance_criteria = db.Column(db.Text)  # JSON string of array
+    security_considerations = db.Column(db.Text)  # JSON string of array
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    def __repr__(self):
+        return f'<TestContext {self.name}>'
+
 # --- TEMP: Create all tables if not present ---
 with app.app_context():
     db.create_all()
@@ -747,6 +771,140 @@ def download_logo():
 @app.route('/learning-resources')
 def learning_resources():
     return render_template('learning-resources.html', active_tab='learning')
+
+@app.route('/context-builder')
+@jira_auth_required
+def context_builder():
+    return render_template('context-builder.html', active_tab='context-builder')
+
+@app.route('/api/process-context', methods=['POST'])
+@jira_auth_required
+@llm_rate_limit
+def process_context():
+    try:
+        # Get uploaded file or text
+        content = ''
+        if 'document' in request.files:
+            file = request.files['document']
+            if file and allowed_file(file.filename):
+                # Extract text from document
+                if file.filename.endswith('.pdf'):
+                    # For PDF files
+                    import io
+                    from PyPDF2 import PdfReader
+                    pdf_reader = PdfReader(io.BytesIO(file.read()))
+                    for page in pdf_reader.pages:
+                        content += page.extract_text() + '\n'
+                elif file.filename.endswith(('.doc', '.docx')):
+                    # For Word documents
+                    import io
+                    import docx
+                    doc = docx.Document(io.BytesIO(file.read()))
+                    for para in doc.paragraphs:
+                        content += para.text + '\n'
+                else:
+                    # For text files
+                    content = file.read().decode('utf-8')
+        else:
+            content = request.form.get('raw_text', '')
+            
+        if not content:
+            return jsonify({'error': 'No content provided'}), 400
+            
+        # Process with AI
+        context_data = generate_structured_context(content)
+        
+        # Save to database if requested
+        if request.form.get('save', 'false').lower() == 'true':
+            name = request.form.get('name', 'Untitled Context')
+            description = request.form.get('description', '')
+            context_id = save_context_to_db(context_data, name, description)
+            return jsonify({
+                'success': True,
+                'context_id': context_id,
+                'context': context_data
+            })
+        else:
+            return jsonify({
+                'success': True,
+                'context': context_data
+            })
+    except Exception as e:
+        app.logger.error(f"Error processing context: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/contexts', methods=['GET'])
+@jira_auth_required
+def list_contexts():
+    try:
+        user_id = get_user_identifier()
+        contexts = TestContext.query.filter_by(user_id=user_id).all()
+        result = []
+        for context in contexts:
+            result.append({
+                'id': context.id,
+                'name': context.name,
+                'description': context.description,
+                'created_at': context.created_at.isoformat(),
+                'updated_at': context.updated_at.isoformat()
+            })
+        return jsonify({'contexts': result})
+    except Exception as e:
+        app.logger.error(f"Error listing contexts: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/contexts/<int:context_id>', methods=['GET'])
+@jira_auth_required
+def get_context(context_id):
+    try:
+        user_id = get_user_identifier()
+        context = TestContext.query.filter_by(id=context_id, user_id=user_id).first()
+        if not context:
+            return jsonify({'error': 'Context not found'}), 404
+        
+        # Parse all JSON fields
+        context_data = json.loads(context.context_data) if context.context_data else {}
+        
+        # Build response with all structured fields
+        response = {
+            'id': context.id,
+            'name': context.name,
+            'description': context.description,
+            'feature_summary': context.feature_summary,
+            'requirements': json.loads(context.requirements) if context.requirements else [],
+            'user_flows': json.loads(context.user_flows) if context.user_flows else [],
+            'validation_points': json.loads(context.validation_points) if context.validation_points else [],
+            'dependencies': json.loads(context.dependencies) if context.dependencies else [],
+            'edge_cases': json.loads(context.edge_cases) if context.edge_cases else [],
+            'data_requirements': json.loads(context.data_requirements) if context.data_requirements else [],
+            # Include new fields
+            'performance_criteria': json.loads(context.performance_criteria) if context.performance_criteria else [],
+            'security_considerations': json.loads(context.security_considerations) if context.security_considerations else [],
+            'created_at': context.created_at.isoformat(),
+            'updated_at': context.updated_at.isoformat()
+        }
+        
+        return jsonify(response)
+    except Exception as e:
+        app.logger.error(f"Error getting context: {str(e)}")
+        return jsonify({'error': f'Error retrieving context: {str(e)}'}), 500
+
+@app.route('/api/contexts/<int:context_id>', methods=['DELETE'])
+@jira_auth_required
+def delete_context(context_id):
+    try:
+        user_id = get_user_identifier()
+        context = TestContext.query.filter_by(id=context_id, user_id=user_id).first()
+        if not context:
+            return jsonify({'error': 'Context not found'}), 404
+        
+        db.session.delete(context)
+        db.session.commit()
+        
+        return jsonify({'success': True})
+    except Exception as e:
+        app.logger.error(f"Error deleting context: {str(e)}")
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/api-co-test')
 @jira_auth_required
@@ -2475,6 +2633,105 @@ def generate_zip():
 
 CONTEXT_DIR = "context"
 
+def save_context_to_db(context_data, name, description=''):
+    """Save context data to database"""
+    try:
+        # Get user ID
+        user_id = get_user_identifier()
+        
+        # Create a new context record
+        new_context = TestContext(
+            user_id=user_id,
+            name=name,
+            description=description,
+            # Store the full JSON for backward compatibility
+            context_data=json.dumps(context_data),
+            # Store individual fields for better querying
+            feature_summary=context_data.get('feature_summary', ''),
+            # Renamed from 'requirements' to 'functional_requirements' in the prompt
+            requirements=json.dumps(context_data.get('functional_requirements', context_data.get('requirements', []))),
+            user_flows=json.dumps(context_data.get('user_flows', [])),
+            validation_points=json.dumps(context_data.get('validation_points', [])),
+            dependencies=json.dumps(context_data.get('dependencies', [])),
+            edge_cases=json.dumps(context_data.get('edge_cases', [])),
+            data_requirements=json.dumps(context_data.get('data_requirements', [])),
+            # Add new fields from enhanced prompt
+            performance_criteria=json.dumps(context_data.get('performance_criteria', [])),
+            security_considerations=json.dumps(context_data.get('security_considerations', [])),
+        )
+        
+        db.session.add(new_context)
+        db.session.commit()
+        
+        return new_context.id
+    except Exception as e:
+        app.logger.error(f"Error saving context to database: {str(e)}")
+        db.session.rollback()
+        return None
+
+def generate_structured_context(content):
+    """
+    Process raw requirements document with AI to generate structured context
+    """
+    try:
+        # Prepare the prompt for the AI
+        prompt = f"""
+        You are an advanced analysis system designed explicitly to deeply interpret complex software requirements and generate exhaustive, structured context optimized for automated test case generation using advanced LLMs, specifically Gemini Pro.
+
+        Conduct a meticulous and comprehensive analysis of the provided detailed software requirements document:
+
+        {content}
+
+        Upon completion of your analysis, deliver a highly detailed and structured JSON object containing the following explicitly defined and comprehensive sections:
+
+        1. **"feature_summary"**: Provide an in-depth, clear, and precise summary of the primary features, functionalities, and objectives captured by the requirements, highlighting core purpose and scope.
+
+        2. **"requirements"**: Detail each explicitly stated functional requirement individually, ensuring precision, completeness, and clarity. Organize requirements logically and cohesively, capturing all key functionalities.
+
+        3. **"user_flows"**: Clearly articulate each critical user journey or workflow in detailed, sequential steps. Include clear entry and exit points, decision branches, alternative paths, and interactions within the workflow.
+
+        4. **"validation_points"**: Identify exhaustive validation checks critical for ensuring comprehensive quality standards. Cover aspects such as functionality, usability, accessibility, performance, security, compliance, and user experience considerations.
+
+        5. **"dependencies"**: Thoroughly list and describe all necessary system dependencies, integrations with external or internal services, APIs, databases, infrastructure requirements, and other resources needed for successful implementation and validation.
+
+        6. **"edge_cases"**: Meticulously identify and detail all possible edge cases, exceptional conditions, boundary scenarios, error handling situations, and unexpected user interactions requiring rigorous testing.
+
+        7. **"data_requirements"**: Clearly and comprehensively specify all data-related needs and constraints. Include test data requirements, data formats, expected data types, database schema details, data volume considerations, and any constraints or limitations that impact testing scenarios.
+
+        8. **"performance_criteria"**: Define precise performance metrics, scalability expectations, load conditions, response times, throughput expectations, and other relevant benchmarks critical for validating system performance under realistic conditions.
+
+        9. **"security_considerations"**: Explicitly outline security requirements, including access controls, authentication, authorization protocols, encryption standards, data privacy measures, compliance with relevant security standards, and any vulnerability points that must be rigorously tested.
+
+        Format your output strictly as a clearly structured, valid JSON object containing exactly these keys. Ensure exhaustive coverage, clarity, completeness, and accuracy optimized specifically for use with Gemini Pro-driven automated test generation systems.
+        """
+        
+        # Call Google Generative AI
+        genai.configure(api_key=os.environ.get('GOOGLE_API_KEY'))
+        # Use gemini-1.5-pro instead of gemini-pro for newer API compatibility
+        model = genai.GenerativeModel('gemini-1.5-pro')
+        response = model.generate_content(prompt)
+        
+        # Extract and parse the JSON from the response
+        response_text = response.text
+        # Find JSON content between triple backticks if present
+        json_match = re.search(r'```json\n(.+?)\n```', response_text, re.DOTALL)
+        if json_match:
+            json_str = json_match.group(1)
+        else:
+            # If no code blocks, try to find a JSON object directly
+            json_match = re.search(r'(\{.+\})', response_text, re.DOTALL)
+            if json_match:
+                json_str = json_match.group(1)
+            else:
+                json_str = response_text
+                
+        # Clean up and parse JSON
+        context_data = json.loads(json_str)
+        return context_data
+    except Exception as e:
+        app.logger.error(f"Error generating structured context: {str(e)}")
+        raise
+
 def get_context_text(context_name):
     """
     Reads the content of a context file and formats it for the prompt.
@@ -2523,33 +2780,122 @@ def get_context_text(context_name):
         return ""
 
 import os
+import traceback
+import stat
 from flask import send_from_directory
 from werkzeug.utils import secure_filename
 
 UPLOAD_FOLDER = os.path.join(os.path.dirname(__file__), 'uploads')
-ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'pdf'}
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'pdf', 'gif', 'doc', 'docx', 'txt'}
 if not os.path.exists(UPLOAD_FOLDER):
     os.makedirs(UPLOAD_FOLDER)
 
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
 @app.route('/api/upload', methods=['POST'])
 def upload_file():
-    if 'file' not in request.files:
-        return jsonify({'error': 'No file part'}), 400
-    file = request.files['file']
-    if file.filename == '':
-        return jsonify({'error': 'No selected file'}), 400
-    filename = secure_filename(file.filename)
-    ext = filename.rsplit('.', 1)[-1].lower()
-    if ext not in ALLOWED_EXTENSIONS:
-        return jsonify({'error': 'File type not allowed'}), 400
-    save_path = os.path.join(UPLOAD_FOLDER, filename)
-    file.save(save_path)
-    url = f'/uploads/{filename}'
-    return jsonify({'url': url})
+    try:
+        if 'file' not in request.files:
+            app.logger.warning('Upload attempt with no file part')
+            return jsonify({'error': 'No file part'}), 400
+            
+        file = request.files['file']
+        if file.filename == '':
+            app.logger.warning('Upload attempt with empty filename')
+            return jsonify({'error': 'No selected file'}), 400
+            
+        if file and allowed_file(file.filename):
+            filename = secure_filename(file.filename)
+            
+            # Ensure upload folder exists
+            if not os.path.exists(UPLOAD_FOLDER):
+                os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+                app.logger.info(f"Created upload folder: {UPLOAD_FOLDER}")
+                
+            # Get absolute path for logging
+            abs_upload_folder = os.path.abspath(UPLOAD_FOLDER)
+            save_path = os.path.join(UPLOAD_FOLDER, filename)
+            
+            # Save the file
+            file.save(save_path)
+            app.logger.info(f"File saved successfully: {save_path}")
+            
+            # Get server name and protocol for absolute URL
+            server_name = request.headers.get('Host', '')
+            protocol = 'https' if request.is_secure else 'http'
+            
+            # Create both relative and absolute URLs
+            relative_url = f'/uploads/{filename}'
+            absolute_url = f"{protocol}://{server_name}{relative_url}"
+            
+            app.logger.info(f"File URL: {absolute_url}")
+            return jsonify({
+                'url': relative_url,
+                'absolute_url': absolute_url,
+                'filename': filename
+            })
+        else:
+            app.logger.warning(f"Invalid file type: {file.filename}")
+            return jsonify({'error': 'File type not allowed'}), 400
+    except Exception as e:
+        app.logger.error(f"Error in upload_file: {str(e)}")
+        return jsonify({'error': f'Upload failed: {str(e)}'}), 500
 
 @app.route('/uploads/<filename>')
 def uploaded_file(filename):
-    return send_from_directory(UPLOAD_FOLDER, filename)
+    try:
+        # Log request details
+        request_id = id(request)
+        app.logger.info(f"[{request_id}] File access request for: {filename}")
+        app.logger.info(f"[{request_id}] Request headers: {dict(request.headers)}")
+        app.logger.info(f"[{request_id}] Request remote addr: {request.remote_addr}")
+        
+        # Ensure the upload folder exists
+        if not os.path.exists(UPLOAD_FOLDER):
+            os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+            app.logger.warning(f"[{request_id}] Upload folder {UPLOAD_FOLDER} did not exist, created it")
+            
+        # Check if the file exists
+        file_path = os.path.join(UPLOAD_FOLDER, filename)
+        app.logger.info(f"[{request_id}] Looking for file at: {os.path.abspath(file_path)}")
+        
+        if not os.path.isfile(file_path):
+            app.logger.error(f"[{request_id}] File not found: {file_path}")
+            app.logger.info(f"[{request_id}] Directory contents: {os.listdir(UPLOAD_FOLDER) if os.path.exists(UPLOAD_FOLDER) else 'upload folder does not exist'}")
+            return jsonify({'error': 'File not found'}), 404
+            
+        # Log successful file access
+        app.logger.info(f"[{request_id}] File found, size: {os.path.getsize(file_path)} bytes, serving file...")
+        
+        # Get server name and protocol for logging
+        server_name = request.headers.get('Host', '')
+        protocol = 'https' if request.is_secure else 'http'
+        app.logger.info(f"[{request_id}] Serving from: {protocol}://{server_name}/uploads/{filename}")
+        
+        app.logger.info(f"Serving file: {file_path}")
+        return send_from_directory(UPLOAD_FOLDER, filename)
+    except Exception as e:
+        request_id = id(request)
+        app.logger.error(f"[{request_id}] Error serving file {filename}: {str(e)}")
+        app.logger.error(f"[{request_id}] Exception type: {type(e).__name__}")
+        app.logger.error(f"[{request_id}] Exception traceback: {traceback.format_exc()}")
+        
+        # Check file permissions
+        try:
+            if os.path.exists(file_path):
+                stat_info = os.stat(file_path)
+                app.logger.info(f"[{request_id}] File permissions: {stat.filemode(stat_info.st_mode)}")
+                app.logger.info(f"[{request_id}] File owner: {stat_info.st_uid}, group: {stat_info.st_gid}")
+        except Exception as perm_error:
+            app.logger.error(f"[{request_id}] Error checking file permissions: {str(perm_error)}")
+            
+        return jsonify({
+            'error': f'Error serving file: {str(e)}',
+            'filename': filename,
+            'path': file_path,
+            'exception_type': type(e).__name__
+        }), 500
 
 # Add this helper function near the top (with other helpers)
 def chunk_text(text, chunk_size=15000, overlap=1000):
@@ -2587,16 +2933,58 @@ def generate_testcases():
             )
         # If both doc and images, combine all image URLs
         all_image_urls = []
+        
+        # Process visual_image_urls to prefer absolute URLs when available
         if visual_image_urls:
-            all_image_urls.extend(visual_image_urls)
+            processed_urls = []
+            for url_data in visual_image_urls:
+                # Check if this is a dict with absolute_url (from our enhanced upload endpoint)
+                if isinstance(url_data, dict) and 'absolute_url' in url_data:
+                    processed_urls.append(url_data['absolute_url'])
+                    app.logger.info(f"Using absolute URL for image: {url_data['absolute_url']}")
+                # Check if this is a dict with url (fallback to relative)
+                elif isinstance(url_data, dict) and 'url' in url_data:
+                    processed_urls.append(url_data['url'])
+                    app.logger.info(f"Using relative URL for image: {url_data['url']}")
+                # If it's just a string URL
+                else:
+                    processed_urls.append(url_data)
+                    app.logger.info(f"Using provided URL for image: {url_data}")
+            all_image_urls.extend(processed_urls)
+            
+        # Add Jira image URLs
         if jira_image_urls:
             all_image_urls.extend(jira_image_urls)
+            
+        # Process visual_doc_url to prefer absolute URL if available
+        if visual_doc_url:
+            if isinstance(visual_doc_url, dict) and 'absolute_url' in visual_doc_url:
+                visual_section = (
+                    f"Refer to the attached document containing UI screenshots or design walkthroughs:\n{visual_doc_url['absolute_url']}\n"
+                    "Use the images in the document to infer layout, field positions, and user flow.\n\n"
+                )
+                app.logger.info(f"Using absolute URL for document: {visual_doc_url['absolute_url']}")
+            elif isinstance(visual_doc_url, dict) and 'url' in visual_doc_url:
+                visual_section = (
+                    f"Refer to the attached document containing UI screenshots or design walkthroughs:\n{visual_doc_url['url']}\n"
+                    "Use the images in the document to infer layout, field positions, and user flow.\n\n"
+                )
+                app.logger.info(f"Using relative URL for document: {visual_doc_url['url']}")
+            else:
+                visual_section = (
+                    f"Refer to the attached document containing UI screenshots or design walkthroughs:\n{visual_doc_url}\n"
+                    "Use the images in the document to infer layout, field positions, and user flow.\n\n"
+                )
+                app.logger.info(f"Using provided URL for document: {visual_doc_url}")
+                
+        # Add all image URLs to the visual section
         if all_image_urls:
             visual_section += (
                 "Refer to the following UI image(s) that show screen layout, component states, and user flow:\n" +
                 "\n".join(all_image_urls) + "\n"
                 "Use these visuals to derive field visibility, workflows, and validation points.\n\n"
             )
+            app.logger.info(f"Added {len(all_image_urls)} image URLs to prompt")
 
         # --- CHUNKED CONTEXT LOGIC ---
         if context_name and context_text and len(context_text) > 15000:
@@ -6537,6 +6925,613 @@ def reset_llm_usage_for_user(user_id):
     except Exception as e:
         logger.error(f"Error resetting LLM usage for user {user_id}: {str(e)}")
         return jsonify({'error': 'Failed to reset LLM usage for user'}), 500
+
+# =============================================================================
+# BUG BUILDER ROUTES
+# =============================================================================
+
+# Bug Builder Models
+class BugSession(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    session_id = db.Column(db.String(100), unique=True, nullable=False)
+    video_path = db.Column(db.String(500))
+    annotations = db.Column(db.Text)  # JSON string
+    action_logs = db.Column(db.Text)  # JSON string
+    bug_report = db.Column(db.Text)  # JSON string
+    jira_issue_key = db.Column(db.String(50))
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    status = db.Column(db.String(20), default='recording')  # recording, processing, completed
+
+@app.route('/bug-builder')
+def bug_builder():
+    """Bug Builder main page"""
+    return render_template('bug-builder.html', active_tab='bug-builder')
+
+@app.route('/api/bug-builder/start-session', methods=['POST'])
+def start_bug_session():
+    """Initialize a new bug recording session"""
+    try:
+        data = request.get_json()
+        user_id = get_user_identifier()
+        
+        # Generate unique session ID
+        import uuid
+        session_id = str(uuid.uuid4())
+        
+        # Create new session
+        session = BugSession(
+            user_id=user_id,
+            session_id=session_id,
+            status='recording'
+        )
+        db.session.add(session)
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'session_id': session_id
+        })
+        
+    except Exception as e:
+        logger.error(f"Error starting bug session: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/bug-builder/process-recording', methods=['POST'])
+@llm_rate_limit
+def process_bug_recording():
+    """Process recorded video and generate bug report using AI"""
+    try:
+        session_id = request.form.get('session_id')
+        annotations = json.loads(request.form.get('annotations', '[]'))
+        action_logs = json.loads(request.form.get('actions', '[]'))
+        
+        # Get session
+        session = BugSession.query.filter_by(session_id=session_id).first()
+        if not session:
+            return jsonify({'success': False, 'error': 'Session not found'}), 404
+        
+        # Save video file
+        video_file = request.files.get('video')
+        if video_file:
+            import os
+            video_filename = f"bug_recording_{session_id}.webm"
+            video_path = os.path.join('uploads', video_filename)
+            
+            # Ensure uploads directory exists
+            os.makedirs('uploads', exist_ok=True)
+            video_file.save(video_path)
+            session.video_path = video_path
+        
+        # Update session with data
+        session.annotations = json.dumps(annotations)
+        session.action_logs = json.dumps(action_logs)
+        session.status = 'processing'
+        db.session.commit()
+        
+        # Generate bug report using AI
+        bug_report = generate_ai_bug_report(action_logs, annotations)
+        
+        # Save bug report
+        session.bug_report = json.dumps(bug_report)
+        session.status = 'completed'
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'bug_report': bug_report
+        })
+        
+    except Exception as e:
+        logger.error(f"Error processing bug recording: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+def generate_ai_bug_report(action_logs, annotations):
+    """Generate bug report using AI analysis"""
+    try:
+        # Prepare context for AI
+        context = {
+            'actions': action_logs,
+            'annotations': annotations,
+            'total_actions': len(action_logs),
+            'total_annotations': len(annotations)
+        }
+        
+        # Create prompt for AI
+        action_summary = analyze_action_patterns(action_logs)
+        
+        prompt = f"""
+Analyze this comprehensive bug recording data and generate a detailed bug report.
+
+=== RECORDING SUMMARY ===
+Total Actions Recorded: {len(action_logs)}
+User Annotations: {len(annotations)}
+Recording Duration: {action_logs[-1]['timestamp'] if action_logs else 0}ms
+
+=== ACTION ANALYSIS ===
+{action_summary}
+
+=== DETAILED ACTION LOG ===
+{format_action_logs_for_ai(action_logs[:15])}
+
+=== USER ANNOTATIONS ===
+{format_annotations_for_ai(annotations)}
+
+=== ANALYSIS REQUIREMENTS ===
+Generate a comprehensive bug report with:
+1. Clear, descriptive title that captures the core issue
+2. Detailed description including context and impact
+3. Step-by-step reproduction steps (extracted from actions)
+4. Expected vs actual results (from annotations and behavior)
+5. Priority assessment based on error severity and user impact
+6. Technical details (API calls, errors, data mismatches)
+
+Pay special attention to:
+- Behavioral issues where data doesn't match expectations
+- API response inconsistencies
+- JavaScript errors or console warnings
+- Form submission issues
+- Navigation problems
+- Performance or timing issues
+
+Format the response as a structured bug report.
+"""
+        
+        # Use Google AI if available
+        if genai:
+            model = genai.GenerativeModel('gemini-pro')
+            response = model.generate_content(prompt)
+            ai_analysis = response.text
+        else:
+            # Fallback to basic analysis
+            ai_analysis = generate_basic_bug_report(action_logs, annotations)
+        
+        # Parse AI response into structured format
+        bug_report = parse_ai_bug_report(ai_analysis, action_logs, annotations)
+        
+        return bug_report
+        
+    except Exception as e:
+        logger.error(f"Error generating AI bug report: {str(e)}")
+        return generate_basic_bug_report(action_logs, annotations)
+
+def analyze_action_patterns(action_logs):
+    """Analyze action patterns to identify potential issues"""
+    if not action_logs:
+        return "No actions recorded."
+    
+    analysis = []
+    
+    # Count action types
+    action_counts = {}
+    error_count = 0
+    api_calls = 0
+    form_submissions = 0
+    navigation_count = 0
+    
+    for action in action_logs:
+        action_type = action.get('type', 'unknown')
+        action_counts[action_type] = action_counts.get(action_type, 0) + 1
+        
+        if action_type in ['javascript_error', 'console_error', 'unhandled_promise_rejection']:
+            error_count += 1
+        elif action_type in ['xhr_request', 'fetch_request']:
+            api_calls += 1
+        elif action_type == 'submit':
+            form_submissions += 1
+        elif action_type == 'navigation':
+            navigation_count += 1
+    
+    # Generate analysis summary
+    analysis.append(f"Action Types: {', '.join([f'{k}: {v}' for k, v in sorted(action_counts.items())])}")
+    
+    if error_count > 0:
+        analysis.append(f"⚠️ {error_count} JavaScript/Console errors detected")
+    
+    if api_calls > 0:
+        analysis.append(f"🌐 {api_calls} API calls made")
+        
+        # Analyze API response patterns
+        failed_apis = []
+        for action in action_logs:
+            if action.get('type') in ['xhr_response', 'fetch_response']:
+                status = action.get('status', 0)
+                if status >= 400:
+                    failed_apis.append(f"{action.get('method', 'GET')} {action.get('url', 'unknown')} ({status})")
+        
+        if failed_apis:
+            analysis.append(f"❌ Failed API calls: {', '.join(failed_apis[:3])}")
+    
+    if form_submissions > 0:
+        analysis.append(f"📝 {form_submissions} form submissions")
+    
+    if navigation_count > 0:
+        analysis.append(f"🔄 {navigation_count} page navigations")
+    
+    # Identify potential issues
+    issues = []
+    
+    # Check for rapid clicking (potential UI responsiveness issue)
+    click_times = [action['timestamp'] for action in action_logs if action.get('type') == 'click']
+    if len(click_times) > 1:
+        rapid_clicks = sum(1 for i in range(1, len(click_times)) if click_times[i] - click_times[i-1] < 500)
+        if rapid_clicks > 2:
+            issues.append(f"Rapid clicking detected ({rapid_clicks} instances) - possible UI responsiveness issue")
+    
+    # Check for repeated actions (potential confusion)
+    repeated_actions = {}
+    for action in action_logs:
+        if action.get('type') in ['click', 'input']:
+            target = str(action.get('target', ''))
+            repeated_actions[target] = repeated_actions.get(target, 0) + 1
+    
+    high_repeat = [target for target, count in repeated_actions.items() if count > 3]
+    if high_repeat:
+        issues.append(f"Repeated interactions with same elements: {len(high_repeat)} elements")
+    
+    if issues:
+        analysis.append("\n🔍 Potential Issues Identified:")
+        analysis.extend([f"  - {issue}" for issue in issues])
+    
+    return '\n'.join(analysis)
+
+def format_action_logs_for_ai(actions):
+    """Format action logs for AI analysis with enhanced detail"""
+    formatted = []
+    for i, action in enumerate(actions):
+        timestamp = action.get('timestamp', 0)
+        action_type = action.get('type', 'unknown')
+        
+        if action_type == 'click':
+            target = action.get('target', {})
+            if isinstance(target, dict):
+                element_desc = get_element_description(target)
+                coords = action.get('coordinates', {})
+                formatted.append(f"{i+1}. [{timestamp}ms] Click on {element_desc} at ({coords.get('x', 0)}, {coords.get('y', 0)})")
+            else:
+                formatted.append(f"{i+1}. [{timestamp}ms] Click on {target}")
+                
+        elif action_type == 'input':
+            target = action.get('target', {})
+            value = action.get('value', '')
+            if isinstance(target, dict):
+                element_desc = get_element_description(target)
+                formatted.append(f"{i+1}. [{timestamp}ms] Input '{value[:30]}' in {element_desc}")
+            else:
+                formatted.append(f"{i+1}. [{timestamp}ms] Input '{value[:30]}' in {target}")
+                
+        elif action_type in ['xhr_request', 'fetch_request']:
+            method = action.get('method', 'GET')
+            url = action.get('url', 'unknown')
+            formatted.append(f"{i+1}. [{timestamp}ms] API {method} request to {url}")
+            
+        elif action_type in ['xhr_response', 'fetch_response']:
+            method = action.get('method', 'GET')
+            url = action.get('url', 'unknown')
+            status = action.get('status', 'unknown')
+            formatted.append(f"{i+1}. [{timestamp}ms] API {method} response from {url} (Status: {status})")
+            
+        elif action_type in ['javascript_error', 'console_error']:
+            message = action.get('message', 'Unknown error')
+            formatted.append(f"{i+1}. [{timestamp}ms] ❌ Error: {message[:50]}")
+            
+        elif action_type == 'navigation':
+            from_url = action.get('fromUrl', '')
+            to_url = action.get('toUrl', '')
+            formatted.append(f"{i+1}. [{timestamp}ms] Navigate from {from_url} to {to_url}")
+            
+        elif action_type == 'submit':
+            target = action.get('target', {})
+            if isinstance(target, dict):
+                element_desc = get_element_description(target)
+                formatted.append(f"{i+1}. [{timestamp}ms] Submit {element_desc}")
+            else:
+                formatted.append(f"{i+1}. [{timestamp}ms] Submit form")
+                
+        else:
+            formatted.append(f"{i+1}. [{timestamp}ms] {action_type} on {action.get('target', 'unknown')}")
+    
+    return '\n'.join(formatted)
+
+def format_annotations_for_ai(annotations):
+    """Format annotations for AI analysis"""
+    if not annotations:
+        return "No user annotations provided."
+    
+    formatted = []
+    for i, annotation in enumerate(annotations, 1):
+        formatted.append(f"{i}. At {annotation['timestamp']}ms: {annotation['text']}")
+    return '\n'.join(formatted)
+
+def parse_ai_bug_report(ai_text, action_logs, annotations):
+    """Parse AI-generated text into structured bug report"""
+    # Basic parsing - can be enhanced with more sophisticated NLP
+    lines = ai_text.split('\n')
+    
+    bug_report = {
+        'title': 'Bug Report Generated from Recording',
+        'description': ai_text[:500] + '...' if len(ai_text) > 500 else ai_text,
+        'steps_to_reproduce': extract_steps_from_actions(action_logs),
+        'expected_result': extract_expected_from_annotations(annotations),
+        'actual_result': extract_actual_from_annotations(annotations),
+        'priority': 'medium',
+        'evidence': [
+            {'type': 'video', 'name': 'Screen Recording', 'description': 'Complete user session recording'},
+            {'type': 'logs', 'name': 'Action Logs', 'description': f'{len(action_logs)} user interactions captured'},
+            {'type': 'annotations', 'name': 'User Notes', 'description': f'{len(annotations)} behavioral observations'}
+        ]
+    }
+    
+    # Try to extract title from AI response
+    for line in lines:
+        if 'title:' in line.lower() or line.startswith('#'):
+            bug_report['title'] = line.replace('Title:', '').replace('#', '').strip()
+            break
+    
+    return bug_report
+
+def extract_steps_from_actions(action_logs):
+    """Convert comprehensive action logs to detailed reproduction steps"""
+    steps = []
+    step_num = 1
+    
+    # Group related actions and create meaningful steps
+    i = 0
+    while i < len(action_logs) and step_num <= 20:  # Limit to 20 steps
+        action = action_logs[i]
+        
+        if action['type'] == 'navigation':
+            steps.append(f"{step_num}. Navigate to {action.get('toUrl', action.get('url', 'page'))}")
+            step_num += 1
+            
+        elif action['type'] == 'click':
+            target_info = action.get('target', {})
+            if isinstance(target_info, dict):
+                element_desc = get_element_description(target_info)
+                coordinates = action.get('coordinates', {})
+                steps.append(f"{step_num}. Click on {element_desc}")
+            else:
+                steps.append(f"{step_num}. Click on {target_info}")
+            step_num += 1
+            
+        elif action['type'] == 'input' and action.get('value'):
+            target_info = action.get('target', {})
+            value = action.get('value', '')
+            if isinstance(target_info, dict):
+                element_desc = get_element_description(target_info)
+                if value != '[SENSITIVE_DATA_HIDDEN]':
+                    steps.append(f"{step_num}. Enter '{value[:50]}' in {element_desc}")
+                else:
+                    steps.append(f"{step_num}. Enter sensitive data in {element_desc}")
+            else:
+                steps.append(f"{step_num}. Enter '{value[:50]}' in {target_info}")
+            step_num += 1
+            
+        elif action['type'] == 'submit':
+            target_info = action.get('target', {})
+            if isinstance(target_info, dict):
+                element_desc = get_element_description(target_info)
+                steps.append(f"{step_num}. Submit {element_desc}")
+            else:
+                steps.append(f"{step_num}. Submit form")
+            step_num += 1
+        
+        i += 1
+    
+    return '\n'.join(steps) if steps else 'Steps will be extracted from recording analysis'
+
+def get_element_description(target_info):
+    """Generate human-readable description of an element"""
+    if not isinstance(target_info, dict):
+        return str(target_info)
+    
+    # Priority order for element identification
+    if target_info.get('id'):
+        return f"element with ID '{target_info['id']}'"
+    elif target_info.get('name'):
+        return f"'{target_info['name']}' field"
+    elif target_info.get('placeholder'):
+        return f"field with placeholder '{target_info['placeholder']}'"
+    elif target_info.get('text') and len(target_info['text'].strip()) > 0:
+        return f"'{target_info['text'][:30]}' element"
+    elif target_info.get('type'):
+        return f"{target_info['type']} input"
+    elif target_info.get('tagName'):
+        return f"{target_info['tagName']} element"
+    else:
+        return "element"
+
+def extract_expected_from_annotations(annotations):
+    """Extract expected behavior from user annotations"""
+    expected_parts = []
+    for annotation in annotations:
+        text = annotation['text'].lower()
+        if 'expected' in text or 'should' in text:
+            expected_parts.append(annotation['text'])
+    
+    return ' '.join(expected_parts) if expected_parts else 'Expected behavior as per requirements'
+
+def extract_actual_from_annotations(annotations):
+    """Extract actual behavior from user annotations"""
+    actual_parts = []
+    for annotation in annotations:
+        text = annotation['text'].lower()
+        if 'actual' in text or 'but' in text or 'instead' in text:
+            actual_parts.append(annotation['text'])
+    
+    return ' '.join(actual_parts) if actual_parts else 'Actual behavior differs from expected'
+
+def generate_basic_bug_report(action_logs, annotations):
+    """Generate basic bug report without AI"""
+    return {
+        'title': f'Bug Report - {len(action_logs)} actions recorded',
+        'description': f'Bug identified during testing session with {len(annotations)} user observations.',
+        'steps_to_reproduce': extract_steps_from_actions(action_logs),
+        'expected_result': extract_expected_from_annotations(annotations),
+        'actual_result': extract_actual_from_annotations(annotations),
+        'priority': 'medium',
+        'evidence': [
+            {'type': 'video', 'name': 'Screen Recording'},
+            {'type': 'logs', 'name': f'{len(action_logs)} Action Logs'},
+            {'type': 'annotations', 'name': f'{len(annotations)} User Notes'}
+        ]
+    }
+
+@app.route('/api/bug-builder/upload-video', methods=['POST'])
+def upload_bug_video():
+    """Upload video for preview"""
+    try:
+        session_id = request.form.get('session_id')
+        if not session_id:
+            return jsonify({'success': False, 'error': 'Session ID required'}), 400
+        
+        # Get session
+        session = BugSession.query.filter_by(session_id=session_id).first()
+        if not session:
+            return jsonify({'success': False, 'error': 'Session not found'}), 404
+        
+        # Check if user owns this session
+        user_id = get_user_identifier()
+        if session.user_id != user_id:
+            return jsonify({'success': False, 'error': 'Unauthorized'}), 403
+        
+        # Save video file
+        video_file = request.files.get('video')
+        if video_file:
+            import os
+            video_filename = f"bug_recording_{session_id}.webm"
+            video_path = os.path.join('uploads', video_filename)
+            
+            # Ensure uploads directory exists
+            os.makedirs('uploads', exist_ok=True)
+            video_file.save(video_path)
+            
+            # Update session with video path
+            session.video_path = video_path
+            db.session.commit()
+            
+            return jsonify({
+                'success': True,
+                'video_url': f'/api/bug-builder/video/{session_id}'
+            })
+        else:
+            return jsonify({'success': False, 'error': 'No video file provided'}), 400
+            
+    except Exception as e:
+        logger.error(f"Error uploading video: {str(e)}")
+        return jsonify({'success': False, 'error': 'Failed to upload video'}), 500
+
+@app.route('/api/bug-builder/video/<session_id>')
+def serve_bug_video(session_id):
+    """Serve recorded video for preview"""
+    try:
+        # Get session
+        session = BugSession.query.filter_by(session_id=session_id).first()
+        if not session or not session.video_path:
+            return jsonify({'error': 'Video not found'}), 404
+        
+        # Check if user owns this session
+        user_id = get_user_identifier()
+        if session.user_id != user_id:
+            return jsonify({'error': 'Unauthorized'}), 403
+        
+        # Serve video file
+        import os
+        if os.path.exists(session.video_path):
+            return send_file(session.video_path, mimetype='video/webm')
+        else:
+            return jsonify({'error': 'Video file not found'}), 404
+            
+    except Exception as e:
+        logger.error(f"Error serving video: {str(e)}")
+        return jsonify({'error': 'Failed to serve video'}), 500
+
+@app.route('/api/bug-builder/submit-to-jira', methods=['POST'])
+@jira_auth_required
+def submit_bug_to_jira():
+    """Submit bug report to Jira"""
+    try:
+        data = request.get_json()
+        session_id = data.get('session_id')
+        
+        # Get session
+        session = BugSession.query.filter_by(session_id=session_id).first()
+        if not session:
+            return jsonify({'success': False, 'error': 'Session not found'}), 404
+        
+        # Get Jira credentials from session
+        jira_token = session.get('jira_access_token')
+        jira_site = session.get('jira_site')
+        
+        if not jira_token or not jira_site:
+            return jsonify({'success': False, 'error': 'Jira authentication required'}), 401
+        
+        # Prepare Jira issue data
+        issue_data = {
+            "fields": {
+                "project": {"key": "TEST"},  # Default project, should be configurable
+                "summary": data.get('title', 'Bug Report from Co-Tester'),
+                "description": format_jira_description(data),
+                "issuetype": {"name": "Bug"},
+                "priority": {"name": data.get('priority', 'Medium').title()}
+            }
+        }
+        
+        # Create Jira issue
+        jira_response = requests.post(
+            f"https://{jira_site}.atlassian.net/rest/api/3/issue",
+            headers={
+                'Authorization': f'Bearer {jira_token}',
+                'Content-Type': 'application/json'
+            },
+            json=issue_data
+        )
+        
+        if jira_response.status_code == 201:
+            issue_key = jira_response.json()['key']
+            
+            # Update session with Jira issue key
+            session.jira_issue_key = issue_key
+            db.session.commit()
+            
+            return jsonify({
+                'success': True,
+                'jira_key': issue_key,
+                'jira_url': f"https://{jira_site}.atlassian.net/browse/{issue_key}"
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'error': f'Jira API error: {jira_response.text}'
+            }), 400
+            
+    except Exception as e:
+        logger.error(f"Error submitting to Jira: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+def format_jira_description(bug_data):
+    """Format bug report for Jira description"""
+    description = f"""
+*Description:*
+{bug_data.get('description', '')}
+
+*Steps to Reproduce:*
+{bug_data.get('steps_to_reproduce', '')}
+
+*Expected Result:*
+{bug_data.get('expected_result', '')}
+
+*Actual Result:*
+{bug_data.get('actual_result', '')}
+
+*Generated by:* Co-Tester Bug Builder
+*Session ID:* {bug_data.get('session_id', '')}
+"""
+    return description
+
+# Create tables for bug builder
+with app.app_context():
+    db.create_all()
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)

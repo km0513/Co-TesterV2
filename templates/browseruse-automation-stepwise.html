@@ -8,7 +8,7 @@
     <title>AI Automation</title>
     <link rel="stylesheet" href="/static/styles.css">
     <style>
-        .container { max-width: 900px; margin: 0 auto; padding: 1.5rem; }
+        .container { max-width: 900px; margin: 0; padding: 1.5rem; padding-left: 0; }
         .step-list { margin: 1em 0; }
         .step { background: #f8f8f8; border-radius: 6px; padding: 1em; margin-bottom: 1em; display: flex; flex-wrap: wrap; gap: 1em; align-items: flex-start; }
         .step select, .step input { margin-right: 0.5em; min-width: 180px; max-width: 300px; box-sizing: border-box; }
@@ -31,6 +31,7 @@
     </style>
 </head>
 <body>
+  {% include 'quotes-header.html' %}
   {% set active_tab = 'browseruse' %}
   {% include 'left-sidebar.html' %}
   <div class="main-content">

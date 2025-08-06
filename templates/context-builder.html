@@ -1,0 +1,655 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<title>Context Builder - Co-Tester <span class="ai-badge">AI</span></title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='0.9em' font-size='90'>🚀</text></svg>">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+<link rel="stylesheet" href="/static/styles.css">
+<link rel="stylesheet" href="/static/navbar-tabs.css">
+<style>
+    .context-builder-container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 20px;
+    }
+    
+    .glass-card {
+        background: rgba(255, 255, 255, 0.7);
+        backdrop-filter: blur(10px);
+        border-radius: 10px;
+        padding: 20px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        margin-bottom: 20px;
+        border-top: 3px solid;
+        border-image: linear-gradient(135deg, #667eea 0%, #764ba2 100%) 1;
+    }
+    
+    .input-section, .output-section {
+        margin-bottom: 30px;
+    }
+    
+    .tab-content {
+        padding: 20px 0;
+    }
+    
+    .nav-tabs .nav-link.active {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border: none;
+    }
+    
+    .nav-tabs .nav-link {
+        border-radius: 5px 5px 0 0;
+        margin-right: 5px;
+    }
+    
+    .form-control {
+        border-radius: 5px;
+    }
+    
+    textarea {
+        min-height: 200px;
+    }
+    
+    .btn-primary {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border: none;
+    }
+    
+    .btn-outline-primary {
+        border: 1px solid #667eea;
+        color: #667eea;
+    }
+    
+    .btn-outline-primary:hover {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border: 1px solid transparent;
+    }
+    
+    .context-list {
+        max-height: 300px;
+        overflow-y: auto;
+    }
+    
+    .context-item {
+        cursor: pointer;
+        padding: 10px;
+        border-radius: 5px;
+        margin-bottom: 5px;
+        transition: all 0.3s ease;
+    }
+    
+    .context-item:hover {
+        background-color: rgba(102, 126, 234, 0.1);
+    }
+    
+    .context-item.active {
+        background-color: rgba(102, 126, 234, 0.2);
+    }
+    
+    .json-viewer {
+        background-color: #f8f9fa;
+        border-radius: 5px;
+        padding: 15px;
+        max-height: 500px;
+        overflow-y: auto;
+        font-family: monospace;
+    }
+    
+    .spinner-border {
+        width: 3rem;
+        height: 3rem;
+    }
+    
+    .loading-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.5);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 9999;
+        flex-direction: column;
+        color: white;
+    }
+    
+    .ai-badge {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 3px 8px;
+        border-radius: 4px;
+        font-size: 0.7rem;
+        margin-left: 5px;
+        vertical-align: middle;
+    }
+</style>
+</head>
+{% include 'quotes-header.html' %}
+{% include 'left-sidebar.html' %}
+
+<div class="main-content">
+    {% include 'page-header.html' with context %}
+    
+    <div class="context-builder-container">
+        <div class="glass-card">
+            <h2>Context Builder <span class="ai-badge">AI</span></h2>
+            <p class="lead">Transform raw requirements into structured context for test generation</p>
+            
+            <ul class="nav nav-tabs" id="contextTabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active" id="create-tab" data-bs-toggle="tab" data-bs-target="#create" type="button" role="tab" aria-controls="create" aria-selected="true">Create Context</button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="saved-tab" data-bs-toggle="tab" data-bs-target="#saved" type="button" role="tab" aria-controls="saved" aria-selected="false">Saved Contexts</button>
+                </li>
+            </ul>
+            
+            <div class="tab-content" id="contextTabsContent">
+                <!-- Create Context Tab -->
+                <div class="tab-pane fade show active" id="create" role="tabpanel" aria-labelledby="create-tab">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="input-section glass-card">
+                                <h4>Input</h4>
+                                <ul class="nav nav-tabs" id="inputTabs" role="tablist">
+                                    <li class="nav-item" role="presentation">
+                                        <button class="nav-link active" id="text-tab" data-bs-toggle="tab" data-bs-target="#text" type="button" role="tab" aria-controls="text" aria-selected="true">Raw Text</button>
+                                    </li>
+                                    <li class="nav-item" role="presentation">
+                                        <button class="nav-link" id="file-tab" data-bs-toggle="tab" data-bs-target="#file" type="button" role="tab" aria-controls="file" aria-selected="false">Upload Document</button>
+                                    </li>
+                                </ul>
+                                
+                                <div class="tab-content" id="inputTabsContent">
+                                    <div class="tab-pane fade show active" id="text" role="tabpanel" aria-labelledby="text-tab">
+                                        <div class="mb-3 mt-3">
+                                            <textarea class="form-control" id="rawText" rows="10" placeholder="Paste your requirements document here..."></textarea>
+                                        </div>
+                                    </div>
+                                    <div class="tab-pane fade" id="file" role="tabpanel" aria-labelledby="file-tab">
+                                        <div class="mb-3 mt-3">
+                                            <label for="documentUpload" class="form-label">Upload a document (PDF, DOC, DOCX, TXT)</label>
+                                            <input class="form-control" type="file" id="documentUpload" accept=".pdf,.doc,.docx,.txt">
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label for="contextName" class="form-label">Context Name</label>
+                                    <input type="text" class="form-control" id="contextName" placeholder="Enter a name for this context">
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label for="contextDescription" class="form-label">Description (Optional)</label>
+                                    <textarea class="form-control" id="contextDescription" rows="2" placeholder="Brief description of this context"></textarea>
+                                </div>
+                                
+                                <div class="mb-3 form-check">
+                                    <input type="checkbox" class="form-check-input" id="saveContext" checked>
+                                    <label class="form-check-label" for="saveContext">Save this context for future use</label>
+                                </div>
+                                
+                                <button id="processButton" class="btn btn-primary">
+                                    <i class="fas fa-magic"></i> Process with AI
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <div class="output-section glass-card">
+                                <h4>Structured Context</h4>
+                                <div id="outputContainer">
+                                    <div class="alert alert-info">
+                                        <i class="fas fa-info-circle"></i> Enter your requirements and click "Process with AI" to generate structured context.
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Saved Contexts Tab -->
+                <div class="tab-pane fade" id="saved" role="tabpanel" aria-labelledby="saved-tab">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="glass-card">
+                                <h4>Your Saved Contexts</h4>
+                                <div class="context-list" id="contextList">
+                                    <div class="alert alert-info">
+                                        <i class="fas fa-spinner fa-spin"></i> Loading saved contexts...
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-8">
+                            <div class="glass-card">
+                                <h4 id="selectedContextName">Select a Context</h4>
+                                <p id="selectedContextDescription" class="text-muted"></p>
+                                <div id="selectedContextData">
+                                    <div class="alert alert-info">
+                                        <i class="fas fa-info-circle"></i> Select a context from the list to view its details.
+                                    </div>
+                                </div>
+                                <div class="mt-3" id="contextActions" style="display: none;">
+                                    <button id="useContextButton" class="btn btn-primary">
+                                        <i class="fas fa-check"></i> Use This Context
+                                    </button>
+                                    <button id="deleteContextButton" class="btn btn-outline-danger">
+                                        <i class="fas fa-trash"></i> Delete
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Loading Overlay -->
+<div class="loading-overlay" id="loadingOverlay" style="display: none;">
+    <div class="spinner-border text-light" role="status">
+        <span class="visually-hidden">Loading...</span>
+    </div>
+    <p class="mt-3">Processing your requirements with AI...</p>
+</div>
+</div>
+
+<script>
+    $(document).ready(function() {
+        // Load saved contexts when tab is shown
+        $('#saved-tab').on('click', function() {
+            loadSavedContexts();
+        });
+        
+        // Process button click handler
+        $('#processButton').on('click', function() {
+            processContext();
+        });
+        
+        // Delete context button click handler
+        $('#deleteContextButton').on('click', function() {
+            const contextId = $(this).data('context-id');
+            if (contextId && confirm('Are you sure you want to delete this context?')) {
+                deleteContext(contextId);
+            }
+        });
+        
+        // Function to process context with AI
+        function processContext() {
+            const formData = new FormData();
+            const saveContext = $('#saveContext').is(':checked');
+            const contextName = $('#contextName').val();
+            const contextDescription = $('#contextDescription').val();
+            
+            // Validate input
+            let hasContent = false;
+            
+            if ($('#text-tab').hasClass('active')) {
+                const rawText = $('#rawText').val();
+                if (rawText.trim() === '') {
+                    alert('Please enter some text to process.');
+                    return;
+                }
+                formData.append('raw_text', rawText);
+                hasContent = true;
+            } else {
+                const fileInput = $('#documentUpload')[0];
+                if (fileInput.files.length === 0) {
+                    alert('Please select a file to upload.');
+                    return;
+                }
+                formData.append('document', fileInput.files[0]);
+                hasContent = true;
+            }
+            
+            if (saveContext && contextName.trim() === '') {
+                alert('Please enter a name for this context.');
+                return;
+            }
+            
+            if (hasContent) {
+                formData.append('save', saveContext);
+                formData.append('name', contextName);
+                formData.append('description', contextDescription);
+                
+                // Show loading overlay
+                $('#loadingOverlay').show();
+                
+                // Send request to API
+                $.ajax({
+                    url: '/api/process-context',
+                    type: 'POST',
+                    data: formData,
+                    processData: false,
+                    contentType: false,
+                    success: function(response) {
+                        $('#loadingOverlay').hide();
+                        if (response.success) {
+                            displayContextOutput(response.context);
+                        } else {
+                            alert('Error: ' + response.error);
+                        }
+                    },
+                    error: function(xhr) {
+                        $('#loadingOverlay').hide();
+                        try {
+                            const response = JSON.parse(xhr.responseText);
+                            alert('Error: ' + (response.error || 'Unknown error occurred'));
+                        } catch (e) {
+                            alert('An error occurred while processing your request.');
+                        }
+                    }
+                });
+            }
+        }
+        
+        // Function to display context output
+        function displayContextOutput(context) {
+            let output = '<div class="context-output">';
+            
+            // Feature Summary
+            output += '<h4>Feature Summary</h4>';
+            output += '<p>' + context.feature_summary + '</p>';
+            
+            // Requirements
+            output += '<h5>Requirements</h5>';
+            if (context.requirements && context.requirements.length > 0) {
+                output += '<ul>';
+                context.requirements.forEach(req => {
+                    if (typeof req === 'object' && req !== null) {
+                        // Handle object type requirements
+                        let reqText = '';
+                        if (req.id) reqText += '<strong>' + req.id + '</strong>: ';
+                        if (req.description) reqText += req.description;
+                        output += '<li>' + reqText + '</li>';
+                    } else {
+                        // Handle string type requirements
+                        output += '<li>' + req + '</li>';
+                    }
+                });
+                output += '</ul>';
+            } else {
+                output += '<p>No requirements specified</p>';
+            }
+            
+            // User Flows
+            output += '<h5>User Flows</h5>';
+            if (context.user_flows && context.user_flows.length > 0) {
+                output += '<ul>';
+                context.user_flows.forEach(flow => {
+                    if (typeof flow === 'object' && flow !== null) {
+                        // Handle object type user flows
+                        let flowText = '';
+                        if (flow.name) flowText += '<strong>' + flow.name + '</strong>: ';
+                        if (flow.description) flowText += flow.description + '<br>';
+                        if (flow.steps && flow.steps.length > 0) {
+                            flowText += '<ol>';
+                            flow.steps.forEach(step => {
+                                flowText += '<li>' + step + '</li>';
+                            });
+                            flowText += '</ol>';
+                        }
+                        output += '<li>' + flowText + '</li>';
+                    } else {
+                        // Handle string type user flows
+                        output += '<li>' + flow + '</li>';
+                    }
+                });
+                output += '</ul>';
+            } else {
+                output += '<p>No user flows specified</p>';
+            }
+            
+            // Validation Points
+            output += '<h5>Validation Points</h5>';
+            if (context.validation_points && context.validation_points.length > 0) {
+                output += '<ul>';
+                context.validation_points.forEach(point => {
+                    if (typeof point === 'object' && point !== null) {
+                        // Handle object type validation points
+                        let pointText = '';
+                        if (point.category) pointText += '<strong>' + point.category + '</strong>: ';
+                        if (point.description) pointText += point.description;
+                        output += '<li>' + pointText + '</li>';
+                    } else {
+                        // Handle string type validation points
+                        output += '<li>' + point + '</li>';
+                    }
+                });
+                output += '</ul>';
+            } else {
+                output += '<p>No validation points specified</p>';
+            }
+            
+            // Dependencies
+            output += '<h5>Dependencies</h5>';
+            if (context.dependencies && context.dependencies.length > 0) {
+                output += '<ul>';
+                context.dependencies.forEach(dep => {
+                    if (typeof dep === 'object' && dep !== null) {
+                        // Handle object type dependencies
+                        let depText = '';
+                        if (dep.name) depText += '<strong>' + dep.name + '</strong>: ';
+                        if (dep.description) depText += dep.description;
+                        output += '<li>' + depText + '</li>';
+                    } else {
+                        // Handle string type dependencies
+                        output += '<li>' + dep + '</li>';
+                    }
+                });
+                output += '</ul>';
+            } else {
+                output += '<p>No dependencies specified</p>';
+            }
+            
+            // Edge Cases
+            output += '<h5>Edge Cases</h5>';
+            if (context.edge_cases && context.edge_cases.length > 0) {
+                output += '<ul>';
+                context.edge_cases.forEach(edge => {
+                    if (typeof edge === 'object' && edge !== null) {
+                        // Handle object type edge cases
+                        let edgeText = '';
+                        if (edge.scenario) edgeText += '<strong>' + edge.scenario + '</strong>: ';
+                        if (edge.description) edgeText += edge.description;
+                        output += '<li>' + edgeText + '</li>';
+                    } else {
+                        // Handle string type edge cases
+                        output += '<li>' + edge + '</li>';
+                    }
+                });
+                output += '</ul>';
+            } else {
+                output += '<p>No edge cases specified</p>';
+            }
+            
+            // Data Requirements
+            output += '<h5>Data Requirements</h5>';
+            if (context.data_requirements && context.data_requirements.length > 0) {
+                output += '<ul>';
+                context.data_requirements.forEach(data => {
+                    if (typeof data === 'object' && data !== null) {
+                        // Handle object type data requirements
+                        let dataText = '';
+                        if (data.type) dataText += '<strong>' + data.type + '</strong>: ';
+                        if (data.description) dataText += data.description;
+                        output += '<li>' + dataText + '</li>';
+                    } else {
+                        // Handle string type data requirements
+                        output += '<li>' + data + '</li>';
+                    }
+                });
+                output += '</ul>';
+            } else {
+                output += '<p>No data requirements specified</p>';
+            }
+            
+            // Performance Criteria (New section)
+            output += '<h5>Performance Criteria</h5>';
+            if (context.performance_criteria && context.performance_criteria.length > 0) {
+                output += '<ul>';
+                context.performance_criteria.forEach(criteria => {
+                    if (typeof criteria === 'object' && criteria !== null) {
+                        // Handle object type performance criteria
+                        let criteriaText = '';
+                        if (criteria.metric) criteriaText += '<strong>' + criteria.metric + '</strong>: ';
+                        if (criteria.description) criteriaText += criteria.description;
+                        output += '<li>' + criteriaText + '</li>';
+                    } else {
+                        // Handle string type performance criteria
+                        output += '<li>' + criteria + '</li>';
+                    }
+                });
+                output += '</ul>';
+            } else {
+                output += '<p>No performance criteria specified</p>';
+            }
+            
+            // Security Considerations (New section)
+            output += '<h5>Security Considerations</h5>';
+            if (context.security_considerations && context.security_considerations.length > 0) {
+                output += '<ul>';
+                context.security_considerations.forEach(security => {
+                    if (typeof security === 'object' && security !== null) {
+                        // Handle object type security considerations
+                        let securityText = '';
+                        if (security.aspect) securityText += '<strong>' + security.aspect + '</strong>: ';
+                        if (security.description) securityText += security.description;
+                        output += '<li>' + securityText + '</li>';
+                    } else {
+                        // Handle string type security considerations
+                        output += '<li>' + security + '</li>';
+                    }
+                });
+                output += '</ul>';
+            } else {
+                output += '<p>No security considerations specified</p>';
+            }
+            
+            output += '</div>';
+            
+            $('#outputContainer').html(output);
+        }
+        
+        // Function to load saved contexts
+        function loadSavedContexts() {
+            $('#contextList').html('<div class="alert alert-info"><i class="fas fa-spinner fa-spin"></i> Loading...</div>');
+            
+            $.ajax({
+                url: '/api/contexts',
+                type: 'GET',
+                success: function(response) {
+                    if (response.contexts && response.contexts.length > 0) {
+                        let contextListHtml = '';
+                        response.contexts.forEach(context => {
+                            const date = new Date(context.created_at).toLocaleDateString();
+                            contextListHtml += `
+                                <div class="context-item" data-context-id="${context.id}">
+                                    <strong>${context.name}</strong>
+                                    <div class="text-muted small">${date}</div>
+                                </div>
+                            `;
+                        });
+                        $('#contextList').html(contextListHtml);
+                        
+                        // Add click handler for context items
+                        $('.context-item').on('click', function() {
+                            const contextId = $(this).data('context-id');
+                            $('.context-item').removeClass('active');
+                            $(this).addClass('active');
+                            loadContextDetails(contextId);
+                        });
+                    } else {
+                        $('#contextList').html('<div class="alert alert-info">No saved contexts found. Create one in the "Create Context" tab.</div>');
+                    }
+                },
+                error: function() {
+                    $('#contextList').html('<div class="alert alert-danger">Error loading contexts. Please try again.</div>');
+                }
+            });
+        }
+        
+        // Function to load context details
+        function loadContextDetails(contextId) {
+            $('#selectedContextData').html('<div class="alert alert-info"><i class="fas fa-spinner fa-spin"></i> Loading context details...</div>');
+            
+            $.ajax({
+                url: '/api/contexts/' + contextId,
+                type: 'GET',
+                success: function(context) {
+                    $('#selectedContextName').text(context.name);
+                    $('#selectedContextDescription').text(context.description || 'No description provided');
+                    displayContextOutput(context.context_data);
+                    
+                    // Show context actions and set context ID for delete button
+                    $('#contextActions').show();
+                    $('#deleteContextButton').data('context-id', context.id);
+                    $('#useContextButton').data('context-data', JSON.stringify(context.context_data));
+                },
+                error: function() {
+                    $('#selectedContextData').html('<div class="alert alert-danger">Error loading context details. Please try again.</div>');
+                    $('#contextActions').hide();
+                }
+            });
+        }
+        
+        // Function to delete a context
+        function deleteContext(contextId) {
+            $.ajax({
+                url: '/api/contexts/' + contextId,
+                type: 'DELETE',
+                success: function(response) {
+                    if (response.success) {
+                        // Reload contexts list
+                        loadSavedContexts();
+                        
+                        // Clear selected context
+                        $('#selectedContextName').text('Select a Context');
+                        $('#selectedContextDescription').text('');
+                        $('#selectedContextData').html('<div class="alert alert-info"><i class="fas fa-info-circle"></i> Select a context from the list to view its details.</div>');
+                        $('#contextActions').hide();
+                    } else {
+                        alert('Error: ' + response.error);
+                    }
+                },
+                error: function(xhr) {
+                    try {
+                        const response = JSON.parse(xhr.responseText);
+                        alert('Error: ' + (response.error || 'Unknown error occurred'));
+                    } catch (e) {
+                        alert('An error occurred while deleting the context.');
+                    }
+                }
+            });
+        }
+        
+        // Use context button click handler
+        $('#useContextButton').on('click', function() {
+            const contextData = $(this).data('context-data');
+            if (contextData) {
+                // Switch to create tab
+                $('#create-tab').tab('show');
+                
+                // Display the context data in the output section
+                displayContextOutput(JSON.parse(contextData));
+            }
+        });
+    });
+</script>
+</body>
+</html>

@@ -1309,6 +1309,7 @@
     </style>
 </head>
 <body>
+  {% include 'quotes-header.html' %}
   {% set active_tab = 'manual' %}
   {% include 'left-sidebar.html' %}
   <div class="main-content">
@@ -1317,7 +1318,7 @@
     {% set allow_html = true %}
     {% include 'page-header.html' %}
     
-    <div class="content-area" style="width:100%; padding:1.5rem;">
+    <div class="content-area" style="width:100%; padding:1.5rem; padding-left: 0; margin-left: 0;">
 
     <!-- Instructions Panel -->
     <div style="background-color: #fff9e6; border: 1px solid #ffe066; border-radius: 6px; padding: 1rem 1.5rem; margin-bottom: 1.5rem;">
@@ -2950,7 +2951,18 @@ async function onGenerateTests() {
                     const resp = await fetch('/api/upload', { method: 'POST', body: formData });
                     const result = await resp.json();
                     if (resp.ok && result.url) {
-                        visual_image_urls.push(result.url);
+                        // Use absolute_url if available, otherwise fall back to relative url
+                        if (result.absolute_url) {
+                            console.log('Using absolute URL for image:', result.absolute_url);
+                            visual_image_urls.push({
+                                url: result.url,
+                                absolute_url: result.absolute_url,
+                                filename: result.filename
+                            });
+                        } else {
+                            console.log('Using relative URL for image:', result.url);
+                            visual_image_urls.push(result.url);
+                        }
                     } else {
                         alert('Failed to upload image: ' + (result.error || file.name));
                         return;
@@ -2968,7 +2980,18 @@ async function onGenerateTests() {
                     const resp = await fetch('/api/upload', { method: 'POST', body: formData });
                     const result = await resp.json();
                     if (resp.ok && result.url) {
-                        visual_doc_url = result.url;
+                        // Use absolute_url if available, otherwise fall back to relative url
+                        if (result.absolute_url) {
+                            console.log('Using absolute URL for PDF:', result.absolute_url);
+                            visual_doc_url = {
+                                url: result.url,
+                                absolute_url: result.absolute_url,
+                                filename: result.filename
+                            };
+                        } else {
+                            console.log('Using relative URL for PDF:', result.url);
+                            visual_doc_url = result.url;
+                        }
                     } else {
                         alert('Failed to upload PDF: ' + (result.error || pdfFiles[0].name));
                         return;

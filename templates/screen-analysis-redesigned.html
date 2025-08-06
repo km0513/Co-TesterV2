@@ -49,12 +49,14 @@
             background: var(--bg-light);
             min-height: 100vh;
             padding: 0;
+            padding-top: 0;
         }
 
         .container {
             max-width: 1200px;
-            margin: 0 auto;
+            margin: 0;
             padding: 2rem;
+            padding-left: 0;
         }
 
         .analyzer-container {
@@ -577,6 +579,7 @@
     </style>
 </head>
 <body>
+    {% include 'quotes-header.html' %}
     {% set active_tab = 'screen-analysis' %}
     {% include 'left-sidebar.html' %}
 
@@ -586,7 +589,7 @@
         {% set allow_html = true %}
         {% include 'page-header.html' %}
         
-        <div class="container">
+        <div class="container" style="padding-left: 0; margin-left: 0;">
 
             <!-- Upload Section -->
             <div class="analyzer-container">

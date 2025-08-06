@@ -88,6 +88,22 @@
       <span class="sidebar-label">Data Generator</span>
     </a>
     
+    <!-- Bug Builder hidden until ready -->
+    <!--
+    <a href="#" data-href="/bug-builder" class="nav-link sidebar-item{% if active_tab == 'bug-builder' %} active{% endif %}">
+      <span class="sidebar-icon"><i class="fas fa-bug"></i></span>
+      <span class="sidebar-label">Bug Builder <span class="ai-badge">AI</span></span>
+    </a>
+    -->
+    
+    <!-- Context Builder hidden until ready -->
+    <!--
+    <a href="#" data-href="/context-builder" class="nav-link sidebar-item{% if active_tab == 'context-builder' %} active{% endif %}">
+      <span class="sidebar-icon"><i class="fas fa-brain"></i></span>
+      <span class="sidebar-label">Context Builder <span class="ai-badge">AI</span></span>
+    </a>
+    -->
+    
     <a href="#" data-href="/learning-resources" class="nav-link sidebar-item{% if active_tab == 'learning' %} active{% endif %}" data-no-auth="true">
       <span class="sidebar-icon"><i class="fas fa-graduation-cap"></i></span>
       <span class="sidebar-label">Learning Resources</span>
@@ -222,6 +238,17 @@
     // Navigation state management
     let previousActiveItem = null;
     
+    // Restore sidebar visibility if navigating between pages
+    if (sessionStorage.getItem('sidebarVisible') === 'true') {
+      const sidebar = document.querySelector('.sidebar');
+      if (sidebar) {
+        sidebar.style.display = 'flex';
+        sidebar.style.visibility = 'visible';
+        sidebar.style.opacity = '1';
+        sidebar.style.zIndex = '1000';
+      }
+    }
+    
     // Handle all navigation links
     const navLinks = document.querySelectorAll('.nav-link');
     navLinks.forEach(link => {
@@ -246,22 +273,22 @@
         
         if (noAuth) {
           // Navigate directly for no-auth pages (like dashboard)
-          navigateToPage(targetUrl);
+          performNavigation(targetUrl, false);
         } else {
-          // Show subtle loading indicator
-          showNavigationLoader();
+          // Show loading indicator for authentication check
+          showNavigationLoader('Verifying Authentication', 'Please wait while we check your Jira connection...');
           
           // Check authentication before navigation
           fetch('/api/jira/status')
             .then(response => response.json())
             .then(data => {
-              hideNavigationLoader();
-              
               if (data.connected) {
-                // Connected - proceed to the page
-                navigateToPage(targetUrl);
+                // Connected - update loader message and proceed to the page
+                updateLoaderMessage('Navigating', 'Loading your requested page...');
+                performNavigation(targetUrl, true);
               } else {
-                // Not connected - show login prompt
+                // Not connected - hide loader and show login prompt
+                hideNavigationLoader();
                 showJiraLoginModal(targetUrl);
                 // Restore previous active state
                 restorePreviousActiveState();
@@ -277,15 +304,26 @@
       });
     });
     
-    // Smooth navigation function
-    function navigateToPage(url) {
-      // Add subtle transition for smooth experience
-      document.body.style.opacity = '0.99';
-      document.body.style.transition = 'opacity 0.1s ease';
+    // Perform navigation with proper state management
+    function performNavigation(url, keepLoader = false) {
+      // Store sidebar state in sessionStorage
+      sessionStorage.setItem('sidebarVisible', 'true');
       
+      // Ensure the sidebar remains visible during navigation
+      const sidebar = document.querySelector('.sidebar');
+      if (sidebar) {
+        sidebar.style.zIndex = '10000'; // Keep sidebar above loader
+      }
+      
+      // If we're already showing a loader, update it
+      if (!keepLoader) {
+        showNavigationLoader('Navigating', 'Loading your requested page...');
+      }
+      
+      // Navigate after a short delay to allow loader to display
       setTimeout(() => {
         window.location.href = url;
-      }, 20);
+      }, 200);
     }
     
     // Update active navigation state
@@ -314,9 +352,13 @@
       }
     }
     
-    // Subtle navigation loader
-    function showNavigationLoader() {
-      if (document.getElementById('navigationLoader')) return; // Prevent duplicates
+    // Full-screen navigation loader to prevent layout shifts
+    function showNavigationLoader(title = 'Verifying Authentication', message = 'Please wait while we check your Jira connection...') {
+      if (document.getElementById('navigationLoader')) {
+        // Update existing loader message
+        updateLoaderMessage(title, message);
+        return;
+      }
       
       const loader = document.createElement('div');
       loader.id = 'navigationLoader';
@@ -325,34 +367,102 @@
         top: 0;
         left: 0;
         right: 0;
-        height: 2px;
-        background: linear-gradient(90deg, transparent, #6366f1, transparent);
+        bottom: 0;
+        background-color: rgba(255, 255, 255, 0.7);
+        backdrop-filter: blur(5px);
         z-index: 9999;
-        animation: shimmer 0.6s ease-in-out infinite;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        transition: opacity 0.2s ease;
       `;
       
-      // Add shimmer animation if not exists
-      if (!document.getElementById('shimmerStyle')) {
+      // Create loader content
+      const loaderContent = document.createElement('div');
+      loaderContent.id = 'loaderContent';
+      loaderContent.style.cssText = `
+        text-align: center;
+        background: white;
+        padding: 2rem;
+        border-radius: 12px;
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+        max-width: 90%;
+        width: 400px;
+      `;
+      
+      // Create spinner
+      const spinner = document.createElement('div');
+      spinner.style.cssText = `
+        width: 40px;
+        height: 40px;
+        margin: 0 auto 1rem auto;
+        border: 3px solid rgba(99, 102, 241, 0.3);
+        border-radius: 50%;
+        border-top-color: #6366f1;
+        animation: spin 1s ease-in-out infinite;
+      `;
+      
+      // Create message container
+      const messageContainer = document.createElement('div');
+      messageContainer.id = 'loaderMessageContainer';
+      messageContainer.innerHTML = `
+        <h3 id="loaderTitle" style="margin: 0 0 0.5rem 0; color: #1f2937; font-weight: 600;">${title}</h3>
+        <p id="loaderMessage" style="margin: 0; color: #6b7280;">${message}</p>
+      `;
+      
+      // Add animation style
+      if (!document.getElementById('spinnerStyle')) {
         const style = document.createElement('style');
-        style.id = 'shimmerStyle';
+        style.id = 'spinnerStyle';
         style.textContent = `
-          @keyframes shimmer {
-            0% { transform: translateX(-100%); opacity: 0; }
-            50% { opacity: 1; }
-            100% { transform: translateX(100vw); opacity: 0; }
+          @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
           }
         `;
         document.head.appendChild(style);
       }
       
+      // Assemble loader
+      loaderContent.appendChild(spinner);
+      loaderContent.appendChild(messageContainer);
+      loader.appendChild(loaderContent);
       document.body.appendChild(loader);
+      
+      // Ensure the sidebar stays visible above the loader
+      const sidebar = document.querySelector('.sidebar');
+      if (sidebar) {
+        sidebar.style.zIndex = '10000';
+      }
+      
+      // Prevent layout shifts by disabling scrolling temporarily
+      document.body.style.overflow = 'hidden';
+    }
+    
+    // Update loader message without recreating the loader
+    function updateLoaderMessage(title, message) {
+      const titleElement = document.getElementById('loaderTitle');
+      const messageElement = document.getElementById('loaderMessage');
+      
+      if (titleElement && messageElement) {
+        titleElement.textContent = title;
+        messageElement.textContent = message;
+      }
     }
     
     function hideNavigationLoader() {
       const loader = document.getElementById('navigationLoader');
       if (loader) {
+        // Fade out the loader
         loader.style.opacity = '0';
-        setTimeout(() => loader.remove(), 100);
+        
+        // Re-enable scrolling
+        document.body.style.overflow = '';
+        
+        // Remove loader after animation completes
+        setTimeout(() => {
+          loader.remove();
+        }, 200);
       }
     }
     

@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bug Builder - Co-Tester</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='0.9em' font-size='90'>🚀</text></svg>">
+  
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/styles.css">
+  <link rel="stylesheet" href="/static/navbar-tabs.css">
+  <script src="/static/auth-utils.js"></script>
+  <style>
+    :root {
+      --primary: #6366f1;
+      --primary-hover: #4f46e5;
+      --primary-light: #a5b4fc;
+      --accent: #7c3aed;
+      --accent-hover: #6d28d9;
+      --secondary: #1f2937;
+      --secondary-light: #374151;
+      --bg-light: #f8fafc;
+      --bg-dark: #0f172a;
+      --text-light: #64748b;
+      --text-dark: #0f172a;
+      --text-white: #ffffff;
+      --border: #e2e8f0;
+      --success: #10b981;
+      --error: #ef4444;
+      --warning: #f59e0b;
+      --info: #3b82f6;
+      --glass-bg: rgba(255, 255, 255, 0.7);
+      --glass-border: rgba(255, 255, 255, 0.2);
+      --shadow-xl: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+      --transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    body {
+      background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 50%, #cbd5e1 100%);
+      font-family: 'Inter', sans-serif;
+      min-height: 100vh;
+      color: var(--text-dark);
+      position: relative;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grain" width="100" height="100" patternUnits="userSpaceOnUse"><circle cx="25" cy="25" r="1" fill="%23000" opacity="0.02"/><circle cx="75" cy="75" r="1" fill="%23000" opacity="0.02"/><circle cx="50" cy="10" r="0.5" fill="%23000" opacity="0.03"/><circle cx="20" cy="80" r="0.5" fill="%23000" opacity="0.03"/></pattern></defs><rect width="100" height="100" fill="url(%23grain)"/></svg>') repeat;
+      pointer-events: none;
+      z-index: -1;
+    }
+
+    .ai-badge {
+      background: linear-gradient(45deg, #f59e0b, #d97706);
+      color: white;
+      padding: 0.25rem 0.75rem;
+      border-radius: 20px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);
+    }
+
+    .recording-section, .bug-report-section {
+      background: var(--glass-bg);
+      backdrop-filter: blur(20px);
+      border: 1px solid var(--glass-border);
+      border-radius: 20px;
+      padding: 2rem;
+      margin-bottom: 2rem;
+      box-shadow: var(--shadow-xl);
+      transition: var(--transition);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .recording-section::before, .bug-report-section::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 4px;
+      background: linear-gradient(90deg, var(--primary) 0%, var(--accent) 100%);
+      border-radius: 20px 20px 0 0;
+    }
+
+    .recording-section:hover, .bug-report-section:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 32px 64px -12px rgba(0, 0, 0, 0.35);
+    }
+
+    .record-btn {
+      background: linear-gradient(135deg, var(--error) 0%, #dc2626 100%);
+      color: white;
+      border: none;
+      padding: 1rem 2rem;
+      border-radius: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: var(--transition);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 1rem;
+      box-shadow: 0 8px 25px rgba(239, 68, 68, 0.3);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .record-btn::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+      transition: left 0.5s;
+    }
+
+    .record-btn:hover::before {
+      left: 100%;
+    }
+
+    .record-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 12px 35px rgba(239, 68, 68, 0.4);
+    }
+
+    .record-btn.recording {
+      background: linear-gradient(135deg, var(--success) 0%, #059669 100%);
+      animation: pulse 2s infinite;
+      box-shadow: 0 8px 25px rgba(16, 185, 129, 0.3);
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.7; }
+    }
+
+    .recording-status {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid #e2e8f0;
+      padding: 1rem;
+      border-radius: 12px;
+      display: none;
+    }
+
+    .recording-status.active {
+      display: block;
+    }
+
+    .form-group {
+      margin-bottom: 1.5rem;
+    }
+
+    .form-label {
+      display: block;
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+      color: #0f172a;
+    }
+
+    .form-input, .form-textarea {
+      width: 100%;
+      padding: 0.75rem;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      font-family: inherit;
+      transition: border-color 0.3s ease;
+    }
+
+    .form-textarea {
+      resize: vertical;
+      min-height: 120px;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+      color: white;
+      border: none;
+      padding: 0.75rem 1.5rem;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      font-weight: 600;
+    }
+
+    .section-header {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-bottom: 1.5rem;
+      font-size: 1.5rem;
+      font-weight: 600;
+      color: var(--text-dark);
+    }
+
+    .section-header i {
+      color: var(--primary);
+      font-size: 1.25rem;
+    }
+
+    .btn-primary, .btn-secondary {
+      padding: 0.75rem 1.5rem;
+      border-radius: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: var(--transition);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.95rem;
+      border: none;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-hover) 100%);
+      color: white;
+      box-shadow: 0 8px 25px rgba(99, 102, 241, 0.3);
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 12px 35px rgba(99, 102, 241, 0.4);
+    }
+
+    .btn-secondary {
+      background: var(--glass-bg);
+      backdrop-filter: blur(10px);
+      border: 1px solid var(--border);
+      color: var(--text-dark);
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    }
+
+    .btn-secondary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+      background: rgba(255, 255, 255, 0.9);
+    }
+
+    .loading-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.5);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+    }
+
+    .loading-overlay.active {
+      display: flex;
+    }
+
+    @media (max-width: 768px) {
+      .main-content {
+        margin-left: 0;
+        padding: 1rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  {% include 'quotes-header.html' %}
+  {% set active_tab = 'bug-builder' %}
+  {% include 'left-sidebar.html' %}
+  <div class="main-content">
+    {% set page_title = 'Bug Builder <span class="ai-badge">AI</span>' %}
+    {% set page_subtitle = 'AI-powered bug report generator with screen recording and behavioral analysis' %}
+    {% set allow_html = true %}
+    {% include 'page-header.html' %}
+
+    <div class="recording-section">
+      <h2 class="section-header"><i class="fas fa-video"></i> Screen Recording</h2>
+      <div style="margin: 1rem 0;">
+        <button id="recordBtn" class="record-btn">
+          <i class="fas fa-circle"></i>
+          Start Recording
+        </button>
+      </div>
+      <div id="recordingStatus" class="recording-status">
+        <div>Recording in progress... <span id="timer">00:00</span></div>
+      </div>
+    </div>
+
+    <!-- Video Preview Section -->
+    <div id="videoPreviewSection" class="recording-section" style="display: none;">
+      <h2 class="section-header"><i class="fas fa-play-circle"></i> Recording Preview</h2>
+      <div style="margin-bottom: 1rem;">
+        <p style="color: #64748b; margin-bottom: 1rem;">Review your recording to ensure the bug was captured correctly:</p>
+        <div style="position: relative; background: #000; border-radius: 12px; overflow: hidden; max-width: 800px;">
+          <video id="recordingPreview" controls style="width: 100%; height: auto; display: block;">
+            Your browser does not support video playback.
+          </video>
+          <div id="videoLoadingOverlay" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center; color: white;">
+            <div style="text-align: center;">
+              <div style="width: 40px; height: 40px; border: 4px solid rgba(255,255,255,0.3); border-top: 4px solid white; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 1rem;"></div>
+              <p>Processing video...</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div style="display: flex; gap: 1rem; align-items: center; margin-top: 1rem;">
+        <button id="retakeBtn" class="btn-secondary">
+          <i class="fas fa-redo"></i>
+          Retake Recording
+        </button>
+        <button id="proceedBtn" class="btn-primary">
+          <i class="fas fa-arrow-right"></i>
+          Proceed with Bug Report
+        </button>
+      </div>
+      
+      <!-- Action Summary -->
+      <div style="margin-top: 2rem; padding: 1.5rem; background: #f8fafc; border-radius: 12px; border: 1px solid #e2e8f0;">
+        <h4 class="section-header" style="font-size: 1.25rem; margin-bottom: 1rem;">
+          <i class="fas fa-list"></i>
+          Recording Summary
+        </h4>
+        <div id="actionSummary" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+          <!-- Summary items will be populated here -->
+        </div>
+      </div>
+    </div>
+
+    <div id="bugReportSection" class="bug-report-section" style="display: none;">
+      <h2><i class="fas fa-file-alt"></i> Generated Bug Report</h2>
+      <form id="bugReportForm">
+        <div class="form-group">
+          <label class="form-label">Bug Title</label>
+          <input type="text" id="bugTitle" class="form-input">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Description</label>
+          <textarea id="bugDescription" class="form-textarea"></textarea>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Steps to Reproduce</label>
+          <textarea id="stepsToReproduce" class="form-textarea"></textarea>
+        </div>
+        <div style="text-align: right;">
+          <button type="button" class="btn-primary" id="submitBtn">Submit to Jira</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div id="loadingOverlay" class="loading-overlay">
+    <div style="background: white; padding: 2rem; border-radius: 16px; text-align: center;">
+      <div style="width: 40px; height: 40px; border: 4px solid #e2e8f0; border-top: 4px solid #6366f1; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 1rem;"></div>
+      <h3>Processing Recording</h3>
+      <p>AI is analyzing your recording...</p>
+    </div>
+  </div>
+  </div>
+
+{% include 'footer.html' %}
+
+<script src="/static/bug-builder.js"></script>
+</body>
+</html>

@@ -457,6 +457,7 @@
 </head>
 
 <body>
+  {% include 'quotes-header.html' %}
   {% set active_tab = 'pom-builder' %}
   {% include 'left-sidebar.html' %}
   
@@ -467,7 +468,7 @@
     {% set allow_html = true %}
     {% include 'page-header.html' %}
     
-    <div class="container-fluid">
+    <div class="container-fluid" style="padding-left: 0; margin-left: 0;">
       
       <!-- Preview Notice -->
       <div class="alert alert-warning mb-4" style="background: linear-gradient(135deg, #fef3c7 0%, #fed7aa 100%); border: 2px solid #f59e0b; border-radius: 12px; padding: 1.5rem;">

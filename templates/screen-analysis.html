@@ -434,6 +434,15 @@
             margin-bottom: 1rem;
         }
 
+        .analysis-result-card {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            padding: 20px;
+            margin-bottom: 20px;
+            border-left: 4px solid #4CAF50;
+        }
+
         .preview-title {
             font-weight: 600;
             color: var(--text-dark);
@@ -761,9 +770,18 @@
             font-weight: 600;
             font-size: 0.9rem;
         }
+    /* Ensure quotes header is visible */
+    body > .quotes-header {
+        display: block !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        z-index: 1500 !important;
+        position: relative !important;
+    }
     </style>
 </head>
 <body>
+    {% include 'quotes-header.html' %}
     {% set active_tab = 'screen-analysis' %}
     {% include 'left-sidebar.html' %}
 
@@ -772,7 +790,7 @@
         {% set page_subtitle = 'Upload screenshots to get intelligent UI analysis, element detection, and testing recommendations powered by advanced AI.' %}
         {% include 'page-header.html' %}
         
-        <div class="container">
+        <div class="container" style="padding-left: 0; margin-left: 0;">
 
             <!-- Upload Section -->
             <div class="upload-section">
