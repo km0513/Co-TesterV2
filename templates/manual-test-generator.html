@@ -1677,11 +1677,17 @@
             left: 0;
             right: 0;
             bottom: 0;
-            background: rgba(0, 0, 0, 0.8);
+            background: rgba(0, 0, 0, 0.7);
             display: none;
             align-items: center;
             justify-content: center;
             z-index: 1000;
+            backdrop-filter: blur(5px);
+        }
+
+        /* Dark mode support for loading overlay */
+        body.dark-mode .loading-overlay {
+            background: rgba(0, 0, 0, 0.8);
         }
 
         .loading-overlay.show {
@@ -1689,12 +1695,21 @@
         }
 
         .loading-content {
-            background: white;
+            background: var(--bg-light, white);
             border-radius: 20px;
             padding: 3rem;
             text-align: center;
             max-width: 400px;
             margin: 0 auto;
+            color: var(--text-dark);
+            box-shadow: var(--shadow-xl);
+        }
+        
+        /* Dark mode support for loading content */
+        body.dark-mode .loading-content {
+            background: var(--bg-dark, #23272B);
+            color: var(--text-white, #ffffff);
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5);
         }
 
         .loading-spinner {
@@ -1706,6 +1721,12 @@
             animation: spin 1s linear infinite;
             margin: 0 auto 1.5rem;
         }
+        
+        /* Dark mode support for loading spinner */
+        body.dark-mode .loading-spinner {
+            border-color: rgba(255, 255, 255, 0.15);
+            border-top-color: var(--primary, #D32F2F);
+        }
 
         @keyframes spin {
             0% { transform: rotate(0deg); }
@@ -1716,6 +1737,13 @@
             font-size: 1.2rem;
             font-weight: 600;
             color: var(--text-dark);
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+        }
+        
+        /* Dark mode support for loading text */
+        body.dark-mode .loading-text {
+            color: var(--text-white, #ffffff);
+            text-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
         }
     </style>
     
