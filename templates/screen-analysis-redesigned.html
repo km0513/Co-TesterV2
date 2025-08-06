@@ -749,7 +749,7 @@
             <!-- Analyze Button -->
             <button class="analyze-btn" id="analyzeBtn" disabled>
                 <i class="fas fa-brain"></i>
-                <span>Analyze Screenshots</span>
+                <span>Generate Tests</span>
             </button>
 
             <!-- Results Container -->
@@ -773,7 +773,7 @@
     <div class="loading-overlay" id="loadingOverlay">
         <div class="loading-content">
             <div class="loading-spinner"></div>
-            <div class="loading-text">Analyzing your screenshots...</div>
+            <div class="loading-text">Analyzing your screens..</div>
         </div>
     </div>
 
@@ -1196,9 +1196,13 @@
                     return;
                 }
 
+                // Show loading overlay immediately after validation passes
                 this.isAnalyzing = true;
                 this.showLoading();
                 this.updateAnalyzeButton();
+                
+                // Small delay to ensure the loading overlay is visible before any heavy processing begins
+                await new Promise(resolve => setTimeout(resolve, 50));
 
                 try {
                     const formData = new FormData();

@@ -1669,6 +1669,54 @@
                 padding: 1.5rem;
             }
         }
+        
+        /* Loading Overlay Styles */
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.8);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .loading-overlay.show {
+            display: flex;
+        }
+
+        .loading-content {
+            background: white;
+            border-radius: 20px;
+            padding: 3rem;
+            text-align: center;
+            max-width: 400px;
+            margin: 0 auto;
+        }
+
+        .loading-spinner {
+            width: 60px;
+            height: 60px;
+            border: 4px solid var(--border);
+            border-top: 4px solid var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 1.5rem;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .loading-text {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: var(--text-dark);
+        }
     </style>
     
     <!-- Tab Navigation -->
@@ -1963,6 +2011,14 @@
 </div>
 
 {% include 'footer.html' %}
+
+<!-- Loading Overlay -->
+<div class="loading-overlay" id="loadingOverlay">
+    <div class="loading-content">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">Generating tests...</div>
+    </div>
+</div>
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
@@ -2753,6 +2809,15 @@ clearJiraBtn.onclick = function() {
 
 
 
+// Loading overlay functions
+function showLoading() {
+    document.getElementById('loadingOverlay').classList.add('show');
+}
+
+function hideLoading() {
+    document.getElementById('loadingOverlay').classList.remove('show');
+}
+
 // Spinner HTML
 const spinnerHtml = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true" style="margin-right:0.5em;"></span>';
 
@@ -2926,6 +2991,12 @@ async function onGenerateTests() {
     const original = generateBtn.innerHTML;
     generateBtn.innerHTML = spinnerHtml + 'Generating...';
     document.getElementById('testcasesSection').style.display = 'none';
+    
+    // Show the loading overlay
+    showLoading();
+    
+    // Small delay to ensure the loading overlay is visible before any heavy processing begins
+    await new Promise(resolve => setTimeout(resolve, 50));
     try {
         // Collect attachment files and doc URL
         const attachmentInput = document.getElementById('attachmentInput');
@@ -3043,6 +3114,8 @@ async function onGenerateTests() {
     } catch (err) {
         alert('Error generating tests: ' + err);
     } finally {
+        // Hide the loading overlay
+        hideLoading();
         setButtonsForIdle();
         generateBtn.innerHTML = original;
     }
