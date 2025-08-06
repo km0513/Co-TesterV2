@@ -5670,8 +5670,23 @@ from flask import request, jsonify
 # Configure Tesseract path - try to find it in common locations
 import platform
 import os.path
+import subprocess
+import tempfile
+import base64
+import io
+
+# Check if Tesseract is installed and available
+def check_tesseract_availability():
+    try:
+        # Try to execute tesseract command
+        subprocess.run(['tesseract', '--version'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False)
+        return True
+    except FileNotFoundError:
+        logger.warning("Tesseract not found in PATH")
+        return False
 
 # Auto-detect Tesseract path based on platform
+tesseract_available = False
 if platform.system() == 'Windows':
     tesseract_paths = [
         r'C:\Program Files\Tesseract-OCR\tesseract.exe',
@@ -5681,18 +5696,28 @@ if platform.system() == 'Windows':
         if os.path.exists(path):
             pytesseract.pytesseract.tesseract_cmd = path
             logger.info(f"Found Tesseract at: {path}")
+            tesseract_available = True
             break
 elif platform.system() == 'Linux':
-    # On Linux, it's typically in PATH already, but we can check common locations
-    tesseract_paths = [
-        '/usr/bin/tesseract',
-        '/usr/local/bin/tesseract'
-    ]
-    for path in tesseract_paths:
-        if os.path.exists(path):
-            pytesseract.pytesseract.tesseract_cmd = path
-            logger.info(f"Found Tesseract at: {path}")
-            break
+    # On Linux, check if it's in PATH first
+    if check_tesseract_availability():
+        tesseract_available = True
+        logger.info("Tesseract found in PATH")
+    else:
+        # Check common locations
+        tesseract_paths = [
+            '/usr/bin/tesseract',
+            '/usr/local/bin/tesseract'
+        ]
+        for path in tesseract_paths:
+            if os.path.exists(path):
+                pytesseract.pytesseract.tesseract_cmd = path
+                logger.info(f"Found Tesseract at: {path}")
+                tesseract_available = True
+                break
+
+if not tesseract_available:
+    logger.warning("Tesseract OCR not found on system. Image-to-text will use fallback methods only.")
 
 @app.route('/api/image-to-text', methods=['POST'])
 @jira_auth_required
@@ -5702,74 +5727,155 @@ def image_to_text():
         if not data:
             logger.error("No JSON data received in image-to-text request")
             return jsonify({'error': 'No JSON data provided'}), 400
-            
-        image_url = data.get('image_url')
-        if not image_url:
-            logger.error("No image_url provided in image-to-text request")
-            return jsonify({'error': 'No image_url provided'}), 400
-            
-        logger.info(f"Processing image-to-text request for URL: {image_url}")
         
-        # Handle both direct URLs and Jira attachment URLs
+        # Handle both URL and base64 encoded images
+        image_url = data.get('image_url')
+        image_base64 = data.get('image_base64')
+        
+        if not image_url and not image_base64:
+            logger.error("Neither image_url nor image_base64 provided in request")
+            return jsonify({'error': 'No image source provided. Please provide either image_url or image_base64'}), 400
+        
+        img = None
+        source_type = "url" if image_url else "base64"
+        
+        # Process based on source type
         try:
-            # For Jira attachments, we need to use the session with auth
-            if 'jira' in image_url.lower() and 'attachment' in image_url.lower():
-                logger.info("Detected Jira attachment URL, using authenticated session")
-                # Get Jira access token from session
-                access_token = session.get('jira_access_token')
-                if not access_token:
-                    logger.error("No Jira access token found in session")
-                    return jsonify({'error': 'Jira authentication required'}), 401
+            if source_type == "url":
+                logger.info(f"Processing image from URL: {image_url}")
+                
+                # Handle both direct URLs and Jira attachment URLs
+                if 'jira' in image_url.lower() and 'attachment' in image_url.lower():
+                    logger.info("Detected Jira attachment URL, using authenticated session")
+                    # Get Jira access token from session
+                    access_token = session.get('jira_access_token')
+                    if not access_token:
+                        logger.error("No Jira access token found in session")
+                        return jsonify({'error': 'Jira authentication required'}), 401
                     
-                # Make request with authorization header
-                headers = {'Authorization': f'Bearer {access_token}'}
-                response = requests.get(image_url, headers=headers, stream=True)
-            else:
-                # Regular URL
-                response = requests.get(image_url, stream=True)
+                    # Make request with authorization header
+                    headers = {'Authorization': f'Bearer {access_token}'}
+                    response = requests.get(image_url, headers=headers, stream=True, timeout=10)
+                else:
+                    # Regular URL
+                    response = requests.get(image_url, stream=True, timeout=10)
                 
-            response.raise_for_status()  # Raise exception for 4XX/5XX responses
-            img = Image.open(response.raw)
-            
+                response.raise_for_status()  # Raise exception for 4XX/5XX responses
+                img = Image.open(response.raw)
+            else:  # base64
+                logger.info("Processing base64 encoded image")
+                # Remove data URL prefix if present
+                if image_base64.startswith('data:image'):
+                    image_base64 = image_base64.split(',', 1)[1]
+                
+                # Decode base64 string to image
+                image_data = base64.b64decode(image_base64)
+                img = Image.open(io.BytesIO(image_data))
+        
         except requests.exceptions.RequestException as e:
-            logger.error(f"Error fetching image from URL: {str(e)}")
+            logger.error(f"Error fetching image: {str(e)}")
             return jsonify({'error': f'Error fetching image: {str(e)}'}), 500
-            
-        # Check if pytesseract is properly configured
-        if not hasattr(pytesseract, 'image_to_string'):
-            logger.error("Pytesseract not properly installed or configured")
-            return jsonify({'error': 'OCR engine not available'}), 500
-            
-        # Process with OCR
-        try:
-            logger.info("Performing OCR on image")
-            text = pytesseract.image_to_string(img)
-            
-            if text and text.strip():
-                logger.info(f"OCR successful, extracted {len(text.strip())} characters")
-                return jsonify({'text': text.strip(), 'source': 'ocr'})
-                
-            # Fallback to Vision API if OCR returns no text
-            logger.info("OCR returned no text, falling back to Vision API")
-            caption = call_vision_api(image_url)
-            return jsonify({'text': caption, 'source': 'vision'})
-            
         except Exception as e:
-            logger.error(f"OCR processing error: {str(e)}")
-            return jsonify({'error': f'OCR processing error: {str(e)}'}), 500
-            
+            logger.error(f"Error processing image data: {str(e)}")
+            return jsonify({'error': f'Error processing image data: {str(e)}'}), 500
+        
+        # Try OCR if available
+        text = None
+        source = None
+        
+        # Try Tesseract OCR first if available
+        if tesseract_available:
+            try:
+                logger.info("Attempting OCR with Tesseract")
+                text = pytesseract.image_to_string(img)
+                if text and text.strip():
+                    logger.info(f"OCR successful, extracted {len(text.strip())} characters")
+                    source = "ocr"
+            except Exception as e:
+                logger.error(f"Tesseract OCR error: {str(e)}")
+                # Continue to fallback methods
+        
+        # If OCR failed or not available, try Google Vision API
+        if not text or not text.strip():
+            try:
+                if genai and os.getenv('GOOGLE_API_KEY'):
+                    logger.info("Attempting to use Google Generative AI for image description")
+                    # Save image to temporary file
+                    with tempfile.NamedTemporaryFile(suffix='.png', delete=False) as temp_file:
+                        img.save(temp_file, format='PNG')
+                        temp_file_path = temp_file.name
+                    
+                    # Load image for Gemini
+                    try:
+                        import google.generativeai as genai
+                        from google.generativeai.types import HarmCategory, HarmBlockThreshold
+                        
+                        # Configure safety settings
+                        safety_settings = {
+                            HarmCategory.HARM_CATEGORY_HATE_SPEECH: HarmBlockThreshold.BLOCK_NONE,
+                            HarmCategory.HARM_CATEGORY_HARASSMENT: HarmBlockThreshold.BLOCK_NONE,
+                            HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT: HarmBlockThreshold.BLOCK_NONE,
+                            HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: HarmBlockThreshold.BLOCK_NONE,
+                        }
+                        
+                        # Load image
+                        with open(temp_file_path, 'rb') as f:
+                            image_data = f.read()
+                        
+                        # Use Gemini Pro Vision model
+                        model = genai.GenerativeModel('gemini-pro-vision', safety_settings=safety_settings)
+                        response = model.generate_content(["Extract and return all text visible in this image. Return only the text content, no descriptions or explanations.", image_data])
+                        
+                        if response and hasattr(response, 'text'):
+                            text = response.text
+                            source = "vision"
+                            logger.info(f"Google Vision API extracted {len(text)} characters")
+                    except ImportError as e:
+                        logger.error(f"Google Generative AI import error: {str(e)}")
+                    except Exception as e:
+                        logger.error(f"Google Vision API error: {str(e)}")
+                    finally:
+                        # Clean up temp file
+                        try:
+                            os.unlink(temp_file_path)
+                        except:
+                            pass
+            except Exception as e:
+                logger.error(f"Vision API fallback error: {str(e)}")
+        
+        # If all methods failed, return a helpful error
+        if not text or not text.strip():
+            logger.warning("All text extraction methods failed")
+            return jsonify({
+                'text': "No text could be extracted from this image.",
+                'source': "none",
+                'warning': "Text extraction failed with all available methods."
+            })
+        
+        # Return the extracted text
+        return jsonify({
+            'text': text.strip(),
+            'source': source
+        })
+        
     except Exception as e:
         logger.error(f"Unexpected error in image-to-text: {str(e)}")
-        return jsonify({'error': str(e)}), 500
+        import traceback
+        logger.error(traceback.format_exc())
+        return jsonify({'error': 'Internal server error processing image', 'details': str(e)}), 500
 
 def call_vision_api(image_url):
-    # Try to use Google Vision API if configured
+    """Legacy function for backward compatibility"""
     try:
         if genai and os.getenv('GOOGLE_API_KEY'):
-            logger.info("Attempting to use Google Generative AI for image description")
+            # Download image
+            response = requests.get(image_url, timeout=10)
+            response.raise_for_status()
+            image_data = response.content
+            
+            # Use Gemini model
             model = genai.GenerativeModel('gemini-pro-vision')
-            image_data = requests.get(image_url).content
-            response = model.generate_content(["Describe all text visible in this image", image_data])
+            response = model.generate_content(["Extract all text visible in this image", image_data])
             if response and hasattr(response, 'text'):
                 return response.text
     except Exception as e:
