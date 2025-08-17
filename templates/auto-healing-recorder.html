@@ -1,0 +1,843 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Auto-Healing Test Recorder - Co-Test</title>
+    <link rel="stylesheet" href="/static/styles.css">
+    <link rel="stylesheet" href="/static/left-sidebar.css">
+    <link rel="stylesheet" href="/static/navbar-tabs.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary: #667eea;
+            --accent: #764ba2;
+            --glass-bg: rgba(255, 255, 255, 0.1);
+            --glass-border: rgba(255, 255, 255, 0.2);
+            --shadow-light: rgba(0, 0, 0, 0.1);
+            --shadow-medium: rgba(0, 0, 0, 0.15);
+            --text-primary: #2d3748;
+            --text-secondary: #4a5568;
+            --success: #48bb78;
+            --warning: #ed8936;
+            --error: #f56565;
+        }
+
+        .main-content {
+            margin-left: 280px;
+            padding: 20px;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            min-height: 100vh;
+        }
+
+        .recorder-container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .recorder-header {
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 8px 32px var(--shadow-light);
+        }
+
+        .recorder-title {
+            font-size: 2.5rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--primary), var(--accent));
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 10px;
+        }
+
+        .recorder-subtitle {
+            color: var(--text-secondary);
+            font-size: 1.1rem;
+            margin-bottom: 20px;
+        }
+
+        .wip-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: linear-gradient(135deg, var(--warning), #f6ad55);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            box-shadow: 0 4px 12px rgba(237, 137, 54, 0.3);
+        }
+
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 24px;
+            margin-bottom: 30px;
+        }
+
+        .feature-card {
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            padding: 24px;
+            box-shadow: 0 8px 32px var(--shadow-light);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            border-top: 3px solid transparent;
+            background-clip: padding-box;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 40px var(--shadow-medium);
+            border-top-color: var(--primary);
+        }
+
+        .feature-icon {
+            width: 48px;
+            height: 48px;
+            background: linear-gradient(135deg, var(--primary), var(--accent));
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.5rem;
+            margin-bottom: 16px;
+        }
+
+        .feature-title {
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 8px;
+        }
+
+        .feature-description {
+            color: var(--text-secondary);
+            line-height: 1.6;
+            margin-bottom: 16px;
+        }
+
+        .recorder-controls {
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 8px 32px var(--shadow-light);
+        }
+
+        .control-section {
+            margin-bottom: 24px;
+        }
+
+        .control-label {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 12px;
+            display: block;
+        }
+
+        .url-input {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid var(--glass-border);
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.8);
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        .url-input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary), var(--accent));
+            color: white;
+            border: none;
+            padding: 14px 28px;
+            border-radius: 12px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 4px 16px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-primary:active {
+            transform: translateY(0);
+        }
+
+        .btn-secondary {
+            background: var(--glass-bg);
+            color: var(--text-primary);
+            border: 2px solid var(--glass-border);
+            padding: 12px 24px;
+            border-radius: 12px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.2);
+            border-color: var(--primary);
+        }
+        
+        .btn-accent {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 12px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            text-decoration: none;
+            box-shadow: 0 4px 15px rgba(240, 147, 251, 0.3);
+        }
+        
+        .btn-accent:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(240, 147, 251, 0.4);
+        }
+
+        .status-panel {
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            padding: 24px;
+            margin-bottom: 30px;
+            box-shadow: 0 8px 32px var(--shadow-light);
+        }
+
+        .status-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .status-content {
+            color: var(--text-secondary);
+            line-height: 1.6;
+        }
+
+        .locator-strategies {
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            padding: 24px;
+            margin-bottom: 30px;
+            box-shadow: 0 8px 32px var(--shadow-light);
+        }
+
+        .strategy-item {
+            background: rgba(255, 255, 255, 0.5);
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 12px;
+            border-left: 4px solid var(--primary);
+        }
+
+        .strategy-name {
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 4px;
+        }
+
+        .strategy-description {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        .code-block {
+            background: #2d3748;
+            color: #e2e8f0;
+            padding: 16px;
+            border-radius: 8px;
+            font-family: 'Monaco', 'Consolas', monospace;
+            font-size: 0.9rem;
+            margin-top: 8px;
+            overflow-x: auto;
+        }
+
+        .loading-spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .generated-code-section,
+        .recorded-actions-section {
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            padding: 24px;
+            margin-bottom: 30px;
+            box-shadow: 0 8px 32px var(--shadow-light);
+        }
+
+        .code-section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid var(--glass-border);
+        }
+
+        .code-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .code-display {
+            background: #2d3748;
+            color: #e2e8f0;
+            padding: 20px;
+            border-radius: 12px;
+            overflow-x: auto;
+            font-family: 'Monaco', 'Consolas', monospace;
+            font-size: 0.9rem;
+            line-height: 1.5;
+            max-height: 500px;
+            overflow-y: auto;
+        }
+
+        .actions-header {
+            margin-bottom: 16px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid var(--glass-border);
+        }
+
+        .action-item {
+            background: rgba(255, 255, 255, 0.5);
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 8px;
+            border-left: 3px solid var(--primary);
+        }
+
+        .action-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 8px;
+        }
+
+        .action-number {
+            background: var(--primary);
+            color: white;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        .action-type {
+            background: var(--accent);
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .action-time {
+            color: var(--text-secondary);
+            font-size: 0.8rem;
+        }
+
+        .action-locators {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .locator-preview {
+            background: #2d3748;
+            color: #e2e8f0;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-family: 'Monaco', 'Consolas', monospace;
+            font-size: 0.75rem;
+        }
+
+        .more-locators {
+            color: var(--text-secondary);
+            font-size: 0.8rem;
+            font-style: italic;
+        }
+
+        .recording-controls-section {
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid var(--glass-border);
+        }
+
+        .button-group {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .instructions-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 10000;
+        }
+
+        .modal-overlay {
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 16px;
+            max-width: 800px;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 24px 24px 16px;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: var(--text-secondary);
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            transition: all 0.2s ease;
+        }
+
+        .modal-close:hover {
+            background: #f7fafc;
+            color: var(--text-primary);
+        }
+
+        .modal-body {
+            padding: 24px;
+        }
+
+        .modal-footer {
+            padding: 16px 24px 24px;
+            text-align: right;
+        }
+
+        .instruction-section {
+            margin-bottom: 24px;
+        }
+
+        .instruction-section h3 {
+            color: var(--text-primary);
+            margin-bottom: 12px;
+            font-size: 1.1rem;
+        }
+
+        .instruction-section ul,
+        .instruction-section ol {
+            color: var(--text-secondary);
+            line-height: 1.6;
+            padding-left: 20px;
+        }
+
+        .instruction-section li {
+            margin-bottom: 8px;
+        }
+
+        .mcp-commands-section {
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            padding: 24px;
+            margin-bottom: 30px;
+            box-shadow: 0 8px 32px var(--shadow-light);
+        }
+
+        .commands-header {
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .commands-header h3 {
+            color: var(--text-primary);
+            margin-bottom: 8px;
+        }
+
+        .commands-header p {
+            color: var(--text-secondary);
+            margin: 0;
+        }
+
+        .commands-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 16px;
+        }
+
+        .command-card {
+            background: rgba(255, 255, 255, 0.5);
+            border-radius: 12px;
+            padding: 16px;
+            border-left: 4px solid var(--primary);
+        }
+
+        .command-card h4 {
+            color: var(--text-primary);
+            margin-bottom: 12px;
+            font-size: 1rem;
+        }
+
+        .command-code {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: #2d3748;
+            border-radius: 8px;
+            padding: 12px;
+        }
+
+        .command-code code {
+            flex: 1;
+            color: #e2e8f0;
+            font-family: 'Monaco', 'Consolas', monospace;
+            font-size: 0.85rem;
+            word-break: break-all;
+        }
+
+        .copy-btn {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 6px 8px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            transition: all 0.2s ease;
+        }
+
+        .copy-btn:hover {
+            background: var(--accent);
+            transform: scale(1.05);
+        }
+
+        .action-recorder-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 10001;
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 6px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 10px 12px;
+            border: 2px solid var(--glass-border);
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.8);
+            font-size: 0.95rem;
+            transition: all 0.3s ease;
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .browser-controls-section {
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid var(--glass-border);
+        }
+
+        @media (max-width: 768px) {
+            .main-content {
+                margin-left: 0;
+                padding: 16px;
+            }
+            
+            .feature-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .recorder-title {
+                font-size: 2rem;
+            }
+            
+            .code-section-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 12px;
+            }
+            
+            .button-group {
+                flex-direction: column;
+            }
+            
+            .modal-content {
+                margin: 10px;
+                max-width: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    {% include 'quotes-header.html' %}
+    {% include 'left-sidebar.html' %}
+    
+    <div class="main-content">
+        <div class="recorder-container">
+            <!-- Header Section -->
+            <div class="recorder-header">
+                <h1 class="recorder-title">
+                    <i class="fas fa-shield-alt"></i>
+                    Auto-Healing Test Recorder
+                </h1>
+                <p class="recorder-subtitle">
+                    Advanced Playwright codegen with intelligent multi-locator strategies for robust test automation
+                </p>
+                <div class="wip-badge">
+                    <i class="fas fa-tools"></i>
+                    Work in Progress
+                </div>
+            </div>
+
+            <!-- Feature Overview -->
+            <div class="feature-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-magic"></i>
+                    </div>
+                    <h3 class="feature-title">Multi-Locator Strategies</h3>
+                    <p class="feature-description">
+                        Automatically generates multiple locator strategies for each element: ID, data attributes, role-based, text-based, CSS classes, and XPath fallbacks.
+                    </p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-shield-alt"></i>
+                    </div>
+                    <h3 class="feature-title">Auto-Healing Framework</h3>
+                    <p class="feature-description">
+                        Intelligent fallback system that automatically tries alternative locators when primary selectors fail, ensuring test resilience.
+                    </p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-code"></i>
+                    </div>
+                    <h3 class="feature-title">Playwright Integration</h3>
+                    <p class="feature-description">
+                        Built on top of Playwright's powerful codegen capabilities with enhanced element identification and recording features.
+                    </p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-accessibility"></i>
+                    </div>
+                    <h3 class="feature-title">Accessibility-First</h3>
+                    <p class="feature-description">
+                        Prioritizes accessibility-friendly locators like roles and ARIA attributes for better test maintainability and inclusivity.
+                    </p>
+                </div>
+            </div>
+
+            <!-- Recording Controls -->
+            <div class="recorder-controls">
+                <h2 class="control-label">
+                    <i class="fas fa-play-circle"></i>
+                    Start Recording Session
+                </h2>
+                
+                <div class="control-section">
+                    <label class="control-label" for="targetUrl">Target URL</label>
+                    <input 
+                        type="url" 
+                        id="targetUrl" 
+                        class="url-input" 
+                        placeholder="https://example.com"
+                        value="https://example.com"
+                    >
+                </div>
+
+                <div class="control-section">
+                    <button id="startRecording" class="btn-primary">
+                        <i class="fas fa-record-vinyl"></i>
+                        Start Playwright Codegen
+                    </button>
+                    
+                    <button id="viewInstructions" class="btn-secondary">
+                        <i class="fas fa-info-circle"></i>
+                        View Instructions
+                    </button>
+                    
+                    <button id="recordTestAction" class="btn-accent" onclick="autoHealingRecorder.recordTestAction()">
+                        <i class="fas fa-plus"></i>
+                        Record Test Action
+                    </button>
+                    
+                    <button id="testBrowser" class="btn-accent" onclick="autoHealingRecorder.testBrowserLaunch()">
+                        <i class="fas fa-vial"></i>
+                        Test Browser Launch
+                    </button>
+                    
+                    <button id="checkPlaywright" class="btn-secondary" onclick="autoHealingRecorder.checkPlaywrightStatus()">
+                        <i class="fas fa-check-circle"></i>
+                        Check Playwright
+                    </button>
+                </div>
+            </div>
+
+            <!-- Status Panel -->
+            <div class="status-panel" id="statusPanel">
+                <h3 class="status-title">
+                    <i class="fas fa-info-circle"></i>
+                    Session Status
+                </h3>
+                <div class="status-content" id="statusContent">
+                    Ready to start recording. Click "Start Playwright Codegen" to begin.
+                </div>
+            </div>
+
+            <!-- Locator Strategies Preview -->
+            <div class="locator-strategies">
+                <h3 class="status-title">
+                    <i class="fas fa-crosshairs"></i>
+                    Auto-Healing Locator Strategies
+                </h3>
+                
+                <div class="strategy-item">
+                    <div class="strategy-name">1. ID-Based Locators (Highest Priority)</div>
+                    <div class="strategy-description">Most reliable - uses element ID attributes</div>
+                    <div class="code-block">page.locator('#submit-button')</div>
+                </div>
+
+                <div class="strategy-item">
+                    <div class="strategy-name">2. Data Attribute Locators</div>
+                    <div class="strategy-description">Test-specific attributes like data-testid, data-test, data-cy</div>
+                    <div class="code-block">page.locator('[data-testid="login-form"]')</div>
+                </div>
+
+                <div class="strategy-item">
+                    <div class="strategy-name">3. Role-Based Locators (Accessibility)</div>
+                    <div class="strategy-description">Uses ARIA roles for accessibility-friendly selection</div>
+                    <div class="code-block">page.get_by_role('button', name='Submit')</div>
+                </div>
+
+                <div class="strategy-item">
+                    <div class="strategy-name">4. Text-Based Locators</div>
+                    <div class="strategy-description">Selects elements by visible text content</div>
+                    <div class="code-block">page.get_by_text('Click here to continue')</div>
+                </div>
+
+                <div class="strategy-item">
+                    <div class="strategy-name">5. CSS Class Combination</div>
+                    <div class="strategy-description">Uses CSS class combinations for styling-based selection</div>
+                    <div class="code-block">page.locator('.btn.btn-primary.submit-btn')</div>
+                </div>
+
+                <div class="strategy-item">
+                    <div class="strategy-name">6. XPath Fallback</div>
+                    <div class="strategy-description">Last resort - structural XPath locators</div>
+                    <div class="code-block">page.locator('xpath=//button[@type="submit"]')</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Include external JavaScript -->
+    <script src="/static/auto-healing-recorder.js"></script>
+</body>
+</html>

@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Simple Auto-Healing Recorder</title>
+  <link rel="stylesheet" href="/static/styles.css" />
+  <style>
+    :root { --primary:#6366f1; --primary-hover:#4f46e5; --border:#e5e7eb; --bg:#f8fafc; --text:#111827; --muted:#6b7280; }
+    body { font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; background: var(--bg); color: var(--text); margin: 0; }
+    .container { max-width: 1040px; margin: 32px auto; padding: 0 16px; }
+    .header { display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; }
+    .title { font-size: 20px; font-weight: 800; display:flex; gap:10px; align-items:center; }
+    .badge { font-size:12px; font-weight:700; color:#fff; background: linear-gradient(135deg,#ff6b6b,#ffa726); padding:4px 10px; border-radius:999px; }
+    .card { background:#fff; border:1px solid var(--border); border-radius:16px; padding:16px; box-shadow: 0 10px 24px rgba(0,0,0,0.06); }
+    .row { display:flex; gap:12px; flex-wrap:wrap; }
+    .field { flex:1 1 420px; display:flex; gap:10px; align-items:center; border:1px solid var(--border); border-radius:12px; padding:10px 12px; background:#fff; }
+    .field input { flex:1; border:none; outline:none; font-size:14px; }
+    .buttons { display:flex; gap:8px; flex-wrap:wrap; }
+    button { appearance:none; border:none; border-radius:10px; padding:10px 14px; font-weight:700; cursor:pointer; background: var(--primary); color:#fff; }
+    button.secondary { background:#eef2ff; color:#3730a3; }
+    button.ghost { background:#fff; color:#111827; border:1px solid var(--border); }
+    button:disabled { opacity:0.6; cursor:not-allowed; }
+    .grid { display:grid; grid-template-columns: 1fr 1fr; gap:16px; margin-top:16px; }
+    .section-title { font-size:13px; font-weight:800; color:#374151; margin-bottom:8px; text-transform:uppercase; letter-spacing:.04em; }
+    pre, code, textarea { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace; }
+    .list { max-height: 360px; overflow:auto; border:1px solid var(--border); border-radius:12px; padding:12px; background:#fafafa; }
+    .item { background:#fff; border:1px solid var(--border); border-radius:10px; padding:10px; margin-bottom:10px; }
+    .muted { color: var(--muted); font-size: 12px; }
+    textarea.code { width:100%; height:380px; border:1px solid var(--border); border-radius:12px; padding:12px; background:#0b1220; color:#e5e7eb; font-size:12px; }
+    .inline { display:flex; gap:8px; align-items:center; justify-content:space-between; }
+    .tabs { display:flex; gap:6px; border-bottom:1px solid var(--border); margin-bottom:8px; }
+    .tab { padding:6px 10px; border-radius:8px 8px 0 0; font-weight:700; color:#374151; cursor:pointer; }
+    .tab.active { background:#eef2ff; color:#3730a3; }
+    .hidden { display:none; }
+    .more { position:relative; }
+    .menu { position:absolute; top:42px; right:0; background:#fff; border:1px solid var(--border); border-radius:12px; min-width:220px; box-shadow: 0 10px 24px rgba(0,0,0,0.08); padding:8px; z-index:10; }
+    .menu button { width:100%; text-align:left; background:#fff; color:#111827; border:1px solid transparent; padding:8px 10px; border-radius:8px; }
+    .menu button:hover { background:#f3f4f6; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="title">
+        <span>Simple Auto-Healing Recorder</span>
+        <span class="badge">AI</span>
+      </div>
+      <div class="muted">Launch → Record → (optional: Clear) → Stop → Generate</div>
+    </div>
+
+    <div class="card">
+      <div class="row">
+        <div class="field" style="flex:2">
+          <span class="muted">URL</span>
+          <input id="targetUrl" type="text" placeholder="https://example.com" />
+        </div>
+        <div class="buttons">
+          <button id="startBtn">Start Recording</button>
+          <button class="ghost" id="stopBtn">Stop</button>
+          <button id="genBtn">Generate Test</button>
+          <div class="more">
+            <button class="secondary" id="moreBtn">More</button>
+            <div class="menu hidden" id="moreMenu">
+              <button id="moreStatus">Refresh Status</button>
+              <button id="moreClear" title="Clear recorded actions without ending the session">Clear Actions</button>
+              <button id="moreReset" title="Stop and delete current session">Reset Session</button>
+              <button id="moreExport">Export Elements (JSON)</button>
+              <button id="morePomTs">Download POM (TS)</button>
+              <button id="morePomJs">Download POM (JS)</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="inline" style="margin-top:8px">
+        <div class="muted">Session ID: <span id="sessionId">-</span></div>
+        <div class="muted">Recorded Actions: <span id="actionCount">0</span></div>
+      </div>
+    </div>
+
+    <div class="grid">
+      <div id="extractCard" class="card hidden">
+        <div class="inline">
+          <div class="section-title">Extracted Elements</div>
+          <div class="buttons">
+            <button class="ghost" id="backBtn">Back to Code</button>
+            <button class="secondary" id="downloadExtractBtn">Download Elements (JSON)</button>
+            <button class="ghost" id="extractPomTs">POM (TS)</button>
+            <button class="ghost" id="extractPomJs">POM (JS)</button>
+          </div>
+        </div>
+        <div id="elementsPanel">
+          <div class="field" style="margin-bottom:8px"><input id="elementSearch" type="text" placeholder="Search by name or attribute"/></div>
+          <div class="item" style="margin-bottom:12px;">
+            <div class="inline" style="margin-bottom:8px;">
+              <strong>Pages</strong>
+              <div class="buttons">
+                <input id="pageInput" type="text" placeholder="Add a page name" style="border:1px solid var(--border); padding:8px; border-radius:8px;" />
+                <button class="ghost" id="addPageBtn">Add</button>
+                <button class="secondary" id="savePagesBtn">Save Pages</button>
+              </div>
+            </div>
+            <div id="pagesChips" class="muted"></div>
+          </div>
+          <div class="inline" style="margin: 6px 0 8px;">
+            <strong>Naming</strong>
+            <div class="buttons">
+              <span class="muted">Assign Page and Name for each element (required)</span>
+              <button class="secondary" id="saveNamesBtn">Save Names</button>
+            </div>
+          </div>
+          <div id="elementsList" class="list"></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="inline">
+          <div class="section-title">Generated Test (JavaScript)</div>
+          <div class="buttons">
+            <button class="secondary" id="extractBtn">Extract Elements</button>
+            <button class="secondary" id="copyBtn">Copy</button>
+          </div>
+        </div>
+        <textarea id="codeOut" class="code" spellcheck="false" placeholder="Click Generate Test to see output..."></textarea>
+      </div>
+    </div>
+  </div>
+
+  <script src="/static/autoheal.js?v=1"></script>
+</body>
+</html>

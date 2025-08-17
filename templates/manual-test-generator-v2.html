@@ -1,0 +1,1197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manual Test Generator - Co-Test</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='left-sidebar.css') }}">
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --error: #ef4444;
+            --bg-light: #f8fafc;
+            --text-dark: #1f2937;
+            --text-light: #6b7280;
+            --border: #e5e7eb;
+        }
+
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+        }
+
+        .main-content {
+            margin-left: 280px;
+            padding: 2rem;
+            min-height: 100vh;
+        }
+
+        .page-container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+            padding: 2rem;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .page-header {
+            text-align: center;
+            margin-bottom: 3rem;
+        }
+
+        .page-title {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: var(--text-dark);
+            margin-bottom: 0.5rem;
+        }
+
+        .page-subtitle {
+            color: var(--text-light);
+            font-size: 1.1rem;
+        }
+
+        /* JQL Input Section */
+        .jql-section {
+            background: var(--bg-light);
+            border-radius: 16px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .jql-header {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .jql-icon {
+            width: 50px;
+            height: 50px;
+            background: var(--primary);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.5rem;
+        }
+
+        .jql-input-group {
+            display: flex;
+            gap: 1rem;
+            align-items: flex-end;
+        }
+
+        .jql-input {
+            flex: 1;
+            padding: 1rem;
+            border: 2px solid var(--border);
+            border-radius: 12px;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        .jql-input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1);
+        }
+
+        .fetch-btn {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 1rem 2rem;
+            border-radius: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .fetch-btn:hover:not(:disabled) {
+            background: var(--primary-dark);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(99, 102, 241, 0.4);
+        }
+
+        .fetch-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* Context Selector */
+        .context-section {
+            background: white;
+            border: 2px solid var(--border);
+            border-radius: 16px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .context-header {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .context-select {
+            width: 100%;
+            padding: 0.75rem;
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            font-size: 1rem;
+        }
+
+        /* Stories Section */
+        .stories-section {
+            margin-bottom: 2rem;
+        }
+
+        .stories-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1.5rem;
+        }
+
+        .stories-count {
+            background: var(--primary);
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        .story-card {
+            background: white;
+            border: 2px solid var(--border);
+            border-radius: 16px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            transition: all 0.3s ease;
+        }
+
+        .story-card:hover {
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+            transform: translateY(-2px);
+        }
+
+        .story-header {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            margin-bottom: 1rem;
+        }
+
+        .story-info {
+            flex: 1;
+        }
+
+        .story-key {
+            font-size: 0.9rem;
+            font-weight: 700;
+            color: var(--primary);
+            margin-bottom: 0.5rem;
+        }
+
+        .story-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: var(--text-dark);
+            margin-bottom: 0.5rem;
+        }
+
+        .story-meta {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .meta-badge {
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        .meta-badge.priority {
+            background: var(--warning);
+            color: white;
+        }
+
+        .meta-badge.status {
+            background: var(--success);
+            color: white;
+        }
+
+        .story-description {
+            color: var(--text-light);
+            margin-bottom: 1.5rem;
+            line-height: 1.6;
+        }
+
+        .story-actions {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        .generate-btn {
+            background: var(--success);
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .generate-btn:hover:not(:disabled) {
+            background: #059669;
+            transform: translateY(-2px);
+        }
+
+        .generate-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* Test Cases Section */
+        .test-cases {
+            margin-top: 1.5rem;
+            border-top: 2px solid var(--border);
+            padding-top: 1.5rem;
+        }
+
+        .test-cases-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1rem;
+            cursor: pointer;
+        }
+
+        .test-cases-title {
+            font-weight: 600;
+            color: var(--text-dark);
+        }
+
+        .test-cases-count {
+            background: var(--success);
+            color: white;
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        .toggle-icon {
+            transition: transform 0.3s ease;
+        }
+
+        .toggle-icon.expanded {
+            transform: rotate(180deg);
+        }
+
+        .test-cases-content {
+            display: none;
+        }
+
+        .test-cases-content.expanded {
+            display: block;
+        }
+
+        /* Test Cases Table */
+        .testcase-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 1rem;
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .testcase-table th {
+            background: var(--bg-light);
+            padding: 1rem;
+            text-align: left;
+            font-weight: 600;
+            color: var(--text-dark);
+            border-bottom: 2px solid var(--border);
+        }
+
+        .testcase-table td {
+            padding: 1rem;
+            border-bottom: 1px solid var(--border);
+            vertical-align: top;
+        }
+
+        .testcase-table tr:hover {
+            background: rgba(99, 102, 241, 0.05);
+        }
+
+        .test-step-cell {
+            font-weight: 500;
+            color: var(--text-dark);
+        }
+
+        .test-expected-cell {
+            color: var(--text-light);
+        }
+
+        .test-estimate-cell {
+            text-align: center;
+            font-weight: 600;
+            color: var(--primary);
+        }
+
+        .test-actions-cell {
+            text-align: center;
+        }
+
+        .btn-edit {
+            background: var(--warning);
+            color: white;
+            border: none;
+            padding: 0.25rem;
+            border-radius: 3px;
+            cursor: pointer;
+            margin-right: 0.125rem;
+            transition: all 0.3s ease;
+            font-size: 0.7rem;
+            width: 24px;
+            height: 24px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .btn-edit:hover {
+            background: #d97706;
+            transform: translateY(-1px);
+        }
+
+        .btn-delete {
+            background: var(--error);
+            color: white;
+            border: none;
+            padding: 0.25rem;
+            border-radius: 3px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.7rem;
+            width: 24px;
+            height: 24px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .btn-delete:hover {
+            background: #dc2626;
+            transform: translateY(-1px);
+        }
+
+        /* Test Actions Bar */
+        .test-actions-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 1rem;
+            padding: 1rem;
+            background: var(--bg-light);
+            border-radius: 8px;
+        }
+
+        .test-summary {
+            display: flex;
+            gap: 2rem;
+            align-items: center;
+        }
+
+        .summary-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .summary-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        .summary-label {
+            font-size: 0.8rem;
+            color: var(--text-light);
+            text-transform: uppercase;
+            font-weight: 600;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 1rem;
+        }
+
+        .btn-action {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn-csv {
+            background: var(--success);
+            color: white;
+        }
+
+        .btn-csv:hover {
+            background: #059669;
+            transform: translateY(-2px);
+        }
+
+        .btn-jira {
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn-jira:hover {
+            background: var(--primary-dark);
+            transform: translateY(-2px);
+        }
+
+        /* View More Button */
+        .view-more-btn {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 0.25rem 0.75rem;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            margin-top: 0.5rem;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+
+        .view-more-btn:hover {
+            background: var(--primary-dark);
+            transform: translateY(-1px);
+        }
+
+
+        /* Edit Modal */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 16px;
+            padding: 2rem;
+            max-width: 600px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .modal-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: var(--text-dark);
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: var(--text-light);
+        }
+
+        .modal-form {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .form-label {
+            font-weight: 600;
+            color: var(--text-dark);
+            margin-bottom: 0.5rem;
+        }
+
+        .form-input {
+            padding: 0.75rem;
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+
+        .form-textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 1rem;
+            justify-content: flex-end;
+            margin-top: 1.5rem;
+        }
+
+        .btn-cancel {
+            background: var(--text-light);
+            color: white;
+        }
+
+        .btn-save {
+            background: var(--primary);
+            color: white;
+        }
+
+        /* Loading States */
+        .loading {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            color: var(--text-light);
+        }
+
+        .spinner {
+            width: 20px;
+            height: 20px;
+            border: 2px solid var(--border);
+            border-top: 2px solid var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Alert Messages */
+        .alert {
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+        }
+
+        .alert-success {
+            background: #d1fae5;
+            color: #065f46;
+            border: 1px solid #a7f3d0;
+        }
+
+        .alert-error {
+            background: #fee2e2;
+            color: #991b1b;
+            border: 1px solid #fecaca;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .main-content {
+                margin-left: 0;
+                padding: 1rem;
+            }
+
+            .jql-input-group {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .story-header {
+                flex-direction: column;
+                gap: 1rem;
+            }
+
+            .story-actions {
+                justify-content: flex-start;
+            }
+        }
+    </style>
+</head>
+<body>
+    {% include 'quotes-header.html' %}
+    {% include 'left-sidebar.html' %}
+
+    <div class="main-content">
+        <div class="page-container">
+            <div class="page-header">
+                <h1 class="page-title">Manual Test Generator</h1>
+                <p class="page-subtitle">Fetch Jira stories and generate test cases individually</p>
+            </div>
+
+            <!-- JQL Input Section -->
+            <div class="jql-section">
+                <div class="jql-header">
+                    <div class="jql-icon">
+                        <i class="fab fa-jira"></i>
+                    </div>
+                    <div>
+                        <h3>Fetch Stories from Jira</h3>
+                        <p>Enter a JQL query to fetch stories for test generation</p>
+                    </div>
+                </div>
+                <div class="jql-input-group">
+                    <input type="text" id="jqlInput" class="jql-input" 
+                           placeholder="Enter JQL query (e.g., project = TEST AND status = 'To Do')"
+                           value="">
+                    <button id="fetchBtn" class="fetch-btn">
+                        <i class="fas fa-search"></i>
+                        Fetch Stories
+                    </button>
+                </div>
+            </div>
+
+            <!-- Context Selector -->
+            <div class="context-section">
+                <div class="context-header">
+                    <i class="fas fa-layer-group" style="color: var(--primary);"></i>
+                    <h4>Test Context</h4>
+                </div>
+                <select id="contextSelect" class="context-select">
+                    <option value="">Select testing context...</option>
+                    <option value="lxp">LXP Platform</option>
+                </select>
+            </div>
+
+            <!-- Alert Messages -->
+            <div id="alertContainer"></div>
+
+            <!-- Stories Section -->
+            <div id="storiesSection" class="stories-section" style="display: none;">
+                <div class="stories-header">
+                    <h3>Fetched Stories</h3>
+                    <span id="storiesCount" class="stories-count">0 stories</span>
+                </div>
+                <div id="storiesContainer"></div>
+            </div>
+        </div>
+    </div>
+
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const jqlInput = document.getElementById('jqlInput');
+            const fetchBtn = document.getElementById('fetchBtn');
+            const contextSelect = document.getElementById('contextSelect');
+            const alertContainer = document.getElementById('alertContainer');
+            const storiesSection = document.getElementById('storiesSection');
+            const storiesContainer = document.getElementById('storiesContainer');
+            const storiesCount = document.getElementById('storiesCount');
+
+            let currentStories = [];
+            let fetchedStories = {}; // Store full story data for preview
+
+            // Show alert message
+            function showAlert(message, type = 'success') {
+                alertContainer.innerHTML = `
+                    <div class="alert alert-${type}">
+                        <i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-circle'}"></i>
+                        ${message}
+                    </div>
+                `;
+                setTimeout(() => {
+                    alertContainer.innerHTML = '';
+                }, 5000);
+            }
+
+            // Fetch stories from Jira
+            async function fetchStories() {
+                const jqlQuery = jqlInput.value.trim();
+                
+                if (!jqlQuery) {
+                    showAlert('Please enter a JQL query', 'error');
+                    return;
+                }
+
+                // Update button state
+                fetchBtn.disabled = true;
+                fetchBtn.innerHTML = '<div class="spinner"></div> Fetching...';
+
+                try {
+                    const response = await fetch('/api/jira/fetch-jql-stories', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ jql: jqlQuery })
+                    });
+
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}`);
+                    }
+
+                    const data = await response.json();
+
+                    if (data.success && data.stories) {
+                        currentStories = data.stories;
+                        // Store full story data for preview
+                        data.stories.forEach(story => {
+                            fetchedStories[story.jira_key] = story;
+                        });
+                        displayStories(data.stories);
+                        showAlert(`Successfully fetched ${data.stories.length} stories from Jira!`);
+                    } else {
+                        throw new Error(data.error || 'Failed to fetch stories');
+                    }
+
+                } catch (error) {
+                    console.error('Error fetching stories:', error);
+                    showAlert(`Error: ${error.message}`, 'error');
+                } finally {
+                    // Reset button state
+                    fetchBtn.disabled = false;
+                    fetchBtn.innerHTML = '<i class="fas fa-search"></i> Fetch Stories';
+                }
+            }
+
+            // Display stories
+            function displayStories(stories) {
+                if (!stories || stories.length === 0) {
+                    storiesSection.style.display = 'none';
+                    return;
+                }
+
+                storiesCount.textContent = `${stories.length} stories`;
+                storiesSection.style.display = 'block';
+
+                storiesContainer.innerHTML = stories.map(story => `
+                    <div class="story-card" data-story-key="${story.jira_key}">
+                        <div class="story-header">
+                            <div class="story-info">
+                                <div class="story-key">${story.jira_key}</div>
+                                <div class="story-title">${story.title || 'No title'}</div>
+                                <div class="story-meta">
+                                    <span class="meta-badge priority">${story.priority || 'Medium'}</span>
+                                    <span class="meta-badge status">${story.status || 'Unknown'}</span>
+                                </div>
+                                <div class="story-description">
+                                    ${story.description ? story.description.substring(0, 200) + (story.description.length > 200 ? '...' : '') : 'No description available'}
+                                    <button class="view-more-btn" onclick="openJiraStory('${story.jira_key}')"><i class="fas fa-external-link-alt"></i> View in Jira</button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="story-actions">
+                            <button class="generate-btn" onclick="generateTests('${story.jira_key}')">
+                                <i class="fas fa-magic"></i>
+                                Generate Tests
+                            </button>
+                        </div>
+                        <div class="test-cases" id="tests-${story.jira_key}" style="display: none;">
+                            <div class="test-cases-header" onclick="toggleTests('${story.jira_key}')">
+                                <div style="display: flex; align-items: center; gap: 1rem;">
+                                    <span class="test-cases-title">Generated Test Cases</span>
+                                    <span class="test-cases-count" id="count-${story.jira_key}">0 tests</span>
+                                </div>
+                                <i class="fas fa-chevron-down toggle-icon" id="toggle-${story.jira_key}"></i>
+                            </div>
+                            <div class="test-cases-content" id="content-${story.jira_key}">
+                                <table class="testcase-table">
+                                    <thead>
+                                        <tr>
+                                            <th style="width: 5%;">#</th>
+                                            <th style="width: 35%;">Test Step</th>
+                                            <th style="width: 35%;">Expected Result</th>
+                                            <th style="width: 15%;">Estimate (min)</th>
+                                            <th style="width: 10%;">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="tbody-${story.jira_key}"></tbody>
+                                </table>
+                                <div class="test-actions-bar">
+                                    <div class="test-summary">
+                                        <div class="summary-item">
+                                            <span class="summary-value" id="total-tests-${story.jira_key}">0</span>
+                                            <span class="summary-label">Tests</span>
+                                        </div>
+                                        <div class="summary-item">
+                                            <span class="summary-value" id="total-time-${story.jira_key}">0</span>
+                                            <span class="summary-label">Minutes</span>
+                                        </div>
+                                    </div>
+                                    <div class="action-buttons">
+                                        <button class="btn-action btn-csv" onclick="exportCSV('${story.jira_key}')">
+                                            <i class="fas fa-download"></i>
+                                            Export CSV
+                                        </button>
+                                        <button class="btn-action btn-jira" onclick="createJiraSubtasks('${story.jira_key}')">
+                                            <i class="fab fa-jira"></i>
+                                            Create Subtasks
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+            }
+
+            // Generate tests for a story
+            window.generateTests = async function(storyKey) {
+                const context = contextSelect.value;
+                
+                if (!context) {
+                    showAlert('Please select a testing context first', 'error');
+                    return;
+                }
+
+                const btn = document.querySelector(`[data-story-key="${storyKey}"] .generate-btn`);
+                const testsSection = document.getElementById(`tests-${storyKey}`);
+
+                // Update button state
+                btn.disabled = true;
+                btn.innerHTML = '<div class="spinner"></div> Generating...';
+
+                try {
+                    const response = await fetch('/api/jira/generate-story-tests', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            story_key: storyKey,
+                            context: context
+                        })
+                    });
+
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}`);
+                    }
+
+                    const data = await response.json();
+
+                    if (data.success && data.test_cases) {
+                        displayTestCases(storyKey, data.test_cases);
+                        testsSection.style.display = 'block';
+                        showAlert(`Generated ${data.test_cases.length} test cases for ${storyKey}!`);
+                    } else {
+                        throw new Error(data.error || 'Failed to generate test cases');
+                    }
+
+                } catch (error) {
+                    console.error('Error generating tests:', error);
+                    showAlert(`Error generating tests for ${storyKey}: ${error.message}`, 'error');
+                } finally {
+                    // Reset button state
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="fas fa-magic"></i> Generate Tests';
+                }
+            };
+
+            // Display test cases
+            function displayTestCases(storyKey, testCases) {
+                const tbody = document.getElementById(`tbody-${storyKey}`);
+                const countElement = document.getElementById(`count-${storyKey}`);
+                const totalTestsElement = document.getElementById(`total-tests-${storyKey}`);
+                const totalTimeElement = document.getElementById(`total-time-${storyKey}`);
+                
+                // Store test cases for this story
+                if (!window.storyTestCases) window.storyTestCases = {};
+                window.storyTestCases[storyKey] = testCases;
+                
+                // Calculate totals
+                const totalTime = testCases.reduce((sum, test) => sum + (test.estimate_minutes || 15), 0);
+                
+                // Update counts
+                countElement.textContent = `${testCases.length} tests`;
+                totalTestsElement.textContent = testCases.length;
+                totalTimeElement.textContent = totalTime;
+                
+                // Populate table
+                tbody.innerHTML = testCases.map((testCase, index) => `
+                    <tr>
+                        <td style="text-align: center; font-weight: 600;">${index + 1}</td>
+                        <td class="test-step-cell">${testCase.step || 'No step provided'}</td>
+                        <td class="test-expected-cell">${testCase.expected || 'No expected result provided'}</td>
+                        <td class="test-estimate-cell">${testCase.estimate_minutes || 15}</td>
+                        <td class="test-actions-cell">
+                            <button class="btn-edit" onclick="editTestCase('${storyKey}', ${index})" title="Edit">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="btn-delete" onclick="deleteTestCase('${storyKey}', ${index})" title="Delete">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </td>
+                    </tr>
+                `).join('');
+            }
+
+            // Toggle test cases visibility
+            window.toggleTests = function(storyKey) {
+                const content = document.getElementById(`content-${storyKey}`);
+                const toggle = document.getElementById(`toggle-${storyKey}`);
+                
+                if (content.classList.contains('expanded')) {
+                    content.classList.remove('expanded');
+                    toggle.classList.remove('expanded');
+                } else {
+                    content.classList.add('expanded');
+                    toggle.classList.add('expanded');
+                }
+            };
+
+            // Open Jira story in new tab
+            window.openJiraStory = function(storyKey) {
+                const story = fetchedStories[storyKey];
+                if (!story) {
+                    showAlert('Story data not found', 'error');
+                    return;
+                }
+
+                // Get Jira base URL from story data
+                const jiraBaseUrl = story.jira_base_url;
+                if (!jiraBaseUrl) {
+                    showAlert('Jira URL not available', 'error');
+                    return;
+                }
+
+                const jiraUrl = `${jiraBaseUrl}/browse/${storyKey}`;
+                
+                // Open in new tab
+                window.open(jiraUrl, '_blank', 'noopener,noreferrer');
+            };
+
+            // Event listeners
+            fetchBtn.addEventListener('click', fetchStories);
+            
+            // Allow Enter key to trigger fetch
+            jqlInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    fetchStories();
+                }
+            });
+
+            // Edit test case
+            window.editTestCase = function(storyKey, index) {
+                const testCases = window.storyTestCases[storyKey];
+                const testCase = testCases[index];
+                
+                showEditModal(storyKey, index, testCase);
+            };
+
+            // Delete test case
+            window.deleteTestCase = function(storyKey, index) {
+                if (confirm('Are you sure you want to delete this test case?')) {
+                    const testCases = window.storyTestCases[storyKey];
+                    testCases.splice(index, 1);
+                    displayTestCases(storyKey, testCases);
+                    showAlert('Test case deleted successfully');
+                }
+            };
+
+            // Export CSV
+            window.exportCSV = function(storyKey) {
+                const testCases = window.storyTestCases[storyKey];
+                if (!testCases || testCases.length === 0) {
+                    showAlert('No test cases to export', 'error');
+                    return;
+                }
+
+                const csvContent = [
+                    ['#', 'Test Step', 'Expected Result', 'Estimate (minutes)'],
+                    ...testCases.map((test, index) => [
+                        index + 1,
+                        `"${(test.step || '').replace(/"/g, '""')}"`,
+                        `"${(test.expected || '').replace(/"/g, '""')}"`,
+                        test.estimate_minutes || 15
+                    ])
+                ].map(row => row.join(',')).join('\n');
+
+                const blob = new Blob([csvContent], { type: 'text/csv' });
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `test-cases-${storyKey}.csv`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                window.URL.revokeObjectURL(url);
+                
+                showAlert(`Test cases exported as ${storyKey}.csv`);
+            };
+
+            // Create Jira subtasks
+            window.createJiraSubtasks = async function(storyKey) {
+                const testCases = window.storyTestCases[storyKey];
+                if (!testCases || testCases.length === 0) {
+                    showAlert('No test cases to create subtasks for', 'error');
+                    return;
+                }
+
+                if (!confirm(`Create ${testCases.length} Jira subtasks for ${storyKey}?`)) {
+                    return;
+                }
+
+                try {
+                    const response = await fetch('/api/jira/add-tests', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            parent_key: storyKey,
+                            test_cases: testCases
+                        })
+                    });
+
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}`);
+                    }
+
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        showAlert(`Successfully created ${data.created_count} Jira subtasks for ${storyKey}!`);
+                    } else {
+                        throw new Error(data.error || 'Failed to create subtasks');
+                    }
+
+                } catch (error) {
+                    console.error('Error creating subtasks:', error);
+                    showAlert(`Error creating subtasks: ${error.message}`, 'error');
+                }
+            };
+
+            // Show edit modal
+            function showEditModal(storyKey, index, testCase) {
+                const modal = document.createElement('div');
+                modal.className = 'modal-overlay';
+                modal.innerHTML = `
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h3 class="modal-title">Edit Test Case #${index + 1}</h3>
+                            <button class="modal-close" onclick="closeModal()">&times;</button>
+                        </div>
+                        <div class="modal-form">
+                            <div class="form-group">
+                                <label class="form-label">Test Step</label>
+                                <textarea class="form-input form-textarea" id="editStep" placeholder="Enter test step...">${testCase.step || ''}</textarea>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Expected Result</label>
+                                <textarea class="form-input form-textarea" id="editExpected" placeholder="Enter expected result...">${testCase.expected || ''}</textarea>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Estimate (minutes)</label>
+                                <input type="number" class="form-input" id="editEstimate" min="1" max="120" value="${testCase.estimate_minutes || 15}">
+                            </div>
+                        </div>
+                        <div class="modal-actions">
+                            <button class="btn-action btn-cancel" onclick="closeModal()">Cancel</button>
+                            <button class="btn-action btn-save" onclick="saveTestCase('${storyKey}', ${index})">Save Changes</button>
+                        </div>
+                    </div>
+                `;
+                
+                document.body.appendChild(modal);
+                window.currentModal = modal;
+                
+                // Focus first input
+                document.getElementById('editStep').focus();
+            }
+
+            // Close modal
+            window.closeModal = function() {
+                if (window.currentModal) {
+                    document.body.removeChild(window.currentModal);
+                    window.currentModal = null;
+                }
+            };
+
+            // Save test case
+            window.saveTestCase = function(storyKey, index) {
+                const step = document.getElementById('editStep').value.trim();
+                const expected = document.getElementById('editExpected').value.trim();
+                const estimate = parseInt(document.getElementById('editEstimate').value) || 15;
+
+                if (!step) {
+                    showAlert('Test step is required', 'error');
+                    return;
+                }
+
+                if (!expected) {
+                    showAlert('Expected result is required', 'error');
+                    return;
+                }
+
+                // Update test case
+                const testCases = window.storyTestCases[storyKey];
+                testCases[index] = {
+                    ...testCases[index],
+                    step: step,
+                    expected: expected,
+                    estimate_minutes: estimate
+                };
+
+                // Refresh display
+                displayTestCases(storyKey, testCases);
+                closeModal();
+                showAlert('Test case updated successfully');
+            };
+
+            // Close modal on escape key
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape' && window.currentModal) {
+                    closeModal();
+                }
+            });
+
+            // Close modal on overlay click
+            document.addEventListener('click', function(e) {
+                if (e.target && e.target.classList.contains('modal-overlay')) {
+                    closeModal();
+                }
+            });
+        });
+    </script>
+</body>
+</html>
