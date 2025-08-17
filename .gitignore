@@ -24,3 +24,6 @@ npm-debug.log*
 
 # Backup files
 *.bak
+
+#ignore top folder
+team_manager/
