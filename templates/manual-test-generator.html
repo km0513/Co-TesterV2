@@ -10,6 +10,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/static/styles.css">
     <link rel="stylesheet" href="/static/navbar-tabs.css">
+    <script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.9/dist/purify.min.js"></script>
     <style>
         :root {
             --primary: #6366f1;
@@ -2409,7 +2410,7 @@ if (prdUpload) {
                 reader.onload = function(e) {
                     const prdContent = e.target.result;
                     // Auto-populate the description field
-                    descriptionInput.innerHTML = prdContent;
+                    descriptionInput.textContent = prdContent;
                     prdUploaded = true;
                     updateGenerateBtnState();
                     prdFileStatus.textContent = '✓ Document processed successfully';
@@ -2442,7 +2443,7 @@ if (prdUpload) {
                 const prdContent = data.text || 'Failed to extract text from document.';
                 
                 // Auto-populate the description field
-                descriptionInput.innerHTML = prdContent;
+                descriptionInput.textContent = prdContent;
                 prdUploaded = true;
                 updateGenerateBtnState();
                 prdFileStatus.textContent = '✓ Document processed successfully';
@@ -2558,28 +2559,44 @@ if (attachmentInput) {
     function createFileItem(file, index) {
         const item = document.createElement('div');
         item.className = 'file-item';
-        
+
         const isImage = file.type.startsWith('image/');
         const isPdf = file.type === 'application/pdf';
-        
+
         let icon = 'fas fa-file';
         if (isImage) icon = 'fas fa-image';
         else if (isPdf) icon = 'fas fa-file-pdf';
-        
+
         const size = formatFileSize(file.size);
         const fileName = file.name.length > 15 ? file.name.substring(0, 15) + '...' : file.name;
-        
-        item.innerHTML = `
-            <div class="file-icon">
-                <i class="${icon}"></i>
-            </div>
-            <div class="file-name">${fileName}</div>
-            <div class="file-size">${size}</div>
-            <button class="file-remove" onclick="removeFile(${index})" title="Remove file">
-                <i class="fas fa-times"></i>
-            </button>
-        `;
-        
+
+        const iconDiv = document.createElement('div');
+        iconDiv.className = 'file-icon';
+        const iconEl = document.createElement('i');
+        iconEl.className = icon;
+        iconDiv.appendChild(iconEl);
+
+        const nameDiv = document.createElement('div');
+        nameDiv.className = 'file-name';
+        nameDiv.textContent = fileName;
+
+        const sizeDiv = document.createElement('div');
+        sizeDiv.className = 'file-size';
+        sizeDiv.textContent = size;
+
+        const removeBtn = document.createElement('button');
+        removeBtn.className = 'file-remove';
+        removeBtn.title = 'Remove file';
+        const xIcon = document.createElement('i');
+        xIcon.className = 'fas fa-times';
+        removeBtn.appendChild(xIcon);
+        removeBtn.addEventListener('click', () => removeFile(index));
+
+        item.appendChild(iconDiv);
+        item.appendChild(nameDiv);
+        item.appendChild(sizeDiv);
+        item.appendChild(removeBtn);
+
         return item;
     }
     
@@ -2618,22 +2635,23 @@ clearJiraBtn.onclick = function() {
     if (confirm('Are you sure you want to clear the Jira ID, Summary, Description fields, and any generated tests?')) {
         jiraIdInput.value = '';
         summaryInput.value = '';
-        descriptionInput.innerHTML = '';
+        descriptionInput.textContent = '';
         jiraFetched = false;
         clearGeneratedTests();
         updateGenerateBtnState();
-        isDirty = false;
     }
+    isDirty = false;
 };
 
 clearPrdBtn.onclick = function() {
     if (confirm('Are you sure you want to clear the uploaded PRD, Description field, and any generated tests?')) {
         prdUpload.value = '';
-        descriptionInput.innerHTML = '';
+        descriptionInput.textContent = '';
         prdUploaded = false;
         clearGeneratedTests();
         updateGenerateBtnState();
-        isDirty = false;
+    }
+    isDirty = false;
         
         // Clear stored file references
         window.currentPrdFile = null;
@@ -2651,7 +2669,6 @@ clearPrdBtn.onclick = function() {
         const loadingSpan = document.getElementById('prdLoadingIndicator');
         if (loadingSpan) loadingSpan.remove();
     }
-}
 
 function renderTestCases(testcases, page = 1) {
     const tbody = document.getElementById('testcasesTableBody');
@@ -2661,29 +2678,64 @@ function renderTestCases(testcases, page = 1) {
     const end = start + perPage;
     const pageCases = testcases.slice(start, end);
 
+    // Render rows safely using DOM APIs (no innerHTML with untrusted data)
     tbody.innerHTML = '';
     pageCases.forEach((tc, idx) => {
-        tbody.innerHTML += `
-            <tr>
-                <td>${start + idx + 1}</td>
-                <td contenteditable="true">${tc.step}</td>
-                <td contenteditable="true">${tc.expected}</td>
-                <td contenteditable="true">${tc.estimate_minutes !== undefined ? tc.estimate_minutes : ''}</td>
-                <td style="white-space: nowrap;">
-                    <button class="btn btn-sm btn-primary" onclick="editTestCase(${start + idx})" title="Edit" style="padding: 0.25rem 0.5rem; margin-right: 5px;">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
-                            <path d="M12.146.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1 0 .708l-10 10a.5.5 0 0 1-.168.11l-5 2a.5.5 0 0 1-.65-.65l2-5a.5.5 0 0 1 .11-.168l10-10zM11.207 2.5 13.5 4.793 14.793 3.5 12.5 1.207 11.207 2.5zm1.586 3L10.5 3.207 4 9.707V10h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.293l6.5-6.5zm-9.761 5.175-.106.106-1.528 3.821 3.821-1.528.106-.106A.5.5 0 0 1 5 12.5V12h-.5a.5.5 0 0 1-.5-.5V11h-.5a.5.5 0 0 1-.468-.325z"/>
-                        </svg>
-                    </button>
-                    <button class="btn btn-sm btn-danger" onclick="removeTestCase(${start + idx})" title="Delete" style="padding: 0.25rem 0.5rem;">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
-                            <path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z"/>
-                            <path fill-rule="evenodd" d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z"/>
-                        </svg>
-                    </button>
-                </td>
-            </tr>
-        `;
+        const tr = document.createElement('tr');
+
+        const tdIndex = document.createElement('td');
+        tdIndex.textContent = String(start + idx + 1);
+        tr.appendChild(tdIndex);
+
+        const tdStep = document.createElement('td');
+        tdStep.setAttribute('contenteditable', 'true');
+        tdStep.textContent = (tc && typeof tc.step === 'string') ? tc.step : '';
+        tr.appendChild(tdStep);
+
+        const tdExpected = document.createElement('td');
+        tdExpected.setAttribute('contenteditable', 'true');
+        tdExpected.textContent = (tc && typeof tc.expected === 'string') ? tc.expected : '';
+        tr.appendChild(tdExpected);
+
+        const tdEstimate = document.createElement('td');
+        tdEstimate.setAttribute('contenteditable', 'true');
+        tdEstimate.textContent = (tc && tc.estimate_minutes !== undefined) ? String(tc.estimate_minutes) : '';
+        tr.appendChild(tdEstimate);
+
+        const tdActions = document.createElement('td');
+        tdActions.style.whiteSpace = 'nowrap';
+
+        const editBtn = document.createElement('button');
+        editBtn.className = 'btn btn-sm btn-primary';
+        editBtn.title = 'Edit';
+        editBtn.style.padding = '0.25rem 0.5rem';
+        editBtn.style.marginRight = '5px';
+        editBtn.innerHTML = `
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                <path d="M12.146.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1 0 .708l-10 10a.5.5 0 0 1-.168.11l-5 2a.5.5 0 0 1-.65-.65l2-5a.5.5 0 0 1 .11-.168l10-10zM11.207 2.5 13.5 4.793 14.793 3.5 12.5 1.207 11.207 2.5zm1.586 3L10.5 3.207 4 9.707V10h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.293l6.5-6.5zm-9.761 5.175-.106.106-1.528 3.821 3.821-1.528.106-.106A.5.5 0 0 1 5 12.5V12h-.5a.5.5 0 0 1-.5-.5V11h-.5a.5.5 0 0 1-.468-.325z"/>
+            </svg>`;
+        editBtn.addEventListener('click', () => {
+            if (typeof editTestCase === 'function') editTestCase(start + idx);
+        });
+
+        const delBtn = document.createElement('button');
+        delBtn.className = 'btn btn-sm btn-danger';
+        delBtn.title = 'Delete';
+        delBtn.style.padding = '0.25rem 0.5rem';
+        delBtn.innerHTML = `
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                <path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z"/>
+                <path fill-rule="evenodd" d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z"/>
+            </svg>`;
+        delBtn.addEventListener('click', () => {
+            if (typeof removeTestCase === 'function') removeTestCase(start + idx);
+        });
+
+        tdActions.appendChild(editBtn);
+        tdActions.appendChild(delBtn);
+        tr.appendChild(tdActions);
+
+        tbody.appendChild(tr);
     });
 
     // Total Estimated Time
@@ -2781,15 +2833,15 @@ function editTestCase(idx) {
         <h4>Edit Test Case</h4>
         <div class="mb-3">
             <label for="editStep" class="form-label">Test Step</label>
-            <textarea id="editStep" class="form-control" rows="3">${testCase.step}</textarea>
+            <textarea id="editStep" class="form-control" rows="3"></textarea>
         </div>
         <div class="mb-3">
             <label for="editExpected" class="form-label">Expected Result</label>
-            <textarea id="editExpected" class="form-control" rows="3">${testCase.expected}</textarea>
+            <textarea id="editExpected" class="form-control" rows="3"></textarea>
         </div>
         <div class="mb-3">
             <label for="editEstimate" class="form-label">Estimate (minutes)</label>
-            <input type="number" id="editEstimate" class="form-control" value="${testCase.estimate_minutes || ''}">
+            <input type="number" id="editEstimate" class="form-control">
         </div>
         <div class="d-flex justify-content-end gap-2">
             <button id="cancelEdit" class="btn btn-secondary">Cancel</button>
@@ -2799,6 +2851,13 @@ function editTestCase(idx) {
     
     modal.appendChild(modalContent);
     document.body.appendChild(modal);
+    // Populate values safely after insertion
+    const stepField = document.getElementById('editStep');
+    const expectedField = document.getElementById('editExpected');
+    const estimateField = document.getElementById('editEstimate');
+    if (stepField) stepField.value = (testCase && typeof testCase.step === 'string') ? testCase.step : '';
+    if (expectedField) expectedField.value = (testCase && typeof testCase.expected === 'string') ? testCase.expected : '';
+    if (estimateField) estimateField.value = (testCase && testCase.estimate_minutes !== undefined) ? testCase.estimate_minutes : '';
     
     // Add event listeners
     document.getElementById('cancelEdit').addEventListener('click', () => {
@@ -2828,7 +2887,7 @@ clearJiraBtn.onclick = function() {
     if (confirm('Are you sure you want to clear the Jira ID, Summary, and Description fields?')) {
         jiraIdInput.value = '';
         document.getElementById('summaryInput').value = '';
-        document.getElementById('scenarioInput').innerHTML = '';
+        document.getElementById('scenarioInput').textContent = '';
         jiraFetched = false;
         updateGenerateBtnState();
         isDirty = false;
@@ -2909,8 +2968,9 @@ fetchJiraBtn.onclick = async function() {
             document.getElementById('summaryInput').value = issue.summary || '';
             // --- Render HTML description ---
             let descHtml = issue.description_html || '';
-            // Optionally sanitize descHtml here with DOMPurify or similar
-            document.getElementById('scenarioInput').innerHTML = descHtml;
+            // Sanitize Jira HTML description before inserting into DOM
+            const cleanDesc = DOMPurify.sanitize(descHtml);
+            document.getElementById('scenarioInput').innerHTML = cleanDesc;
             // Ensure all links open in a new tab
             const descLinks = document.getElementById('scenarioInput').querySelectorAll('a');
             descLinks.forEach(link => {

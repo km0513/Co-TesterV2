@@ -581,8 +581,8 @@
                 <h3 id="displayName" style="margin: 0 0 0.25rem 0; font-size: 1.25rem; font-weight: 600; color: #1e293b;">Loading...</h3>
                 <p id="displayEmail" style="margin: 0; color: #64748b; font-size: 0.9rem;">Loading...</p>
               </div>
-        </div>
-      </div>
+            </div>
+          </div>
 
           <!-- Loading State -->
           <div id="userProfileLoading" style="text-align: center; padding: 2rem;">
@@ -598,120 +598,54 @@
         </div>
       </div>
 
-      <!-- LLM Usage Card -->
-      <div class="jira-card">
-        <div class="jira-card-header">
-          <h2 class="jira-card-title">
-            <i class="fas fa-brain"></i> LLM Usage
-          </h2>
-        </div>
-        <div id="llmUsageContent">
-          <!-- Loading State -->
-          <div id="llmUsageLoading" style="text-align: center; padding: 2rem;">
-            <div style="display: inline-block; width: 40px; height: 40px; border: 3px solid #e2e8f0; border-top: 3px solid #f59e0b; border-radius: 50%; animation: spin 1s linear infinite;"></div>
-            <p style="margin-top: 1rem; color: #64748b;">Loading usage data...</p>
-            </div>
-          
-          <!-- Usage Display -->
-          <div id="llmUsageDisplay" style="display: none;">
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
-              <!-- Usage Stats -->
-              <div style="background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%); border-radius: 12px; padding: 1.5rem; border: 1px solid #cbd5e1; text-align: center;">
-                <div style="width: 50px; height: 50px; margin: 0 auto 1rem auto; background: linear-gradient(135deg, #3b82f6, #1d4ed8); border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);">
-                  <i class="fas fa-chart-line" style="color: white; font-size: 1.25rem;"></i>
-            </div>
-                <h4 style="margin: 0 0 0.5rem 0; font-size: 0.875rem; color: #64748b; font-weight: 500; text-transform: uppercase; letter-spacing: 0.05em;">Requests Used</h4>
-                <p id="llmUsedCount" style="margin: 0; font-size: 2rem; font-weight: 700; color: #1e293b;">-</p>
-            </div>
-              
-              <!-- Remaining Stats -->
-              <div style="background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%); border-radius: 12px; padding: 1.5rem; border: 1px solid #cbd5e1; text-align: center;">
-                <div style="width: 50px; height: 50px; margin: 0 auto 1rem auto; background: linear-gradient(135deg, #10b981, #059669); border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);">
-                  <i class="fas fa-battery-three-quarters" style="color: white; font-size: 1.25rem;"></i>
-            </div>
-                <h4 style="margin: 0 0 0.5rem 0; font-size: 0.875rem; color: #64748b; font-weight: 500; text-transform: uppercase; letter-spacing: 0.05em;">Remaining</h4>
-                <p id="llmRemainingCount" style="margin: 0; font-size: 2rem; font-weight: 700; color: #1e293b;">-</p>
-          </div>
-              
-              <!-- Daily Limit -->
-              <div style="background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%); border-radius: 12px; padding: 1.5rem; border: 1px solid #cbd5e1; text-align: center;">
-                <div style="width: 50px; height: 50px; margin: 0 auto 1rem auto; background: linear-gradient(135deg, #f59e0b, #d97706); border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);">
-                  <i class="fas fa-shield-alt" style="color: white; font-size: 1.25rem;"></i>
-                </div>
-                <h4 style="margin: 0 0 0.5rem 0; font-size: 0.875rem; color: #64748b; font-weight: 500; text-transform: uppercase; letter-spacing: 0.05em;">Daily Limit</h4>
-                <p id="llmLimitCount" style="margin: 0; font-size: 2rem; font-weight: 700; color: #1e293b;">-</p>
-        </div>
-      </div>
-
-            <!-- Progress Bar -->
-            <div style="margin-bottom: 1.5rem;">
-              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
-                <span style="font-size: 0.875rem; font-weight: 600; color: #374151;">Usage Progress</span>
-                <span id="llmPercentage" style="font-size: 0.875rem; font-weight: 600; color: #6b7280;">-</span>
-              </div>
-              <div style="width: 100%; height: 8px; background: #e5e7eb; border-radius: 4px; overflow: hidden;">
-                <div id="llmProgressBar" style="height: 100%; background: linear-gradient(135deg, #3b82f6, #1d4ed8); width: 0%; transition: width 0.3s ease-in-out; border-radius: 4px;"></div>
-              </div>
-            </div>
-            
-            <!-- Reset Time Info -->
-            <div style="background: #f3f4f6; border-radius: 8px; padding: 1rem; border-left: 4px solid #6366f1;">
-              <div style="display: flex; align-items: center; gap: 0.75rem;">
-                <i class="fas fa-clock" style="color: #6366f1; font-size: 1.125rem;"></i>
-                <div>
-                  <p style="margin: 0 0 0.25rem 0; font-weight: 600; color: #374151; font-size: 0.875rem;">Next Reset</p>
-                  <p id="llmResetTime" style="margin: 0; color: #6b7280; font-size: 0.8rem;">Daily at 00:00 UTC</p>
-                </div>
-              </div>
-            </div>
-            
-            <!-- User Info -->
-            <div id="llmUserInfo" style="margin-top: 1rem; padding: 1rem; background: #fefce8; border-radius: 8px; border-left: 4px solid #facc15; display: none;">
-              <div style="display: flex; align-items: center; gap: 0.75rem;">
-                <i class="fas fa-user" style="color: #ca8a04; font-size: 1.125rem;"></i>
-                <div>
-                  <p style="margin: 0 0 0.25rem 0; font-weight: 600; color: #374151; font-size: 0.875rem;">User ID</p>
-                  <p id="llmUserId" style="margin: 0; color: #6b7280; font-size: 0.8rem;">-</p>
-                </div>
-              </div>
-            </div>
-          </div>
-          
-          <!-- Error State -->
-          <div id="llmUsageError" style="display: none; margin: 1rem; padding: 1rem; background: #fee2e2; border-radius: 8px; border-left: 4px solid #ef4444;">
-            <h4 style="margin-top: 0; color: #dc2626;">⚠️ Unable to Load Usage Data</h4>
-            <p style="margin-bottom: 1rem; color: #7f1d1d;">There was an error loading your LLM usage information.</p>
-            <button onclick="loadLLMUsage()" style="background: #ef4444; color: white; border: none; padding: 0.5rem 1rem; border-radius: 4px; cursor: pointer;">
-              <i class="fas fa-redo"></i> Retry
-            </button>
-          </div>
-        </div>
-      </div>
-
       <!-- Time Entries Card -->
-      <div class="jira-card jira-time-entries">
+      <div id="myTimeEntriesCard" class="jira-card jira-time-entries">
         <div class="jira-card-header">
           <h2 class="jira-card-title">
             <i class="fas fa-clock"></i> My Time Entries
           </h2>
         </div>
         
-        <div style="padding: 2rem; text-align: center;">
-          <div style="background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%); border-radius: 12px; padding: 2rem; border: 1px solid #cbd5e1;">
-            <div style="width: 80px; height: 80px; margin: 0 auto 1.5rem auto; background: linear-gradient(135deg, #f59e0b, #d97706); border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);">
-              <i class="fas fa-clock" style="color: white; font-size: 2rem;"></i>
+        <div class="jira-card-content">
+          <!-- Date Selection -->
+          <div style="margin-bottom: 1.5rem;">
+            <label for="timeEntriesDate" style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #374151;">Select Date:</label>
+            <input type="date" id="timeEntriesDate" style="padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 6px; font-size: 0.875rem;">
           </div>
-            <h3 style="margin: 0 0 0.5rem 0; font-size: 1.25rem; font-weight: 600; color: #1e293b;">
-              <i class="fas fa-rocket" style="color: #f59e0b; margin-right: 0.5rem;"></i>
-              Coming Soon
-            </h3>
-            <p style="margin: 0 0 1rem 0; color: #64748b; font-size: 0.95rem; line-height: 1.5;">
-              Jira time entries and worklog tracking will be available soon. We're working on expanding our Jira integration to include comprehensive time tracking features.
-            </p>
-            <div style="background: #fef3c7; color: #92400e; padding: 0.75rem 1rem; border-radius: 8px; font-size: 0.875rem; border: 1px solid #fbbf24;">
-              <i class="fas fa-info-circle" style="margin-right: 0.5rem;"></i>
-              <strong>Note:</strong> This feature requires additional Jira permissions that are currently being configured.
-        </div>
+          
+          <!-- Loading State -->
+          <div id="timeEntriesLoading" style="display: none; text-align: center; padding: 2rem;">
+            <i class="fas fa-spinner fa-spin" style="font-size: 1.5rem; color: var(--primary);"></i>
+            <p style="margin-top: 0.5rem; color: #6b7280;">Loading time entries...</p>
+          </div>
+          
+          <!-- Time Entries Summary -->
+          <div id="timeEntriesSummary" style="display: none; background: #f0f9ff; border: 1px solid #0ea5e9; border-radius: 8px; padding: 1rem; margin-bottom: 1rem;">
+            <div style="display: flex; justify-content: flex-start; align-items: center;">
+              <div>
+                <h4 style="margin: 0; color: #0c4a6e; font-size: 1rem;">Total Time Logged</h4>
+                <p id="totalTimeDisplay" style="margin: 0.25rem 0 0 0; font-size: 1.5rem; font-weight: 700; color: #0c4a6e;">0h 0m</p>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Time Entries List -->
+          <div id="timeEntriesList" style="display: none;">
+            <h4 style="margin: 0 0 1rem 0; color: #374151; font-size: 1rem; font-weight: 600;">Time Entries Details</h4>
+            <div id="timeEntriesContainer"></div>
+          </div>
+          
+          <!-- No Entries Message -->
+          <div id="noTimeEntries" style="display: none; text-align: center; padding: 2rem; color: #6b7280;">
+            <i class="fas fa-clock" style="font-size: 2rem; margin-bottom: 0.5rem; opacity: 0.5;"></i>
+            <p style="margin: 0; font-size: 1rem;">No time entries found for the selected date.</p>
+            <p style="margin: 0.5rem 0 0 0; font-size: 0.875rem;">Try selecting a different date or check your Jira worklogs.</p>
+          </div>
+          
+          <!-- Error Message -->
+          <div id="timeEntriesError" style="display: none; background: #fef2f2; border: 1px solid #fca5a5; border-radius: 8px; padding: 1rem; color: #dc2626;">
+            <i class="fas fa-exclamation-triangle" style="margin-right: 0.5rem;"></i>
+            <span id="timeEntriesErrorText">Error loading time entries</span>
           </div>
         </div>
       </div>
@@ -754,40 +688,53 @@
   <script>
     document.addEventListener('DOMContentLoaded', function() {
       // Set today's date as default for the date input
-      // setDefaultDate(); // Disabled - no date picker in "Coming Soon" mode
+      setDefaultDate();
       
       // Load user info
       loadUserInfo();
       
-      // Load LLM usage
-      loadLLMUsage();
-      
       // Load issues
       loadIssues();
       
-      // Time entries disabled - showing "Coming Soon" message
-      // loadTimeEntriesForDate();
+      // Load time entries for today by default
+      loadTimeEntriesForDate();
       
       // Set up event listeners
-      document.getElementById('refreshButton').addEventListener('click', function() {
-        loadUserInfo();
-        loadLLMUsage();
-        loadIssues();
-        // loadTimeEntriesForDate(); // Disabled - showing "Coming Soon"
-      });
+      const refreshButton = document.getElementById('refreshButton');
+      if (refreshButton) {
+        refreshButton.addEventListener('click', function() {
+          loadUserInfo();
+          loadIssues();
+          loadTimeEntriesForDate();
+        });
+      }
       
-      document.getElementById('searchButton').addEventListener('click', loadIssues);
+      // Set up time entries event listeners with null checks
+      const timeEntriesDate = document.getElementById('timeEntriesDate');
       
-      document.getElementById('debugButton').addEventListener('click', function() {
-        console.log('=== DEBUG: Checking session ===');
-        
-        // Show debug info section
-        const debugInfo = document.getElementById('debugInfo');
-        const debugContent = document.getElementById('debugContent');
-        debugInfo.style.display = 'block';
-        debugContent.textContent = 'Loading debug information...';
-        
-        Promise.all([
+      if (timeEntriesDate) {
+        timeEntriesDate.addEventListener('change', loadTimeEntriesForDate);
+      } else {
+        console.error('timeEntriesDate element not found');
+      }
+      
+      const searchButton = document.getElementById('searchButton');
+      if (searchButton) {
+        searchButton.addEventListener('click', loadIssues);
+      }
+      
+      const debugButton = document.getElementById('debugButton');
+      if (debugButton) {
+        debugButton.addEventListener('click', function() {
+          console.log('=== DEBUG: Checking session ===');
+          
+          // Show debug info section
+          const debugInfo = document.getElementById('debugInfo');
+          const debugContent = document.getElementById('debugContent');
+          debugInfo.style.display = 'block';
+          debugContent.textContent = 'Loading debug information...';
+          
+          Promise.all([
           fetch('/api/jira/debug-session').then(r => r.json()),
           fetch('/api/jira/user-info').then(r => r.json())
         ])
@@ -807,11 +754,14 @@
             console.error('Debug error:', error);
             debugContent.textContent = 'Error loading debug info: ' + error.message;
           });
-      });
+        });
+      }
       
-      document.getElementById('refreshUserInfoButton').addEventListener('click', function() {
-        console.log('=== FORCE REFRESH: Refreshing user info ===');
-        fetch('/api/jira/refresh-user-info', {
+      const refreshUserInfoButton = document.getElementById('refreshUserInfoButton');
+      if (refreshUserInfoButton) {
+        refreshUserInfoButton.addEventListener('click', function() {
+          console.log('=== FORCE REFRESH: Refreshing user info ===');
+          fetch('/api/jira/refresh-user-info', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'
@@ -832,13 +782,16 @@
             console.error('Refresh user info error:', error);
             alert('Failed to refresh user info. Check console for details.');
           });
-      });
+        });
+      }
       
-      document.getElementById('testSessionButton').addEventListener('click', function() {
-        console.log('=== TESTING SESSION: Basic session functionality ===');
-        
-        // First, store test data
-        fetch('/api/test-session', {
+      const testSessionButton = document.getElementById('testSessionButton');
+      if (testSessionButton) {
+        testSessionButton.addEventListener('click', function() {
+          console.log('=== TESTING SESSION: Basic session functionality ===');
+          
+          // First, store test data
+          fetch('/api/test-session', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'
@@ -881,7 +834,8 @@
             console.error('Session test error:', error);
             alert('Session test failed: ' + error.message);
           });
-      });
+        });
+      }
 
     });
     
@@ -971,96 +925,7 @@
     
     // Session duration timer - removed since login time/duration elements were removed
     
-    // LLM Usage functions
-    function loadLLMUsage() {
-      console.log('🔄 Loading LLM usage data...');
-      
-      // Show loading state
-      const loadingEl = document.getElementById('llmUsageLoading');
-      const displayEl = document.getElementById('llmUsageDisplay');
-      const errorEl = document.getElementById('llmUsageError');
-      
-      if (loadingEl) loadingEl.style.display = 'block';
-      if (displayEl) displayEl.style.display = 'none';
-      if (errorEl) errorEl.style.display = 'none';
-      
-      fetch('/api/llm-usage')
-        .then(response => {
-          console.log('LLM usage response status:', response.status);
-          if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-          }
-          return response.json();
-        })
-        .then(data => {
-          console.log('✅ LLM usage data received:', data);
-          
-          // Hide loading
-          if (loadingEl) loadingEl.style.display = 'none';
-          
-          // Show display
-          if (displayEl) displayEl.style.display = 'block';
-          
-          // Update usage statistics
-          const usedEl = document.getElementById('llmUsedCount');
-          const remainingEl = document.getElementById('llmRemainingCount');
-          const limitEl = document.getElementById('llmLimitCount');
-          const percentageEl = document.getElementById('llmPercentage');
-          const progressBarEl = document.getElementById('llmProgressBar');
-          const resetTimeEl = document.getElementById('llmResetTime');
-          const userInfoEl = document.getElementById('llmUserInfo');
-          const userIdEl = document.getElementById('llmUserId');
-          
-          if (data.usage) {
-            if (usedEl) usedEl.textContent = data.usage.used || 0;
-            if (remainingEl) remainingEl.textContent = data.usage.remaining || 0;
-            if (limitEl) limitEl.textContent = data.usage.limit || 0;
-            
-            const percentage = data.usage.percentage || 0;
-            if (percentageEl) percentageEl.textContent = percentage.toFixed(1) + '%';
-            if (progressBarEl) {
-              progressBarEl.style.width = percentage + '%';
-              
-              // Change color based on usage
-              if (percentage >= 90) {
-                progressBarEl.style.background = 'linear-gradient(135deg, #ef4444, #dc2626)'; // Red
-              } else if (percentage >= 70) {
-                progressBarEl.style.background = 'linear-gradient(135deg, #f59e0b, #d97706)'; // Orange
-              } else {
-                progressBarEl.style.background = 'linear-gradient(135deg, #3b82f6, #1d4ed8)'; // Blue
-              }
-            }
-          }
-          
-          // Update reset time
-          if (resetTimeEl && data.reset_time) {
-            resetTimeEl.textContent = data.reset_time;
-          }
-          
-          // Update user info
-          if (data.user && userInfoEl && userIdEl) {
-            userIdEl.textContent = data.user.display_name || data.user.user_id || 'Unknown';
-            
-            // Show user info only for anonymous users or if user ID is useful to display
-            if (data.user.user_type === 'anonymous' || data.user.user_id.includes('user_')) {
-              userInfoEl.style.display = 'block';
-            } else {
-              userInfoEl.style.display = 'none';
-            }
-          }
-          
-          console.log('🎉 LLM usage display updated successfully');
-        })
-        .catch(error => {
-          console.error('❌ Error loading LLM usage:', error);
-          
-          // Hide loading
-          if (loadingEl) loadingEl.style.display = 'none';
-          
-          // Show error
-          if (errorEl) errorEl.style.display = 'block';
-        });
-    }
+    // LLM usage section and functions removed
     
     // Issues functions
     function loadIssues() {
@@ -1140,20 +1005,172 @@
         });
     }
     
-    // Time entries functions - DISABLED (showing "Coming Soon" message)
-    /*
+    // Time entries functions
     function loadTimeEntriesForDate() {
-      // Function disabled - showing "Coming Soon" message instead
-      // This function will be re-enabled when Jira OAuth scopes are expanded
+      const selectedDate = document.getElementById('timeEntriesDate').value;
+      if (!selectedDate) {
+        console.log('No date selected for time entries');
+        return;
+      }
+      
+      // Show loading state
+      hideAllTimeEntriesStates();
+      document.getElementById('timeEntriesLoading').style.display = 'block';
+      
+      // Make API call to fetch time entries
+      fetch(`/api/jira/time-entries?date=${selectedDate}`)
+        .then(response => {
+          if (response.status === 401) {
+            // Authentication expired - show helpful message
+            hideAllTimeEntriesStates();
+            showTimeEntriesAuthError();
+            return null;
+          }
+          return response.json();
+        })
+        .then(data => {
+          if (!data) return; // Handle 401 case
+          
+          hideAllTimeEntriesStates();
+          
+          if (data.error) {
+            if (data.error.includes('401') || data.error.includes('Not authenticated')) {
+              showTimeEntriesAuthError();
+            } else {
+              showTimeEntriesError(data.error);
+            }
+            return;
+          }
+          
+          if (data.timeEntries && data.timeEntries.length > 0) {
+            displayTimeEntries(data);
+          } else {
+            document.getElementById('noTimeEntries').style.display = 'block';
+          }
+        })
+        .catch(error => {
+          console.error('Error loading time entries:', error);
+          hideAllTimeEntriesStates();
+          showTimeEntriesError('Failed to load time entries. Please try again.');
+        });
     }
-    */
     
-    // Set default date to today - DISABLED (no date picker in "Coming Soon" mode)
-    /*
-    function setDefaultDate() {
-      // Function disabled - no date picker needed for "Coming Soon" message
+    function hideAllTimeEntriesStates() {
+      document.getElementById('timeEntriesLoading').style.display = 'none';
+      document.getElementById('timeEntriesSummary').style.display = 'none';
+      document.getElementById('timeEntriesList').style.display = 'none';
+      document.getElementById('noTimeEntries').style.display = 'none';
+      document.getElementById('timeEntriesError').style.display = 'none';
     }
-    */
+    
+    function showTimeEntriesError(message) {
+      document.getElementById('timeEntriesErrorText').textContent = message;
+      document.getElementById('timeEntriesError').style.display = 'block';
+    }
+    
+    function showTimeEntriesAuthError() {
+      const errorDiv = document.getElementById('timeEntriesError');
+      errorDiv.innerHTML = `
+        <div style="display: flex; align-items: center; margin-bottom: 1rem;">
+          <i class="fas fa-exclamation-triangle" style="margin-right: 0.5rem; color: #dc2626;"></i>
+          <strong>Jira Authentication Expired</strong>
+        </div>
+        <p style="margin: 0 0 1rem 0; font-size: 0.875rem;">Your Jira session has expired. Please re-authenticate to view time entries.</p>
+        <div style="display: flex; gap: 0.5rem;">
+          <button onclick="window.location.href='/api/jira/oauth/login'" style="padding: 0.5rem 1rem; background: #0052CC; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.875rem;">
+            <i class="fas fa-sign-in-alt" style="margin-right: 0.25rem;"></i>
+            Re-authenticate with Jira
+          </button>
+          <button onclick="checkJiraStatus()" style="padding: 0.5rem 1rem; background: #6b7280; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.875rem;">
+            <i class="fas fa-refresh" style="margin-right: 0.25rem;"></i>
+            Check Status
+          </button>
+        </div>
+      `;
+      errorDiv.style.display = 'block';
+    }
+
+    // Yesterday time status in profile card
+    
+    
+    function checkJiraStatus() {
+      fetch('/api/jira/status')
+        .then(response => response.json())
+        .then(data => {
+          if (data.connected) {
+            // Try loading time entries again
+            loadTimeEntriesForDate();
+          } else {
+            showTimeEntriesAuthError();
+          }
+        })
+        .catch(error => {
+          console.error('Error checking Jira status:', error);
+          showTimeEntriesError('Failed to check authentication status.');
+        });
+    }
+    
+    function displayTimeEntries(data) {
+      // Update summary
+      document.getElementById('totalTimeDisplay').textContent = data.totalTimeDisplay || '0h 0m';
+      document.getElementById('timeEntriesSummary').style.display = 'block';
+      
+      // Display entries list
+      const container = document.getElementById('timeEntriesContainer');
+      container.innerHTML = '';
+      
+      data.timeEntries.forEach(entry => {
+        const entryDiv = document.createElement('div');
+        entryDiv.style.cssText = 'background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 1rem; margin-bottom: 0.75rem;';
+        
+        entryDiv.innerHTML = `
+          <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.5rem;">
+            <div>
+              <h5 style="margin: 0; font-size: 0.875rem; font-weight: 600; color: #1f2937;">
+                <a href="https://upgrad-jira.atlassian.net/browse/${entry.issueKey || 'N/A'}" target="_blank" style="color: #0052CC; text-decoration: none;">
+                  ${entry.issueKey || 'N/A'}
+                </a>
+              </h5>
+              <p style="margin: 0.25rem 0 0 0; font-size: 0.75rem; color: #6b7280;">${entry.author || 'User'}</p>
+            </div>
+            <div style="text-align: right;">
+              <span style="background: #dbeafe; color: #1e40af; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.75rem; font-weight: 600;">
+                ${entry.timeSpent || '0m'}
+              </span>
+            </div>
+          </div>
+          <p style="margin: 0 0 0.5rem 0; font-size: 0.875rem; color: #374151; line-height: 1.4;">
+            ${entry.issueSummary || 'No summary available'}
+          </p>
+          ${entry.comment && typeof entry.comment === 'string' ? `<p style="margin: 0; font-size: 0.75rem; color: #6b7280; font-style: italic;">${entry.comment}</p>` : entry.comment && typeof entry.comment === 'object' ? `<p style="margin: 0; font-size: 0.75rem; color: #6b7280; font-style: italic;">${JSON.stringify(entry.comment)}</p>` : ''}
+        `;
+        
+        container.appendChild(entryDiv);
+      });
+      
+      document.getElementById('timeEntriesList').style.display = 'block';
+    }
+    
+    // Set default date to today
+    function setDefaultDate() {
+      const input = document.getElementById('timeEntriesDate');
+      if (!input) return;
+      let dateParam = '';
+      try {
+        const urlParams = new URLSearchParams(window.location.search);
+        dateParam = urlParams.get('date') || '';
+      } catch (e) { /* ignore */ }
+      let prefill = '';
+      try {
+        prefill = localStorage.getItem('prefillTimeEntriesDate') || '';
+      } catch (e) { /* ignore */ }
+      let dateToUse = dateParam || prefill;
+      if (!dateToUse) {
+        dateToUse = new Date().toISOString().split('T')[0];
+      }
+      input.value = dateToUse;
+      try { localStorage.removeItem('prefillTimeEntriesDate'); } catch (e) { /* ignore */ }
+    }
     
     // This initialization is now handled in the main DOMContentLoaded event listener above
     

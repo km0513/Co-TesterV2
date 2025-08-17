@@ -59,11 +59,26 @@
 
    
     
-    <a href="#" data-href="/test-generator" class="nav-link sidebar-item{% if active_tab == 'manual' %} active{% endif %}">
-      <span class="sidebar-icon"><i class="fas fa-magic"></i></span>
-      <span class="sidebar-label">Test Generator <span class="ai-badge">AI</span></span>
+    <!-- Manual Test Generator (Parent with Sub-menu) -->
+    <div class="sidebar-parent-item{% if active_tab == 'manual' %} active{% endif %}">
+      <a href="#" class="nav-link sidebar-item sidebar-parent" data-toggle="manual-submenu">
+        <span class="sidebar-icon"><i class="fas fa-magic"></i></span>
+        <span class="sidebar-label">Test Generator <span class="ai-badge">AI</span></span>
+        <span class="sidebar-arrow"><i class="fas fa-chevron-down"></i></span>
+      </a>
       
-    </a>
+      <div class="sidebar-submenu" id="manual-submenu">
+        <a href="#" data-href="/test-generator/individual" class="nav-link sidebar-subitem{% if active_tab == 'manual' and request.endpoint == 'test_generator_individual' %} active{% endif %}">
+          <span class="sidebar-subicon"><i class="fas fa-user"></i></span>
+          <span class="sidebar-sublabel">User Story / PRD</span>
+        </a>
+        
+        <a href="#" data-href="/test-generator/bulk" class="nav-link sidebar-subitem{% if active_tab == 'manual' and request.endpoint == 'test_generator_bulk' %} active{% endif %}">
+          <span class="sidebar-subicon"><i class="fas fa-layer-group"></i></span>
+          <span class="sidebar-sublabel">Bulk (JQL)</span>
+        </a>
+      </div>
+    </div>
     
     <a href="#" data-href="/ui-analyzer" class="nav-link sidebar-item{% if active_tab == 'screen-analysis' %} active{% endif %}">
       <span class="sidebar-icon"><i class="fas fa-search-plus"></i></span>
@@ -87,6 +102,8 @@
       <span class="sidebar-icon"><i class="fas fa-database"></i></span>
       <span class="sidebar-label">Data Generator</span>
     </a>
+    
+    <!-- Auto-Healing Recorder temporarily removed for redesign -->
     
     <!-- Bug Builder hidden until ready -->
     <!--
@@ -113,6 +130,17 @@
       <span class="sidebar-icon"><i class="fas fa-user-circle"></i></span>
       <span class="sidebar-label">My Details</span>
     </a>
+    
+    {% if is_admin %}
+    <a href="#" data-href="/admin/time-entries" class="nav-link sidebar-item{% if request.endpoint == 'admin_time_entries_page' %} active{% endif %}">
+      <span class="sidebar-icon"><i class="fas fa-user-shield"></i></span>
+      <span class="sidebar-label">Admin Panel</span>
+    </a>
+    <a href="#" data-href="/admin/dashboards" class="nav-link sidebar-item{% if request.endpoint == 'admin_jira_dashboards_page' %} active{% endif %}">
+      <span class="sidebar-icon"><i class="fas fa-chart-line"></i></span>
+      <span class="sidebar-label">Dashboards</span>
+    </a>
+    {% endif %}
     
     {% if false %}
     
@@ -144,6 +172,56 @@
   // Mobile sidebar toggle functionality
   document.getElementById('sidebarToggle').addEventListener('click', function() {
     document.querySelector('.sidebar').classList.toggle('sidebar-open');
+  });
+
+  // Hierarchical navigation functionality
+  document.addEventListener('DOMContentLoaded', function() {
+    // Handle submenu toggles
+    const parentToggles = document.querySelectorAll('[data-toggle]');
+    
+    parentToggles.forEach(toggle => {
+      toggle.addEventListener('click', function(e) {
+        e.preventDefault();
+        const submenuId = this.getAttribute('data-toggle');
+        const submenu = document.getElementById(submenuId);
+        const arrow = this.querySelector('.sidebar-arrow');
+        
+        if (submenu) {
+          // Toggle expanded state
+          this.classList.toggle('expanded');
+          submenu.classList.toggle('expanded');
+          
+          // Store expanded state in localStorage
+          const isExpanded = submenu.classList.contains('expanded');
+          localStorage.setItem(`sidebar-${submenuId}`, isExpanded);
+        }
+      });
+    });
+    
+    // Restore expanded states from localStorage
+    parentToggles.forEach(toggle => {
+      const submenuId = toggle.getAttribute('data-toggle');
+      const submenu = document.getElementById(submenuId);
+      const isExpanded = localStorage.getItem(`sidebar-${submenuId}`) === 'true';
+      
+      if (isExpanded && submenu) {
+        toggle.classList.add('expanded');
+        submenu.classList.add('expanded');
+      }
+    });
+    
+    // Auto-expand parent menu if child is active
+    const activeSubitems = document.querySelectorAll('.sidebar-subitem.active');
+    activeSubitems.forEach(activeItem => {
+      const parentSubmenu = activeItem.closest('.sidebar-submenu');
+      if (parentSubmenu) {
+        const parentToggle = document.querySelector(`[data-toggle="${parentSubmenu.id}"]`);
+        if (parentToggle) {
+          parentToggle.classList.add('expanded');
+          parentSubmenu.classList.add('expanded');
+        }
+      }
+    });
   });
   
   // Close sidebar when clicking outside on mobile
@@ -495,9 +573,17 @@
         .then(data => {
           if (data.authenticated) {
             updateUserProfile(data);
-            if (data.show_welcome) {
-              showWelcomeMessage(data.user_name, data.user_email, data.user_avatar);
-            }
+            // Show welcome only once per user (server already sends once, add client guard too)
+            try {
+              const email = data.user_email || '';
+              const welcomeKey = `welcomeShown:${email}`;
+              const alreadyShown = localStorage.getItem(welcomeKey) === 'true';
+              const exists = !!document.getElementById('welcomeModal');
+              if (data.show_welcome && !alreadyShown && !exists) {
+                showWelcomeMessage(data.user_name, email, data.user_avatar);
+                localStorage.setItem(welcomeKey, 'true');
+              }
+            } catch (e) { /* ignore storage errors */ }
           } else {
             hideUserProfile();
           }
@@ -642,7 +728,13 @@
         <h2 style="color: #6366f1; margin-bottom: 0.5rem; font-size: 1.5rem;">🎉 Welcome to Co-Tester!</h2>
         <p style="color: #64748b; margin-bottom: 0.5rem; font-size: 1.1rem;">Hello, <strong>${userName}</strong>!</p>
         <p style="color: #64748b; margin-bottom: 1.5rem; font-size: 0.9rem;">${userEmail}</p>
-        <p style="color: #374151; margin-bottom: 1.5rem;">You're now connected to Jira and ready to start testing!</p>
+        <p style="color: #374151; margin-bottom: 1rem;">You're now connected to Jira and ready to start testing!</p>
+        <div id="yesterdayStatus" style="margin-bottom: 1.25rem; text-align: left; font-size: 0.9rem; color: #374151;">
+          <div style="display: flex; align-items: center; color: #6b7280;">
+            <div style="width: 16px; height: 16px; border: 2px solid rgba(99,102,241,0.3); border-top-color: #6366f1; border-radius: 50%; animation: spin 1s linear infinite; margin-right: 8px;"></div>
+            Loading yesterday's time...
+          </div>
+        </div>
         <button id="welcomeOkBtn" style="
           background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
           color: white;
@@ -669,9 +761,112 @@
           from { transform: translateY(-50px) scale(0.9); opacity: 0; }
           to { transform: translateY(0) scale(1); opacity: 1; }
         }
+        @keyframes fadeOut {
+          from { opacity: 1; }
+          to { opacity: 0; }
+        }
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
       `;
       document.head.appendChild(style);
       
+      // Helper to format local date as YYYY-MM-DD
+      function formatYYYYMMDDLocal(date) {
+        const y = date.getFullYear();
+        const m = String(date.getMonth() + 1).padStart(2, '0');
+        const d = String(date.getDate()).padStart(2, '0');
+        return `${y}-${m}-${d}`;
+      }
+
+      // Load yesterday's time status and render inside the modal
+      (function loadYesterdayStatus() {
+        try {
+          const yesterday = new Date();
+          yesterday.setDate(yesterday.getDate() - 1);
+          const dateStr = formatYYYYMMDDLocal(yesterday);
+          const statusEl = welcomeContent.querySelector('#yesterdayStatus');
+
+          fetch(`/api/jira/time-entries?date=${dateStr}`)
+            .then(res => {
+              if (!res.ok) throw res;
+              return res.json();
+            })
+            .then(data => {
+              const secs = Number(data.totalTimeSeconds || 0);
+              const hours = secs / 3600;
+              const ok = hours >= 8;
+              const bg = ok ? '#ecfdf5' : '#fee2e2';
+              const border = ok ? '#10b981' : '#ef4444';
+              const text = ok ? '#065f46' : '#991b1b';
+              const badgeBg = ok ? '#d1fae5' : '#fecaca';
+              const badgeText = ok ? '#065f46' : '#991b1b';
+              const icon = ok ? 'fa-check-circle' : 'fa-clock';
+              const totalDisplay = data.totalTimeDisplay || `${Math.floor(hours)}h ${Math.round((hours % 1) * 60)}m`;
+
+              statusEl.innerHTML = `
+                <div style="background:${bg}; border: 1px solid ${border}; color:${text}; border-radius: 10px; padding: 0.75rem 0.9rem;">
+                  <div style="display:flex; align-items:center; justify-content: space-between; gap: 0.5rem;">
+                    <div style="display:flex; align-items:center; gap: 0.5rem;">
+                      <i class="fas ${icon}"></i>
+                      <span><strong>Yesterday:</strong> ${ok ? 'Great job!' : 'Heads up,'} you logged <strong>${totalDisplay}</strong>.</span>
+                    </div>
+                    <span style="background:${badgeBg}; color:${badgeText}; padding: 0.15rem 0.5rem; border-radius: 999px; font-size: 0.8rem; font-weight: 600;">${ok ? 'On Track' : 'Below 8h'}</span>
+                  </div>
+                  <div style="margin-top: 0.65rem; display:flex; gap: 0.5rem; flex-wrap: wrap;">
+                    <button id="viewYesterdayBtn" style="padding: 0.45rem 0.8rem; background: #111827; color: #fff; border: none; border-radius: 6px; cursor: pointer; font-size: 0.85rem;">
+                      <i class="fas fa-eye" style="margin-right: 0.35rem;"></i> View Yesterday
+                    </button>
+                    <button id="addYesterdayBtn" style="padding: 0.45rem 0.8rem; background: #2563eb; color: #fff; border: none; border-radius: 6px; cursor: pointer; font-size: 0.85rem;">
+                      <i class="fas fa-plus-circle" style="margin-right: 0.35rem;"></i> Add Time
+                    </button>
+                  </div>
+                </div>
+              `;
+
+              const navigateToMyDetails = () => {
+                try { localStorage.setItem('prefillTimeEntriesDate', dateStr); } catch (e) {}
+                window.location.href = `/my-details?date=${dateStr}`;
+              };
+
+              const viewBtn = document.getElementById('viewYesterdayBtn');
+              const addBtn = document.getElementById('addYesterdayBtn');
+              if (viewBtn) viewBtn.addEventListener('click', navigateToMyDetails);
+              if (addBtn) addBtn.addEventListener('click', navigateToMyDetails);
+            })
+            .catch(() => {
+              const statusEl = welcomeContent.querySelector('#yesterdayStatus');
+              if (!statusEl) return;
+              statusEl.innerHTML = `
+                <div style="background:#fff7ed; border: 1px solid #f59e0b; color:#92400e; border-radius: 10px; padding: 0.75rem 0.9rem;">
+                  <div style="display:flex; align-items:center; gap: 0.5rem;">
+                    <i class="fas fa-info-circle"></i>
+                    <span>Could not load yesterday's time. You can still view or add entries from My Details.</span>
+                  </div>
+                  <div style="margin-top: 0.65rem; display:flex; gap: 0.5rem; flex-wrap: wrap;">
+                    <button id="fallbackViewYesterdayBtn" style="padding: 0.45rem 0.8rem; background: #111827; color: #fff; border: none; border-radius: 6px; cursor: pointer; font-size: 0.85rem;">
+                      <i class="fas fa-eye" style="margin-right: 0.35rem;"></i> View Yesterday
+                    </button>
+                  </div>
+                </div>
+              `;
+              const yesterday = new Date();
+              yesterday.setDate(yesterday.getDate() - 1);
+              const dateStr = formatYYYYMMDDLocal(yesterday);
+              const fb = document.getElementById('fallbackViewYesterdayBtn');
+              if (fb) {
+                fb.addEventListener('click', () => {
+                  try { localStorage.setItem('prefillTimeEntriesDate', dateStr); } catch (e) {}
+                  window.location.href = `/my-details?date=${dateStr}`;
+                });
+              }
+            });
+        } catch (e) {
+          // noop
+        }
+      })();
+
       // Close modal functionality
       document.getElementById('welcomeOkBtn').addEventListener('click', function() {
         welcomeModal.style.animation = 'fadeOut 0.3s ease';
@@ -704,10 +899,26 @@
     
     // Logout function
     function logoutFromJira() {
+      // Ask for confirmation before proceeding with logout
+      try {
+        const confirmed = window.confirm('Are you sure you want to log out?');
+        if (!confirmed) {
+          return; // user cancelled logout
+        }
+      } catch (e) { /* ignore */ }
       fetch('/api/jira/logout', { method: 'POST' })
         .then(response => response.json())
         .then(data => {
           if (data.success) {
+            // Clear welcome guard keys on logout
+            try {
+              const keysToRemove = [];
+              for (let i = 0; i < localStorage.length; i++) {
+                const k = localStorage.key(i);
+                if (k && k.startsWith('welcomeShown:')) keysToRemove.push(k);
+              }
+              keysToRemove.forEach(k => localStorage.removeItem(k));
+            } catch (e) { /* ignore storage errors */ }
             // Redirect to home page after successful logout
             window.location.href = '/';
           } else {

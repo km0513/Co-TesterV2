@@ -1,52 +1,1612 @@
-import os
-import base64
-import json
-import subprocess
-import shlex
-import re
-# Configure browser visibility (false means browser will be visible)
-os.environ["PLAYWRIGHT_HEADLESS"] = "false"  # browseruse needs visible browser
-from dotenv import load_dotenv
-load_dotenv()  # This will load variables from .env into os.environ
-import logging
-from datetime import datetime, timedelta
-from collections import defaultdict
-
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
-logger = logging.getLogger(__name__)
-
-# Import Playwright if available
+# ==============================
+# Simple Auto-Healing Recorder
+from threading import Lock
 try:
     from playwright.sync_api import sync_playwright
-    playwright_available = True
-    logger.info("Playwright is available for browser automation")
-except ImportError:
-    playwright_available = False
-    logger.warning("Playwright is not installed. Browser automation will not be available.")
+except Exception:
+    sync_playwright = None
 
-# Import Google AI for AI-powered step generation
-try:
-    import google.generativeai as genai
-    # Initialize Google Generative AI with API key
-    if os.getenv('GOOGLE_API_KEY'):
-        genai.configure(api_key=os.getenv('GOOGLE_API_KEY'))
-        logging.info("Google Generative AI initialized successfully")
-    else:
-        logging.warning("GOOGLE_API_KEY not found in environment variables")
-except ImportError:
-    # Google AI is optional - we'll fall back to basic step generation if not available
-    genai = None
-    logging.warning("Google Generative AI library not installed")
-from flask import Flask, request, jsonify, render_template, session, redirect, url_for, send_file, make_response, Response, current_app
-import requests
-from requests.exceptions import RequestException
-import json
-from datetime import datetime
+import logging
+import os
+import time
 import re
+from collections import defaultdict
+from datetime import datetime
+import base64
+import json
+from flask import Flask, Blueprint, render_template, request, jsonify, session, redirect, url_for
+from sqlalchemy import or_
+
+autoheal_bp = Blueprint('autoheal', __name__)
+
+_ah_lock = Lock()
+_ah_playwright = None
+_ah_sessions = {}
+
+def _ah_get_pw():
+    if sync_playwright is None:
+        return None
+    # Start a new Playwright instance in the current request thread
+    return sync_playwright().start()
+
+def _ah_build_locators(snapshot: dict):
+    """Return ordered list of locator expressions (strings of JS using page.* that produce a Locator)."""
+    locs = []
+    if not snapshot:
+        return locs
+    s = snapshot
+    q = lambda v: (v or '').replace("\\", "\\\\").replace("'", "\\'")
+    tag = (s.get('tag') or '').lower()
+    # Ignore top-level non-actionable targets
+    if tag in ('html', 'body'):
+        return locs
+
+    # Heuristic name to use in role-based locators
+    text_val = s.get('text') or ''
+    name_guess = s.get('ariaLabel') or s.get('title') or (text_val if 0 < len(text_val) <= 80 else None)
+
+    # Native semantics: links and buttons
+    if tag == 'a':
+        if name_guess:
+            locs.append(f"page.getByRole('link', {{ name: '{q(name_guess)}' }})")
+        href = s.get('href')
+        if href and len(href) <= 200:
+            locs.append(f"page.locator('a[href=\"{q(href)}\"]')")
+    if tag == 'button' or (tag == 'input' and (s.get('type') in ['button', 'submit'])):
+        if name_guess:
+            locs.append(f"page.getByRole('button', {{ name: '{q(name_guess)}' }})")
+    if tag == 'input' and (s.get('type') in ['checkbox', 'radio']) and name_guess:
+        role = 'checkbox' if s.get('type') == 'checkbox' else 'radio'
+        locs.append(f"page.getByRole('{role}', {{ name: '{q(name_guess)}' }})")
+
+    # 1. data-testid / data-test / data-cy
+    for key in ['data-testid', 'data-test', 'data-cy']:
+        v = s.get(key) or s.get('dataset', {}).get(key)
+        if v:
+            if key == 'data-testid':
+                locs.append(f"page.getByTestId('{q(v)}')")
+            else:
+                locs.append(f"page.locator('[{key}=\'{q(v)}\']')")
+    # 2. id
+    if s.get('id'):
+        locs.append(f"page.locator('#{q(s['id'])}')")
+    # 3. role + name (text)
+    if s.get('role') and s.get('text'):
+        locs.append(f"page.getByRole('{q(s['role'])}', {{ name: '{q(s['text'])}' }})")
+    # 4. placeholder
+    if s.get('placeholder'):
+        locs.append(f"page.getByPlaceholder('{q(s['placeholder'])}')")
+    # 5. aria-label
+    if s.get('ariaLabel'):
+        locs.append(f"page.locator('[aria-label=\'{q(s['ariaLabel'])}\']')")
+    # 6. title
+    if s.get('title'):
+        locs.append(f"page.locator('[title=\'{q(s['title'])}\']')")
+    # 7. name attribute
+    if s.get('nameAttr'):
+        locs.append(f"page.locator('[name=\'{q(s['nameAttr'])}\']')")
+    # 8. reasonable text
+    if s.get('text'):
+        text = s['text']
+        if 0 < len(text) <= 80:
+            locs.append(f"page.getByText('{q(text)}')")
+    # 9. classes combo
+    classes = s.get('classes') or []
+    if classes:
+        cls = '.' + '.'.join([q(c) for c in classes[:3]])
+        locs.append(f"page.locator('{cls}')")
+    # 10. cssPath
+    cssp = (s.get('cssPath') or '').strip()
+    low = cssp.lower()
+    if low and low not in ('html', 'body', 'html>body') and 'html>body' not in low:
+        locs.append(f"page.locator('{q(cssp)}')")
+    # 11. xpath
+    if s.get('xpath'):
+        xp = (s.get('xpath') or '').strip()
+        if not re.match(r"^//(html(\[1\])?/)?body(\[1\])?$", xp, re.IGNORECASE):
+            # Only include XPath if we don't already have enough strong strategies
+            if len(locs) < 3:
+                locs.append(f"page.locator('xpath={q(xp)}')")
+
+    # dedupe, preserve order
+    seen = set()
+    ordered = []
+    for L in locs:
+        if L not in seen:
+            seen.add(L)
+            ordered.append(L)
+    return ordered
+
+def _ah_element_key(snapshot: dict) -> str:
+    try:
+        s = snapshot or {}
+        parts = [
+            (s.get('tag') or '').lower(),
+            s.get('data-testid') or '',
+            s.get('id') or '',
+            s.get('nameAttr') or '',
+            s.get('placeholder') or '',
+            s.get('ariaLabel') or '',
+            s.get('role') or '',
+            (s.get('cssPath') or '')[:120],
+        ]
+        return '|'.join(parts)
+    except Exception:
+        return ''
+
+
+def _aggregate_time_entries(entries):
+    """Aggregate multiple worklogs for the same issue into one entry per issue.
+    Assumes entries are already filtered to a single date when date_filter is provided.
+    """
+    groups = {}
+    for e in entries:
+        issue_key = e.get('issueKey', 'Unknown')
+        g = groups.get(issue_key)
+        if not g:
+            g = {
+                'id': issue_key,
+                'issueKey': issue_key,
+                'issueSummary': e.get('issueSummary', ''),
+                'timeSpentSeconds': 0,
+                'timeSpent': '0m',
+                'comment': '',
+                'started': e.get('started', ''),  # will keep the latest for sorting
+                'author': e.get('author', 'User'),
+                '_comments': []
+            }
+            groups[issue_key] = g
+
+        g['timeSpentSeconds'] = g.get('timeSpentSeconds', 0) + int(e.get('timeSpentSeconds', 0) or 0)
+        # Keep latest started for ordering
+        if (e.get('started') or '') > (g.get('started') or ''):
+            g['started'] = e.get('started')
+
+        c = e.get('comment') or ''
+        if c and c not in g['_comments']:
+            g['_comments'].append(c)
+
+    aggregated = []
+    for key, g in groups.items():
+        secs = g.get('timeSpentSeconds', 0)
+        hours = secs // 3600
+        minutes = (secs % 3600) // 60
+        g['timeSpent'] = f"{hours}h {minutes}m" if hours > 0 else f"{minutes}m"
+        if g['_comments']:
+            g['comment'] = '\n'.join(g['_comments'])
+        g.pop('_comments', None)
+        aggregated.append(g)
+
+    return aggregated
+
+def _ah_element_name(snapshot: dict) -> str:
+    """Generate a readable stable name for POM identifiers."""
+    s = snapshot or {}
+    cand = (
+        s.get('data-testid') or s.get('id') or s.get('nameAttr') or s.get('ariaLabel') or s.get('placeholder') or s.get('title')
+        or (s.get('text')[:40] if s.get('text') else '') or s.get('role') or s.get('tag') or 'element'
+    )
+    name = re.sub(r"[^a-zA-Z0-9]+", "_", cand).strip('_') or 'element'
+    if name[0:1].isdigit():
+        name = 'el_' + name
+    return name
+
+def _ah_loc_chain_for_pom(snapshot: dict, this_prefix: str = 'this.page') -> str:
+    """Return the primary locator expression replacing 'page.' with this_prefix."""
+    locs = _ah_build_locators(snapshot)
+    if not locs:
+        return f"{this_prefix}.locator('[data-qa-missing]')"
+    L = locs[0]
+    return L.replace('page.', f'{this_prefix}.', 1) if L.startswith('page.') else f"{this_prefix}.{L}"
+
+def _ah_loc_list_for_pom(snapshot: dict, this_prefix: str = 'this.page') -> list:
+    locs = _ah_build_locators(snapshot)
+    out = []
+    for L in locs:
+        out.append(L.replace('page.', f'{this_prefix}.', 1) if L.startswith('page.') else f"{this_prefix}.{L}")
+    return out
+
+def _ah_action_to_code(action: dict, idx: int):
+    # Build chained locator and action line
+    locs = _ah_build_locators(action.get('element') or {})
+    # fallback placeholder
+    if not locs:
+        loc_chain = "page.locator('[data-qa-missing]')"
+    else:
+        loc_chain = locs[0]
+        for alt in locs[1:]:
+            loc_chain = f"{loc_chain}.or({alt})"
+    t = action.get('type')
+    val = action.get('value')
+    if t == 'click':
+        return f"  // step {idx}: click\n  await ({loc_chain}).click();"
+    if t == 'fill':
+        v = (val or '').replace("\\", "\\\\").replace("`", "\\`")
+        return f"  // step {idx}: fill\n  await ({loc_chain}).fill(`{v}`);"
+    if t == 'check':
+        return f"  // step {idx}: check\n  await ({loc_chain}).check();"
+    if t == 'uncheck':
+        return f"  // step {idx}: uncheck\n  await ({loc_chain}).uncheck();"
+    if t == 'select':
+        v = (val or '').replace("'", "\\'")
+        return f"  // step {idx}: select\n  await ({loc_chain}).selectOption({{ value: '{v}' }});"
+    if t == 'enter':
+        return f"  // step {idx}: press Enter\n  await ({loc_chain}).press('Enter');"
+    return f"  // step {idx}: {t or 'action'}\n  // TODO: implement\n  await ({loc_chain}).click();"
+
+@autoheal_bp.route('/autoheal')
+def autoheal_page():
+    return render_template('autoheal-recorder.html', active_tab='auto-heal')
+
+@autoheal_bp.route('/api/autoheal/start', methods=['POST'])
+def autoheal_start():
+    try:
+        data = request.get_json() or {}
+        url = data.get('url')
+        if not url:
+            return jsonify({'success': False, 'error': 'url is required'}), 400
+        # Normalize URL: add https:// if missing scheme
+        url = url.strip()
+        if not re.match(r'^https?://', url, re.IGNORECASE):
+            url = f'https://{url}'
+        with _ah_lock:
+            pw = _ah_get_pw()
+            if pw is None:
+                return jsonify({'success': False, 'error': 'Playwright not available on server'}), 500
+            browser = pw.chromium.launch(headless=False)
+            context = browser.new_context(bypass_csp=True, ignore_https_errors=True)
+            page = context.new_page()
+
+            # Log browser console messages to server logs for diagnostics
+            try:
+                def _on_console(msg):
+                    try:
+                        logging.info(f"[autoheal][console] {msg.type}: {msg.text}")
+                    except Exception:
+                        pass
+                    # Also persist a small console log tail per session
+                    try:
+                        logs = _ah_sessions.get(session_id, {}).setdefault('logs', [])
+                        logs.append(f"{msg.type}: {msg.text}")
+                        if len(logs) > 200:
+                            del logs[: len(logs) - 200]
+                    except Exception:
+                        pass
+                page.on("console", _on_console)
+                # Also capture console logs from any newly opened pages (popups)
+                try:
+                    def _attach_console(p):
+                        try:
+                            p.on("console", _on_console)
+                        except Exception:
+                            pass
+                    context.on("page", _attach_console)
+                except Exception:
+                    pass
+                def _on_page_error(err):
+                    try:
+                        logging.exception(f"[autoheal][pageerror] {err}")
+                    except Exception:
+                        pass
+                page.on("pageerror", _on_page_error)
+            except Exception:
+                pass
+
+            # Create session id and register session early to avoid dropping early events
+            session_id = f"ah_{int(time.time())}"
+            _ah_sessions[session_id] = {
+                'pw': pw,
+                'browser': browser,
+                'context': context,
+                'page': page,
+                'url': url,
+                'actions': [],
+                'diag': {'created': True},
+                'logs': []
+            }
+
+            # Expose binding to record actions (robust to JSHandles / arg variations)
+            def _record_action(source, payload=None, *args):
+                try:
+                    # If payload is passed as a JSHandle or via *args, normalize it
+                    if payload is None and args:
+                        payload = args[0]
+                    if hasattr(payload, 'json_value'):
+                        try:
+                            payload = payload.json_value()
+                        except Exception:
+                            pass
+                    if not isinstance(payload, dict):
+                        return
+                    sid = payload.get('session_id')
+                    if not sid or sid not in _ah_sessions:
+                        return
+                    try:
+                        logging.info(f"[autoheal] action: sid={sid} type={payload.get('type')} value={payload.get('value')}")
+                    except Exception:
+                        pass
+                    try:
+                        if payload.get('type') == 'ping':
+                            _ah_sessions[sid].setdefault('diag', {})['ping'] = 'received'
+                    except Exception:
+                        pass
+                    _ah_sessions[sid]['actions'].append({
+                        'type': payload.get('type'),
+                        'value': payload.get('value'),
+                        'element': payload.get('element')
+                    })
+                except Exception as err:
+                    try:
+                        logging.exception(f"[autoheal] record_action error: {err}")
+                    except Exception:
+                        pass
+            # Use context-level binding so it's available in all frames and future pages
+            try:
+                context.expose_binding('__ah_recordAction', _record_action)
+                try:
+                    logging.info("[autoheal] exposed context binding __ah_recordAction")
+                except Exception:
+                    pass
+            except Exception:
+                # Fallback to page-level if context method not available
+                page.expose_binding('__ah_recordAction', _record_action)
+                try:
+                    logging.info("[autoheal] exposed page binding __ah_recordAction (fallback)")
+                except Exception:
+                    pass
+            # Also expose a plain function as another call path
+            try:
+                def _record_func(payload=None, *args):
+                    return _record_action(None, payload, *args)
+                context.expose_function('ahRecord', _record_func)
+                try:
+                    logging.info("[autoheal] exposed context function ahRecord")
+                except Exception:
+                    pass
+            except Exception:
+                try:
+                    page.expose_function('ahRecord', _record_func)
+                    try:
+                        logging.info("[autoheal] exposed page function ahRecord (fallback)")
+                    except Exception:
+                        pass
+                except Exception:
+                    pass
+
+            # Recorder injection (use template string to avoid f-string brace issues)
+            recorder_template = """
+                (() => {{
+                  if (window.__ah_installed) return; window.__ah_installed = true;
+                  const sid = '__SID__';
+                  try {{ console.log('[autoheal] recorder injected', sid); }} catch(e) {{}}
+                  try {{
+                    console.log('[autoheal] binding types', typeof window.__ah_recordAction, typeof window.ahRecord);
+                  }} catch(e) {{}}
+                  const qText = (el) => {{
+                    const t = (el.innerText || el.textContent || '').trim().replace(/\s+/g,' ');
+                    return t.length > 120 ? t.slice(0,117)+'...' : t;
+                  }};
+                  // Monkey-patch common interaction APIs to capture programmatic interactions
+                  try {{
+                    const _origClick = Element.prototype.click;
+                    Element.prototype.click = function() {{
+                      try {{ console.log('[autoheal] Element.click patched'); }} catch(e) {{}}
+                      try {{ send('click', this); }} catch(e) {{}}
+                      return _origClick.apply(this, arguments);
+                    }};
+                  }} catch(e) {{}}
+                  try {{
+                    const iv = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value');
+                    if (iv && iv.set) {{
+                      Object.defineProperty(HTMLInputElement.prototype, 'value', {{
+                        get: function() {{ return iv.get.call(this); }},
+                        set: function(v) {{ iv.set.call(this, v); try {{ send(this.type === 'checkbox' ? (this.checked ? 'check' : 'uncheck') : 'fill', this, v); }} catch(e) {{}} }}
+                      }});
+                    }}
+                  }} catch(e) {{}}
+                  try {{
+                    const tv = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value');
+                    if (tv && tv.set) {{
+                      Object.defineProperty(HTMLTextAreaElement.prototype, 'value', {{
+                        get: function() {{ return tv.get.call(this); }},
+                        set: function(v) {{ tv.set.call(this, v); try {{ send('fill', this, v); }} catch(e) {{}} }}
+                      }});
+                    }}
+                  }} catch(e) {{}}
+                  try {{
+                    const sv = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value');
+                    if (sv && sv.set) {{
+                      Object.defineProperty(HTMLSelectElement.prototype, 'value', {{
+                        get: function() {{ return sv.get.call(this); }},
+                        set: function(v) {{ sv.set.call(this, v); try {{ send('select', this, v); }} catch(e) {{}} }}
+                      }});
+                    }}
+                  }} catch(e) {{}}
+                  const cssPath = (el) => {{
+                    if (!el) return '';
+                    if (el.id) return `#${{el.id}}`;
+                    const path = [];
+                    let node = el;
+                    while (node && node.nodeType === 1 && path.length < 6) {{
+                      let sel = node.nodeName.toLowerCase();
+                      if (node.classList && node.classList.length) {{
+                        sel += '.' + Array.from(node.classList).slice(0,2).join('.');
+                      }}
+                      const sibs = node.parentNode ? Array.from(node.parentNode.children).filter(n => n.nodeName === node.nodeName) : [];
+                      if (sibs.length > 1) {{
+                        const idx = sibs.indexOf(node) + 1;
+                        sel += `:nth-of-type(${{idx}})`;
+                      }}
+                      path.unshift(sel);
+                      node = node.parentElement;
+                    }}
+                    return path.join('>');
+                  }};
+                  const xPath = (el) => {{
+                    if (!el) return '';
+                    const parts = [];
+                    let node = el;
+                    while (node && node.nodeType === 1 && parts.length < 6) {{
+                      let ix = 1;
+                      let sib = node.previousSibling;
+                      while (sib) {{
+                        if (sib.nodeType === 1 && sib.nodeName === node.nodeName) ix++;
+                        sib = sib.previousSibling;
+                      }}
+                      parts.unshift(node.nodeName.toLowerCase() + '[' + ix + ']');
+                      node = node.parentNode;
+                    }}
+                    return '//' + parts.join('/');
+                  }};
+                  const snapshot = (el) => {{
+                    if (!el) return null;
+                    if (el.nodeType && el.nodeType !== 1) el = el.parentElement;
+                    if (!el) return null;
+                    const safeGetAttr = (node, name) => {{ try {{ return node.getAttribute(name); }} catch(_) {{ return null; }} }};
+                    const role = safeGetAttr(el, 'role');
+                    let classes = [];
+                    try {{ classes = Array.from(el.classList || []); }} catch(_) {{ classes = []; }}
+                    classes = classes.filter(c => !/active|selected|focus|hover|open|close|hidden|show|hide/i.test(c)).slice(0,3);
+                    let bbox = null;
+                    try {{
+                      const r = el.getBoundingClientRect();
+                      const sx = (window.scrollX || window.pageXOffset || 0);
+                      const sy = (window.scrollY || window.pageYOffset || 0);
+                      bbox = {{ x: Math.max(0, Math.floor(r.x + sx)), y: Math.max(0, Math.floor(r.y + sy)), width: Math.max(0, Math.floor(r.width)), height: Math.max(0, Math.floor(r.height)) }};
+                    }} catch(_e) {{ bbox = null; }}
+                    return {{
+                      tag: (el.nodeName || '').toLowerCase(),
+                      id: el.id || null,
+                      'data-testid': safeGetAttr(el, 'data-testid'),
+                      'data-test': safeGetAttr(el, 'data-test'),
+                      'data-cy': safeGetAttr(el, 'data-cy'),
+                      role: role || null,
+                      ariaLabel: safeGetAttr(el, 'aria-label') || null,
+                      title: safeGetAttr(el, 'title') || null,
+                      nameAttr: safeGetAttr(el, 'name') || null,
+                      placeholder: safeGetAttr(el, 'placeholder') || null,
+                      type: safeGetAttr(el, 'type') || null,
+                      text: qText(el),
+                      classes: classes,
+                      cssPath: cssPath(el),
+                      xpath: xPath(el),
+                      bbox: bbox
+                    }};
+                  }};
+                  const getEl = (e) => {{
+                    try {{
+                      const path = (e.composedPath && e.composedPath()) || [];
+                      const isBad = (el) => !el || !el.tagName || el.tagName === 'HTML' || el.tagName === 'BODY';
+                      const selectors = 'a[href],button,input,select,textarea,[role="button"],[role="link"],[role="menuitem"],[role="tab"],[role="checkbox"],[role="radio"],*[onclick],[tabindex]';
+                      for (const n of path) {{
+                        if (n && n.closest) {{
+                          const c = n.closest(selectors);
+                          if (c && !isBad(c)) return c;
+                        }}
+                        if (n && !isBad(n)) return n;
+                      }}
+                      const t = e.target;
+                      if (t && t.closest) {{
+                        const c2 = t.closest(selectors);
+                        if (c2 && !isBad(c2)) return c2;
+                      }}
+                      return (!t || isBad(t)) ? null : t;
+                    }} catch(_) {{ return null; }}
+                  }};
+                  const send = (type, el, value) => {{
+                    const payload = {{ session_id: sid, type, value, element: snapshot(el) }};
+                    try {{
+                      if (typeof window.__ah_recordAction === 'function') {{
+                        window.__ah_recordAction(payload);
+                      }} else if (typeof window.ahRecord === 'function') {{
+                        window.ahRecord(payload);
+                      }}
+                    }} catch (e) {{ try {{ console.warn('__ah_recordAction failed', e); }} catch(_) {{}} }}
+                    // Always send HTTP as well to survive fast navigations
+                    try {{
+                      const url = '__SERVER__/api/autoheal/record';
+                      const body = JSON.stringify(payload);
+                      if (navigator.sendBeacon) {{
+                        const blob = new Blob([body], {{ type: 'application/json' }});
+                        navigator.sendBeacon(url, blob);
+                      }} else {{
+                        fetch(url, {{ method: 'POST', headers: {{ 'Content-Type': 'application/json' }}, body, mode: 'cors' }}).catch(() => {{}});
+                      }}
+                    }} catch(_) {{}}
+                    try {{ console.log('[autoheal] sent', type, value); }} catch(e) {{}}
+                  }};
+                  // Only record direct user interactions; add dedupe to avoid duplicates
+                  try {{
+                    const _ah_seen = new Map();
+                    const _fingerprint = (el) => {{
+                      try {{
+                        const s = snapshot(el) || {{}};
+                        return (s.tag||'') + '#' + (s.id||'') + '|' + (s['data-testid']||s.nameAttr||s.ariaLabel||s.title||s.text||'');
+                      }} catch(_) {{ return 'unknown'; }}
+                    }};
+                    const record = (type, el, value, ev) => {{
+                      try {{ if (ev && ev.isTrusted === false) return; }} catch(_) {{}}
+                      const key = type + '|' + _fingerprint(el);
+                      const now = Date.now();
+                      const last = _ah_seen.get(key) || 0;
+                      if (now - last < 400) return;
+                      _ah_seen.set(key, now);
+                      send(type, el, value);
+                    }};
+                    window.__ah_recordDirect = record;
+                  }} catch(e) {{}}
+                  try {{
+                    document.addEventListener('click', (e) => {{
+                      try {{
+                        const el = getEl(e);
+                        try {{ console.log('[autoheal] click captured', el && el.tagName); }} catch(e) {{}}
+                        if (e && e.isTrusted === true) window.__ah_recordDirect('click', el, undefined, e);
+                      }} catch(err) {{
+                        try {{ console.error('[autoheal] doc click handler error', err); }} catch(_) {{}}
+                      }}
+                    }}, true);
+                    // Debounced typing capture: only record after user stops typing for 600ms, or on blur/Enter
+                    const _fillTimers = new WeakMap();
+                    const _scheduleFill = (el, ev) => {{
+                      if (!el) return;
+                      try {{
+                        const tPrev = _fillTimers.get(el);
+                        if (tPrev) clearTimeout(tPrev);
+                      }} catch(_) {{}}
+                      try {{
+                        const t = setTimeout(() => {{
+                          try {{ window.__ah_recordDirect('fill', el, el.value || '', ev); }} catch(_) {{}}
+                        }}, 600);
+                        _fillTimers.set(el, t);
+                      }} catch(_) {{}}
+                    }};
+                    document.addEventListener('change', (e) => {{
+                      const el = e.target;
+                      if (el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.tagName === 'SELECT')) {{
+                        let t = 'fill';
+                        if (el.type === 'checkbox') t = el.checked ? 'check' : 'uncheck';
+                        if (el.tagName === 'SELECT') t = 'select';
+                        try {{ console.log('[autoheal] change captured', t); }} catch(e) {{}}
+                        if (e && e.isTrusted === true) {{
+                          if (t === 'fill') {{ _scheduleFill(el, e); }} else {{ window.__ah_recordDirect(t, el, el.value || '', e); }}
+                        }}
+                      }}
+                    }}, true);
+                    // Capture typing with debounce to avoid per-keystroke spam
+                    document.addEventListener('input', (e) => {{
+                      const el = e.target;
+                      if (el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA')) {{
+                        try {{ console.log('[autoheal] input captured (debounced)'); }} catch(e) {{}}
+                        if (e && e.isTrusted === true) _scheduleFill(el, e);
+                      }}
+                    }}, true);
+                    // Flush on blur
+                    document.addEventListener('blur', (e) => {{
+                      const el = e.target;
+                      if (el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA')) {{
+                        try {{ console.log('[autoheal] blur captured'); }} catch(e) {{}}
+                        try {{ window.__ah_recordDirect('fill', el, el.value || '', e); }} catch(_) {{}}
+                      }}
+                    }}, true);
+                    document.addEventListener('keydown', (e) => {{
+                      if (e.key === 'Enter') {{
+                        const el = e.target;
+                        try {{ console.log('[autoheal] enter captured'); }} catch(e) {{}}
+                        if (e && e.isTrusted === true) window.__ah_recordDirect('enter', el, undefined, e);
+                      }}
+                    }}, true);
+                    try {{ console.log('[autoheal] listeners attached', location.href); }} catch(e) {{}}
+                    // Removed body-level click fallback to avoid duplicates; main click handler is sufficient
+                    try {{ console.log('[autoheal] binding types', typeof window.__ah_recordAction, typeof window.ahRecord); }} catch(e) {{}}
+                    // Heartbeat to verify end-to-end binding
+                    try {{ send('ready', document.documentElement, 'v1'); }} catch(e) {{}}
+                    try {{ setTimeout(() => {{ try {{ send('ready', document.documentElement, 'v1-late'); }} catch(_) {{}} }}, 1000); }} catch(e) {{}}
+                  }} catch (err) {{
+                    try {{ console.error('[autoheal] listener install error', err); }} catch(e) {{}}
+                  }}
+                })();
+            """
+            server_origin = request.host_url.rstrip('/')
+            recorder_js = recorder_template.replace('__SID__', session_id).replace('__SERVER__', server_origin).replace('{{', '{').replace('}}', '}')
+            # Minimal recorder (idempotent) to ensure capture even if main recorder is blocked
+            mini_js = """
+            (() => {
+              if (window.__ah_installed_mini) return;
+              window.__ah_installed_mini = true;
+              const sid = '__SID__';
+              const server = '__SERVER__';
+              const safeText = (el) => { try { return (el.innerText || el.textContent || '').trim().slice(0,200); } catch(_) { return ''; } };
+              const a = (el, n) => { try { return el.getAttribute(n) || null; } catch(_) { return null; } };
+              const cssPath = (el) => {
+                if (!el) return '';
+                if (el.id) return '#' + el.id;
+                const path = [];
+                let node = el;
+                while (node && node.nodeType === 1 && path.length < 6) {
+                  let sel = node.nodeName.toLowerCase();
+                  if (node.classList && node.classList.length) {
+                    sel += '.' + Array.from(node.classList).slice(0,2).join('.');
+                  }
+                  const sibs = node.parentNode ? Array.from(node.parentNode.children).filter(n => n.nodeName === node.nodeName) : [];
+                  if (sibs.length > 1) {
+                    const idx = sibs.indexOf(node) + 1;
+                    sel += ':nth-of-type(' + idx + ')';
+                  }
+                  path.unshift(sel);
+                  node = node.parentElement;
+                }
+                return path.join('>');
+              };
+              const xPath = (el) => {
+                if (!el) return '';
+                const parts = [];
+                let node = el;
+                while (node && node.nodeType === 1 && parts.length < 6) {
+                  let ix = 1;
+                  let sib = node.previousSibling;
+                  while (sib) {
+                    if (sib.nodeType === 1 && sib.nodeName === node.nodeName) ix++;
+                    sib = sib.previousSibling;
+                  }
+                  parts.unshift(node.nodeName.toLowerCase() + '[' + ix + ']');
+                  node = node.parentNode;
+                }
+                return '//' + parts.join('/');
+              };
+              const snap = (el) => {
+                if (!el || !el.nodeType || el.nodeType !== 1) return { tag: 'unknown' };
+                let classes = [];
+                try { classes = Array.from(el.classList || []); } catch(_) { classes = []; }
+                classes = classes.filter(c => !/active|selected|focus|hover|open|close|hidden|show|hide/i.test(c)).slice(0,3);
+                return {
+                  tag: (el.nodeName||'').toLowerCase(),
+                  id: el.id || null,
+                  'data-testid': a(el,'data-testid'),
+                  'data-test': a(el,'data-test'),
+                  'data-cy': a(el,'data-cy'),
+                  role: a(el,'role') || null,
+                  href: a(el,'href') || null,
+                  ariaLabel: a(el,'aria-label') || null,
+                  title: a(el,'title') || null,
+                  nameAttr: a(el,'name') || null,
+                  placeholder: a(el,'placeholder') || null,
+                  type: a(el,'type') || null,
+                  text: safeText(el),
+                  classes: classes,
+                  cssPath: cssPath(el),
+                  xpath: xPath(el)
+                };
+              };
+              const send = (type, el, value) => {
+                const payload = { session_id: sid, type, value, element: snap(el) };
+                let sent = false;
+                try { if (typeof window.__ah_recordAction==='function') { window.__ah_recordAction(payload); sent = true; } } catch(_) {}
+                try { if (!sent && typeof window.ahRecord==='function') { window.ahRecord(payload); sent = true; } } catch(_) {}
+                if (!sent && server) {
+                  try {
+                    fetch(server + '/api/autoheal/record', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      mode: 'cors',
+                      body: JSON.stringify(payload)
+                    }).catch(() => {});
+                  } catch (_) {}
+                }
+              };
+              const getEl = (e) => {
+                const path = (e.composedPath && e.composedPath()) || [];
+                const isBad = (el) => !el || !el.tagName || el.tagName === 'HTML' || el.tagName === 'BODY';
+                const selectors = 'a[href],button,input,select,textarea,[role="button"],[role="link"],[role="menuitem"],[role="tab"],[role="checkbox"],[role="radio"],*[onclick],[tabindex]';
+                for (const n of path) {
+                  if (n && n.closest) {
+                    const c = n.closest(selectors);
+                    if (c && !isBad(c)) return c;
+                  }
+                  if (n && !isBad(n)) return n;
+                }
+                const t = e.target;
+                if (t && t.closest) {
+                  const c2 = t.closest(selectors);
+                  if (c2 && !isBad(c2)) return c2;
+                }
+                return isBad(t) ? null : t;
+              };
+              document.addEventListener('click', (e) => {
+                const el = getEl(e);
+                if (!el) return;
+                try { console.log('[autoheal-mini] click'); } catch(_) {}
+                send('click', el);
+              }, true);
+              // Debounce input in mini recorder
+              { let _miniTimer = null; let _miniEl = null; }
+              document.addEventListener('input', (e) => { const el = e.target; if (el && (el.tagName==='INPUT'||el.tagName==='TEXTAREA')) { try { console.log('[autoheal-mini] input (debounced)'); } catch(_) {} _miniEl = el; if (_miniTimer) clearTimeout(_miniTimer); _miniTimer = setTimeout(() => { try { send('fill', _miniEl, _miniEl && (_miniEl.value||'')); } catch(_) {} }, 600); } }, true);
+              document.addEventListener('change', (e) => { const el = e.target; if (el && (el.tagName==='INPUT' || el.tagName==='SELECT')) { let t='fill'; if (el.type === 'checkbox') t = el.checked ? 'check':'uncheck'; if (el.tagName==='SELECT') t='select'; try { console.log('[autoheal-mini] change'); } catch(_) {} send(t, el, el.value||''); } }, true);
+              document.addEventListener('keydown', (e) => { if (e.key==='Enter') { const el = document.activeElement || e.target; if (!el || el.tagName==='HTML' || el.tagName==='BODY') return; try { console.log('[autoheal-mini] enter'); } catch(_) {} send('enter', el); } }, true);
+            })();
+            """.replace('__SID__', session_id).replace('__SERVER__', server_origin)
+            # Inject into all pages/frames in this context
+            try:
+                context.add_init_script(recorder_js)
+                try:
+                    context.add_init_script(mini_js)
+                except Exception as e:
+                    try:
+                        logging.exception(f"[autoheal] context.add_init_script mini error: {e}")
+                    except Exception:
+                        pass
+            except Exception as e:
+                try:
+                    logging.exception(f"[autoheal] context.add_init_script error: {e}")
+                except Exception:
+                    pass
+                try:
+                    page.add_init_script(recorder_js)
+                    try:
+                        page.add_init_script(mini_js)
+                    except Exception as e3:
+                        try:
+                            logging.exception(f"[autoheal] page.add_init_script mini error: {e3}")
+                        except Exception:
+                            pass
+                except Exception as e2:
+                    try:
+                        logging.exception(f"[autoheal] page.add_init_script error: {e2}")
+                    except Exception:
+                        pass
+            # Pre-wire reinjection on any navigation of the initial page to survive redirects
+            try:
+                def _pre_reinject():
+                    try:
+                        page.evaluate(recorder_js)
+                    except Exception:
+                        pass
+                    try:
+                        page.evaluate(mini_js)
+                    except Exception:
+                        pass
+                    try:
+                        page.add_script_tag(content=recorder_js)
+                    except Exception:
+                        pass
+                page.on('domcontentloaded', lambda *args: _pre_reinject())
+                page.on('load', lambda *args: _pre_reinject())
+                page.on('framenavigated', lambda *args: _pre_reinject())
+            except Exception:
+                pass
+            page.goto(url, wait_until='domcontentloaded')
+            # Force attach in the current document as an extra safety net
+            try:
+                page.evaluate(recorder_js)
+                try:
+                    page.evaluate(mini_js)
+                except Exception as e:
+                    try:
+                        logging.exception(f"[autoheal] page.evaluate(mini_js) error: {e}")
+                    except Exception:
+                        pass
+            except Exception as e:
+                try:
+                    logging.exception(f"[autoheal] page.evaluate(recorder_js) error: {e}")
+                except Exception:
+                    pass
+            # Fallback: attempt to add a script tag (may be blocked by CSP on some sites)
+            try:
+                page.add_script_tag(content=recorder_js)
+            except Exception as e:
+                try:
+                    logging.exception(f"[autoheal] page.add_script_tag error: {e}")
+                except Exception:
+                    pass
+            # Diagnostic: verify injection and bindings from page context
+            try:
+                diag = page.evaluate("(() => { return { installed: !!window.__ah_installed, bind: typeof window.__ah_recordAction, func: typeof window.ahRecord }; })()")
+                try:
+                    logging.info(f"[autoheal] diag after inject: installed={diag.get('installed')} bind={diag.get('bind')} func={diag.get('func')}")
+                except Exception:
+                    pass
+                try:
+                    _ah_sessions.get(session_id, {}).setdefault('diag', {}).update({
+                        'installed': bool(diag.get('installed')),
+                        'bind': diag.get('bind'),
+                        'func': diag.get('func')
+                    })
+                except Exception:
+                    pass
+                # Inject a minimal fallback recorder (idempotent)
+                try:
+                    _mini = """
+                        (() => {
+                          if (window.__ah_installed_mini) return;
+                          window.__ah_installed_mini = true;
+                          const sid = '__SID__';
+                          const server = '__SERVER__';
+                          const safeText = (el) => { try { return (el.innerText || el.textContent || '').trim().slice(0,200); } catch(_) { return ''; } };
+                          const a = (el, n) => { try { return el.getAttribute(n) || null; } catch(_) { return null; } };
+                          const snap = (el) => {
+                            if (!el || !el.nodeType || el.nodeType !== 1) return { tag: 'unknown' };
+                            return {
+                              tag: (el.nodeName||'').toLowerCase(),
+                              id: el.id || null,
+                              'data-testid': a(el,'data-testid'),
+                              'data-test': a(el,'data-test'),
+                              'data-cy': a(el,'data-cy'),
+                              ariaLabel: a(el,'aria-label') || null,
+                              title: a(el,'title') || null,
+                              nameAttr: a(el,'name') || null,
+                              placeholder: a(el,'placeholder') || null,
+                              type: a(el,'type') || null,
+                              text: safeText(el)
+                            };
+                          };
+                          const send = (type, el, value) => {
+                            const payload = { session_id: sid, type, value, element: snap(el) };
+                            try { if (typeof window.__ah_recordAction==='function') window.__ah_recordAction(payload); else if (typeof window.ahRecord==='function') window.ahRecord(payload); } catch(_) {}
+                            try {
+                              const url = server + '/api/autoheal/record';
+                              const body = JSON.stringify(payload);
+                              if (navigator.sendBeacon) { const blob = new Blob([body], { type: 'application/json' }); navigator.sendBeacon(url, blob); }
+                              else { fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body, mode: 'cors' }).catch(() => {}); }
+                            } catch(_) {}
+                          };
+                          const getEl = (e) => { const tgt = (e.composedPath && e.composedPath()[0]) || e.target; return (tgt && tgt.closest ? tgt.closest('a,button,input,select,textarea,[role="button"],*[onclick]') : null) || tgt; };
+                          // Only direct user interactions with dedupe
+                          try {
+                            const _seen = new Map();
+                            const fp = (el) => { try { const s = snap(el)||{}; return (s.tag||'') + '#' + (s.id||'') + '|' + (s['data-testid']||s.nameAttr||s.ariaLabel||s.title||s.text||''); } catch(_) { return 'u'; } };
+                            const record = (type, el, value, ev) => { try { if (ev && ev.isTrusted === false) return; } catch(_) {} const k = type+'|'+fp(el); const n = Date.now(); const l = _seen.get(k)||0; if (n-l<400) return; _seen.set(k,n); send(type, el, value); };
+                            document.addEventListener('click', (e) => { try { console.log('[autoheal-mini] click'); } catch(_) {} try { const el = getEl(e); if (e && e.isTrusted===true) record('click', el, undefined, e); } catch(_) {} }, true);
+                            document.addEventListener('input', (e) => { const el = e.target; if (el && (el.tagName==='INPUT'||el.tagName==='TEXTAREA')) { try { console.log('[autoheal-mini] input'); } catch(_) {} if (e && e.isTrusted===true) record('fill', el, el.value||'', e); } }, true);
+                            document.addEventListener('change', (e) => { const el = e.target; if (el && (el.tagName==='INPUT' || el.tagName==='SELECT')) { let t='fill'; if (el.type === 'checkbox') t = el.checked ? 'check':'uncheck'; if (el.tagName==='SELECT') t='select'; try { console.log('[autoheal-mini] change'); } catch(_) {} if (e && e.isTrusted===true) record(t, el, el.value||'', e); } }, true);
+                            document.addEventListener('keydown', (e) => { if (e.key==='Enter') { try { console.log('[autoheal-mini] enter'); } catch(_) {} if (e && e.isTrusted===true) record('enter', e.target, undefined, e); } }, true);
+                          } catch(_) {}
+                        })();
+                    """.replace('__SID__', session_id).replace('__SERVER__', server_origin)
+                    page.evaluate(_mini)
+                    try:
+                        _ah_sessions.get(session_id, {}).setdefault('diag', {})['mini'] = True
+                        logging.info("[autoheal] installed minimal recorder fallback")
+                    except Exception:
+                        pass
+                except Exception:
+                    pass
+            except Exception:
+                pass
+            # Try a diagnostic ping via binding to verify end-to-end pipeline
+            try:
+                _ping_js = "(function(){ try { if (typeof window.__ah_recordAction==='function') window.__ah_recordAction({ session_id: '__SID__', type: 'ping', value: 'start', element: { tag: 'HTML' } }); else if (typeof window.ahRecord==='function') window.ahRecord({ session_id: '__SID__', type: 'ping', value: 'start', element: { tag: 'HTML' } }); } catch(_) {} })()"
+                _ping_js = _ping_js.replace('__SID__', session_id)
+                page.evaluate(_ping_js)
+                try:
+                    logging.info("[autoheal] ping attempted from page context")
+                except Exception:
+                    pass
+            except Exception:
+                pass
+            # Ensure all existing frames also have the recorder
+            try:
+                frames_info = []
+                for fr in page.frames:
+                    try:
+                        fr.evaluate(recorder_js)
+                    except Exception:
+                        pass
+                    try:
+                        fr.evaluate(mini_js)
+                    except Exception:
+                        pass
+                    try:
+                        frames_info.append(getattr(fr, 'url', lambda: '')() if callable(getattr(fr, 'url', None)) else fr.url)
+                    except Exception:
+                        pass
+                try:
+                    _ah_sessions.get(session_id, {}).setdefault('diag', {})['frames'] = frames_info
+                except Exception:
+                    pass
+            except Exception:
+                pass
+            # Ensure any newly opened pages also get the recorder immediately
+            try:
+                def _inject_on_new_page(p):
+                    try:
+                        p.add_init_script(recorder_js)
+                        try:
+                            p.add_init_script(mini_js)
+                        except Exception:
+                            pass
+                    except Exception:
+                        pass
+                    try:
+                        p.evaluate(recorder_js)
+                    except Exception:
+                        pass
+                    try:
+                        p.add_script_tag(content=recorder_js)
+                    except Exception:
+                        pass
+                    try:
+                        def _on_frame_attached(fr):
+                            try:
+                                fr.evaluate(recorder_js)
+                            except Exception:
+                                pass
+                            try:
+                                fr.evaluate(mini_js)
+                            except Exception:
+                                pass
+                            try:
+                                _ah_sessions.get(session_id, {}).setdefault('diag', {}).setdefault('frames_new', []).append(
+                                    getattr(fr, 'url', lambda: '')() if callable(getattr(fr, 'url', None)) else fr.url
+                                )
+                            except Exception:
+                                pass
+                        p.on("frameattached", _on_frame_attached)
+                        # Re-inject on navigations within the page (SPA/soft reloads)
+                        def _reinject():
+                            try:
+                                p.evaluate(recorder_js)
+                            except Exception:
+                                pass
+                            try:
+                                p.evaluate(mini_js)
+                            except Exception:
+                                pass
+                        try:
+                            p.on('domcontentloaded', lambda *args: _reinject())
+                            p.on('load', lambda *args: _reinject())
+                        except Exception:
+                            pass
+                    except Exception:
+                        pass
+                context.on("page", _inject_on_new_page)
+            except Exception:
+                pass
+            # Inject into frames of the initial page
+            try:
+                def _on_frame_attached(fr):
+                    try:
+                        fr.evaluate(recorder_js)
+                    except Exception:
+                        pass
+                    try:
+                        fr.evaluate(mini_js)
+                    except Exception:
+                        pass
+                page.on("frameattached", _on_frame_attached)
+                # Re-inject on navigations within the initial page as well
+                def _reinject_root():
+                    try:
+                        page.evaluate(recorder_js)
+                    except Exception:
+                        pass
+                    try:
+                        page.evaluate(mini_js)
+                    except Exception:
+                        pass
+                    try:
+                        page.add_script_tag(content=recorder_js)
+                    except Exception:
+                        pass
+                page.on("domcontentloaded", lambda *args: _reinject_root())
+                page.on("load", lambda *args: _reinject_root())
+            except Exception:
+                pass
+
+            session['ah_session_id'] = session_id
+            return jsonify({'success': True, 'session_id': session_id, 'url': url})
+    except Exception as e:
+        logging.exception('autoheal_start error')
+        try:
+            if 'pw' in locals() and locals()['pw']:
+                locals()['pw'].stop()
+        except Exception:
+            pass
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@autoheal_bp.route('/api/autoheal/record', methods=['POST', 'OPTIONS'])
+def autoheal_record():
+    # HTTP fallback to record an action coming from the injected recorder
+    if request.method == 'OPTIONS':
+        # Let Flask-CORS handle headers; return 200 quickly
+        return ('', 204)
+    try:
+        payload = request.get_json() or {}
+        sid = payload.get('session_id')
+        if not sid or sid not in _ah_sessions:
+            return jsonify({'success': False, 'error': 'invalid session'}), 400
+        try:
+            logging.info(f"[autoheal] action(http): sid={sid} type={payload.get('type')} value={payload.get('value')}")
+        except Exception:
+            pass
+        s = _ah_sessions[sid]
+        el_snap = payload.get('element') or {}
+        # store action with stable key
+        ek = _ah_element_key(el_snap)
+        act = {
+            'type': payload.get('type'),
+            'value': payload.get('value'),
+            'element': el_snap,
+            'element_key': ek
+        }
+        s['actions'].append(act)
+        # maintain element registry with optional visual clip
+        try:
+            registry = s.setdefault('elements', {})
+            if ek and ek not in registry:
+                entry = {
+                    'key': ek,
+                    'name': _ah_element_name(el_snap),
+                    'snapshot': el_snap,
+                    'locators': _ah_build_locators(el_snap),
+                }
+                # Try capture visual clip once if bbox exists and page is available
+                bbox = (el_snap or {}).get('bbox') or {}
+                px = {k: float(bbox.get(k)) for k in ('x','y','width','height') if bbox.get(k) is not None}
+                if len(px) == 4 and s.get('page'):
+                    try:
+                        clip = { 'x': px['x'], 'y': px['y'], 'width': px['width'], 'height': px['height'] }
+                        img = s['page'].screenshot(clip=clip)
+                        entry['visual'] = 'data:image/png;base64,' + base64.b64encode(img).decode('ascii')
+                    except Exception:
+                        pass
+                registry[ek] = entry
+        except Exception:
+            pass
+        return jsonify({'success': True})
+    except Exception as e:
+        logging.exception('autoheal_record error')
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@autoheal_bp.route('/api/autoheal/status', methods=['GET'])
+def autoheal_status():
+    sid = request.args.get('session_id') or session.get('ah_session_id')
+    if not sid or sid not in _ah_sessions:
+        return jsonify({'success': False, 'error': 'no active session'}), 404
+    s = _ah_sessions[sid]
+    # Provide diagnostics and recent console logs to help debugging
+    diag = s.get('diag', {})
+    logs = s.get('logs', [])
+    tail = logs[-50:] if len(logs) > 50 else logs
+    return jsonify({
+        'success': True,
+        'session_id': sid,
+        'url': s['url'],
+        'actions': s['actions'],
+        'diag': diag,
+        'logs_tail': tail
+    })
+
+@autoheal_bp.route('/api/autoheal/clear', methods=['POST'])
+def autoheal_clear():
+    sid = (request.get_json() or {}).get('session_id') or session.get('ah_session_id')
+    if not sid or sid not in _ah_sessions:
+        return jsonify({'success': False, 'error': 'no active session'}), 404
+    with _ah_lock:
+        s = _ah_sessions.get(sid)
+        if s is None:
+            return jsonify({'success': False, 'error': 'no active session'}), 404
+        try:
+            s['actions'] = []
+        except Exception:
+            s['actions'] = []
+    return jsonify({'success': True, 'session_id': sid, 'count': 0})
+
+@autoheal_bp.route('/api/autoheal/reset', methods=['POST'])
+def autoheal_reset():
+    sid = (request.get_json() or {}).get('session_id') or session.get('ah_session_id')
+    if not sid or sid not in _ah_sessions:
+        return jsonify({'success': False, 'error': 'no active session'}), 404
+    with _ah_lock:
+        s = _ah_sessions.get(sid)
+        # Attempt to close all resources
+        try:
+            if s and s.get('context'):
+                s['context'].close()
+        except Exception:
+            pass
+        try:
+            if s and s.get('browser'):
+                s['browser'].close()
+        except Exception:
+            pass
+        try:
+            if s and s.get('pw'):
+                s['pw'].stop()
+        except Exception:
+            pass
+        # Remove the session entirely
+        try:
+            _ah_sessions.pop(sid, None)
+        finally:
+            session.pop('ah_session_id', None)
+    return jsonify({'success': True})
+
+@autoheal_bp.route('/api/autoheal/stop', methods=['POST'])
+def autoheal_stop():
+    sid = (request.get_json() or {}).get('session_id') or session.get('ah_session_id')
+    if not sid or sid not in _ah_sessions:
+        return jsonify({'success': False, 'error': 'no active session'}), 404
+    with _ah_lock:
+        s = _ah_sessions.get(sid)
+        try:
+            if s:
+                # Close browser resources but retain actions and session for code generation
+                try:
+                    if s.get('context'):
+                        s['context'].close()
+                except Exception:
+                    pass
+                try:
+                    if s.get('browser'):
+                        s['browser'].close()
+                except Exception:
+                    pass
+                try:
+                    if s.get('pw'):
+                        s['pw'].stop()
+                except Exception:
+                    pass
+                s['context'] = None
+                s['browser'] = None
+                s['page'] = None
+                s['pw'] = None
+                s['stopped'] = True
+        finally:
+            # Keep session id so /status and /generate-test still work after stop
+            session['ah_session_id'] = sid
+    return jsonify({'success': True, 'session_id': sid, 'count': len(s.get('actions', []))})
+
+@autoheal_bp.route('/api/autoheal/generate-test', methods=['POST'])
+def autoheal_generate_test():
+    try:
+        data = request.get_json() or {}
+        sid = data.get('session_id') or session.get('ah_session_id')
+        if not sid or sid not in _ah_sessions:
+            return jsonify({'success': False, 'error': 'no active session'}), 404
+        s = _ah_sessions[sid]
+        url = s['url']
+        # Filter only real user actions, ignore diagnostics
+        allowed = { 'click', 'fill', 'check', 'uncheck', 'select', 'enter' }
+        actions_all = s['actions']
+        def _is_actionable(a):
+            try:
+                el = (a or {}).get('element') or {}
+                tag = (el.get('tag') or '').lower()
+                return tag not in ('html', 'body')
+            except Exception:
+                return True
+        actions = [a for a in actions_all if a and a.get('type') in allowed and _is_actionable(a)]
+        # Coalesce multiple fills on the same field and collapse consecutive duplicate clicks
+        def _fp(el: dict):
+            try:
+                if not el:
+                    return ''
+                keys = ['data-testid', 'id', 'nameAttr', 'placeholder', 'ariaLabel', 'role', 'cssPath']
+                base = (el.get('tag') or '')
+                parts = [base] + [f"{k}={el.get(k)}" for k in keys if el.get(k)]
+                return '|'.join(parts)
+            except Exception:
+                return ''
+        def _coalesce(seq):
+            res = []
+            last_fill_by = {}
+            for a in seq:
+                try:
+                    t = a.get('type')
+                    el = (a.get('element') or {})
+                    f = _fp(el)
+                    if t == 'fill':
+                        if f in last_fill_by:
+                            res[last_fill_by[f]] = a
+                        else:
+                            last_fill_by[f] = len(res)
+                            res.append(a)
+                    elif t == 'click':
+                        if res and res[-1].get('type') == 'click' and _fp(res[-1].get('element') or {}) == f:
+                            continue
+                        res.append(a)
+                    else:
+                        res.append(a)
+                except Exception:
+                    res.append(a)
+            return res
+        actions = _coalesce(actions)
+        body_lines = []
+        for i, a in enumerate(actions, start=1):
+            body_lines.append(_ah_action_to_code(a, i))
+        # If no real actions, produce a minimal test with guidance
+        if not body_lines:
+            body_lines = ["  // No user interactions were captured. Try interacting with elements in the main page (not in cross-origin iframes)."]
+        body = "\n".join(body_lines)
+        code = f"""// Auto-generated by Simple Auto-Healing Recorder
+import {{ test, expect }} from '@playwright/test';
+
+test('Autoheal Recording', async ({{ page }}) => {{
+  await page.goto('{url}');
+{body}
+}});
+"""
+        return jsonify({'success': True, 'code': code, 'count': len(actions)})
+    except Exception as e:
+        logging.exception('autoheal_generate_test error')
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@autoheal_bp.route('/api/autoheal/export', methods=['GET'])
+def autoheal_export():
+    sid = request.args.get('session_id') or session.get('ah_session_id')
+    if not sid or sid not in _ah_sessions:
+        return jsonify({'success': False, 'error': 'no active session'}), 404
+    s = _ah_sessions[sid]
+    # Build registry from stored elements or actions
+    registry = s.get('elements', {}).copy()
+    if not registry:
+        for a in s.get('actions', []):
+            snap = (a or {}).get('element') or {}
+            ek = _ah_element_key(snap)
+            if not ek:
+                continue
+            if ek not in registry:
+                registry[ek] = {
+                    'key': ek,
+                    'name': _ah_element_name(snap),
+                    'snapshot': snap,
+                    'locators': _ah_build_locators(snap),
+                }
+    # Ensure page/user_name fields are included if present in session elements
+    out = []
+    for ek, entry in registry.items():
+        e = entry.copy()
+        try:
+            ses_entry = (s.get('elements') or {}).get(ek) or {}
+            if 'page' in ses_entry:
+                e['page'] = ses_entry.get('page')
+            if 'user_name' in ses_entry:
+                e['user_name'] = ses_entry.get('user_name')
+        except Exception:
+            pass
+        out.append(e)
+    return jsonify({'success': True, 'elements': out, 'count': len(out)})
+
+@autoheal_bp.route('/api/autoheal/select', methods=['POST'])
+def autoheal_select():
+    try:
+        data = request.get_json() or {}
+        sid = data.get('session_id') or session.get('ah_session_id')
+        if not sid or sid not in _ah_sessions:
+            return jsonify({'success': False, 'error': 'no active session'}), 404
+        snap = data.get('snapshot') or {}
+        ek = _ah_element_key(snap)
+        if not ek:
+            return jsonify({'success': False, 'error': 'invalid snapshot'}), 400
+        with _ah_lock:
+            s = _ah_sessions.get(sid) or {}
+            reg = s.setdefault('elements', {})
+            prev = reg.get(ek) or {}
+            entry = {
+                'key': ek,
+                'name': _ah_element_name(snap),
+                'snapshot': snap,
+                'locators': _ah_build_locators(snap),
+            }
+            # Preserve existing page and user_name assignments if any
+            if 'page' in prev:
+                entry['page'] = prev.get('page')
+            if 'user_name' in prev:
+                entry['user_name'] = prev.get('user_name')
+            reg[ek] = entry
+        return jsonify({'success': True, 'key': ek, 'count': len(reg)})
+    except Exception as e:
+        logging.exception('autoheal_select error')
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@autoheal_bp.route('/api/autoheal/deselect', methods=['POST'])
+def autoheal_deselect():
+    try:
+        data = request.get_json() or {}
+        sid = data.get('session_id') or session.get('ah_session_id')
+        if not sid or sid not in _ah_sessions:
+            return jsonify({'success': False, 'error': 'no active session'}), 404
+        snap = data.get('snapshot') or {}
+        ek = _ah_element_key(snap)
+        if not ek:
+            return jsonify({'success': False, 'error': 'invalid snapshot'}), 400
+        with _ah_lock:
+            s = _ah_sessions.get(sid) or {}
+            reg = s.setdefault('elements', {})
+            reg.pop(ek, None)
+            cnt = len(reg)
+        return jsonify({'success': True, 'key': ek, 'count': cnt})
+    except Exception as e:
+        logging.exception('autoheal_deselect error')
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+def _ah_sanitize_ident(name: str) -> str:
+    ident = re.sub(r"[^a-zA-Z0-9_]+", "_", name or '').strip('_') or 'element'
+    if ident[0:1].isdigit():
+        ident = 'el_' + ident
+    return ident
+
+def _ah_build_ident(entry: dict) -> str:
+    # Combine page and user-provided name when available; fallback to auto name
+    page = (entry or {}).get('page')
+    user = (entry or {}).get('user_name') or (entry or {}).get('name') or 'element'
+    if page:
+        return _ah_sanitize_ident(f"{page}_{user}")
+    return _ah_sanitize_ident(user)
+
+def _ah_require_all_named(reg):
+    missing = []
+    for ek, e in (reg or {}).items():
+        if not (e.get('page') and e.get('user_name')):
+            missing.append(ek)
+    return (len(missing) == 0, missing)
+
+def _ah_generate_pom(sid: str, lang: str = 'ts') -> str:
+    s = _ah_sessions[sid]
+    url = s.get('url') or ''
+    from urllib.parse import urlparse
+    host = (urlparse(url).hostname or 'recorded').split('.')
+    base = ''.join([p.capitalize() for p in host if p]) or 'Recorded'
+    class_name = f'{base}Page'
+    # Collect elements
+    reg = s.get('elements') or {}
+    if not reg:
+        for a in s.get('actions', []):
+            snap = (a or {}).get('element') or {}
+            ek = _ah_element_key(snap)
+            if not ek:
+                continue
+            reg[ek] = {
+                'key': ek,
+                'name': _ah_element_name(snap),
+                'snapshot': snap,
+                'loc_chain': _ah_loc_chain_for_pom(snap, 'this.page'),
+            }
+    else:
+        # enrich with loc_chain
+        for ek, entry in reg.items():
+            snap = entry.get('snapshot') or {}
+            entry['loc_chain'] = _ah_loc_chain_for_pom(snap, 'this.page')
+
+    # Enforce naming (page + user_name) for all elements prior to generation
+    ok, missing = _ah_require_all_named(reg)
+    if not ok:
+        raise ValueError(f"All elements must be named before download. Missing assignments for {len(missing)} element(s).")
+
+    lines = []
+    if lang == 'ts':
+        lines.append("import { Page, Locator } from '@playwright/test';")
+        lines.append("")
+        lines.append(f"export class {class_name} {{")
+        lines.append("  constructor(public page: Page) {}")
+    else:
+        lines.append(f"export class {class_name} {{")
+        lines.append("  constructor(page) { this.page = page; }")
+    # element getters
+    for ek, entry in reg.items():
+        # identifier is Page_Element
+        ident = _ah_build_ident(entry)
+        # primary getter
+        loc_chain = entry.get('loc_chain') or "this.page.locator('[data-qa-missing]')"
+        if lang == 'ts':
+            lines.append(f"  get {ident}(): Locator {{ return {loc_chain}; }}")
+        else:
+            lines.append(f"  get {ident}() {{ return {loc_chain}; }}")
+        # async fallback resolver method
+        locs = _ah_loc_list_for_pom(entry.get('snapshot') or {}, 'this.page')
+        arr = ', '.join(locs) if locs else "this.page.locator('[data-qa-missing]')"
+        bbox = (entry.get('snapshot') or {}).get('bbox') or None
+        bbox_json = json.dumps(bbox) if bbox else 'null'
+        if lang == 'ts':
+            lines.append(f"  async {ident}$(timeoutMs: number = 2000): Promise<Locator> {{")
+            lines.append(f"    const cands: Locator[] = [{arr}];")
+            lines.append("    for (const loc of cands) { try { if ((await loc.count()) > 0) return loc; } catch(_) {} }")
+            lines.append(f"    try {{ return await this.aiFindByVisual({{ key: '{ek}', bbox: {bbox_json} }}); }} catch(_) {{}}")
+            lines.append("    return cands[0];")
+            lines.append("  }")
+        else:
+            lines.append(f"  async {ident}$(timeoutMs = 2000) {{")
+            lines.append(f"    const cands = [{arr}];")
+            lines.append("    for (const loc of cands) { try { if ((await loc.count()) > 0) return loc; } catch(_) {} }")
+            lines.append(f"    try {{ return await this.aiFindByVisual({{ key: '{ek}', bbox: {bbox_json} }}); }} catch(_) {{}}")
+            lines.append("    return cands[0];")
+            lines.append("  }")
+    # AI visual stub
+    if lang == 'ts':
+        lines.append("  protected async aiFindByVisual(meta: { key: string; bbox?: { x:number;y:number;width:number;height:number } }): Promise<Locator> {")
+    else:
+        lines.append("  async aiFindByVisual(meta) {")
+    lines.append("    throw new Error('AI visual locator not configured. Plug-in your provider here.');")
+    lines.append("  }")
+    lines.append("}")
+    return "\n".join(lines)
+
+@autoheal_bp.route('/api/autoheal/pom', methods=['GET'])
+def autoheal_pom():
+    sid = request.args.get('session_id') or session.get('ah_session_id')
+    lang = (request.args.get('lang') or 'ts').lower()
+    if lang not in ('ts','js'):
+        lang = 'ts'
+    if not sid or sid not in _ah_sessions:
+        return jsonify({'success': False, 'error': 'no active session'}), 404
+    # Validate that all elements are named before allowing download
+    s = _ah_sessions[sid]
+    reg = s.get('elements') or {}
+    ok, missing = _ah_require_all_named(reg)
+    if not ok:
+        return jsonify({'success': False, 'error': f'All elements must be named (page + name). Pending: {len(missing)}'}), 400
+    content = _ah_generate_pom(sid, lang)
+    fname = 'RecordedPage.' + ('ts' if lang=='ts' else 'js')
+    from flask import Response
+    resp = Response(content, mimetype='text/plain')
+    resp.headers['Content-Disposition'] = f'attachment; filename={fname}'
+    return resp
+
+@autoheal_bp.route('/api/autoheal/pom/element', methods=['GET'])
+def autoheal_pom_element():
+    sid = request.args.get('session_id') or session.get('ah_session_id')
+    key = request.args.get('key') or ''
+    lang = (request.args.get('lang') or 'ts').lower()
+    if lang not in ('ts','js'):
+        lang = 'ts'
+    if not sid or sid not in _ah_sessions:
+        return jsonify({'success': False, 'error': 'no active session'}), 404
+    s = _ah_sessions[sid]
+    reg = s.get('elements') or {}
+    entry = reg.get(key)
+    if not entry:
+        return jsonify({'success': False, 'error': 'element not found'}), 404
+    # Enforce naming for this element
+    if not (entry.get('page') and entry.get('user_name')):
+        return jsonify({'success': False, 'error': 'element must have page and name assigned'}), 400
+    ident = _ah_build_ident(entry)
+    loc_chain = _ah_loc_chain_for_pom(entry.get('snapshot') or {}, 'this.page')
+    # build both getter and async fallback method
+    locs = _ah_loc_list_for_pom(entry.get('snapshot') or {}, 'this.page')
+    arr = ', '.join(locs) if locs else "this.page.locator('[data-qa-missing]')"
+    bbox = (entry.get('snapshot') or {}).get('bbox') or None
+    bbox_json = json.dumps(bbox) if bbox else 'null'
+    if lang == 'ts':
+        content = (
+            f"get {ident}(): Locator {{ return {loc_chain}; }}\n"
+            f"async {ident}$(timeoutMs: number = 2000): Promise<Locator> {{ const cands: Locator[] = [{arr}]; for (const loc of cands) {{ try {{ if ((await loc.count()) > 0) return loc; }} catch(_) {{}} }} try {{ return await this.aiFindByVisual({{ key: '{key}', bbox: {bbox_json} }}); }} catch(_) {{}} return cands[0]; }}\n"
+        )
+    else:
+        content = (
+            f"get {ident}() {{ return {loc_chain}; }}\n"
+            f"async {ident}$(timeoutMs = 2000) {{ const cands = [{arr}]; for (const loc of cands) {{ try {{ if ((await loc.count()) > 0) return loc; }} catch(_) {{}} }} try {{ return await this.aiFindByVisual({{ key: '{key}', bbox: {bbox_json} }}); }} catch(_) {{}} return cands[0]; }}\n"
+        )
+    from flask import Response
+    resp = Response(content, mimetype='text/plain')
+    ext = 'ts' if lang == 'ts' else 'js'
+    resp.headers['Content-Disposition'] = f'attachment; filename={ident}.{ext}'
+    return resp
+
+@autoheal_bp.route('/api/autoheal/pages', methods=['GET', 'POST'])
+def autoheal_pages():
+    sid = (request.args.get('session_id') if request.method == 'GET' else (request.get_json() or {}).get('session_id')) or session.get('ah_session_id')
+    if not sid or sid not in _ah_sessions:
+        return jsonify({'success': False, 'error': 'no active session'}), 404
+    if request.method == 'GET':
+        pages = _ah_sessions[sid].get('pages') or []
+        return jsonify({'success': True, 'pages': pages})
+    data = request.get_json() or {}
+    pages = data.get('pages') or []
+    if not isinstance(pages, list):
+        return jsonify({'success': False, 'error': 'pages must be a list'}), 400
+    # sanitize, dedupe, keep order
+    cleaned = []
+    seen = set()
+    for p in pages:
+        if not isinstance(p, str):
+            continue
+        v = p.strip()
+        if not v:
+            continue
+        if v.lower() in seen:
+            continue
+        seen.add(v.lower())
+        cleaned.append(v)
+    with _ah_lock:
+        _ah_sessions[sid]['pages'] = cleaned
+    return jsonify({'success': True, 'pages': cleaned})
+
+@autoheal_bp.route('/api/autoheal/elements/names', methods=['POST'])
+def autoheal_elements_names():
+    data = request.get_json() or {}
+    sid = data.get('session_id') or session.get('ah_session_id')
+    if not sid or sid not in _ah_sessions:
+        return jsonify({'success': False, 'error': 'no active session'}), 404
+    assigns = data.get('assignments') or {}
+    if not isinstance(assigns, dict):
+        return jsonify({'success': False, 'error': 'assignments must be an object'}), 400
+    with _ah_lock:
+        s = _ah_sessions[sid]
+        reg = s.get('elements') or {}
+        updated = 0
+        for ek, payload in assigns.items():
+            if ek not in reg:
+                continue
+            if not isinstance(payload, dict):
+                continue
+            page = (payload.get('page') or '').strip()
+            name = (payload.get('name') or '').strip()
+            if not page or not name:
+                continue
+            reg[ek]['page'] = page
+            reg[ek]['user_name'] = name
+            updated += 1
+    return jsonify({'success': True, 'updated': updated})
+
+@autoheal_bp.route('/api/autoheal/select', methods=['POST'])
+def autoheal_select_from_snapshot():
+    data = request.get_json() or {}
+    sid = data.get('session_id') or session.get('ah_session_id')
+    if not sid or sid not in _ah_sessions:
+        return jsonify({'success': False, 'error': 'no active session'}), 404
+    snap = data.get('snapshot') or {}
+    if not isinstance(snap, dict) or not snap:
+        return jsonify({'success': False, 'error': 'invalid snapshot'}), 400
+    ek = _ah_element_key(snap)
+    if not ek:
+        return jsonify({'success': False, 'error': 'could not derive element key'}), 400
+    entry = {
+        'key': ek,
+        'name': _ah_element_name(snap),
+        'snapshot': snap,
+        'locators': _ah_build_locators(snap),
+        'loc_chain': _ah_loc_chain_for_pom(snap, 'this.page'),
+    }
+    with _ah_lock:
+        s = _ah_sessions[sid]
+        reg = s.get('elements') or {}
+        reg[ek] = entry
+        s['elements'] = reg
+    return jsonify({'success': True, 'element': entry})
+
+@autoheal_bp.route('/autoheal/html')
+def autoheal_html_page():
+    # Standalone HTML Extractor UI (separate from recorder)
+    return render_template('autoheal-html.html')
+
+@autoheal_bp.route('/api/autoheal/session', methods=['POST'])
+def autoheal_create_session():
+    # Create a fresh session for HTML mode (or any headless extraction) without launching Playwright
+    import uuid
+    sid = uuid.uuid4().hex
+    with _ah_lock:
+        _ah_sessions[sid] = {
+            'created_at': time.time(),
+            'url': None,
+            'browser': None,
+            'context': None,
+            'page': None,
+            'actions': [],
+            'elements': {},
+            'pages': [],
+        }
+    session['ah_session_id'] = sid
+    return jsonify({'success': True, 'session_id': sid})
+
 from urllib.parse import urlparse, urlencode, parse_qs, urljoin
 import threading
 import time
@@ -95,6 +1655,9 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 CORS(app, supports_credentials=True)
 db = SQLAlchemy(app)
 
+# Register blueprints
+app.register_blueprint(autoheal_bp)
+
 # Define Jira OAuth URLs
 JIRA_AUTH_URL = 'https://auth.atlassian.com/authorize'
 JIRA_TOKEN_URL = 'https://auth.atlassian.com/oauth/token'
@@ -110,10 +1673,12 @@ public_routes = [
     '/',  # Home page only
     '/home',  # Home redirect (dashboard is now public for welcome screen)
     '/index',  # Home redirect
+    '/autoheal',  # Simple Auto-Healing Recorder page
     '/api/jira/oauth/login',
     '/api/jira/oauth/callback',
     '/api/jira/status',
     '/api/jira/logout',  # Allow logout without authentication
+    '/api/autoheal/',  # Allow all autoheal APIs without Jira auth
     '/static/',  # CSS, JS, and other static assets
     '/favicon.ico'
 ]
@@ -139,6 +1704,39 @@ def jira_auth_required(f):
         
         return f(*args, **kwargs)
     return decorated_function
+
+
+# Simple admin decorator using allowlisted emails in env ADMIN_EMAILS (comma-separated)
+def admin_required(f):
+    """Restrict access to admin users based on email allowlist.
+    Set ADMIN_EMAILS env var to comma-separated list of allowed emails.
+    """
+    @wraps(f)
+    def wrapper(*args, **kwargs):
+        try:
+            admin_csv = os.getenv('ADMIN_EMAILS', '')
+            allow = [e.strip().lower() for e in admin_csv.split(',') if e.strip()]
+            user_email = (session.get('jira_user_email') or '').lower()
+            if allow and user_email in allow:
+                return f(*args, **kwargs)
+            # If no allowlist configured, deny by default
+            return jsonify({'error': 'Admin access required'}), 403
+        except Exception:
+            return jsonify({'error': 'Admin access required'}), 403
+    return wrapper
+
+@app.context_processor
+def inject_admin_flag():
+    """Inject a boolean `is_admin` into templates based on ADMIN_EMAILS allowlist.
+    Returns False if no allowlist is configured or the user is not in the list.
+    """
+    try:
+        admin_csv = os.getenv('ADMIN_EMAILS', '')
+        allow = [e.strip().lower() for e in admin_csv.split(',') if e.strip()]
+        user_email = (session.get('jira_user_email') or '').lower()
+        return { 'is_admin': bool(allow and user_email in allow) }
+    except Exception:
+        return { 'is_admin': False }
 
 @app.before_request
 def check_jira_auth():
@@ -170,7 +1768,7 @@ def check_jira_auth():
         logger.info(f"No Jira token found, redirecting to home page for path: {request.path}")
         
         # For API requests, return 401 Unauthorized instead of redirecting
-        if is_api_request and not request.path.startswith('/api/jira/'):
+        if is_api_request:
             return jsonify({
                 'error': 'Jira authentication required', 
                 'login_url': url_for('index', _external=True)
@@ -188,7 +1786,7 @@ def check_jira_auth():
             logger.info(f"Token refresh failed, redirecting to home page for path: {request.path}")
             
             # For API requests, return 401 Unauthorized
-            if is_api_request and not request.path.startswith('/api/jira/'):
+            if is_api_request:
                 return jsonify({
                     'error': 'Jira authentication expired', 
                     'login_url': url_for('index', _external=True)
@@ -746,6 +2344,26 @@ class TestContext(db.Model):
     
     def __repr__(self):
         return f'<TestContext {self.name}>'
+
+# Jira user directory (for admin search and autocomplete)
+class JiraUser(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    account_id = db.Column(db.String(100), unique=True, nullable=False, index=True)
+    display_name = db.Column(db.String(200), index=True)
+    email = db.Column(db.String(200), index=True)
+    avatar_48 = db.Column(db.String(500))
+    active = db.Column(db.Boolean, default=True)
+    time_zone = db.Column(db.String(100))
+    synced_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    def to_dict(self):
+        return {
+            'accountId': self.account_id,
+            'displayName': self.display_name,
+            'email': self.email,
+            'avatar48': self.avatar_48,
+            'active': self.active,
+        }
 
 # --- TEMP: Create all tables if not present ---
 with app.app_context():
@@ -1313,21 +2931,21 @@ def execute_graphql():
         logger.error(f"Error executing GraphQL query: {str(e)}")
         return jsonify({'error': f'Error: {str(e)}'}), 500
 
-@app.route('/ui-recorder')
-def ui_recorder():
-    return render_template('ui-recorder.html')
+# @app.route('/ui-recorder')
+# def ui_recorder():
+#     return render_template('ui-recorder.html')  # Template missing
 
-@app.route('/recorder-target')
-def recorder_target():
-    """
-    Single-tab recording interface that shows steps in real-time.
-    """
-    target_url = request.args.get('url', 'https://example.com')
-    response = make_response(render_template('recorder-target.html', target_url=target_url))
-    # Add headers to allow iframe embedding for the recorder-target page itself
-    response.headers['X-Frame-Options'] = 'ALLOWALL'
-    response.headers['Access-Control-Allow-Origin'] = '*'
-    return response
+# @app.route('/recorder-target')
+# def recorder_target():
+#     """
+#     Single-tab recording interface that shows steps in real-time.
+#     """
+#     target_url = request.args.get('url', 'https://example.com')
+#     response = make_response(render_template('recorder-target.html', target_url=target_url))  # Template missing
+#     # Add headers to allow iframe embedding for the recorder-target page itself
+#     response.headers['X-Frame-Options'] = 'ALLOWALL'
+#     response.headers['Access-Control-Allow-Origin'] = '*'
+#     return response
 
 @app.route('/api/signup', methods=['POST'])
 def signup():
@@ -1536,7 +3154,23 @@ def generate_e2e_zip():
 @app.route('/test-generator')
 @jira_auth_required
 def test_generator():
+    # Redirect to individual by default for backward compatibility
+    return redirect('/test-generator/individual', code=301)
+
+@app.route('/test-generator/individual')
+@jira_auth_required
+def test_generator_individual():
     return render_template('manual-test-generator.html', active_tab='manual', is_development=FLASK_ENV == 'development')
+
+@app.route('/test-generator/v2')
+@jira_auth_required
+def test_generator_v2():
+    return render_template('manual-test-generator-v2.html', active_tab='manual', is_development=FLASK_ENV == 'development')
+
+@app.route('/test-generator/bulk')
+@jira_auth_required
+def test_generator_bulk():
+    return render_template('test-generator-bulk.html', active_tab='manual', is_development=FLASK_ENV == 'development')
 
 # Keep old route for backward compatibility
 @app.route('/manual-co-test')
@@ -2274,7 +3908,8 @@ def direct_recorder():
     # Clean up the code
     bookmarklet_code = "javascript:" + bookmarklet_code.replace('\n', '').replace('    ', '').replace('  ', '')
     
-    return render_template('direct-recorder.html', bookmarklet=bookmarklet_code)
+    # return render_template('direct-recorder.html', bookmarklet=bookmarklet_code)  # Template missing
+    return redirect('/static/record.html')  # Redirect to static recorder instead
 
 @app.route('/simple-recorder')
 def simple_recorder():
@@ -2283,13 +3918,13 @@ def simple_recorder():
     """
     return redirect('/static/record.html')
 
-@app.route('/selenium-recorder')
-def selenium_recorder():
-    return render_template('selenium-recorder.html')
+# @app.route('/selenium-recorder')
+# def selenium_recorder():
+#     return render_template('selenium-recorder.html')  # Template missing
 
-@app.route('/download-extension')
-def download_extension():
-    return render_template('download_extension.html')
+# @app.route('/download-extension')
+# def download_extension():
+#     return render_template('download_extension.html')  # Template missing
 
 @app.route('/dom-extractor')
 def dom_extractor():
@@ -3000,7 +4635,17 @@ def generate_testcases():
     "You are a **Senior QA Engineer** responsible for ensuring deep functional coverage across API, UI, and data workflows.\n\n"
     
     "Your task is to generate a **thorough and exhaustive list of manual test scenarios** based on the following functionality.\n"
-    "Design tests that validate functionality from every angle — core workflows, edge behaviors, data conditions, and integrations.\n"
+    "Design tests that validate functionality from every angle — core workflows, edge behaviors, data conditions, and integrations.\n\n"
+    
+    "You must rigorously apply the following **black-box functional test design techniques** when crafting scenarios (do NOT label techniques in the output; they are for internal guidance only):\n"
+    "- **Equivalence Partitioning (EP):** Identify valid/invalid input classes for every input and constraint; include at least one representative per class.\n"
+    "- **Boundary Value Analysis (BVA):** For ranges/limits (numbers, lengths, dates, counts), include just-below/at/just-above boundaries on both ends.\n"
+    "- **Decision Tables / Cause–Effect Graphing:** For rules with multiple conditions → outcomes, derive a minimal but complete set of condition combinations and expected actions.\n"
+    "- **State Transition Testing:** For workflows with states/events, cover valid transitions, invalid transitions, retries, cancellations, and time-based state changes.\n"
+    "- **Combinatorial (Pairwise / 3-wise):** For multi-parameter inputs/configs, select cases ensuring at least pairwise coverage; use 3-wise for high-risk areas (money, identity, compliance).\n"
+    "- **Syntax/Schema-Based & Contract Testing:** For APIs and structured payloads, validate against schemas (types, required/optional, enums), unknown/extra fields, and nullability.\n"
+    "- **Error Guessing / Negative Heuristics:** Include malformed inputs, large values, special characters/Unicode/whitespace-only, duplicates, rate limits, and concurrency/idempotency checks as applicable.\n"
+    "- **Property-Based Invariants (black-box lens):** Where business rules imply invariants (e.g., totals never negative), include randomized or varied data sets validating those properties.\n\n"
     
     "Each test case must be formatted as a **JSON object** with the following keys ONLY:\n"
     "- 'step': Describes the exact user/system action or precondition\n"
@@ -3019,29 +4664,31 @@ def generate_testcases():
     "You are expected to generate **30–50 well-formed test cases**, ensuring coverage in the following categories:\n\n"
     
     "🔹 **API-Level Scenarios** (if applicable):\n"
-    "- Valid/invalid payloads\n"
-    "- Required vs optional fields\n"
-    "- Status codes (200, 400, 403, 404, 500, etc.)\n"
-    "- Header behavior and auth dependencies\n"
-    "- Data returned, field types, nullability, pagination, and contract schema\n\n"
+    "- Valid/invalid payloads (EP) and boundary sizes/limits (BVA)\n"
+    "- Required vs optional fields; nullability; unknown/extra fields (schema-based)\n"
+    "- Status codes (200, 400, 401/403, 404, 409, 422, 429, 500)\n"
+    "- Header behavior, auth dependencies, and rate limiting\n"
+    "- Data returned, field types, enumerations, pagination, sorting, filtering (pairwise across params)\n"
+    "- Contract/schema conformance and backward-compatibility checks\n\n"
 
     "🔹 **UI and UX Scenarios** (if applicable):\n"
-    "- Element visibility, state changes (enabled/disabled)\n"
-    "- Input validation, field behavior, UI error/success messages\n"
-    "- Modal handling, transitions, scroll behavior, tab flow\n"
-    "- Accessibility implications (if implied)\n"
+    "- Element visibility, enabled/disabled states; default values (EP)\n"
+    "- Input validation, inline errors/success, masking/formatting; length/format BVA\n"
+    "- Modal/dialog behavior, transitions, scroll/overflow, tab order/focus\n"
+    "- Conditional rendering and calculated fields (decision tables)\n"
+    "- Accessibility implications (labels, focus order, keyboard navigation, contrast)\n\n"
 
     "🔹 **Data-Intensive Scenarios**:\n"
-    "- Input limits, boundary value tests, malformed values\n"
-    "- Data lifecycle (create, update, delete, restore)\n"
-    "- Pre-existing data states, data merging/overwrites\n"
-    "- Audit trails or log validation (if applicable)\n"
+    "- Input limits, special chars/Unicode/whitespace-only; malformed/oversized values (error guessing + BVA)\n"
+    "- Data lifecycle (create, update, delete, restore); merge/overwrite and version conflicts\n"
+    "- Concurrency, idempotency, duplicate detection; timestamps/time-zone boundaries (state/time)\n"
+    "- Audit trails/logs (if applicable): presence, accuracy, immutability\n\n"
 
     "🔹 **Negative, Role-Based, and Integration Scenarios**:\n"
-    "- Unauthorized actions, permission-denied responses\n"
-    "- Multi-role workflows (if scenario suggests)\n"
-    "- Cross-module dependencies or configuration-driven behaviors\n"
-    "- Conditional rendering, auto-calculated values, time-based rules\n\n"
+    "- Unauthorized/forbidden actions, permission matrices (decision tables)\n"
+    "- Multi-role workflows and handoffs; conditional states and time-based rules (state transitions)\n"
+    "- Cross-module/configuration-driven behaviors; feature flags/toggles (pairwise across config × role)\n"
+    "- Failure injection for dependent services (graceful degradation where applicable)\n\n"
 
     "⚠️ **Constraints:**\n"
     "- DO NOT assume anything outside the described scope (e.g., login, navigation, unrelated features)\n"
@@ -3201,7 +4848,7 @@ def jira_oauth_login():
         params = {
             "audience": "api.atlassian.com",
             "client_id": client_id,
-            "scope": "read:jira-work write:jira-work read:me",
+            "scope": "read:jira-work write:jira-work read:jira-user read:me offline_access",
             "redirect_uri": redirect_uri,
             "response_type": "code",
             "prompt": "consent"
@@ -3403,6 +5050,7 @@ def fetch_jira_issues():
 
         # Build JQL query
         jql_parts = []
+        
         
         # Handle specific issue key search (e.g., "IRA-62215")
         if search and '-' in search:
@@ -3747,77 +5395,232 @@ def jira_issues():
 @app.route('/api/jira/time-entries', methods=['GET'])
 def get_jira_time_entries():
     """Get time entries for Jira issues for a specific date"""
-    # Check if user is authenticated with Jira
-    access_token = session.get('jira_access_token')
-    if not access_token:
-        return jsonify({'error': 'Not authenticated with Jira'}), 401
-    
-    # Get Jira cloud ID from session
-    cloud_id = session.get('jira_cloud_id')
-    if not cloud_id:
-        return jsonify({'error': 'Jira cloud ID not found in session'}), 400
+    logger.info("=== Time Entries API Called ===")
     
     # Get date filter from query parameters
     date_filter = request.args.get('date', '')
+    logger.info(f"Date filter: {date_filter}")
     
-    # Prepare API request
+    # Use hardcoded credentials like team_manager - check team_manager .env first
+    jira_email = "kishore.murkhanad@upgrad.com"
+    jira_token = os.getenv('JIRA_API_TOKEN')
+    
+    # If not found, try loading from team_manager directory
+    if not jira_token:
+        import sys
+        sys.path.append('team_manager')
+        try:
+            from dotenv import load_dotenv
+            load_dotenv('team_manager/.env')
+            jira_token = os.getenv('JIRA_API_TOKEN')
+            logger.info(f"Loaded token from team_manager .env: {bool(jira_token)}")
+        except:
+            logger.error("Could not load team_manager .env file")
+    
+    jira_base_url = "https://upgrad-jira.atlassian.net"
+    
+    logger.info(f"Environment check - JIRA_API_TOKEN exists: {bool(jira_token)}")
+    if jira_token:
+        logger.info(f"Token length: {len(jira_token)}")
+    
+    if jira_email and jira_token:
+        logger.info("Using basic authentication for time entries (primary method)")
+        return get_time_entries_basic_auth(jira_email, jira_token, jira_base_url)
+    else:
+        logger.error(f"Missing credentials - Email: {jira_email}, Token available: {bool(jira_token)}")
+        return jsonify({'error': 'JIRA_API_TOKEN environment variable not set'}), 500
+    
+    # This code should never be reached now
+    return jsonify({'error': 'Unexpected error in authentication flow'}), 500
+
+
+def _extract_comment_text(comment):
+    """Best-effort conversion of Jira worklog comment to plain text.
+    Jira may return ADF (Atlassian Document Format) objects or plain strings.
+    """
+    try:
+        # Plain string already
+        if isinstance(comment, str):
+            return comment
+
+        # ADF object
+        if isinstance(comment, dict):
+            def walk(node):
+                texts = []
+                if isinstance(node, dict):
+                    node_type = node.get('type')
+                    # Collect text nodes
+                    if node_type == 'text' and 'text' in node:
+                        texts.append(node['text'])
+                    # Treat hard breaks as newlines
+                    if node_type == 'hardBreak':
+                        texts.append('\n')
+                    # Recurse into children
+                    for child in node.get('content', []):
+                        texts.extend(walk(child))
+                elif isinstance(node, list):
+                    for child in node:
+                        texts.extend(walk(child))
+                return texts
+
+            parts = walk(comment)
+            return ''.join(parts).strip()
+    except Exception as e:
+        try:
+            logger.warning(f"Failed to parse worklog comment: {e}")
+        except Exception:
+            pass
+    return ''
+
+def get_time_entries_basic_auth(jira_email, jira_token, jira_base_url):
+    """Get time entries using basic authentication - matching team_manager implementation"""
+    date_filter = request.args.get('date', '')
+    
+    try:
+        import requests
+        from requests.auth import HTTPBasicAuth
+        auth = HTTPBasicAuth(jira_email, jira_token)
+        headers = {"Accept": "application/json"}
+        
+        # Get current user info
+        user_url = f'{jira_base_url}/rest/api/3/myself'
+        logger.info(f"Testing basic auth with URL: {user_url}")
+        logger.info(f"Using email: {jira_email}")
+        
+        user_response = requests.get(user_url, headers=headers, auth=auth, timeout=30)
+        logger.info(f"Basic auth response status: {user_response.status_code}")
+        
+        if user_response.status_code != 200:
+            logger.error(f"Basic auth failed: {user_response.text}")
+            return jsonify({'error': f'Failed to authenticate with Jira (status: {user_response.status_code})'}), 401
+            
+        user_data = user_response.json()
+        user_account_id = user_data.get('accountId')
+        
+        # Build JQL for worklogs - exactly like team_manager
+        if date_filter:
+            worklog_jql = f'worklogAuthor = "{user_account_id}" AND worklogDate = "{date_filter}"'
+        else:
+            worklog_jql = f'worklogAuthor = "{user_account_id}"'
+        
+        # Search for issues with worklogs - exactly like team_manager
+        search_url = f'{jira_base_url}/rest/api/3/search'
+        search_params = {
+            'jql': worklog_jql,
+            'fields': 'worklog,summary',
+            'maxResults': 1000
+        }
+        
+        search_response = requests.get(search_url, headers=headers, params=search_params, auth=auth, timeout=30)
+        
+        if search_response.status_code != 200:
+            return jsonify({'error': 'Failed to search for issues with worklogs'}), 500
+        
+        search_data = search_response.json()
+        all_time_entries = []
+        total_seconds = 0
+        
+        # Process each issue and extract relevant worklogs
+        for issue in search_data.get('issues', []):
+            issue_key = issue.get('key', 'Unknown')
+            issue_summary = issue.get('fields', {}).get('summary', 'No summary available')
+            
+            worklog_data = issue.get('fields', {}).get('worklog', {})
+            worklogs = worklog_data.get('worklogs', [])
+            
+            for worklog in worklogs:
+                worklog_author_id = worklog.get('author', {}).get('accountId', '')
+                worklog_started = worklog.get('started', '')
+                
+                if worklog_author_id == user_account_id:
+                    if date_filter:
+                        worklog_date = worklog_started.split('T')[0] if 'T' in worklog_started else worklog_started
+                        if worklog_date != date_filter:
+                            continue
+                    
+                    time_spent_seconds = worklog.get('timeSpentSeconds', 0)
+                    total_seconds += time_spent_seconds
+                    hours = time_spent_seconds // 3600
+                    minutes = (time_spent_seconds % 3600) // 60
+                    time_spent_display = f"{hours}h {minutes}m" if hours > 0 else f"{minutes}m"
+                    
+                    comment_raw = worklog.get('comment', '')
+                    comment_text = _extract_comment_text(comment_raw)
+                    all_time_entries.append({
+                        'id': worklog.get('id', ''),
+                        'issueKey': issue_key,
+                        'issueSummary': issue_summary,
+                        'timeSpent': time_spent_display,
+                        'timeSpentSeconds': time_spent_seconds,
+                        'comment': comment_text,
+                        'started': worklog_started,
+                        'author': worklog.get('author', {}).get('displayName', 'User')
+                    })
+        
+        # Aggregate by issue and sort by latest started
+        aggregated_entries = _aggregate_time_entries(all_time_entries)
+        aggregated_entries.sort(key=lambda x: x.get('started', ''), reverse=True)
+        
+        # Calculate total time display
+        total_hours = total_seconds // 3600
+        total_minutes = (total_seconds % 3600) // 60
+        total_time_display = f"{total_hours}h {total_minutes}m" if total_hours > 0 else f"{total_minutes}m"
+        
+        return jsonify({
+            'timeEntries': aggregated_entries,
+            'totalTimeSeconds': total_seconds,
+            'totalTimeDisplay': total_time_display,
+            'date': date_filter,
+            'entriesCount': len(aggregated_entries)
+        })
+        
+    except Exception as e:
+        logger.error(f"Error in basic auth time entries: {str(e)}")
+        return jsonify({'error': f'Failed to fetch time entries: {str(e)}'}), 500
+
+
+def get_time_entries_oauth(access_token, cloud_id, date_filter):
+    """Get time entries using OAuth authentication"""
+    logger.info(f"OAuth time entries - Token: {access_token[:20]}...")
+    logger.info(f"OAuth time entries - Cloud ID: {cloud_id}")
+    
     headers = {
         'Authorization': f'Bearer {access_token}',
         'Accept': 'application/json'
     }
     
     try:
-        # Get the current user's account ID for filtering
-        user_email = session.get('jira_user_email')
-        if not user_email:
-            return jsonify({'error': 'User email not found in session'}), 400
+        # Get current user info directly instead of searching
+        myself_url = f'https://api.atlassian.com/ex/jira/{cloud_id}/rest/api/3/myself'
+        logger.info(f"Calling myself endpoint: {myself_url}")
         
-        # First, get the user's account ID
-        user_url = f'https://api.atlassian.com/ex/jira/{cloud_id}/rest/api/3/user/search?query={user_email}'
-        logger.info(f"Searching for user with URL: {user_url}")
-        user_response = requests.get(user_url, headers=headers, timeout=30)
+        user_response = requests.get(myself_url, headers=headers, timeout=30)
+        logger.info(f"Myself response status: {user_response.status_code}")
         
-        logger.info(f"User search response status: {user_response.status_code}")
         if user_response.status_code != 200:
-            logger.error(f"User search failed: {user_response.text}")
-            return jsonify({
-                'timeEntries': [],
-                'total': 0,
-                'date': date_filter,
-                'error': f'Failed to get user information from Jira (status: {user_response.status_code})',
-                'debug_info': {
-                    'user_url': user_url,
-                    'response_text': user_response.text[:500],  # First 500 chars
-                    'user_email': user_email,
-                    'cloud_id': cloud_id
-                }
-            }), 200
+            logger.error(f"Myself endpoint failed: {user_response.text}")
+            # If OAuth fails, try basic auth as fallback
+            jira_email = os.getenv('JIRA_EMAIL')
+            jira_token = os.getenv('JIRA_API_TOKEN')
+            jira_base_url = os.getenv('JIRA_BASE_URL', 'https://upgrad-jira.atlassian.net')
+            
+            if jira_email and jira_token:
+                logger.info("OAuth failed, falling back to basic auth")
+                return get_time_entries_basic_auth(jira_email, jira_token, jira_base_url)
+            
+            return jsonify({'error': f'Failed to get user information (status: {user_response.status_code})'}), 401
             
         user_data = user_response.json()
-        logger.info(f"User search returned {len(user_data) if user_data else 0} users")
+        user_account_id = user_data.get('accountId')
         
-        if not user_data:
-            return jsonify({
-                'timeEntries': [],
-                'total': 0,
-                'date': date_filter,
-                'error': 'User not found in Jira',
-                'debug_info': {
-                    'user_email': user_email,
-                    'search_response': user_data
-                }
-            }), 200
-            
-        user_account_id = user_data[0]['accountId']
-        logger.info(f"Found user account ID: {user_account_id}")
+        if not user_account_id:
+            return jsonify({'error': 'Could not get user account ID'}), 400
         
         # Build JQL to find issues with worklogs by the current user
         if date_filter:
-            # Search for issues with worklogs by this user on the specified date
-            worklog_jql = f'worklogAuthor = "{user_account_id}" AND worklogDate = "{date_filter}"'
+            worklog_jql = f'worklogAuthor = currentUser() AND worklogDate = "{date_filter}"'
         else:
-            # Get recent worklogs by this user
-            worklog_jql = f'worklogAuthor = "{user_account_id}"'
+            worklog_jql = f'worklogAuthor = currentUser()'
         
         # Search for issues with worklogs
         search_url = f'https://api.atlassian.com/ex/jira/{cloud_id}/rest/api/3/search'
@@ -3831,71 +5634,69 @@ def get_jira_time_entries():
         search_response = requests.get(search_url, headers=headers, params=search_params, timeout=30)
         
         if search_response.status_code != 200:
-            return jsonify({'error': 'Failed to search for issues with worklogs'}), 500
+            logger.error(f"Worklog search failed: {search_response.status_code} - {search_response.text}")
+            return jsonify({'error': f'Failed to search for issues with worklogs (status: {search_response.status_code})'}), 500
         
         search_data = search_response.json()
         all_time_entries = []
+        total_seconds = 0
         
         # Process each issue and extract relevant worklogs
         for issue in search_data.get('issues', []):
-            issue_key = issue['key']
-            issue_summary = issue['fields']['summary']
+            issue_key = issue.get('key', 'Unknown')
+            issue_summary = issue.get('fields', {}).get('summary', 'No summary available')
             
-            # Get worklogs for this issue
-            worklog_data = issue['fields'].get('worklog', {})
+            worklog_data = issue.get('fields', {}).get('worklog', {})
             worklogs = worklog_data.get('worklogs', [])
             
-            # Filter worklogs by author and date if specified
             for worklog in worklogs:
                 worklog_author_id = worklog.get('author', {}).get('accountId', '')
                 worklog_started = worklog.get('started', '')
                 
-                # Only include worklogs by the current user
                 if worklog_author_id == user_account_id:
-                    # If date filter is specified, check if worklog is on that date
                     if date_filter:
                         worklog_date = worklog_started.split('T')[0] if 'T' in worklog_started else worklog_started
                         if worklog_date != date_filter:
                             continue
                     
                     time_spent_seconds = worklog.get('timeSpentSeconds', 0)
+                    total_seconds += time_spent_seconds
                     hours = time_spent_seconds // 3600
                     minutes = (time_spent_seconds % 3600) // 60
                     time_spent_display = f"{hours}h {minutes}m" if hours > 0 else f"{minutes}m"
                     
+                    comment_raw = worklog.get('comment', '')
+                    comment_text = _extract_comment_text(comment_raw)
                     all_time_entries.append({
                         'id': worklog.get('id', ''),
                         'issueKey': issue_key,
                         'issueSummary': issue_summary,
                         'timeSpent': time_spent_display,
                         'timeSpentSeconds': time_spent_seconds,
-                        'comment': worklog.get('comment', ''),
+                        'comment': comment_text,
                         'started': worklog_started,
                         'author': worklog.get('author', {}).get('displayName', session.get('jira_user_name', 'User'))
                     })
     
     except Exception as e:
-        logger.error(f"Error fetching time entries: {str(e)}")
-        # Return error details for debugging but don't crash
-        return jsonify({
-            'timeEntries': [],
-            'total': 0,
-            'date': date_filter,
-            'error': f"Failed to fetch time entries: {str(e)}",
-            'debug_info': {
-                'has_access_token': bool(access_token),
-                'has_cloud_id': bool(cloud_id),
-                'user_email': session.get('jira_user_email', 'N/A')
-            }
-        }), 200  # Return 200 instead of 500 to prevent frontend errors
+        logger.error(f"Error fetching OAuth time entries: {str(e)}")
+        return jsonify({'error': f'Failed to fetch time entries: {str(e)}'}), 500
     
-    # Sort time entries by date (most recent first)
-    all_time_entries.sort(key=lambda x: x.get('started', ''), reverse=True)
+    # Aggregate by issue and sort by latest started (most recent first)
+    aggregated_entries = _aggregate_time_entries(all_time_entries)
+    aggregated_entries.sort(key=lambda x: x.get('started', ''), reverse=True)
+    
+    # Calculate total time display
+    total_hours = total_seconds // 3600
+    total_minutes = (total_seconds % 3600) // 60
+    total_time_display = f"{total_hours}h {total_minutes}m" if total_hours > 0 else f"{total_minutes}m"
     
     return jsonify({
-        'timeEntries': all_time_entries,
-        'total': len(all_time_entries),
-        'date': date_filter
+        'timeEntries': aggregated_entries,
+        'totalTimeSeconds': total_seconds,
+        'totalTimeDisplay': total_time_display,
+        'date': date_filter,
+        'entriesCount': len(aggregated_entries)
     })
 
 @app.route('/api/jira/time-entries', methods=['POST'])
@@ -3951,6 +5752,640 @@ def my_details():
 def my_jira():
     return redirect('/my-details', code=301)
 
+# ===================== Admin: Time Entries by User =====================
+@app.route('/admin/time-entries')
+@jira_auth_required
+@admin_required
+def admin_time_entries_page():
+    """Admin UI to search Jira worklogs by any user."""
+    return render_template('admin-time-entries.html', active_tab='admin')
+
+
+# ===================== Admin: Jira Dashboards =====================
+@app.route('/admin/dashboards')
+@jira_auth_required
+@admin_required
+def admin_jira_dashboards_page():
+    """Admin UI for Jira dashboards with JQL-powered views and charts."""
+    return render_template('admin-jira-dashboards.html', active_tab='admin')
+
+
+@app.route('/api/jira/admin/run-jql', methods=['POST'])
+@jira_auth_required
+@admin_required
+def admin_run_jql():
+    """Admin API: Run arbitrary JQL and return issues plus useful aggregates for dashboards.
+    Body JSON:
+      - jql: string (required)
+      - maxResults: int (optional, default 200, hard cap 1000)
+    """
+    try:
+        payload = request.get_json(silent=True) or {}
+        import requests
+        jql_query = (payload.get('jql') or '').strip()
+        try:
+            max_results = int(payload.get('maxResults') or 200)
+            max_results = max(1, min(max_results, 1000))
+        except Exception:
+            max_results = 200
+
+        if not jql_query:
+            return jsonify({'success': False, 'error': 'JQL is required'}), 400
+
+        # Auth/session
+        access_token = session.get('jira_access_token')
+        cloud_id = session.get('jira_cloud_id')
+        jira_domain = session.get('jira_domain', 'https://upgrad-jira.atlassian.net')
+        if not access_token:
+            return jsonify({'success': False, 'error': 'Jira authentication required'}), 401
+        if not cloud_id:
+            return jsonify({'success': False, 'error': 'Jira cloud ID not found in session'}), 400
+
+        # Ensure token fresh if we track expiry
+        try:
+            token_expires = session.get('jira_token_expires', 0)
+            if time.time() >= token_expires:
+                if refresh_jira_token():
+                    access_token = session.get('jira_access_token')
+                else:
+                    return jsonify({'success': False, 'error': 'Token expired. Please reconnect to Jira.'}), 401
+        except Exception:
+            pass
+
+        headers = {
+            'Authorization': f'Bearer {access_token}',
+            'Accept': 'application/json'
+        }
+
+        # Page through search results up to max_results
+        items = []
+        start_at = 0
+        page_size = 100
+        while start_at < max_results:
+            size = min(page_size, max_results - start_at)
+            resp = requests.get(
+                f"https://api.atlassian.com/ex/jira/{cloud_id}/rest/api/3/search",
+                headers=headers,
+                params={
+                    'jql': jql_query,
+                    'startAt': start_at,
+                    'maxResults': size,
+                    'fields': 'key,summary,status,assignee,reporter,priority,created,updated,resolutiondate,issuetype,labels,customfield_10026'
+                },
+                timeout=30
+            )
+            if resp.status_code == 401:
+                # Try to refresh once
+                if refresh_jira_token():
+                    access_token = session.get('jira_access_token')
+                    headers['Authorization'] = f'Bearer {access_token}'
+                    resp = requests.get(
+                        f"https://api.atlassian.com/ex/jira/{cloud_id}/rest/api/3/search",
+                        headers=headers,
+                        params={
+                            'jql': jql_query,
+                            'startAt': start_at,
+                            'maxResults': size,
+                            'fields': 'key,summary,status,assignee,reporter,priority,created,updated,resolutiondate,issuetype,labels,customfield_10026'
+                        },
+                        timeout=30
+                    )
+                
+            if resp.status_code != 200:
+                body = ''
+                try:
+                    body = resp.text[:500]
+                except Exception:
+                    body = ''
+                return jsonify({'success': False, 'error': f'Jira API error {resp.status_code}', 'details': body}), 400
+
+            data = resp.json() or {}
+            issues = data.get('issues', []) or []
+            for it in issues:
+                f = it.get('fields', {}) or {}
+                items.append({
+                    'key': it.get('key'),
+                    'summary': f.get('summary'),
+                    'status': (f.get('status') or {}).get('name'),
+                    'assignee': (f.get('assignee') or {}).get('displayName') if f.get('assignee') else None,
+                    'reporter': (f.get('reporter') or {}).get('displayName') if f.get('reporter') else None,
+                    'priority': (f.get('priority') or {}).get('name'),
+                    'issuetype': (f.get('issuetype') or {}).get('name'),
+                    'labels': f.get('labels') or [],
+                    'created': f.get('created'),
+                    'updated': f.get('updated'),
+                    'resolved': f.get('resolutiondate'),
+                    'storyPoints': f.get('customfield_10026')  # common cloud default; may be null
+                })
+
+            start_at += len(issues)
+            total = data.get('total', start_at)
+            if not issues or start_at >= total or start_at >= max_results:
+                break
+
+        # Build aggregates
+        def _inc(map_obj, key):
+            map_obj[key or 'Unassigned'] = map_obj.get(key or 'Unassigned', 0) + 1
+
+        agg_status = {}
+        agg_priority = {}
+        agg_assignee = {}
+        created_by_day = {}
+        now = datetime.utcnow()
+
+        for it in items:
+            _inc(agg_status, it.get('status'))
+            _inc(agg_priority, it.get('priority'))
+            _inc(agg_assignee, it.get('assignee'))
+            c = it.get('created')
+            if c:
+                try:
+                    d = c.split('T')[0]
+                    created_by_day[d] = created_by_day.get(d, 0) + 1
+                except Exception:
+                    pass
+
+        # Sort aggregates into arrays for frontend
+        def to_kv_arr(d):
+            return [{'key': k, 'value': d[k]} for k in sorted(d.keys(), key=lambda x: d[x], reverse=True)]
+
+        result = {
+            'success': True,
+            'jiraBaseUrl': jira_domain,
+            'total': len(items),
+            'issues': items,
+            'aggregates': {
+                'byStatus': to_kv_arr(agg_status),
+                'byPriority': to_kv_arr(agg_priority),
+                'byAssignee': to_kv_arr(agg_assignee)[:20],  # top 20
+                'createdByDay': [{'key': k, 'value': created_by_day[k]} for k in sorted(created_by_day.keys())]
+            }
+        }
+        return jsonify(result)
+    except Exception as e:
+        try:
+            logger.error(f"Admin run JQL error: {e}")
+        except Exception:
+            pass
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/jira/admin/time-entries', methods=['GET'])
+@jira_auth_required
+@admin_required
+def admin_get_time_entries_by_user():
+    """Admin API: Get aggregated time entries for a specified Jira user and optional date.
+    Query params:
+      - q: user search query (email or display name)
+      - accountId: optional exact Jira accountId (skips search if provided)
+      - date: optional YYYY-MM-DD filter
+    """
+    q = request.args.get('q', '').strip()
+    account_id = request.args.get('accountId', '').strip()
+    date_filter = request.args.get('date', '').strip()
+
+    # Server-side Jira credentials (basic auth), same as existing time-entries endpoint
+    jira_email = os.getenv('JIRA_EMAIL') or "kishore.murkhanad@upgrad.com"
+    jira_token = os.getenv('JIRA_API_TOKEN')
+    jira_base_url = os.getenv('JIRA_BASE_URL', 'https://upgrad-jira.atlassian.net')
+
+    if not jira_token:
+        # Attempt to load from team_manager/.env as in existing code
+        try:
+            import sys
+            sys.path.append('team_manager')
+            from dotenv import load_dotenv
+            load_dotenv('team_manager/.env')
+            jira_token = os.getenv('JIRA_API_TOKEN')
+        except Exception:
+            pass
+
+    if not (jira_email and jira_token):
+        return jsonify({'error': 'Jira credentials not configured on server'}), 500
+
+    try:
+        from requests.auth import HTTPBasicAuth
+        auth = HTTPBasicAuth(jira_email, jira_token)
+        headers = {"Accept": "application/json"}
+
+        # Resolve accountId if not provided
+        user_info = None
+        if not account_id:
+            if not q:
+                return jsonify({'error': 'Missing user query (q) or accountId'}), 400
+            search_url = f'{jira_base_url}/rest/api/3/user/search'
+            params = { 'query': q, 'maxResults': 10 }
+            s_resp = requests.get(search_url, headers=headers, params=params, auth=auth, timeout=20)
+            if s_resp.status_code != 200:
+                return jsonify({'error': f'User search failed: {s_resp.status_code}'}), 502
+            users = s_resp.json() if isinstance(s_resp.json(), list) else []
+            if not users:
+                return jsonify({'error': 'No Jira users matched query'}), 404
+            # Basic selection: prefer exact email match, else first result
+            q_lower = q.lower()
+            exact = next((u for u in users if (u.get('emailAddress') or '').lower() == q_lower), None)
+            user_info = exact or users[0]
+            account_id = user_info.get('accountId')
+        else:
+            # Optionally fetch user info for display
+            user_url = f'{jira_base_url}/rest/api/3/user'
+            u_resp = requests.get(user_url, headers=headers, params={'accountId': account_id}, auth=auth, timeout=20)
+            if u_resp.status_code == 200:
+                user_info = u_resp.json()
+
+        if not account_id:
+            return jsonify({'error': 'Could not resolve Jira accountId for user'}), 400
+
+        # Build JQL for specified user
+        if date_filter:
+            worklog_jql = f'worklogAuthor = "{account_id}" AND worklogDate = "{date_filter}"'
+        else:
+            worklog_jql = f'worklogAuthor = "{account_id}"'
+
+        search_url = f'{jira_base_url}/rest/api/3/search'
+        search_params = {
+            'jql': worklog_jql,
+            'fields': 'worklog,summary',
+            'maxResults': 1000
+        }
+        search_response = requests.get(search_url, headers=headers, params=search_params, auth=auth, timeout=30)
+        if search_response.status_code != 200:
+            return jsonify({'error': 'Failed to search for issues with worklogs'}), 500
+
+        data = search_response.json()
+        all_time_entries = []
+        total_seconds = 0
+
+        for issue in data.get('issues', []):
+            issue_key = issue.get('key', 'Unknown')
+            issue_summary = issue.get('fields', {}).get('summary', 'No summary available')
+            worklog_data = issue.get('fields', {}).get('worklog', {})
+            worklogs = worklog_data.get('worklogs', [])
+            # Fetch all worklogs if Jira only returned a partial list (default 20)
+            try:
+                total_wl = int(worklog_data.get('total', len(worklogs)))
+            except Exception:
+                total_wl = len(worklogs)
+            if total_wl > len(worklogs):
+                all_wls = []
+                fetched = 0
+                while fetched < total_wl and fetched < 10000:  # sane upper bound
+                    wl_url = f"{jira_base_url}/rest/api/3/issue/{issue_key}/worklog"
+                    wl_params = { 'startAt': fetched, 'maxResults': 1000 }
+                    wl_resp = requests.get(wl_url, headers=headers, params=wl_params, auth=auth, timeout=30)
+                    if wl_resp.status_code != 200:
+                        break
+                    wl_page = wl_resp.json() or {}
+                    page_items = wl_page.get('worklogs', [])
+                    all_wls.extend(page_items)
+                    step = wl_page.get('maxResults') or len(page_items)
+                    fetched += step
+                    total_wl = wl_page.get('total', total_wl)
+                if all_wls:
+                    worklogs = all_wls
+            for wl in worklogs:
+                wl_author_id = wl.get('author', {}).get('accountId', '')
+                wl_started = wl.get('started', '')
+                if wl_author_id != account_id:
+                    continue
+                if date_filter:
+                    wl_date = wl_started.split('T')[0] if 'T' in wl_started else wl_started
+                    if wl_date != date_filter:
+                        continue
+                secs = wl.get('timeSpentSeconds', 0)
+                total_seconds += secs
+                hours = secs // 3600
+                minutes = (secs % 3600) // 60
+                display = f"{hours}h {minutes}m" if hours > 0 else f"{minutes}m"
+                comment_raw = wl.get('comment', '')
+                comment_text = _extract_comment_text(comment_raw)
+                all_time_entries.append({
+                    'id': wl.get('id', ''),
+                    'issueKey': issue_key,
+                    'issueSummary': issue_summary,
+                    'timeSpent': display,
+                    'timeSpentSeconds': secs,
+                    'comment': comment_text,
+                    'started': wl_started,
+                    'author': wl.get('author', {}).get('displayName', (user_info or {}).get('displayName', 'User'))
+                })
+
+        aggregated = _aggregate_time_entries(all_time_entries)
+        aggregated.sort(key=lambda x: x.get('started', ''), reverse=True)
+        total_hours = total_seconds // 3600
+        total_minutes = (total_seconds % 3600) // 60
+        total_display = f"{total_hours}h {total_minutes}m" if total_hours > 0 else f"{total_minutes}m"
+
+        return jsonify({
+            'user': {
+                'accountId': account_id,
+                'displayName': (user_info or {}).get('displayName'),
+                'emailAddress': (user_info or {}).get('emailAddress')
+            },
+            'timeEntries': aggregated,
+            'totalTimeSeconds': total_seconds,
+            'totalTimeDisplay': total_display,
+            'date': date_filter,
+            'entriesCount': len(aggregated)
+        })
+
+    except Exception as e:
+        try:
+            logger.error(f"Admin time entries error: {e}")
+        except Exception:
+            pass
+        return jsonify({'error': f'Failed to fetch admin time entries: {str(e)}'}), 500
+
+
+@app.route('/api/jira/admin/time-entries-overview', methods=['GET'])
+@jira_auth_required
+@admin_required
+def admin_time_entries_overview():
+    """Admin API: Overview of everyone's time entries for a specific date.
+    Query params:
+      - date: required YYYY-MM-DD
+    Returns totals grouped by worklog author (user).
+    """
+    date_filter = request.args.get('date', '').strip()
+    if not date_filter:
+        return jsonify({'error': 'Missing required date (YYYY-MM-DD)'}), 400
+
+    # Server-side Jira credentials (basic auth), same pattern as existing admin endpoint
+    jira_email = os.getenv('JIRA_EMAIL') or "kishore.murkhanad@upgrad.com"
+    jira_token = os.getenv('JIRA_API_TOKEN')
+    jira_base_url = os.getenv('JIRA_BASE_URL', 'https://upgrad-jira.atlassian.net')
+
+    if not jira_token:
+        # Attempt to load from team_manager/.env as in existing code
+        try:
+            import sys
+            sys.path.append('team_manager')
+            from dotenv import load_dotenv
+            load_dotenv('team_manager/.env')
+            jira_token = os.getenv('JIRA_API_TOKEN')
+        except Exception:
+            pass
+
+    if not (jira_email and jira_token):
+        return jsonify({'error': 'Jira credentials not configured on server'}), 500
+
+    try:
+        import requests
+        from requests.auth import HTTPBasicAuth
+        auth = HTTPBasicAuth(jira_email, jira_token)
+        headers = {"Accept": "application/json"}
+
+        # Search for all issues that have worklogs on the specified date
+        search_url = f'{jira_base_url}/rest/api/3/search'
+        start_at = 0
+        page_size = 100
+        max_issues = 2000  # safeguard cap
+        users_map = {}  # accountId -> aggregate
+        total_seconds = 0
+
+        while start_at < max_issues:
+            params = {
+                'jql': f'worklogDate = "{date_filter}"',
+                'fields': 'worklog',
+                'startAt': start_at,
+                'maxResults': page_size
+            }
+            resp = requests.get(search_url, headers=headers, params=params, auth=auth, timeout=30)
+            if resp.status_code != 200:
+                return jsonify({'error': f'Failed to search issues: {resp.status_code}'}), 500
+            data = resp.json() or {}
+            issues = data.get('issues', []) or []
+            if not issues:
+                break
+
+            for issue in issues:
+                issue_key = issue.get('key')
+                worklog_data = (issue.get('fields', {}) or {}).get('worklog', {}) or {}
+                worklogs = worklog_data.get('worklogs', []) or []
+                # Fetch all worklogs if Jira only returned a partial list (default 20)
+                try:
+                    total_wl = int(worklog_data.get('total', len(worklogs)))
+                except Exception:
+                    total_wl = len(worklogs)
+                if total_wl > len(worklogs):
+                    all_wls = []
+                    fetched = 0
+                    while fetched < total_wl and fetched < 10000:  # sane upper bound
+                        wl_url = f"{jira_base_url}/rest/api/3/issue/{issue_key}/worklog"
+                        wl_params = { 'startAt': fetched, 'maxResults': 1000 }
+                        wl_resp = requests.get(wl_url, headers=headers, params=wl_params, auth=auth, timeout=30)
+                        if wl_resp.status_code != 200:
+                            break
+                        wl_page = wl_resp.json() or {}
+                        page_items = wl_page.get('worklogs', []) or []
+                        all_wls.extend(page_items)
+                        step = wl_page.get('maxResults') or len(page_items)
+                        fetched += step
+                        total_wl = wl_page.get('total', total_wl)
+                    if all_wls:
+                        worklogs = all_wls
+
+                # Aggregate by author for the specific date
+                for wl in worklogs:
+                    started = wl.get('started', '')
+                    wl_date = started.split('T')[0] if 'T' in started else started
+                    if wl_date != date_filter:
+                        continue
+                    secs = int(wl.get('timeSpentSeconds') or 0)
+                    total_seconds += secs
+                    author = wl.get('author') or {}
+                    acc_id = author.get('accountId') or 'unknown'
+                    agg = users_map.get(acc_id)
+                    if not agg:
+                        agg = {
+                            'accountId': acc_id,
+                            'displayName': author.get('displayName') or 'User',
+                            'emailAddress': author.get('emailAddress'),
+                            'timeSpentSeconds': 0,
+                            'entriesCount': 0
+                        }
+                        users_map[acc_id] = agg
+                    agg['timeSpentSeconds'] += secs
+                    agg['entriesCount'] += 1
+
+            start_at += len(issues)
+            total = data.get('total', start_at)
+            if start_at >= total or start_at >= max_issues:
+                break
+
+        # Prepare response
+        def fmt(secs: int) -> str:
+            h = secs // 3600
+            m = (secs % 3600) // 60
+            return f"{h}h {m}m" if h > 0 else f"{m}m"
+
+        users = []
+        for acc_id, agg in users_map.items():
+            users.append({
+                **agg,
+                'timeSpent': fmt(agg['timeSpentSeconds'])
+            })
+        users.sort(key=lambda x: x['timeSpentSeconds'], reverse=True)
+
+        return jsonify({
+            'success': True,
+            'date': date_filter,
+            'totalUsers': len(users),
+            'totalTimeSeconds': total_seconds,
+            'totalTimeDisplay': fmt(total_seconds),
+            'users': users
+        })
+    except Exception as e:
+        try:
+            logger.error(f"Admin overview time entries error: {e}")
+        except Exception:
+            pass
+        return jsonify({'error': f'Failed to fetch overview: {str(e)}'}), 500
+
+# ===================== Admin: Jira Users Directory =====================
+@app.route('/api/jira/admin/sync-users', methods=['POST'])
+@jira_auth_required
+@admin_required
+def admin_sync_jira_users():
+    """Admin API: Sync Jira users into local DB for fast lookup/autocomplete.
+    Uses OAuth token + cloud_id from session and pages through Jira users/search.
+    """
+    access_token = session.get('jira_access_token')
+    cloud_id = session.get('jira_cloud_id')
+    if not access_token:
+        return jsonify({'error': 'Jira authentication required'}), 401
+    if not cloud_id:
+        return jsonify({'error': 'Jira cloud ID not found in session'}), 400
+
+    import requests
+    # Ensure token is fresh
+    try:
+        token_expires = session.get('jira_token_expires', 0)
+        if time.time() >= token_expires:
+            if not refresh_jira_token():
+                return jsonify({'error': 'Token expired. Please reconnect to Jira.'}), 401
+            access_token = session.get('jira_access_token')
+    except Exception:
+        pass
+
+    headers = {
+        'Authorization': f'Bearer {access_token}',
+        'Accept': 'application/json'
+    }
+    base_url = f'https://api.atlassian.com/ex/jira/{cloud_id}/rest/api/3/users/search'
+
+    start_at = 0
+    max_results = 100
+    inserted = 0
+    updated = 0
+    total = 0
+
+    try:
+        retried_auth = False
+        while True:
+            params = {
+                'startAt': start_at,
+                'maxResults': max_results,
+                'query': ''
+            }
+            resp = requests.get(base_url, headers=headers, params=params, timeout=30)
+            if resp.status_code == 401 and not retried_auth:
+                # Try token refresh once and retry
+                if refresh_jira_token():
+                    access_token = session.get('jira_access_token')
+                    headers['Authorization'] = f'Bearer {access_token}'
+                    resp = requests.get(base_url, headers=headers, params=params, timeout=30)
+                    retried_auth = True
+            if resp.status_code != 200:
+                # Return more detailed error to aid debugging (status + body snippet)
+                body = ''
+                try:
+                    body = resp.text[:500]
+                except Exception:
+                    body = ''
+                return jsonify({'error': f'Jira users search failed: {resp.status_code}', 'details': body}), 502
+            page = resp.json() or []
+            if not isinstance(page, list):
+                page = []
+            if not page:
+                break
+
+            for u in page:
+                total += 1
+                account_id = u.get('accountId')
+                if not account_id:
+                    continue
+                display_name = u.get('displayName')
+                email = u.get('emailAddress')  # May be None due to privacy settings
+                avatar_48 = (u.get('avatarUrls', {}) or {}).get('48x48')
+                active = bool(u.get('active', True))
+                time_zone = u.get('timeZone')
+
+                existing = JiraUser.query.filter_by(account_id=account_id).first()
+                if existing:
+                    # Update existing
+                    existing.display_name = display_name
+                    existing.email = email
+                    existing.avatar_48 = avatar_48
+                    existing.active = active
+                    existing.time_zone = time_zone
+                    existing.synced_at = datetime.utcnow()
+                    updated += 1
+                else:
+                    db.session.add(JiraUser(
+                        account_id=account_id,
+                        display_name=display_name,
+                        email=email,
+                        avatar_48=avatar_48,
+                        active=active,
+                        time_zone=time_zone,
+                        synced_at=datetime.utcnow()
+                    ))
+                    inserted += 1
+
+            db.session.commit()
+            if len(page) < max_results:
+                break
+            start_at += max_results
+
+        return jsonify({
+            'success': True,
+            'inserted': inserted,
+            'updated': updated,
+            'totalProcessed': total,
+            'lastSync': datetime.utcnow().isoformat() + 'Z'
+        })
+    except Exception as e:
+        db.session.rollback()
+        try:
+            logger.error(f"Admin sync users error: {e}")
+        except Exception:
+            pass
+        return jsonify({'error': f'Failed to sync Jira users: {str(e)}'}), 500
+
+
+@app.route('/api/jira/admin/users', methods=['GET'])
+@jira_auth_required
+@admin_required
+def admin_search_local_jira_users():
+    """Admin API: Search locally stored Jira users for autocomplete.
+    Query params: q (string), limit (int, default 20)
+    """
+    q = (request.args.get('q') or '').strip()
+    try:
+        limit = int(request.args.get('limit') or 20)
+        limit = max(1, min(limit, 50))
+    except Exception:
+        limit = 20
+
+    query = JiraUser.query
+    if q:
+        like = f"%{q}%"
+        query = query.filter(or_(
+            JiraUser.display_name.ilike(like),
+            JiraUser.email.ilike(like)
+        ))
+    users = query.order_by(JiraUser.display_name.asc()).limit(limit).all()
+    return jsonify({'results': [u.to_dict() for u in users], 'count': len(users)})
 def extract_issues_manually(text):
     """
     Extract issues and recommendations from raw AI response text when JSON parsing fails.
@@ -4416,6 +6851,443 @@ def capture_url():
                 
     except Exception as e:
         logging.error(f"URL capture error: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+def _safe_js_identifier(name: str) -> str:
+    name = re.sub(r"[^a-zA-Z0-9_]+", "_", name or "")
+    if not name:
+        name = "el"
+    if re.match(r"^\d", name):
+        name = "el_" + name
+    return name
+
+def _build_locator_chain_js(locators):
+    parts = []
+    for loc in locators:
+        sel = auto_healing_recorder.convert_to_playwright_selector(loc)
+        sel = sel.replace('\\', '\\\\').replace("'", r"\'")
+        parts.append(f"this.page.locator('{sel}')")
+    if not parts:
+        return "this.page.locator('[data-qa-missing]')"
+    chain = parts[0]
+    for p in parts[1:]:
+        chain = f"{chain}.or({p})"
+    return chain
+
+@app.route('/api/pom/generate', methods=['POST'])
+@jira_auth_required
+def generate_pom():
+    """Generate a JavaScript Page Object with auto-healing locator chains.
+    Accepts: {
+      session_id?, url?, class_name?, replay_to_state?, storage_state_json?, storage_state_path?,
+      elements?: [{ name: str, seed?: str }]
+      elements_text?: "name=seed\n..."
+    }
+    Returns: { js_code, manifest }
+    """
+    try:
+        data = request.get_json() or {}
+        session_id = data.get('session_id') or session.get('auto_healing_session_id')
+        sess = auto_healing_recorder.get_session(session_id) if session_id else None
+        url = data.get('url') or (sess or {}).get('url')
+        if not url:
+            return jsonify({'success': False, 'error': 'No URL provided or in session'}), 400
+
+        class_name = data.get('class_name') or 'GeneratedPage'
+        class_name = re.sub(r"[^a-zA-Z0-9_]", "", class_name) or 'GeneratedPage'
+
+        # Parse element specs
+        elements = data.get('elements') or []
+        if not elements and data.get('elements_text'):
+            lines = [l.strip() for l in str(data.get('elements_text')).splitlines() if l.strip()]
+            for ln in lines:
+                if '=' in ln:
+                    n, s = ln.split('=', 1)
+                    elements.append({'name': n.strip(), 'seed': s.strip()})
+                else:
+                    elements.append({'name': ln.strip()})
+        # If still empty, fall back to using recorded actions as candidates
+        if not elements and session_id:
+            actions = auto_healing_recorder.recorded_actions.get(session_id, [])
+            for idx, act in enumerate(actions):
+                nm = act.get('data', {}).get('name') or act.get('element_info', {}).get('data-testid') or act.get('element_info', {}).get('id') or act.get('element_info', {}).get('text') or f'el_{idx+1}'
+                elements.append({'name': str(nm)[:50]})
+
+        if not elements:
+            return jsonify({'success': False, 'error': 'No elements provided to generate POM'}), 400
+
+        # Options
+        storage_state_json = data.get('storage_state_json')
+        storage_state_path = data.get('storage_state_path')
+        replay_to_state = bool(data.get('replay_to_state'))
+
+        storage_state = None
+        if storage_state_json:
+            try:
+                storage_state = json.loads(storage_state_json)
+            except Exception as e:
+                return jsonify({'success': False, 'error': f'Invalid storage_state_json: {e}'}), 400
+        elif storage_state_path:
+            storage_state = storage_state_path
+
+        # Result containers
+        manifest = {
+            'className': class_name,
+            'url': url,
+            'elements': []
+        }
+
+        with sync_playwright() as p:
+            browser = p.chromium.launch(headless=os.getenv('PLAYWRIGHT_HEADLESS', 'false').lower() == 'true')
+            context = browser.new_context(storage_state=storage_state) if storage_state else browser.new_context()
+            page = context.new_page()
+
+            def _navigate():
+                page.goto(url)
+                page.wait_for_load_state('networkidle')
+
+            def _perform_action(act):
+                atype = (act.get('type') or '').lower()
+                locs = act.get('locators') or []
+                for loc in locs:
+                    sel = auto_healing_recorder.convert_to_playwright_selector(loc)
+                    try:
+                        l = page.locator(sel).first
+                        if l.count() == 0:
+                            continue
+                        if atype == 'click':
+                            l.click(timeout=5000)
+                            return True
+                        elif atype == 'fill':
+                            val = (act.get('data') or {}).get('value', '')
+                            l.fill(val, timeout=5000)
+                            return True
+                        elif atype == 'select':
+                            val = (act.get('data') or {}).get('value', '')
+                            l.select_option(val, timeout=5000)
+                            return True
+                    except Exception:
+                        continue
+                return False
+
+            # Optional replay of recorded actions to reach deep state
+            acts = auto_healing_recorder.recorded_actions.get(session_id, []) if session_id else []
+
+            for el in elements:
+                name = _safe_js_identifier(el.get('name'))
+                seed = el.get('seed')
+                _navigate()
+                if replay_to_state and acts:
+                    for a in acts:
+                        _perform_action(a)
+                        try:
+                            page.wait_for_load_state('networkidle', timeout=3000)
+                        except Exception:
+                            pass
+
+                handle = None
+                # Try seed first if provided
+                seeds = []
+                if seed: seeds.append(seed)
+                # else try to find by text/id/testid hints from recorded actions
+                # Not strictly necessary; seeds can be empty
+
+                for s in seeds or ['']:  # if no seed, skip to mining via generic heuristics by querying common candidates
+                    try:
+                        if not s:
+                            break
+                        loc = page.locator(s)
+                        if loc.count() > 0:
+                            handle = loc.first
+                            break
+                    except Exception:
+                        continue
+
+                # If no handle yet, skip enrichment for this element
+                if not handle:
+                    # record as empty with just the name
+                    manifest['elements'].append({'name': name, 'locators': []})
+                    continue
+
+                # Harvest attributes similar to enrichment
+                def attr(nm):
+                    try:
+                        return handle.get_attribute(nm)
+                    except Exception:
+                        return None
+
+                el_info = {}
+                got_id = attr('id')
+                if got_id and _looks_stable_token(got_id):
+                    el_info['id'] = got_id
+                for test_key in ['data-testid', 'data-test', 'data-qa']:
+                    v = attr(test_key)
+                    if v and _looks_stable_token(v):
+                        el_info['data-testid'] = v
+                        break
+                for k in ['name', 'placeholder', 'aria-label', 'title']:
+                    v = attr(k)
+                    if v and v.strip():
+                        if k == 'aria-label':
+                            el_info['aria_label'] = v.strip()
+                        else:
+                            el_info[k] = v.strip()
+                try:
+                    txt = handle.inner_text().strip()
+                    if txt and len(txt) <= 120:
+                        el_info['text'] = txt
+                except Exception:
+                    pass
+                try:
+                    cls = handle.evaluate("el => (el.className || '').toString()") or ''
+                    if cls:
+                        tokens = [t for t in re.split(r"\s+", cls) if _looks_stable_token(t)]
+                        if tokens:
+                            el_info['class'] = ' '.join(tokens[:3])
+                            tag = handle.evaluate("el => el.tagName.toLowerCase()")
+                            el_info['css_selector'] = f"{tag}{''.join(['.'+t for t in tokens[:3]])}"
+                except Exception:
+                    pass
+
+                locators = auto_healing_recorder.generate_auto_healing_locators(el_info)
+                manifest['elements'].append({'name': name, 'locators': locators})
+
+            context.close()
+            browser.close()
+
+        # Build JS class code
+        lines = []
+        lines.append(f"export default class {class_name} {{")
+        lines.append("  constructor(page) { this.page = page; }")
+        for el in manifest['elements']:
+            nm = el['name']
+            locs = el['locators']
+            chain = _build_locator_chain_js(locs)
+            lines.append("")
+            lines.append(f"  {nm}() {{")
+            lines.append(f"    return {chain};")
+            lines.append("  }")
+        lines.append("}")
+        js_code = "\n".join(lines)
+
+        return jsonify({'success': True, 'js_code': js_code, 'manifest': manifest})
+    except Exception as e:
+        logging.error(f"Error generating POM: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+def _looks_stable_token(token: str) -> bool:
+    if not token:
+        return False
+    if len(token) > 32:
+        return False
+    # Reject UUID-like or hashed tokens
+    if re.match(r"^[a-f0-9]{8,}$", token, re.IGNORECASE):
+        return False
+    # Too many digits
+    if re.search(r"\d{4,}", token):
+        return False
+    return True
+
+def _build_seed_selectors(recorder, element_data: dict):
+    seeds = []
+    locs = recorder.generate_auto_healing_locators(element_data)
+    for loc in locs:
+        seeds.append(recorder.convert_to_playwright_selector(loc))
+    # include raw css/xpath if present
+    if element_data.get('css_selector'):
+        seeds.insert(0, element_data['css_selector'])
+    if element_data.get('xpath'):
+        seeds.append(f"xpath={element_data['xpath']}")
+    # dedup preserving order
+    dedup = []
+    seen = set()
+    for s in seeds:
+        if s not in seen:
+            seen.add(s)
+            dedup.append(s)
+    return dedup
+
+@app.route('/api/recorder-v2/enrich-locators', methods=['POST'])
+@jira_auth_required
+def enrich_recorder_v2_locators():
+    """Re-locate elements on the live page and enrich locator strategies per action.
+    Supports:
+      - storage_state_json / storage_state_path: to load authenticated state
+      - replay_to_state: replay prior actions to reach the right UI before enrichment
+    """
+    try:
+        data = request.get_json() or {}
+        session_id = data.get('session_id') or session.get('auto_healing_session_id')
+        if not session_id:
+            return jsonify({'success': False, 'error': 'No active session found'}), 400
+
+        sess = auto_healing_recorder.get_session(session_id) or {}
+        url = data.get('url') or sess.get('url')
+        if not url:
+            return jsonify({'success': False, 'error': 'Session has no URL'}), 400
+
+        actions = auto_healing_recorder.recorded_actions.get(session_id, [])
+        if not actions:
+            return jsonify({'success': False, 'error': 'No actions to enrich'}), 400
+
+        if not playwright_available:
+            return jsonify({'success': False, 'error': 'Playwright not available on server'}), 500
+
+        # Options
+        storage_state_json = data.get('storage_state_json')
+        storage_state_path = data.get('storage_state_path')
+        replay_to_state = bool(data.get('replay_to_state'))
+
+        # Parse storage state if provided
+        storage_state = None
+        if storage_state_json:
+            try:
+                storage_state = json.loads(storage_state_json)
+            except Exception as e:
+                return jsonify({'success': False, 'error': f'Invalid storage_state_json: {e}'}), 400
+        elif storage_state_path:
+            storage_state = storage_state_path  # Playwright accepts path
+
+        enriched_count = 0
+        # Launch a temporary browser, navigate to URL once
+        with sync_playwright() as p:
+            browser = p.chromium.launch(headless=os.getenv('PLAYWRIGHT_HEADLESS', 'false').lower() == 'true')
+            # create context with optional storage state
+            context = browser.new_context(storage_state=storage_state) if storage_state else browser.new_context()
+            page = context.new_page()
+            
+            def _navigate_fresh():
+                page.goto(url)
+                page.wait_for_load_state('networkidle')
+
+            def _perform_action(act):
+                atype = (act.get('type') or '').lower()
+                locs = act.get('locators') or []
+                # Try each locator in order
+                for loc in locs:
+                    sel = auto_healing_recorder.convert_to_playwright_selector(loc)
+                    try:
+                        l = page.locator(sel).first
+                        if l.count() == 0:
+                            continue
+                        if atype == 'click':
+                            l.click(timeout=5000)
+                            return True
+                        elif atype == 'fill':
+                            val = (act.get('data') or {}).get('value', '')
+                            l.fill(val, timeout=5000)
+                            return True
+                        elif atype == 'select':
+                            val = (act.get('data') or {}).get('value', '')
+                            l.select_option(val, timeout=5000)
+                            return True
+                        elif atype == 'check':
+                            l.check(timeout=5000)
+                            return True
+                        elif atype == 'uncheck':
+                            l.uncheck(timeout=5000)
+                            return True
+                        else:
+                            # Unsupported action types are skipped
+                            continue
+                    except Exception:
+                        continue
+                return False
+
+            def _find_handle_for_action(act):
+                el_info = dict(act.get('element_info') or {})
+                seed_selectors = _build_seed_selectors(auto_healing_recorder, el_info)
+                for s in seed_selectors:
+                    try:
+                        loc = page.locator(s)
+                        if loc.count() > 0:
+                            return loc.first
+                    except Exception:
+                        continue
+                return None
+
+            for idx, action in enumerate(actions):
+                # Recreate page state for each action if needed
+                _navigate_fresh()
+                if replay_to_state and idx > 0:
+                    for j in range(0, idx):
+                        _perform_action(actions[j])
+                        # best-effort wait after interactions
+                        try:
+                            page.wait_for_load_state('networkidle', timeout=3000)
+                        except Exception:
+                            pass
+
+                el_info = dict(action.get('element_info') or {})
+                if not el_info:
+                    continue
+                handle = _find_handle_for_action(action)
+                if not handle:
+                    continue
+
+                # Harvest attributes
+                def attr(name):
+                    try:
+                        return handle.get_attribute(name)
+                    except Exception:
+                        return None
+
+                got_id = attr('id')
+                if got_id and _looks_stable_token(got_id):
+                    el_info['id'] = got_id
+
+                for test_key in ['data-testid', 'data-test', 'data-qa']:
+                    val = attr(test_key)
+                    if val and _looks_stable_token(val):
+                        # normalize to data-testid primary key
+                        el_info['data-testid'] = val
+                        break
+
+                for name_key in ['name', 'placeholder', 'aria-label', 'title']:
+                    val = attr(name_key)
+                    if val and val.strip():
+                        if name_key == 'aria-label':
+                            el_info['aria_label'] = val.strip()
+                        else:
+                            el_info[name_key if name_key != 'aria-label' else 'aria_label'] = val.strip()
+
+                # text content
+                try:
+                    txt = handle.inner_text().strip()
+                    if txt and len(txt) <= 120:
+                        el_info['text'] = txt
+                except Exception:
+                    pass
+
+                # class filtering for stable CSS
+                try:
+                    cls = handle.evaluate("el => (el.className || '').toString()") or ''
+                    if cls:
+                        tokens = [t for t in re.split(r"\s+", cls) if _looks_stable_token(t)]
+                        if tokens:
+                            # limit to top 3 stable tokens
+                            el_info['class'] = ' '.join(tokens[:3])
+                            # simple css by tag + classes
+                            tag = handle.evaluate("el => el.tagName.toLowerCase()")
+                            el_info['css_selector'] = f"{tag}{''.join(['.'+t for t in tokens[:3]])}"
+                except Exception:
+                    pass
+
+                # Recompute locators and update action
+                action['element_info'] = el_info
+                action['locators'] = auto_healing_recorder.generate_auto_healing_locators(el_info)
+                enriched_count += 1
+
+            context.close()
+            browser.close()
+
+        return jsonify({
+            'success': True,
+            'enriched_count': enriched_count,
+            'actions_preview': actions[-10:]  # send last 10 for UI refresh
+        })
+    except Exception as e:
+        logger.error(f"Error enriching locators: {str(e)}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/api/analyze-screen', methods=['POST'])
@@ -5669,7 +8541,7 @@ import requests
 from flask import request, jsonify
 # Configure Tesseract path - try to find it in common locations
 import platform
-import os.path
+import os
 import subprocess
 import tempfile
 import base64
@@ -7135,6 +10007,42 @@ class BugSession(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     status = db.Column(db.String(20), default='recording')  # recording, processing, completed
 
+# Bulk Test Generator Models
+class JQLSession(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    session_id = db.Column(db.String(100), unique=True, nullable=False)
+    jql_query = db.Column(db.Text, nullable=False)
+    jira_project_url = db.Column(db.String(500))
+    total_stories = db.Column(db.Integer, default=0)
+    processed_stories = db.Column(db.Integer, default=0)
+    failed_stories = db.Column(db.Integer, default=0)
+    status = db.Column(db.String(20), default='created')  # created, fetching, generating, completed, failed
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    completed_at = db.Column(db.DateTime)
+    
+    # Relationship to stories
+    stories = db.relationship('JQLStory', backref='session', lazy=True, cascade='all, delete-orphan')
+
+class JQLStory(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    session_id = db.Column(db.Integer, db.ForeignKey('jql_session.id'), nullable=False)
+    jira_key = db.Column(db.String(50), nullable=False)
+    title = db.Column(db.String(500), nullable=False)
+    description = db.Column(db.Text)
+    story_type = db.Column(db.String(50))  # Story, Bug, Task, etc.
+    priority = db.Column(db.String(20))
+    status = db.Column(db.String(50))
+    assignee = db.Column(db.String(100))
+    labels = db.Column(db.Text)  # JSON array
+    components = db.Column(db.Text)  # JSON array
+    acceptance_criteria = db.Column(db.Text)
+    test_generation_status = db.Column(db.String(20), default='pending')  # pending, generating, completed, failed
+    test_cases = db.Column(db.Text)  # JSON array of test cases
+    generation_error = db.Column(db.Text)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    generated_at = db.Column(db.DateTime)
+
 @app.route('/bug-builder')
 def bug_builder():
     """Bug Builder main page"""
@@ -7720,6 +10628,2042 @@ def format_jira_description(bug_data):
 *Session ID:* {bug_data.get('session_id', '')}
 """
     return description
+
+# =============================================================================
+# BULK TEST GENERATOR ROUTES
+# =============================================================================
+
+@app.route('/api/bulk-generator/validate-jql', methods=['POST'])
+@jira_auth_required
+def validate_jql():
+    """Validate JQL query against Jira API"""
+    try:
+        data = request.get_json()
+        jql_query = data.get('jql_query', '').strip()
+        
+        if not jql_query:
+            return jsonify({'success': False, 'error': 'JQL query is required'}), 400
+        
+        # Get Jira credentials from session
+        jira_token = session.get('jira_access_token')
+        jira_domain = session.get('jira_domain', 'https://upgrad-jira.atlassian.net')
+        cloud_id = session.get('jira_cloud_id')
+        
+        if not jira_token:
+            return jsonify({'success': False, 'error': 'Jira authentication required'}), 401
+        
+        # Check if token needs refresh
+        import time
+        token_expires = session.get('jira_token_expires', 0)
+        logger.info(f"Token expires at: {token_expires}, current time: {time.time()}")
+        if time.time() >= token_expires:
+            logger.info("Token expired, attempting refresh...")
+            if not refresh_jira_token():
+                logger.error("Token refresh failed")
+                return jsonify({'success': False, 'error': 'Token expired. Please reconnect to Jira.'}), 401
+            logger.info("Token refresh successful")
+            jira_token = session['jira_access_token']
+        
+        # Extract site name from domain URL
+        jira_site = jira_domain.replace('https://', '').replace('.atlassian.net', '')
+        
+        # Log debug information
+        logger.info(f"Validating JQL query: {jql_query}")
+        logger.info(f"Using Jira domain: {jira_domain}")
+        logger.info(f"Has access token: {bool(jira_token)}")
+        
+        # Test JQL query with maxResults=1 to validate syntax
+        jira_response = requests.get(
+            f"https://api.atlassian.com/ex/jira/{cloud_id}/rest/api/3/search",
+            headers={
+                'Authorization': f'Bearer {jira_token}',
+                'Content-Type': 'application/json'
+            },
+            params={
+                'jql': jql_query,
+                'maxResults': 1,
+                'fields': 'key,summary'
+            },
+            timeout=30
+        )
+        
+        logger.info(f"Jira API response status: {jira_response.status_code}")
+        logger.info(f"Jira API response headers: {dict(jira_response.headers)}")
+        logger.info(f"Jira API response content length: {len(jira_response.content)}")
+        
+        if jira_response.status_code == 200:
+            try:
+                result = jira_response.json()
+                total_count = result.get('total', 0)
+                
+                return jsonify({
+                    'success': True,
+                    'valid': True,
+                    'total_stories': total_count,
+                    'message': f'JQL query is valid. Found {total_count} stories.'
+                })
+            except ValueError as e:
+                logger.error(f"Failed to parse Jira response JSON: {str(e)}")
+                logger.error(f"Response content: {jira_response.text}")
+                return jsonify({
+                    'success': True,
+                    'valid': False,
+                    'error': 'Invalid response from Jira API'
+                })
+        elif jira_response.status_code == 401:
+            # Try to refresh token and retry once
+            logger.info("Got 401, attempting token refresh and retry")
+            refresh_success = refresh_jira_token()
+            logger.info(f"Token refresh result: {refresh_success}")
+            if refresh_success:
+                logger.info("Retrying request with refreshed token")
+                # Retry the request with new token
+                jira_response = requests.get(
+                    f"https://api.atlassian.com/ex/jira/{cloud_id}/rest/api/3/search",
+                    headers={
+                        'Authorization': f'Bearer {session["jira_access_token"]}',
+                        'Content-Type': 'application/json'
+                    },
+                    params={
+                        'jql': jql_query,
+                        'maxResults': 1,
+                        'fields': 'key,summary'
+                    },
+                    timeout=30
+                )
+                
+                if jira_response.status_code == 200:
+                    try:
+                        result = jira_response.json()
+                        total_count = result.get('total', 0)
+                        
+                        return jsonify({
+                            'success': True,
+                            'valid': True,
+                            'total_stories': total_count,
+                            'message': f'JQL query is valid. Found {total_count} stories.'
+                        })
+                    except ValueError as e:
+                        logger.error(f"Failed to parse Jira response JSON after retry: {str(e)}")
+                        return jsonify({
+                            'success': True,
+                            'valid': False,
+                            'error': 'Invalid response from Jira API'
+                        })
+            
+            logger.error("Token refresh failed, user needs to reconnect")
+            return jsonify({
+                'success': False,
+                'error': 'Authentication failed. Please refresh the page and reconnect to Jira.',
+                'action': 'reconnect'
+            }), 401
+        else:
+            try:
+                error_data = jira_response.json() if jira_response.content else {}
+                error_message = error_data.get('errorMessages', ['Invalid JQL query'])[0]
+            except ValueError:
+                logger.error(f"Failed to parse Jira error response: {jira_response.text}")
+                error_message = f'Jira API error (Status: {jira_response.status_code})'
+            
+            return jsonify({
+                'success': True,
+                'valid': False,
+                'error': error_message
+            })
+            
+    except Exception as e:
+        logger.error(f"Error validating JQL: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/bulk-generator/create-session', methods=['POST'])
+@jira_auth_required
+def create_bulk_session():
+    """Create a new bulk test generation session"""
+    try:
+        data = request.get_json()
+        jql_query = data.get('jql_query', '').strip()
+        
+        if not jql_query:
+            return jsonify({'success': False, 'error': 'JQL query is required'}), 400
+        
+        user_id = get_user_identifier()
+        
+        # Generate unique session ID
+        import uuid
+        session_id = str(uuid.uuid4())
+        
+        # Get Jira site URL
+        jira_domain = session.get('jira_domain', 'https://upgrad-jira.atlassian.net')
+        jira_project_url = jira_domain
+        
+        # Create new session
+        bulk_session = JQLSession(
+            user_id=user_id,
+            session_id=session_id,
+            jql_query=jql_query,
+            jira_project_url=jira_project_url,
+            status='created'
+        )
+        db.session.add(bulk_session)
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'session_id': session_id
+        })
+        
+    except Exception as e:
+        logger.error(f"Error creating bulk session: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/bulk-generator/fetch-stories', methods=['POST'])
+@jira_auth_required
+def fetch_stories():
+    """Fetch stories from Jira using JQL query"""
+    try:
+        data = request.get_json()
+        session_id = data.get('session_id')
+        
+        if not session_id:
+            return jsonify({'success': False, 'error': 'Session ID is required'}), 400
+        
+        # Get session
+        bulk_session = JQLSession.query.filter_by(session_id=session_id).first()
+        if not bulk_session:
+            return jsonify({'success': False, 'error': 'Session not found'}), 404
+        
+        # Get Jira credentials from session
+        jira_token = session.get('jira_access_token')
+        jira_domain = session.get('jira_domain', 'https://upgrad-jira.atlassian.net')
+        cloud_id = session.get('jira_cloud_id')
+        
+        if not jira_token:
+            return jsonify({'success': False, 'error': 'Jira authentication required'}), 401
+        
+        # Update session status
+        bulk_session.status = 'fetching'
+        db.session.commit()
+        
+        # Fetch stories from Jira
+        stories = []
+        start_at = 0
+        max_results = 50
+        
+        while True:
+            jira_response = requests.get(
+                f"https://api.atlassian.com/ex/jira/{cloud_id}/rest/api/3/search",
+                headers={
+                    'Authorization': f'Bearer {jira_token}',
+                    'Content-Type': 'application/json'
+                },
+                params={
+                    'jql': bulk_session.jql_query,
+                    'startAt': start_at,
+                    'maxResults': max_results,
+                    'fields': 'key,summary,description,issuetype,priority,status,assignee,labels,components'
+                }
+            )
+            
+            if jira_response.status_code != 200:
+                bulk_session.status = 'failed'
+                db.session.commit()
+                return jsonify({'success': False, 'error': 'Failed to fetch stories from Jira'}), 400
+            
+            result = jira_response.json()
+            issues = result.get('issues', [])
+            
+            if not issues:
+                break
+            
+            # Process each issue
+            for issue in issues:
+                fields = issue.get('fields', {})
+                
+                # Extract acceptance criteria from description
+                description = fields.get('description', {})
+                description_text = ''
+                acceptance_criteria = ''
+                
+                if description and isinstance(description, dict):
+                    # Handle Atlassian Document Format (ADF)
+                    description_text = extract_text_from_adf(description)
+                    acceptance_criteria = extract_acceptance_criteria(description_text)
+                elif isinstance(description, str):
+                    description_text = description
+                    acceptance_criteria = extract_acceptance_criteria(description_text)
+                
+                # Create story record
+                story = JQLStory(
+                    session_id=bulk_session.id,
+                    jira_key=issue['key'],
+                    title=fields.get('summary', ''),
+                    description=description_text,
+                    story_type=fields.get('issuetype', {}).get('name', ''),
+                    priority=fields.get('priority', {}).get('name', ''),
+                    status=fields.get('status', {}).get('name', ''),
+                    assignee=fields.get('assignee', {}).get('displayName', '') if fields.get('assignee') else '',
+                    labels=json.dumps(fields.get('labels', [])),
+                    components=json.dumps([c.get('name', '') for c in fields.get('components', [])]),
+                    acceptance_criteria=acceptance_criteria
+                )
+                db.session.add(story)
+                stories.append({
+                    'key': story.jira_key,
+                    'title': story.title,
+                    'type': story.story_type,
+                    'priority': story.priority,
+                    'status': story.status
+                })
+            
+            start_at += max_results
+            if start_at >= result.get('total', 0):
+                break
+        
+        # Update session with totals
+        bulk_session.total_stories = len(stories)
+        bulk_session.status = 'fetched'
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'stories': stories,
+            'total_count': len(stories)
+        })
+        
+    except Exception as e:
+        logger.error(f"Error fetching stories: {str(e)}")
+        # Update session status to failed
+        if 'bulk_session' in locals():
+            bulk_session.status = 'failed'
+            db.session.commit()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/bulk-generator/generate-tests', methods=['POST'])
+@jira_auth_required
+def generate_bulk_tests():
+    """Generate test cases for all stories in the session"""
+    try:
+        data = request.get_json()
+        session_id = data.get('session_id')
+        selected_stories = data.get('selected_stories', [])
+        context_name = data.get('context', '')
+        
+        if not session_id:
+            return jsonify({'success': False, 'error': 'Session ID is required'}), 400
+        
+        if not selected_stories:
+            return jsonify({'success': False, 'error': 'No stories selected for generation'}), 400
+        
+        if len(selected_stories) > 10:
+            return jsonify({'success': False, 'error': 'Maximum 10 stories allowed per generation session'}), 400
+        
+        if not context_name:
+            return jsonify({'success': False, 'error': 'Context is required for test generation'}), 400
+        
+        # Get session
+        bulk_session = JQLSession.query.filter_by(session_id=session_id).first()
+        if not bulk_session:
+            return jsonify({'success': False, 'error': 'Session not found'}), 404
+        
+        # Update session status
+        bulk_session.status = 'generating'
+        bulk_session.processed_stories = 0
+        bulk_session.failed_stories = 0
+        db.session.commit()
+        
+        # Get only selected stories for this session
+        stories = JQLStory.query.filter_by(session_id=bulk_session.id).filter(JQLStory.jira_key.in_(selected_stories)).all()
+        
+        # Update session with actual story count
+        bulk_session.total_stories = len(stories)
+        db.session.commit()
+        
+        logger.info(f"Starting generation for {len(stories)} selected stories: {[s.jira_key for s in stories]}")
+        
+        # Process stories synchronously for now to avoid threading issues
+        logger.info(f"Processing {len(stories)} stories synchronously")
+        
+        try:
+            # Generate test cases for each story
+            for i, story in enumerate(stories):
+                try:
+                    logger.info(f"Processing story {i+1}/{len(stories)}: {story.jira_key}")
+                    story.test_generation_status = 'generating'
+                    db.session.commit()
+                    
+                    # Generate test cases using AI with context
+                    logger.info(f"Starting generation for {story.jira_key} with context {context_name}")
+                    test_cases = generate_test_cases_for_story(story, context_name)
+                    logger.info(f"Generation completed for {story.jira_key}, got {len(test_cases) if test_cases else 0} test cases")
+                    
+                    if test_cases and len(test_cases) > 0:
+                        test_cases_json = json.dumps(test_cases)
+                        story.test_cases = test_cases_json
+                        story.test_generation_status = 'completed'
+                        logger.info(f"Saved {len(test_cases)} test cases for {story.jira_key}")
+                        logger.info(f"Test cases JSON length: {len(test_cases_json)}")
+                        logger.info(f"First test case: {test_cases[0] if test_cases else 'None'}")
+                    else:
+                        logger.error(f"No test cases generated for {story.jira_key}, marking as failed")
+                        story.test_generation_status = 'failed'
+                        story.generation_error = 'No test cases were generated. This could be due to missing API key or generation failure.'
+                        bulk_session.failed_stories += 1
+                    
+                    story.generated_at = datetime.utcnow()
+                    if story.test_generation_status == 'completed':
+                        bulk_session.processed_stories += 1
+                    
+                    logger.info(f"Completed story {story.jira_key}. Progress: {bulk_session.processed_stories}/{len(stories)}, Failed: {bulk_session.failed_stories}")
+                    
+                except Exception as story_error:
+                    logger.error(f"Error processing story {story.jira_key}: {str(story_error)}")
+                    story.test_generation_status = 'failed'
+                    story.generation_error = str(story_error)
+                    bulk_session.failed_stories += 1
+                    
+                # Commit after each story to ensure progress is visible
+                db.session.commit()
+            
+            # Update session status
+            logger.info(f"Generation completed. Processed: {bulk_session.processed_stories}, Failed: {bulk_session.failed_stories}")
+            bulk_session.status = 'completed'
+            bulk_session.completed_at = datetime.utcnow()
+            db.session.commit()
+            
+        except Exception as e:
+            logger.error(f"Error in synchronous generation: {str(e)}")
+            bulk_session.status = 'failed'
+            db.session.commit()
+            return jsonify({'success': False, 'error': str(e)}), 500
+        
+        return jsonify({
+            'success': True,
+            'message': 'Test generation completed',
+            'total': len(stories),
+            'processed': bulk_session.processed_stories,
+            'failed': bulk_session.failed_stories,
+            'thread_started': True
+        })
+        
+    except Exception as e:
+        logger.error(f"Error generating bulk tests: {str(e)}")
+        # Update session status to failed
+        if 'bulk_session' in locals():
+            bulk_session.status = 'failed'
+            db.session.commit()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/bulk-generator/session-status/<session_id>')
+@jira_auth_required
+def get_session_status(session_id):
+    """Get current status of bulk generation session"""
+    try:
+        bulk_session = JQLSession.query.filter_by(session_id=session_id).first()
+        if not bulk_session:
+            return jsonify({'success': False, 'error': 'Session not found'}), 404
+        
+        return jsonify({
+            'success': True,
+            'status': bulk_session.status,
+            'total_stories': bulk_session.total_stories,
+            'processed_stories': bulk_session.processed_stories,
+            'failed_stories': bulk_session.failed_stories,
+            'progress_percentage': (bulk_session.processed_stories + bulk_session.failed_stories) / max(bulk_session.total_stories, 1) * 100
+        })
+        
+    except Exception as e:
+        logger.error(f"Error getting session status: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/bulk-generator/test-thread')
+@jira_auth_required
+def test_background_thread():
+    """Test if background threading works"""
+    import threading
+    import time
+    from flask import current_app
+    
+    test_result = {'started': False, 'completed': False, 'error': None}
+    
+    def test_thread():
+        try:
+            test_result['started'] = True
+            logger.info("Test thread started")
+            time.sleep(2)
+            with current_app.app_context():
+                logger.info("Test thread in app context")
+                test_result['completed'] = True
+        except Exception as e:
+            test_result['error'] = str(e)
+            logger.error(f"Test thread error: {str(e)}")
+    
+    thread = threading.Thread(target=test_thread)
+    thread.daemon = True
+    thread.start()
+    
+    # Wait a bit to see if thread starts
+    time.sleep(0.5)
+    
+    return jsonify({
+        'success': True,
+        'thread_alive': thread.is_alive(),
+        'test_result': test_result
+    })
+
+@app.route('/api/bulk-generator/debug-session/<session_id>')
+def debug_bulk_session(session_id):
+    """Debug endpoint to see session data"""
+    try:
+        bulk_session = JQLSession.query.filter_by(session_id=session_id).first()
+        if not bulk_session:
+            return jsonify({'success': False, 'error': 'Session not found'}), 404
+        
+        # Only return stories that were actually processed (have test_generation_status set)
+        stories = JQLStory.query.filter_by(session_id=bulk_session.id).filter(
+            JQLStory.test_generation_status.isnot(None)
+        ).all()
+        
+        stories_data = []
+        for story in stories:
+            # Debug logging for each story
+            logger.info(f"Debug - Story {story.jira_key}: status={story.test_generation_status}, test_cases_length={len(story.test_cases) if story.test_cases else 0}")
+            
+            story_data = {
+                'jira_key': story.jira_key,
+                'title': story.title,
+                'description': story.description,
+                'acceptance_criteria': story.acceptance_criteria,
+                'test_generation_status': story.test_generation_status,
+                'generation_error': story.generation_error,
+                'generated_at': story.generated_at.isoformat() if story.generated_at else None,
+                'test_cases': story.test_cases  # Include actual test cases data
+            }
+            stories_data.append(story_data)
+            
+            # Log first few characters of test_cases for debugging
+            if story.test_cases:
+                logger.info(f"Debug - Story {story.jira_key} test_cases preview: {story.test_cases[:100]}...")
+            else:
+                logger.info(f"Debug - Story {story.jira_key} has NO test_cases data")
+        
+        return jsonify({
+            'success': True,
+            'session': {
+                'session_id': bulk_session.session_id,
+                'status': bulk_session.status,
+                'total_stories': bulk_session.total_stories,
+                'processed_stories': bulk_session.processed_stories,
+                'failed_stories': bulk_session.failed_stories,
+                'created_at': bulk_session.created_at.isoformat() if bulk_session.created_at else None,
+                'completed_at': bulk_session.completed_at.isoformat() if bulk_session.completed_at else None
+            },
+            'stories': stories_data
+        })
+        
+    except Exception as e:
+        logger.error(f"Error in debug session: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/bulk-generator/update-test-case', methods=['POST'])
+def update_bulk_test_case():
+    """Update a specific test case in a story"""
+    try:
+        data = request.get_json()
+        session_id = data.get('session_id')
+        story_key = data.get('story_key')
+        test_index = data.get('test_index')
+        new_step = data.get('step')
+        new_expected = data.get('expected')
+        
+        if not all([session_id, story_key, test_index is not None, new_step, new_expected]):
+            return jsonify({'success': False, 'error': 'Missing required parameters'}), 400
+        
+        # Find the session and story
+        bulk_session = JQLSession.query.filter_by(session_id=session_id).first()
+        if not bulk_session:
+            return jsonify({'success': False, 'error': 'Session not found'}), 404
+        
+        story = JQLStory.query.filter_by(session_id=bulk_session.id, jira_key=story_key).first()
+        if not story:
+            return jsonify({'success': False, 'error': 'Story not found'}), 404
+        
+        # Parse and update test cases
+        if story.test_cases:
+            test_cases = json.loads(story.test_cases)
+            if 0 <= test_index < len(test_cases):
+                test_cases[test_index]['step'] = new_step
+                test_cases[test_index]['expected'] = new_expected
+                story.test_cases = json.dumps(test_cases)
+                db.session.commit()
+                
+                return jsonify({'success': True, 'message': 'Test case updated successfully'})
+            else:
+                return jsonify({'success': False, 'error': 'Invalid test case index'}), 400
+        else:
+            return jsonify({'success': False, 'error': 'No test cases found'}), 404
+            
+    except Exception as e:
+        logger.error(f"Error updating test case: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/bulk-generator/delete-test-case', methods=['POST'])
+def delete_bulk_test_case():
+    """Delete a specific test case from a story"""
+    try:
+        data = request.get_json()
+        session_id = data.get('session_id')
+        story_key = data.get('story_key')
+        test_index = data.get('test_index')
+        
+        if not all([session_id, story_key, test_index is not None]):
+            return jsonify({'success': False, 'error': 'Missing required parameters'}), 400
+        
+        # Find the session and story
+        bulk_session = JQLSession.query.filter_by(session_id=session_id).first()
+        if not bulk_session:
+            return jsonify({'success': False, 'error': 'Session not found'}), 404
+        
+        story = JQLStory.query.filter_by(session_id=bulk_session.id, jira_key=story_key).first()
+        if not story:
+            return jsonify({'success': False, 'error': 'Story not found'}), 404
+        
+        # Parse and delete test case
+        if story.test_cases:
+            test_cases = json.loads(story.test_cases)
+            if 0 <= test_index < len(test_cases):
+                test_cases.pop(test_index)
+                story.test_cases = json.dumps(test_cases)
+                db.session.commit()
+                
+                return jsonify({'success': True, 'message': 'Test case deleted successfully'})
+            else:
+                return jsonify({'success': False, 'error': 'Invalid test case index'}), 400
+        else:
+            return jsonify({'success': False, 'error': 'No test cases found'}), 404
+            
+    except Exception as e:
+        logger.error(f"Error deleting test case: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/bulk-generator/add-test-case', methods=['POST'])
+def add_bulk_test_case():
+    """Add a new test case to a story"""
+    try:
+        data = request.get_json()
+        session_id = data.get('session_id')
+        story_key = data.get('story_key')
+        step = data.get('step')
+        expected = data.get('expected')
+        estimate_minutes = data.get('estimate_minutes', 15)
+        
+        if not all([session_id, story_key, step, expected]):
+            return jsonify({'success': False, 'error': 'Missing required parameters'}), 400
+        
+        # Find the session and story
+        bulk_session = JQLSession.query.filter_by(session_id=session_id).first()
+        if not bulk_session:
+            return jsonify({'success': False, 'error': 'Session not found'}), 404
+        
+        story = JQLStory.query.filter_by(session_id=bulk_session.id, jira_key=story_key).first()
+        if not story:
+            return jsonify({'success': False, 'error': 'Story not found'}), 404
+        
+        # Parse and add new test case
+        if story.test_cases:
+            test_cases = json.loads(story.test_cases)
+        else:
+            test_cases = []
+        
+        new_test_case = {
+            'step': step,
+            'expected': expected,
+            'estimate_minutes': estimate_minutes
+        }
+        
+        test_cases.append(new_test_case)
+        story.test_cases = json.dumps(test_cases)
+        db.session.commit()
+        
+        return jsonify({'success': True, 'message': 'Test case added successfully'})
+            
+    except Exception as e:
+        logger.error(f"Error adding test case: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/bulk-generator/add-to-jira', methods=['POST'])
+def add_bulk_tests_to_jira():
+    """Add test cases from a story to Jira"""
+    try:
+        data = request.get_json()
+        story_key = data.get('parent_key') or data.get('story_key')  # Accept both parameter names
+        test_cases = data.get('test_cases')
+        
+        if not all([story_key, test_cases]):
+            return jsonify({'success': False, 'error': 'Missing required parameters'}), 400
+        
+        if not isinstance(test_cases, list) or len(test_cases) == 0:
+            return jsonify({'success': False, 'error': 'No test cases provided'}), 400
+        
+        # Get Jira credentials from session (OAuth)
+        jira_token = session.get('jira_access_token')
+        cloud_id = session.get('jira_cloud_id')
+        jira_domain = session.get('jira_domain', 'https://upgrad-jira.atlassian.net')
+        
+        if not jira_token:
+            return jsonify({'success': False, 'error': 'Jira authentication required'}), 401
+        
+        # Get the subtask issue type ID using the same logic as individual generator
+        headers = {
+            'Authorization': f'Bearer {jira_token}',
+            'Accept': 'application/json'
+        }
+        
+        # Get project key from story key
+        project_key = story_key.split('-')[0]
+        
+        # Get the subtask issue type ID and available fields
+        meta_url = f'https://api.atlassian.com/ex/jira/{cloud_id}/rest/api/3/issue/createmeta?projectKeys={project_key}&issuetypeNames=Sub-task&expand=projects.issuetypes.fields'
+        response = requests.get(meta_url, headers=headers)
+        
+        if response.status_code != 200:
+            logger.error(f"Error fetching issue metadata: {response.text}")
+            return jsonify({'success': False, 'error': f'Error fetching issue metadata: {response.status_code}'}), response.status_code
+        
+        meta_data = response.json()
+        subtask_type_id = None
+        available_fields = {}
+        
+        # Extract available fields for subtasks
+        for project in meta_data.get('projects', []):
+            if project.get('key') == project_key:
+                for issue_type in project.get('issuetypes', []):
+                    if issue_type.get('subtask', False) or issue_type.get('name') == 'Sub-task':
+                        subtask_type_id = issue_type.get('id')
+                        available_fields = issue_type.get('fields', {})
+                        break
+        
+        if not subtask_type_id:
+            return jsonify({'success': False, 'error': 'Could not find subtask issue type'}), 400
+        
+        logger.info(f"Available fields for subtasks: {list(available_fields.keys())}")
+        
+        # Create subtasks using the same logic as individual generator
+        created_subtasks = []
+        failed_subtasks = []
+        create_url = f'https://api.atlassian.com/ex/jira/{cloud_id}/rest/api/3/issue'
+        
+        for i, test_case in enumerate(test_cases):
+            try:
+                step = test_case.get('step', '')
+                expected = test_case.get('expected', '')
+                estimate_minutes = test_case.get('estimate_minutes', 15)
+                
+                # Create subtask with proper issue type ID
+                fields = {
+                    'project': {
+                        'key': project_key
+                    },
+                    'parent': {
+                        'key': story_key
+                    },
+                    'issuetype': {
+                        'id': subtask_type_id
+                    },
+                    'summary': f'Test: {step[:80]}' + ('...' if len(step) > 80 else ''),
+                    'description': {
+                        'type': 'doc',
+                        'version': 1,
+                        'content': [
+                            {
+                                'type': 'heading',
+                                'attrs': {'level': 3},
+                                'content': [{'type': 'text', 'text': 'Test Step'}]
+                            },
+                            {
+                                'type': 'paragraph',
+                                'content': [{'type': 'text', 'text': step}]
+                            },
+                            {
+                                'type': 'heading',
+                                'attrs': {'level': 3},
+                                'content': [{'type': 'text', 'text': 'Expected Result'}]
+                            },
+                            {
+                                'type': 'paragraph',
+                                'content': [{'type': 'text', 'text': expected}]
+                            },
+                            {
+                                'type': 'heading',
+                                'attrs': {'level': 3},
+                                'content': [{'type': 'text', 'text': 'Estimated Time'}]
+                            },
+                            {
+                                'type': 'paragraph',
+                                'content': [{'type': 'text', 'text': f'{estimate_minutes} minutes'}]
+                            }
+                        ]
+                    }
+                }
+                
+                # Try to set the original estimate if the timetracking field exists in available fields
+                if 'timetracking' in available_fields:
+                    fields['timetracking'] = {
+                        'originalEstimate': f'{estimate_minutes}m'
+                    }
+                    logger.info("Added timetracking field to subtask")
+                
+                # Look for any field that might be related to task type in the available fields
+                logger.info("Examining available fields for task type fields")
+                
+                # Check if customfield_10010 is in available fields - this is often used for task type
+                if 'customfield_10010' in available_fields:
+                    logger.info("Found customfield_10010 in available fields")
+                    field_info = available_fields['customfield_10010']
+                    
+                    # Check if this field has allowed values
+                    if 'allowedValues' in field_info:
+                        logger.info(f"customfield_10010 has {len(field_info['allowedValues'])} allowed values")
+                        
+                        # Try to find a value that matches QA Testing or Test Execution
+                        for value in field_info['allowedValues']:
+                            value_name = value.get('value', '')
+                            logger.info(f"Available value: {value_name}")
+                            
+                            if 'qa testing' in value_name.lower() or 'test execution' in value_name.lower():
+                                if 'id' in value:
+                                    fields['customfield_10010'] = {'id': value['id']}
+                                    logger.info(f"Setting customfield_10010 to id: {value['id']} (value: {value_name})")
+                                else:
+                                    fields['customfield_10010'] = {'value': value_name}
+                                    logger.info(f"Setting customfield_10010 to value: {value_name}")
+                                break
+                        else:
+                            # If no matching value found, use the first one
+                            if field_info['allowedValues']:
+                                first_value = field_info['allowedValues'][0]
+                                if 'id' in first_value:
+                                    fields['customfield_10010'] = {'id': first_value['id']}
+                                    logger.info(f"Setting customfield_10010 to first available id: {first_value['id']}")
+                                else:
+                                    fields['customfield_10010'] = {'value': first_value['value']}
+                                    logger.info(f"Setting customfield_10010 to first available value: {first_value['value']}")
+                
+                # Look for any other fields that might be task type related
+                for field_id, field_info in available_fields.items():
+                    field_name = field_info.get('name', '').lower()
+                    
+                    # Skip customfield_10010 as we already handled it
+                    if field_id == 'customfield_10010':
+                        continue
+                        
+                    # If this looks like a task type field and has allowed values
+                    if ('task' in field_name or 'type' in field_name) and 'allowedValues' in field_info:
+                        logger.info(f"Found potential task type field: {field_id} ({field_name})")
+                        
+                        # Try to find a value that matches QA Testing or Test Execution
+                        for value in field_info['allowedValues']:
+                            value_name = value.get('value', '')
+                            if 'qa testing' in value_name.lower() or 'test execution' in value_name.lower():
+                                if 'id' in value:
+                                    fields[field_id] = {'id': value['id']}
+                                    logger.info(f"Setting {field_id} to id: {value['id']} (value: {value_name})")
+                                else:
+                                    fields[field_id] = {'value': value_name}
+                                    logger.info(f"Setting {field_id} to value: {value_name}")
+                                break
+                        else:
+                            # If no matching value found, use the first one
+                            if field_info['allowedValues']:
+                                first_value = field_info['allowedValues'][0]
+                                if 'id' in first_value:
+                                    fields[field_id] = {'id': first_value['id']}
+                                    logger.info(f"Setting {field_id} to first available id: {first_value['id']}")
+                                else:
+                                    fields[field_id] = {'value': first_value['value']}
+                                    logger.info(f"Setting {field_id} to first available value: {first_value['value']}")
+                
+                subtask_data = {'fields': fields}
+                
+                logger.info(f"Sending payload for subtask creation: {subtask_data}")
+                response = requests.post(
+                    create_url,
+                    headers={
+                        'Authorization': f'Bearer {jira_token}',
+                        'Content-Type': 'application/json'
+                    },
+                    json=subtask_data
+                )
+                
+                if response.status_code == 201:
+                    issue_data = response.json()
+                    created_subtasks.append({
+                        'key': issue_data['key'],
+                        'url': f"{jira_domain}/browse/{issue_data['key']}"
+                    })
+                else:
+                    logger.error(f"Failed to create subtask {i+1}: {response.status_code} - {response.text}")
+                    failed_subtasks.append({
+                        'index': i+1,
+                        'error': f"HTTP {response.status_code}: {response.text}"
+                    })
+                
+            except Exception as subtask_error:
+                logger.error(f"Error creating subtask {i+1}: {str(subtask_error)}")
+                failed_subtasks.append({
+                    'index': i+1,
+                    'error': str(subtask_error)
+                })
+        
+        # Return results
+        if created_subtasks:
+            message = f"Successfully created {len(created_subtasks)} test subtasks in Jira"
+            if failed_subtasks:
+                message += f" ({len(failed_subtasks)} failed)"
+            
+            return jsonify({
+                'success': True,
+                'created_count': len(created_subtasks),
+                'failed_count': len(failed_subtasks),
+                'message': message,
+                'created_subtasks': created_subtasks,
+                'failed_subtasks': failed_subtasks
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'error': f"Failed to create any subtasks. {len(failed_subtasks)} attempts failed.",
+                'failed_subtasks': failed_subtasks
+            }), 400
+            
+    except Exception as e:
+        logger.error(f"Error adding tests to Jira: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/jira/fetch-jql-stories', methods=['POST'])
+@jira_auth_required
+def fetch_jql_stories():
+    """Fetch stories from Jira using JQL query for manual test generator"""
+    try:
+        logger.info("JQL fetch endpoint called")
+        data = request.get_json()
+        jql_query = data.get('jql')
+        
+        logger.info(f"JQL query received: {jql_query}")
+        
+        if not jql_query:
+            logger.error("No JQL query provided")
+            return jsonify({'success': False, 'error': 'JQL query is required'}), 400
+        
+        # Get Jira credentials from session
+        jira_token = session.get('jira_access_token')
+        jira_domain = session.get('jira_domain', 'https://upgrad-jira.atlassian.net')
+        cloud_id = session.get('jira_cloud_id')
+        
+        logger.info(f"Jira token exists: {bool(jira_token)}")
+        logger.info(f"Cloud ID: {cloud_id}")
+        
+        if not jira_token:
+            logger.error("No Jira token in session")
+            return jsonify({'success': False, 'error': 'Jira authentication required'}), 401
+        
+        # Fetch stories from Jira
+        stories = []
+        start_at = 0
+        max_results = 50
+        
+        while True:
+            logger.info(f"Making Jira API request with JQL: {jql_query}")
+            jira_response = requests.get(
+                f"https://api.atlassian.com/ex/jira/{cloud_id}/rest/api/3/search",
+                headers={
+                    'Authorization': f'Bearer {jira_token}',
+                    'Content-Type': 'application/json'
+                },
+                params={
+                    'jql': jql_query,
+                    'startAt': start_at,
+                    'maxResults': max_results,
+                    'fields': 'key,summary,description,issuetype,priority,status,assignee,reporter,labels,components'
+                }
+            )
+            
+            logger.info(f"Jira API response status: {jira_response.status_code}")
+            
+            if jira_response.status_code != 200:
+                logger.error(f"Jira API error: {jira_response.text}")
+                return jsonify({'success': False, 'error': f'Jira API error: {jira_response.status_code} - {jira_response.text}'}), 400
+            
+            result = jira_response.json()
+            issues = result.get('issues', [])
+            
+            if not issues:
+                break
+            
+            # Process each issue
+            for issue in issues:
+                fields = issue.get('fields', {})
+                
+                # Extract acceptance criteria from description
+                description = fields.get('description', {})
+                description_text = ''
+                acceptance_criteria = ''
+                
+                if description and isinstance(description, dict):
+                    # Handle Atlassian Document Format (ADF)
+                    description_text = extract_text_from_adf(description)
+                    acceptance_criteria = extract_acceptance_criteria(description_text)
+                elif isinstance(description, str):
+                    description_text = description
+                    acceptance_criteria = extract_acceptance_criteria(description_text)
+                
+                # Create story object for response
+                story_data = {
+                    'key': issue['key'],  # Changed from jira_key to key for bulk generator compatibility
+                    'jira_key': issue['key'],
+                    'title': fields.get('summary', ''),
+                    'summary': fields.get('summary', ''),  # Add summary field for bulk generator
+                    'description': description_text,
+                    'story_type': fields.get('issuetype', {}).get('name', ''),
+                    'priority': fields.get('priority', {}).get('name', ''),
+                    'status': fields.get('status', {}).get('name', ''),
+                    'assignee': fields.get('assignee', {}).get('displayName', '') if fields.get('assignee') else '',
+                    'reporter': fields.get('reporter', {}).get('displayName', '') if fields.get('reporter') else '',
+                    'labels': fields.get('labels', []),
+                    'components': [c.get('name', '') for c in fields.get('components', [])],
+                    'acceptance_criteria': acceptance_criteria,
+                    'jira_base_url': jira_domain
+                }
+                stories.append(story_data)
+            
+            start_at += max_results
+            if start_at >= result.get('total', 0):
+                break
+        
+        logger.info(f"Successfully fetched {len(stories)} stories")
+        return jsonify({
+            'success': True,
+            'stories': stories,
+            'total_count': len(stories)
+        })
+        
+    except Exception as e:
+        logger.error(f"Error fetching JQL stories: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/jira/generate-story-tests', methods=['POST'])
+@jira_auth_required
+def generate_story_tests():
+    """Generate test cases for a single story - for manual test generator"""
+    try:
+        data = request.get_json()
+        story_key = data.get('story_key', '').strip()
+        context_name = data.get('context_name', '').strip() or data.get('context', '').strip()
+        
+        if not story_key:
+            return jsonify({'success': False, 'error': 'Story key is required'}), 400
+        
+        # Context is optional, use empty string if not provided
+        if not context_name:
+            context_name = None
+        
+        logger.info(f"Generating test cases for story {story_key} with context {context_name}")
+        
+        # Get Jira credentials from session
+        jira_token = session.get('jira_access_token')
+        cloud_id = session.get('jira_cloud_id')
+        
+        if not jira_token:
+            return jsonify({'success': False, 'error': 'Jira authentication required'}), 401
+        
+        # Fetch story details from Jira
+        jira_response = requests.get(
+            f"https://api.atlassian.com/ex/jira/{cloud_id}/rest/api/3/issue/{story_key}",
+            headers={
+                'Authorization': f'Bearer {jira_token}',
+                'Content-Type': 'application/json'
+            },
+            params={
+                'fields': 'key,summary,description,issuetype,priority,status,assignee,labels,components'
+            }
+        )
+        
+        if jira_response.status_code != 200:
+            logger.error(f"Failed to fetch story {story_key}: {jira_response.status_code} - {jira_response.text}")
+            return jsonify({'success': False, 'error': f'Failed to fetch story from Jira: {jira_response.status_code}'}), 400
+        
+        issue_data = jira_response.json()
+        
+        # Create a story object similar to the bulk generator format
+        class StoryObject:
+            def __init__(self, issue_data):
+                self.jira_key = issue_data['key']
+                self.title = issue_data['fields']['summary']
+                description = issue_data['fields'].get('description', '')
+                if isinstance(description, dict):
+                    # Handle Atlassian Document Format (ADF)
+                    self.description = extract_text_from_adf(description)
+                else:
+                    self.description = description or ''
+                self.acceptance_criteria = extract_acceptance_criteria(self.description)
+        
+        story_obj = StoryObject(issue_data)
+        
+        # Generate test cases using the existing function
+        test_cases = generate_test_cases_for_story(story_obj, context_name)
+        
+        logger.info(f"Generated {len(test_cases)} test cases for story {story_key}")
+        
+        return jsonify({
+            'success': True,
+            'test_cases': test_cases,
+            'story_key': story_key,
+            'total_tests': len(test_cases)
+        })
+        
+    except Exception as e:
+        logger.error(f"Error generating test cases for story: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+def extract_text_from_adf(adf_content):
+    """Extract plain text from Atlassian Document Format (ADF)"""
+    def extract_text_recursive(node):
+        if isinstance(node, dict):
+            text = ""
+            if node.get('type') == 'text':
+                text += node.get('text', '')
+            elif 'content' in node:
+                for child in node['content']:
+                    text += extract_text_recursive(child)
+            return text
+        elif isinstance(node, list):
+            return ''.join(extract_text_recursive(item) for item in node)
+        return str(node) if node else ''
+    
+    return extract_text_recursive(adf_content)
+
+def extract_acceptance_criteria(description_text):
+    """Extract acceptance criteria from story description"""
+    if not description_text:
+        return ''
+    
+    # Look for common acceptance criteria patterns
+    patterns = [
+        r'acceptance criteria[:\s]*(.*?)(?=\n\n|\n[A-Z]|$)',
+        r'ac[:\s]*(.*?)(?=\n\n|\n[A-Z]|$)',
+        r'given.*when.*then.*',
+        r'scenario[:\s]*(.*?)(?=\n\n|\n[A-Z]|$)'
+    ]
+    
+    for pattern in patterns:
+        import re
+        match = re.search(pattern, description_text.lower(), re.DOTALL | re.IGNORECASE)
+        if match:
+            return match.group(1).strip()
+    
+    return ''
+
+def generate_test_cases_for_story(story, context_name=None):
+    """Generate test cases for a single story using AI - matches individual test generator approach"""
+    try:
+        logger.info(f"Generating test cases for story: {story.jira_key} with context: {context_name}")
+        
+        # Get context text (same as individual generator)
+        context_text = get_context_text(context_name) if context_name else ""
+        
+        # Build comprehensive scenario from story details
+        scenario = f"Story: {story.title or 'No title provided'}\n"
+        if story.description:
+            scenario += f"Description: {story.description}\n"
+        if story.acceptance_criteria:
+            scenario += f"Acceptance Criteria: {story.acceptance_criteria}\n"
+        
+        # Use the EXACT same prompt structure as individual test generator (no fixed count)
+        prompt = (
+            (context_text + "\n\n" if context_text else "") +
+            "You are a senior QA engineer with deep expertise in functional, UI, API, and data validation testing. "
+            "Your task is to create a **comprehensive, well-categorized, and exhaustive set of manual test scenarios** for the following functionality.\n\n"
+
+            "Each test case must be a **JSON object** with these exact keys:\n"
+            "- 'step': The specific user/system action or starting condition\n"
+            "- 'expected': The precise, verifiable, and observable system behavior\n"
+            "- 'estimate_minutes': A realistic execution time that includes setup, action, validation, and documentation\n\n"
+
+            "Allowed values for 'estimate_minutes': **5, 10, 15, 20, 30, 45, 60**\n"
+            "Use the following guidelines for estimates:\n"
+            "- 5 mins → Basic UI checks (e.g., visibility, button states, tooltips)\n"
+            "- 10 mins → Single interaction or API hit with straightforward validation\n"
+            "- 15 mins → Multi-step flows or validations with intermediate logic\n"
+            "- 20 mins → Tests involving multiple dependencies or permission-based conditions\n"
+            "- 30 mins → Full user workflows or partial integration checks\n"
+            "- 45–60 mins → End-to-end journeys with environment/data setup, multi-role interaction, or cross-module validation\n\n"
+
+            "Ensure your test cases **thoroughly cover the following dimensions**:\n"
+            "- Core happy path workflows and expected flows\n"
+            "- Edge and boundary conditions (length, values, state switches)\n"
+            "- Negative test cases (invalid inputs, forbidden actions, missing dependencies)\n"
+            "- Input/output data validation and transformation\n"
+            "- API responses, contract structure, and error handling (if applicable)\n"
+            "- UI/UX behaviors (feedback messages, element state, dynamic rendering)\n"
+            "- Role-based or conditional behaviors (if implied)\n"
+            "- Cross-module or integrated system logic (only if within scenario scope)\n\n"
+
+            "⚠️ Do **NOT** assume anything beyond the described functionality (e.g., login, unrelated features, system-wide settings).\n"
+            "⚠️ Your output must be a **single JSON array**. Each object must follow this format exactly:\n"
+            "{'step': '...', 'expected': '...', 'estimate_minutes': 15}\n"
+            "⚠️ Do **NOT** include headings, explanations, markdown, groupings, or extra fields.\n\n"
+
+            f"Scenario:\n{scenario}\n\n"
+            "Test Cases:"
+        )
+        
+        # Try to use Google AI first (same as individual generator)
+        import google.generativeai as genai
+        import os
+        import re
+        import json
+        
+        api_key = os.environ.get("GOOGLE_API_KEY")
+        if not api_key:
+            logger.warning(f"GOOGLE_API_KEY not set for {story.jira_key}, using fallback test cases")
+            fallback_cases = generate_fallback_test_cases(story)
+            logger.info(f"Generated {len(fallback_cases)} fallback test cases for {story.jira_key}")
+            return fallback_cases
+            
+        try:
+            genai.configure(api_key=api_key)
+            model_name = os.environ.get('GOOGLE_API_MODEL', 'gemini-1.5-flash')
+            model = genai.GenerativeModel(model_name)
+            
+            logger.info(f"Calling Google AI API for {story.jira_key} with model {model_name}")
+            response = model.generate_content(prompt)
+            content = response.text
+            logger.info(f"Received AI response for {story.jira_key}, length: {len(content)}")
+            
+            # Extract JSON array from response - try multiple patterns
+            # First try to find JSON array directly
+            match = re.search(r'(\[.*\])', content, re.DOTALL)
+            if match:
+                try:
+                    json_str = match.group(1)
+                    test_cases = json.loads(json_str)
+                    logger.info(f"Successfully generated {len(test_cases)} AI test cases for {story.jira_key}")
+                    return test_cases
+                except json.JSONDecodeError as json_error:
+                    logger.warning(f"JSON decode error for {story.jira_key}: {str(json_error)}")
+            
+            # If direct extraction fails, try to clean the response
+            # Remove markdown formatting and extract JSON
+            cleaned_content = re.sub(r'#+\s*[^\n]*\n', '', content)  # Remove headers
+            cleaned_content = re.sub(r'\*\*[^*]*\*\*', '', cleaned_content)  # Remove bold
+            cleaned_content = re.sub(r'```[^`]*```', '', cleaned_content)  # Remove code blocks
+            
+            # Try again with cleaned content
+            match = re.search(r'(\[.*\])', cleaned_content, re.DOTALL)
+            if match:
+                try:
+                    json_str = match.group(1)
+                    test_cases = json.loads(json_str)
+                    logger.info(f"Successfully extracted {len(test_cases)} AI test cases after cleaning for {story.jira_key}")
+                    return test_cases
+                except json.JSONDecodeError as json_error:
+                    logger.warning(f"JSON decode error after cleaning for {story.jira_key}: {str(json_error)}")
+            
+            logger.warning(f"Could not extract JSON from AI response for {story.jira_key}, response: {content[:500]}...")
+            fallback_cases = generate_fallback_test_cases(story)
+            logger.info(f"Using {len(fallback_cases)} fallback test cases for {story.jira_key}")
+            return fallback_cases
+                
+        except Exception as ai_error:
+            logger.error(f"AI API error for {story.jira_key}: {str(ai_error)}")
+            fallback_cases = generate_fallback_test_cases(story)
+            logger.info(f"Using {len(fallback_cases)} fallback test cases due to AI error for {story.jira_key}")
+            return fallback_cases
+        
+    except Exception as e:
+        logger.error(f"Error generating test cases for story {story.jira_key}: {str(e)}")
+        fallback_cases = generate_fallback_test_cases(story)
+        logger.info(f"Exception fallback: Generated {len(fallback_cases)} fallback test cases for {story.jira_key}")
+        return fallback_cases
+
+def generate_fallback_test_cases(story):
+    """Generate comprehensive fallback test cases when AI generation fails - 15-20 test cases"""
+    title = story.title or "the feature"
+    
+    return [
+        # Happy Path Scenarios (5 test cases)
+        {
+            "step": f"Verify basic functionality of {title} with valid inputs",
+            "expected": "Feature works as described in the story requirements",
+            "estimate_minutes": 15
+        },
+        {
+            "step": f"Test successful completion of primary workflow for {title}",
+            "expected": "User can complete the main workflow without errors",
+            "estimate_minutes": 20
+        },
+        {
+            "step": f"Verify data is saved correctly when using {title}",
+            "expected": "All entered data is persisted and retrievable",
+            "estimate_minutes": 15
+        },
+        {
+            "step": f"Test navigation flow within {title}",
+            "expected": "User can navigate between screens/sections smoothly",
+            "estimate_minutes": 10
+        },
+        {
+            "step": f"Verify confirmation messages are displayed for {title}",
+            "expected": "Success messages are shown for completed actions",
+            "estimate_minutes": 5
+        },
+        
+        # Input Validation Scenarios (4 test cases)
+        {
+            "step": f"Test required field validation for {title}",
+            "expected": "System shows error messages for missing required fields",
+            "estimate_minutes": 10
+        },
+        {
+            "step": f"Test input format validation for {title}",
+            "expected": "System validates email, phone, date formats and shows appropriate errors",
+            "estimate_minutes": 15
+        },
+        {
+            "step": f"Test input length limits for {title}",
+            "expected": "System enforces minimum and maximum character limits",
+            "estimate_minutes": 10
+        },
+        {
+            "step": f"Test special character handling in {title}",
+            "expected": "System handles special characters appropriately without breaking",
+            "estimate_minutes": 10
+        },
+        
+        # Edge Cases and Boundary Conditions (4 test cases)
+        {
+            "step": f"Test {title} with maximum allowed data volume",
+            "expected": "System handles large data sets without performance degradation",
+            "estimate_minutes": 30
+        },
+        {
+            "step": f"Test {title} with empty/null data scenarios",
+            "expected": "System gracefully handles empty states and null values",
+            "estimate_minutes": 15
+        },
+        {
+            "step": f"Test concurrent access to {title}",
+            "expected": "Multiple users can use the feature simultaneously without conflicts",
+            "estimate_minutes": 45
+        },
+        {
+            "step": f"Test {title} performance under load",
+            "expected": "Feature responds within acceptable time limits under normal load",
+            "estimate_minutes": 30
+        },
+        
+        # Security and Access Control (3 test cases)
+        {
+            "step": f"Verify user permissions and access control for {title}",
+            "expected": "Only authorized users can access the feature based on their roles",
+            "estimate_minutes": 20
+        },
+        {
+            "step": f"Test unauthorized access attempts to {title}",
+            "expected": "System blocks unauthorized users and shows appropriate error messages",
+            "estimate_minutes": 15
+        },
+        {
+            "step": f"Test data privacy and security in {title}",
+            "expected": "Sensitive data is protected and not exposed inappropriately",
+            "estimate_minutes": 25
+        },
+        
+        # Error Handling and Recovery (4 test cases)
+        {
+            "step": f"Test error handling and recovery for {title}",
+            "expected": "System provides clear error messages and recovery options",
+            "estimate_minutes": 20
+        },
+        {
+            "step": f"Test {title} behavior during system failures",
+            "expected": "Feature degrades gracefully and maintains data integrity",
+            "estimate_minutes": 30
+        },
+        {
+            "step": f"Test undo/rollback functionality in {title}",
+            "expected": "Users can reverse actions when undo functionality is available",
+            "estimate_minutes": 15
+        },
+        {
+            "step": f"Test {title} recovery after network interruption",
+            "expected": "Feature handles network issues and recovers appropriately",
+            "estimate_minutes": 25
+        }
+    ]
+
+@app.route('/auto-healing-recorder')
+@jira_auth_required
+def auto_healing_recorder_redirect():
+    """Deprecated: redirect to V2 Auto-Healing Test Recorder"""
+    return redirect(url_for('auto_healing_recorder_v2'))
+
+@app.route('/api/auto-healing/start-codegen', methods=['POST'])
+@jira_auth_required
+def start_auto_healing_codegen():
+    """Deprecated: use /api/recorder-v2/start-session"""
+    return jsonify({
+        'success': False,
+        'error': 'Legacy endpoint removed. Use /api/recorder-v2/start-session.'
+    }), 410
+
+# Old route removed - replaced by V2 endpoints
+
+# Old test browser route removed - replaced by V2 endpoints
+
+@app.route('/api/auto-healing/check-playwright', methods=['GET'])
+@jira_auth_required
+def check_playwright_status():
+    """Deprecated: use V2 Recorder commands and session endpoints"""
+    return jsonify({
+        'success': False,
+        'error': 'Legacy endpoint removed. Use /api/recorder-v2/* endpoints and MCP commands shown in the UI.'
+    }), 410
+
+@app.route('/api/auto-healing/close-browser', methods=['POST'])
+@jira_auth_required
+def close_auto_healing_browser():
+    """Deprecated: use /api/recorder-v2/close-session"""
+    return jsonify({
+        'success': False,
+        'error': 'Legacy endpoint removed. Use /api/recorder-v2/close-session.'
+    }), 410
+
+@app.route('/api/auto-healing/session-status', methods=['GET'])
+@jira_auth_required
+def get_auto_healing_session_status():
+    """Deprecated: use /api/recorder-v2/session-status"""
+    return jsonify({
+        'success': False,
+        'error': 'Legacy endpoint removed. Use /api/recorder-v2/session-status.'
+    }), 410
+
+# Old debug route removed - replaced by V2 endpoints
+
+# Old record action route removed - replaced by V2 endpoints
+
+# Old generate test route removed - replaced by V2 endpoints
+
+def generate_playwright_test_code(actions, url, session_id):
+    """Generate Playwright test code with auto-healing locators"""
+    test_name = f'AutoHealingTest_{session_id[:8]}'
+    timestamp = datetime.now().isoformat()
+    
+    test_code = f'''import {{ test, expect }} from '@playwright/test';
+
+/**
+ * Auto-Healing Test Generated by Co-Test
+ * Generated: {timestamp}
+ * Target URL: {url}
+ * Session ID: {session_id}
+ * Actions Recorded: {len(actions)}
+ */
+
+class AutoHealingLocator {{
+    constructor(page, strategies) {{
+        this.page = page;
+        this.strategies = strategies;
+    }}
+
+    async locate() {{
+        for (const strategy of this.strategies) {{
+            try {{
+                let locator;
+                
+                // Handle different locator types
+                switch (strategy.strategy) {{
+                    case 'id':
+                        locator = this.page.locator(strategy.locator);
+                        break;
+                    case 'data-attribute':
+                        locator = this.page.locator(strategy.locator);
+                        break;
+                    case 'role':
+                        // Extract role and name from playwright command
+                        const roleMatch = strategy.playwright.match(/get_by_role\\('([^']+)'(?:,\s*{{\s*name:\s*'([^']+)'\s*}})?\\)/);
+                        if (roleMatch) {{
+                            const [, role, name] = roleMatch;
+                            locator = name ? 
+                                this.page.getByRole(role, {{ name }}) : 
+                                this.page.getByRole(role);
+                        }} else {{
+                            locator = this.page.locator(strategy.locator);
+                        }}
+                        break;
+                    case 'text':
+                        const textMatch = strategy.playwright.match(/get_by_text\\('([^']+)'\\)/);
+                        if (textMatch) {{
+                            locator = this.page.getByText(textMatch[1]);
+                        }} else {{
+                            locator = this.page.locator(strategy.locator);
+                        }}
+                        break;
+                    default:
+                        locator = this.page.locator(strategy.locator);
+                }}
+                
+                await locator.waitFor({{ timeout: 5000 }});
+                console.log(`✅ Located element using ${{strategy.strategy}}: ${{strategy.locator}}`);
+                return locator;
+            }} catch (error) {{
+                console.log(`❌ Failed to locate using ${{strategy.strategy}}: ${{strategy.locator}}`);
+                continue;
+            }}
+        }}
+        throw new Error('All locator strategies failed');
+    }}
+}}
+
+test('{test_name}', async ({{ page }}) => {{
+    // Navigate to the target URL
+    await page.goto('{url}');
+    
+    // Wait for page to load
+    await page.waitForLoadState('networkidle');
+'''
+
+    # Generate test steps for each recorded action
+    for index, action in enumerate(actions):
+        test_code += f'''
+    // Step {index + 1}: {action['type']} action
+    {{
+        const strategies = {json.dumps(action['locators'], indent=8)};
+        const autoLocator = new AutoHealingLocator(page, strategies);
+        const element = await autoLocator.locate();
+        
+'''
+
+        action_type = action['type']
+        value = action.get('value', '')
+        
+        if action_type == 'click':
+            test_code += f'        await element.click();\n'
+        elif action_type == 'fill':
+            test_code += f'        await element.fill(\'{value}\');\n'
+        elif action_type == 'type':
+            test_code += f'        await element.type(\'{value}\');\n'
+        elif action_type == 'select':
+            test_code += f'        await element.selectOption(\'{value}\');\n'
+        else:
+            test_code += f'        // {action_type} action\n'
+
+        test_code += '    }\n'
+
+    test_code += '''
+    // Add assertions as needed
+    // await expect(page).toHaveURL(/expected-url/);
+    // await expect(page.locator('selector')).toBeVisible();
+});
+'''
+
+    return test_code
+
+@app.route('/api/auto-healing/generate-locators', methods=['POST'])
+@jira_auth_required
+def generate_auto_healing_locators():
+    """Generate multiple locator strategies for an element"""
+    try:
+        data = request.get_json()
+        element_info = data.get('element', {})
+        
+        # Generate multiple locator strategies
+        locators = generate_multiple_locators(element_info)
+        
+        return jsonify({
+            'success': True,
+            'locators': locators
+        })
+        
+    except Exception as e:
+        logger.error(f"Error generating locators: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+def generate_multiple_locators(element_info):
+    """Generate multiple locator strategies for robust element identification"""
+    locators = []
+    
+    # Strategy 1: ID-based (highest priority)
+    if element_info.get('id'):
+        locators.append({
+            'strategy': 'id',
+            'locator': f"#{element_info['id']}",
+            'playwright': f"page.locator('#{element_info['id']}')",
+            'priority': 1,
+            'description': 'ID-based locator (most reliable)'
+        })
+    
+    # Strategy 2: Data attributes
+    for attr in ['data-testid', 'data-test', 'data-cy']:
+        if element_info.get(attr):
+            locators.append({
+                'strategy': 'data-attribute',
+                'locator': f"[{attr}='{element_info[attr]}']",
+                'playwright': f"page.locator('[{attr}=\"{element_info[attr]}\"]')",
+                'priority': 2,
+                'description': f'{attr} attribute locator'
+            })
+    
+    # Strategy 3: Role-based (accessibility)
+    if element_info.get('role'):
+        locators.append({
+            'strategy': 'role',
+            'locator': f"role={element_info['role']}",
+            'playwright': f"page.get_by_role('{element_info['role']}')",
+            'priority': 3,
+            'description': 'Role-based locator (accessibility-friendly)'
+        })
+    
+    # Strategy 4: Text-based
+    if element_info.get('text'):
+        locators.append({
+            'strategy': 'text',
+            'locator': f"text={element_info['text']}",
+            'playwright': f"page.get_by_text('{element_info['text']}')",
+            'priority': 4,
+            'description': 'Text-based locator'
+        })
+    
+    # Strategy 5: CSS class combination
+    if element_info.get('classes'):
+        class_selector = '.' + '.'.join(element_info['classes'])
+        locators.append({
+            'strategy': 'css-class',
+            'locator': class_selector,
+            'playwright': f"page.locator('{class_selector}')",
+            'priority': 5,
+            'description': 'CSS class-based locator'
+        })
+    
+    # Strategy 6: XPath (last resort)
+    if element_info.get('xpath'):
+        locators.append({
+            'strategy': 'xpath',
+            'locator': element_info['xpath'],
+            'playwright': f"page.locator('xpath={element_info['xpath']}')",
+            'priority': 6,
+            'description': 'XPath locator (fallback)'
+        })
+    
+    # Sort by priority
+    locators.sort(key=lambda x: x['priority'])
+    
+    return locators
+
+# =============================================
+# SIMPLIFIED AUTO-HEALING TEST RECORDER V2 ENDPOINTS
+# =============================================
+
+@app.route('/api/recorder-v2/start-session', methods=['POST'])
+@jira_auth_required
+def start_recorder_v2_session():
+    """Start a new auto-healing recording session V2"""
+    try:
+        data = request.get_json()
+        url = data.get('url', 'https://example.com')
+        
+        # Generate unique session ID
+        session_id = f"auto_healing_{int(datetime.now().timestamp())}"
+        
+        # Start recording session
+        success, message = auto_healing_recorder.start_session(session_id, url)
+        
+        if success:
+            # Store session in Flask session for persistence
+            session['auto_healing_session_id'] = session_id
+            session['auto_healing_url'] = url
+            
+            return jsonify({
+                'success': True,
+                'session_id': session_id,
+                'url': url,
+                'message': message,
+                'mcp_commands': {
+                    'navigate': f'mcp0_playwright_navigate --url "{url}" --headless false',
+                    'start_codegen': 'mcp0_start_codegen_session --outputPath "./tests" --testNamePrefix "AutoHealing"',
+                    'screenshot': 'mcp0_playwright_screenshot --name "recording-start"'
+                }
+            })
+        else:
+            return jsonify({'success': False, 'error': message}), 500
+        
+    except Exception as e:
+        logger.error(f"Error starting auto-healing session: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/recorder-v2/launch-codegen', methods=['POST'])
+@jira_auth_required
+def launch_recorder_v2_codegen():
+    """Launch Playwright codegen (headed) for the active session URL"""
+    try:
+        data = request.get_json() or {}
+        url = data.get('url') or session.get('auto_healing_url') or 'https://example.com'
+        session_id = data.get('session_id') or session.get('auto_healing_session_id')
+        if not session_id:
+            return jsonify({'success': False, 'error': 'No active session found'}), 400
+
+        # Prepare output path for codegen file
+        output_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'codegen-output')
+        os.makedirs(output_dir, exist_ok=True)
+        output_file = f"codegen_{session_id}_{int(time.time())}.spec.ts"
+        output_path = os.path.join(output_dir, output_file)
+
+        # Launch Playwright codegen as a subprocess
+        # Requires Playwright to be installed (Python) and browsers installed.
+        # Try to use --output to save the generated script automatically.
+        cmd = [
+            "playwright", "codegen",
+            "--target", "javascript",
+            "--output", output_path,
+            url
+        ]
+        try:
+            proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        except FileNotFoundError:
+            # Fallback to python module invocation
+            proc = subprocess.Popen([
+                "python", "-m", "playwright", "codegen",
+                "--target", "javascript",
+                "--output", output_path,
+                url
+            ], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
+        # Save pid into session data
+        sess = auto_healing_recorder.get_session(session_id) or {}
+        sess['codegen_pid'] = proc.pid
+        sess['codegen_output_path'] = output_path
+        auto_healing_recorder.active_sessions[session_id] = sess
+
+        logger.info(f"Launched Playwright codegen (pid={proc.pid}) for session {session_id} on {url}")
+        return jsonify({
+            'success': True,
+            'session_id': session_id,
+            'url': url,
+            'pid': proc.pid,
+            'output_path': output_path
+        })
+    except Exception as e:
+        logger.error(f"Error launching codegen: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/recorder-v2/stop-codegen', methods=['POST'])
+@jira_auth_required
+def stop_recorder_v2_codegen():
+    """Stop Playwright codegen process for the active session"""
+    try:
+        data = request.get_json() or {}
+        session_id = data.get('session_id') or session.get('auto_healing_session_id')
+        if not session_id:
+            return jsonify({'success': False, 'error': 'No active session found'}), 400
+
+        sess = auto_healing_recorder.get_session(session_id) or {}
+        pid = sess.get('codegen_pid')
+        if not pid:
+            return jsonify({'success': False, 'error': 'No codegen process found for this session'}), 400
+
+        # Attempt to terminate process (Windows-friendly)
+        try:
+            if os.name == 'nt':
+                subprocess.run(["taskkill", "/PID", str(pid), "/T", "/F"], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            else:
+                import signal
+                os.kill(pid, signal.SIGTERM)
+        except Exception as kill_err:
+            logger.warning(f"Failed to terminate codegen pid={pid}: {kill_err}")
+
+        # Attempt to read generated code if available
+        code = None
+        output_path = sess.get('codegen_output_path')
+        try:
+            if output_path and os.path.exists(output_path):
+                with open(output_path, 'r', encoding='utf-8') as f:
+                    code = f.read()
+        except Exception as read_err:
+            logger.warning(f"Could not read codegen output at {output_path}: {read_err}")
+
+        # Cleanup
+        sess.pop('codegen_pid', None)
+        # keep output path for later viewing
+        auto_healing_recorder.active_sessions[session_id] = sess
+        logger.info(f"Stopped Playwright codegen (pid={pid}) for session {session_id}")
+        return jsonify({'success': True, 'session_id': session_id, 'output_path': output_path, 'codegen_code': code})
+    except Exception as e:
+        logger.error(f"Error stopping codegen: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+# -------- Codegen Import (convert to auto-healing actions) ---------
+def _extract_element_data_from_target(target: str):
+    """Parse a Playwright target expression into element_data for auto-healing.
+    Supports getByRole, getByText, getByPlaceholder, getByTestId, locator, and direct selectors.
+    """
+    try:
+        # Normalize whitespace
+        t = re.sub(r"\s+", " ", target.strip())
+
+        # getByRole('button', { name: 'Sign in' })
+        m = re.search(r"getByRole\(\s*(['\"]) (?P<role>.+?) \1 \s*(?:,\s*\{[^}]*name\s*:\s*(['\"]) (?P<name>.+?) \3 [^}]*\})?\s*\)", t, re.VERBOSE)
+        if m:
+            role = m.group('role')
+            name = m.group('name') if 'name' in m.groupdict() else None
+            el = {'role': role}
+            if name:
+                el['text'] = name
+            return el
+
+        # getByText('Text')
+        m = re.search(r"getByText\(\s*(['\"]) (?P<text>.*?) \1 \s*\)", t, re.VERBOSE)
+        if m:
+            return {'text': m.group('text')}
+
+        # getByPlaceholder('Placeholder')
+        m = re.search(r"getByPlaceholder\(\s*(['\"]) (?P<ph>.*?) \1 \s*\)", t, re.VERBOSE)
+        if m:
+            return {'placeholder': m.group('ph')}
+
+        # getByTestId('tid')
+        m = re.search(r"getByTestId\(\s*(['\"]) (?P<tid>.*?) \1 \s*\)", t, re.VERBOSE)
+        if m:
+            return {'data-testid': m.group('tid')}
+
+        # locator('...') or direct selector string
+        m = re.search(r"locator\(\s*(['\"]) (?P<sel>.*?) \1 \s*\)", t, re.VERBOSE)
+        if not m:
+            # direct selector variant (from page.click('...'))
+            m = re.search(r"^(['\"]) (?P<sel>.*?) \1$", t, re.VERBOSE)
+        if m:
+            sel = m.group('sel')
+            if sel.startswith('xpath=') or sel.startswith('//'):
+                return {'xpath': sel.replace('xpath=', '')}
+            if sel.startswith('text='):
+                return {'text': sel[len('text='):]}
+            # Heuristics for CSS
+            if sel.startswith('#'):
+                return {'id': sel[1:]}
+            if sel.startswith('.'):
+                return {'class': sel[1:].replace('.', ' ')}
+            return {'css_selector': sel}
+
+        return {}
+    except Exception as e:
+        logger.warning(f"Failed to extract element data from target '{target}': {e}")
+        return {}
+
+def parse_codegen_actions(code_text: str):
+    """Parse Playwright codegen script into a list of actions consumable by AutoHealingRecorder."""
+    actions = []
+    if not code_text:
+        return actions
+
+    # Match typical patterns: await page.getByRole(...).click('..'); etc.
+    action_re = re.compile(r"await\s+page\.(?P<target>getByRole\(.*?\)|getByText\(.*?\)|getByPlaceholder\(.*?\)|getByTestId\(.*?\)|locator\(.*?\))\.(?P<method>click|fill|type|check|uncheck|selectOption)\((?P<args>.*?)\)\s*;", re.DOTALL)
+    direct_re = re.compile(r"await\s+page\.(?P<method>click|fill|type|check|uncheck|selectOption)\(\s*(['\"]) (?P<sel>.*?) \2 (?:\s*,\s*(?P<args>[^\)]*))?\)\s*;", re.VERBOSE | re.DOTALL)
+
+    for m in action_re.finditer(code_text):
+        target = m.group('target')
+        method = m.group('method')
+        args = m.group('args') or ''
+
+        el = _extract_element_data_from_target(target)
+        action_type = {
+            'click': 'click',
+            'fill': 'fill',
+            'type': 'fill',
+            'check': 'check',
+            'uncheck': 'uncheck',
+            'selectOption': 'select'
+        }[method]
+
+        additional = {}
+        if action_type in ('fill', 'select'):
+            mval = re.search(r"(['\"]) (?P<val>.*?) \1", args, re.VERBOSE)
+            if mval:
+                additional['value'] = mval.group('val')
+
+        actions.append({'type': action_type, 'element_data': el, 'additional_data': additional})
+
+    for m in direct_re.finditer(code_text):
+        method = m.group('method')
+        sel = m.group('sel')
+        args = m.group('args') or ''
+        el = _extract_element_data_from_target(sel)
+        action_type = {
+            'click': 'click',
+            'fill': 'fill',
+            'type': 'fill',
+            'check': 'check',
+            'uncheck': 'uncheck',
+            'selectOption': 'select'
+        }[method]
+        additional = {}
+        if action_type in ('fill', 'select'):
+            mval = re.search(r"(['\"]) (?P<val>.*?) \1", args, re.VERBOSE)
+            if mval:
+                additional['value'] = mval.group('val')
+        actions.append({'type': action_type, 'element_data': el, 'additional_data': additional})
+
+    return actions
+
+@app.route('/api/recorder-v2/import-codegen', methods=['POST'])
+@jira_auth_required
+def import_recorder_v2_codegen():
+    """Import Playwright codegen text, convert to auto-healing actions, and add to the active session."""
+    try:
+        data = request.get_json() or {}
+        session_id = data.get('session_id') or session.get('auto_healing_session_id')
+        code = data.get('code', '')
+        if not session_id:
+            return jsonify({'success': False, 'error': 'No active session found'}), 400
+        if not code:
+            return jsonify({'success': False, 'error': 'No code provided'}), 400
+
+        parsed = parse_codegen_actions(code)
+        imported = []
+        for a in parsed:
+            action = auto_healing_recorder.record_action(
+                session_id,
+                a['type'],
+                a.get('element_data') or {},
+                a.get('additional_data') or {}
+            )
+            imported.append(action)
+
+        return jsonify({
+            'success': True,
+            'imported_count': len(imported),
+            'actions': imported[-25:]  # return last 25 imported actions as preview
+        })
+    except Exception as e:
+        logger.error(f"Error importing codegen: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/recorder-v2/record-action', methods=['POST'])
+@jira_auth_required
+def record_recorder_v2_action():
+    """Record an action with auto-healing locators V2"""
+    try:
+        data = request.get_json()
+        session_id = data.get('session_id') or session.get('auto_healing_session_id')
+        action_type = data.get('action_type', 'click')
+        element_data = data.get('element_data', {})
+        additional_data = data.get('additional_data', {})
+        
+        if not session_id:
+            return jsonify({'success': False, 'error': 'No active session found'}), 400
+        
+        # Record the action
+        action = auto_healing_recorder.record_action(session_id, action_type, element_data, additional_data)
+        
+        return jsonify({
+            'success': True,
+            'action': action,
+            'message': f'Recorded {action_type} action successfully',
+            'locators_generated': len(action['locators'])
+        })
+        
+    except Exception as e:
+        logger.error(f"Error recording action: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/recorder-v2/generate-test', methods=['POST'])
+@jira_auth_required
+def generate_recorder_v2_test():
+    """Generate Playwright test code with auto-healing locators V2"""
+    try:
+        data = request.get_json()
+        session_id = data.get('session_id') or session.get('auto_healing_session_id')
+        
+        if not session_id:
+            return jsonify({'success': False, 'error': 'No active session found'}), 400
+        
+        # Generate test code
+        test_code, message = auto_healing_recorder.generate_test_code(session_id)
+        
+        if test_code:
+            return jsonify({
+                'success': True,
+                'test_code': test_code,
+                'message': message,
+                'session_id': session_id
+            })
+        else:
+            return jsonify({'success': False, 'error': message}), 400
+        
+    except Exception as e:
+        logger.error(f"Error generating test: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/recorder-v2/session-status', methods=['GET'])
+@jira_auth_required
+def get_recorder_v2_session_status():
+    """Get current session status and recorded actions V2"""
+    try:
+        session_id = session.get('auto_healing_session_id')
+        
+        if not session_id:
+            return jsonify({
+                'success': True,
+                'session_active': False,
+                'message': 'No active session'
+            })
+        
+        session_data = auto_healing_recorder.get_session(session_id)
+        actions = auto_healing_recorder.recorded_actions.get(session_id, [])
+        
+        return jsonify({
+            'success': True,
+            'session_active': True,
+            'session_id': session_id,
+            'session_data': session_data,
+            'actions_count': len(actions),
+            'actions': actions[-5:] if actions else []  # Last 5 actions
+        })
+        
+    except Exception as e:
+        logger.error(f"Error getting session status: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/recorder-v2/close-session', methods=['POST'])
+@jira_auth_required
+def close_recorder_v2_session():
+    """Close the current recording session V2"""
+    try:
+        data = request.get_json()
+        session_id = data.get('session_id') or session.get('auto_healing_session_id')
+        
+        if not session_id:
+            return jsonify({'success': False, 'error': 'No active session found'}), 400
+        
+        success, message = auto_healing_recorder.close_session(session_id)
+        
+        if success:
+            # Clear Flask session
+            session.pop('auto_healing_session_id', None)
+            session.pop('auto_healing_url', None)
+            
+            return jsonify({
+                'success': True,
+                'message': message
+            })
+        else:
+            return jsonify({'success': False, 'error': message}), 400
+        
+    except Exception as e:
+        logger.error(f"Error closing session: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/auto-healing-recorder-v2')
+@jira_auth_required
+def auto_healing_recorder_v2():
+    """Simplified Auto-Healing Test Recorder V2"""
+    return render_template('auto-healing-recorder-v2.html', active_tab='auto-healing')
 
 # Create tables for bug builder
 with app.app_context():

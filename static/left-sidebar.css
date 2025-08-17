@@ -44,7 +44,9 @@
   z-index: 1000;
   transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
   border-right: 1px solid var(--glass-border);
-  overflow: visible;
+  /* Prevent sidebar content from overflowing the viewport height.
+     Scrolling is handled inside .sidebar-menu. */
+  overflow: hidden;
   will-change: width;
   box-sizing: border-box;
   min-height: 100vh;
@@ -197,6 +199,108 @@
   transition: all 0.3s ease;
   pointer-events: none;
   z-index: 1002;
+}
+
+/* Hierarchical Navigation Styles */
+.sidebar-parent-item {
+  position: relative;
+}
+
+.sidebar-parent {
+  position: relative;
+}
+
+.sidebar-arrow {
+  margin-left: auto;
+  transition: transform 0.3s ease;
+  font-size: 0.75rem;
+  opacity: 0.7;
+}
+
+.sidebar-parent.expanded .sidebar-arrow {
+  transform: rotate(180deg);
+}
+
+.sidebar-submenu {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.3s ease;
+  background: rgba(255, 255, 255, 0.05);
+  border-left: 2px solid rgba(255, 255, 255, 0.1);
+  margin-left: 0;
+  border-radius: 0 0 8px 8px;
+}
+
+.sidebar-submenu.expanded {
+  max-height: 200px;
+}
+
+.sidebar-subitem {
+  display: flex !important;
+  align-items: center !important;
+  padding: 0.75rem 1rem 0.75rem 2rem !important;
+  font-size: 0.875rem !important;
+  border-radius: 0 !important;
+  margin: 0 !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
+  color: var(--sidebar-text) !important;
+  text-decoration: none !important;
+  transition: all 0.3s ease !important;
+  background: transparent !important;
+}
+
+.sidebar-subitem:last-child {
+  border-bottom: none;
+}
+
+.sidebar-subitem:hover {
+  background: rgba(255, 255, 255, 0.08) !important;
+  color: var(--sidebar-active-text) !important;
+}
+
+.sidebar-subitem.active {
+  background: rgba(255, 255, 255, 0.15) !important;
+  border-left: 3px solid var(--primary-light) !important;
+  color: var(--sidebar-active-text) !important;
+}
+
+.sidebar-subicon {
+  width: 1rem;
+  height: 1rem;
+  margin-right: 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  opacity: 0.8;
+  flex-shrink: 0;
+}
+
+.sidebar-sublabel {
+  font-size: 0.875rem;
+  font-weight: 400;
+  flex: 1;
+}
+
+.coming-soon-badge {
+  background: var(--warning);
+  color: var(--text-dark);
+  font-size: 0.625rem;
+  padding: 0.125rem 0.375rem;
+  border-radius: 0.75rem;
+  font-weight: 600;
+  margin-left: 0.5rem;
+  text-transform: uppercase;
+  letter-spacing: 0.025em;
+}
+
+/* Collapsed state for hierarchical navigation */
+.sidebar.collapsed .sidebar-submenu {
+  display: none;
+}
+
+.sidebar.collapsed .sidebar-arrow {
+  display: none;
 }
 
 .sidebar-toggle:hover::before {

@@ -138,24 +138,32 @@ window.authUtils = {
     }
 
     // Add click handlers to any data-auth-required links
-    document.addEventListener('click', (e) => {
-      const link = e.target.closest('[data-auth-required]');
-      if (link) {
-        e.preventDefault();
-        e.stopPropagation();
-        
-        const targetUrl = link.getAttribute('data-href') || link.getAttribute('href');
-        if (targetUrl && targetUrl !== '#') {
-          this.navigateWithAuth(targetUrl);
+    if (document.body) {
+      document.addEventListener('click', (e) => {
+        const link = e.target.closest('[data-auth-required]');
+        if (link) {
+          e.preventDefault();
+          e.stopPropagation();
+          
+          const targetUrl = link.getAttribute('data-href') || link.getAttribute('href');
+          if (targetUrl && targetUrl !== '#') {
+            this.navigateWithAuth(targetUrl);
+          }
         }
-      }
-    });
+      });
+    }
   }
 };
 
-// Initialize when DOM is ready
+// Initialize when DOM is ready - with safety checks
 if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', () => window.authUtils.init());
+  document.addEventListener('DOMContentLoaded', () => {
+    if (window.authUtils && typeof window.authUtils.init === 'function') {
+      window.authUtils.init();
+    }
+  });
 } else {
-  window.authUtils.init();
+  if (window.authUtils && typeof window.authUtils.init === 'function') {
+    window.authUtils.init();
+  }
 }
