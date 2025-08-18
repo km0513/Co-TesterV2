@@ -1,0 +1,777 @@
+<!-- API Co-Test Page -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>API Co-Tester</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text x=%2250%22 y=%2250%22 font-size=%2280%22 font-family=%22Arial%22 text-anchor=%22middle%22>🚀</text></svg>">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="/static/styles.css">
+  <link rel="stylesheet" href="/static/left-sidebar.css">
+  <style>
+    /* API Co-Test Styles */
+    .api-container {
+      padding: 1.5rem;
+      width: 100%;
+    }
+    
+    .api-card {
+      background: #fff;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+      margin-bottom: 1.5rem;
+      padding: 1.5rem;
+    }
+    
+    .api-card-header {
+      border-bottom: 1px solid #eee;
+      margin-bottom: 1rem;
+      padding-bottom: 0.8rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    .api-card-title {
+      font-size: 1.2rem;
+      font-weight: 600;
+      color: #333;
+      margin: 0;
+    }
+    
+    .api-tabs {
+      display: flex;
+      border-bottom: 1px solid #eee;
+      margin-bottom: 1rem;
+    }
+    
+    .api-tab {
+      padding: 0.8rem 1.2rem;
+      cursor: pointer;
+      font-weight: 500;
+      border-bottom: 2px solid transparent;
+      transition: all 0.2s ease;
+    }
+    
+    .api-tab.active {
+      border-bottom: 2px solid #1976D2;
+      color: #1976D2;
+    }
+    
+    .api-tab:hover:not(.active) {
+      border-bottom: 2px solid #e0e0e0;
+    }
+    
+    .tab-content {
+      display: none;
+    }
+    
+    .tab-content.active {
+      display: block;
+    }
+    
+    .input-group {
+      margin-bottom: 1rem;
+    }
+    
+    .input-label {
+      display: block;
+      margin-bottom: 0.5rem;
+      font-weight: 500;
+      color: #333;
+    }
+    
+    .code-editor {
+      font-family: 'Consolas', 'Monaco', monospace;
+      width: 100%;
+      min-height: 150px;
+      padding: 1rem;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      background: #f8f8f8;
+      resize: vertical;
+    }
+    
+    .response-container {
+      background: #23272B;
+      color: #fff;
+      border-radius: 4px;
+      padding: 1rem;
+      margin-top: 1rem;
+      overflow: auto;
+      max-height: 400px;
+      font-family: 'Consolas', 'Monaco', monospace;
+      font-size: 0.9rem;
+      white-space: pre-wrap;
+    }
+    
+    .btn-group {
+      display: flex;
+      gap: 0.8rem;
+      margin-top: 1rem;
+    }
+    
+    .btn {
+      padding: 0.6rem 1.2rem;
+      border-radius: 4px;
+      font-weight: 500;
+      cursor: pointer;
+      border: none;
+      transition: all 0.2s ease;
+    }
+    
+    .btn-primary {
+      background: #1976D2;
+      color: white;
+    }
+    
+    .btn-primary:hover {
+      background: #1565C0;
+    }
+    
+    .btn-secondary {
+      background: #e9e9ee;
+      color: #333;
+    }
+    
+    .btn-secondary:hover {
+      background: #dcdce0;
+    }
+    
+    .collection-item {
+      padding: 0.8rem;
+      border: 1px solid #eee;
+      border-radius: 4px;
+      margin-bottom: 0.5rem;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    
+    .collection-item:hover {
+      background: #f5f5f5;
+      border-color: #ddd;
+    }
+    
+    .method {
+      display: inline-block;
+      padding: 0.2rem 0.5rem;
+      border-radius: 3px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      margin-right: 0.5rem;
+    }
+    
+    .method-get {
+      background: #E3F2FD;
+      color: #1976D2;
+    }
+    
+    .method-post {
+      background: #E8F5E9;
+      color: #388E3C;
+    }
+    
+    .method-put {
+      background: #FFF8E1;
+      color: #FFA000;
+    }
+    
+    .method-delete {
+      background: #FFEBEE;
+      color: #D32F2F;
+    }
+    
+    .status-badge {
+      display: inline-block;
+      padding: 0.2rem 0.5rem;
+      border-radius: 3px;
+      font-size: 0.8rem;
+      font-weight: 600;
+    }
+    
+    .status-success {
+      background: #E8F5E9;
+      color: #388E3C;
+    }
+    
+    .status-error {
+      background: #FFEBEE;
+      color: #D32F2F;
+    }
+    
+    .history-item {
+      padding: 0.8rem;
+      border-bottom: 1px solid #eee;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    .history-item:last-child {
+      border-bottom: none;
+    }
+    
+    .history-actions {
+      display: flex;
+      gap: 0.5rem;
+    }
+    
+    .action-btn {
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: #757575;
+      transition: color 0.2s ease;
+    }
+    
+    .action-btn:hover {
+      color: #333;
+    }
+    
+    /* Loading spinner */
+    .spinner {
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-radius: 50%;
+      border-top-color: #fff;
+      animation: spin 1s ease-in-out infinite;
+      margin-right: 0.5rem;
+    }
+    
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    
+    /* Responsive adjustments */
+    @media (max-width: 768px) {
+      .api-tabs {
+        flex-direction: column;
+        border-bottom: none;
+      }
+      
+      .api-tab {
+        border-bottom: 1px solid #eee;
+        border-left: 2px solid transparent;
+        padding: 0.6rem 0.8rem;
+      }
+      
+      .api-tab.active {
+        border-bottom: 1px solid #eee;
+        border-left: 2px solid #1976D2;
+      }
+      
+      .btn-group {
+        flex-direction: column;
+      }
+    }
+  </style>
+</head>
+<body>
+  {% set active_tab = 'api' %}
+  {% include 'left-sidebar.html' %}
+  <div class="main-content">
+    <div class="api-container">
+      <div class="api-card">
+        <div class="api-card-header">
+          <h2 class="api-card-title">API Co-Test</h2>
+        </div>
+        
+        <div class="api-tabs">
+          <div class="api-tab active" data-tab="curl">Curl Command</div>
+          <div class="api-tab" data-tab="postman">Postman Collection</div>
+          <div class="api-tab" data-tab="history">History</div>
+        </div>
+        
+        <!-- Curl Command Tab -->
+        <div id="curl-tab" class="tab-content active">
+          <div class="input-group">
+            <label class="input-label" for="curl-command">Enter Curl Command:</label>
+            <textarea id="curl-command" class="code-editor" placeholder="curl -X GET 'https://api.example.com/endpoint' -H 'Authorization: Bearer token'"></textarea>
+          </div>
+          <div class="btn-group">
+            <button id="run-curl" class="btn btn-primary">
+              <i class="fas fa-play"></i> Run Command
+            </button>
+            <button id="save-curl" class="btn btn-secondary">
+              <i class="fas fa-save"></i> Save Command
+            </button>
+            <button id="clear-curl" class="btn btn-secondary">
+              <i class="fas fa-trash"></i> Clear
+            </button>
+          </div>
+          <div id="curl-response" class="response-container" style="display: none;"></div>
+        </div>
+        
+        <!-- Postman Collection Tab -->
+        <div id="postman-tab" class="tab-content">
+          <div class="input-group">
+            <label class="input-label">Import Postman Collection:</label>
+            <div style="display: flex; gap: 1rem; margin-bottom: 1rem;">
+              <div style="flex: 1;">
+                <input type="file" id="collection-file" accept=".json" style="display: none;">
+                <button id="upload-collection" class="btn btn-secondary" style="width: 100%;">
+                  <i class="fas fa-upload"></i> Upload Collection File
+                </button>
+              </div>
+              <div style="flex: 1;">
+                <button id="connect-postman" class="btn btn-secondary" style="width: 100%;">
+                  <i class="fas fa-link"></i> Connect to Postman
+                </button>
+              </div>
+            </div>
+          </div>
+          
+          <div id="collection-content" style="display: none;">
+            <h3 id="collection-name" style="margin-top: 0; font-size: 1.1rem;"></h3>
+            <div id="collection-items"></div>
+          </div>
+          
+          <div id="request-details" style="display: none; margin-top: 1.5rem;">
+            <h3 id="request-name" style="margin-top: 0; font-size: 1.1rem;"></h3>
+            <div class="input-group">
+              <label class="input-label">Request URL:</label>
+              <input type="text" id="request-url" class="code-editor" style="min-height: auto; height: 40px;" readonly>
+            </div>
+            <div class="input-group">
+              <label class="input-label">Headers:</label>
+              <textarea id="request-headers" class="code-editor" style="min-height: 80px;" readonly></textarea>
+            </div>
+            <div class="input-group" id="request-body-container" style="display: none;">
+              <label class="input-label">Body:</label>
+              <textarea id="request-body" class="code-editor" style="min-height: 120px;" readonly></textarea>
+            </div>
+            <div class="btn-group">
+              <button id="run-request" class="btn btn-primary">
+                <i class="fas fa-play"></i> Run Request
+              </button>
+              <button id="copy-as-curl" class="btn btn-secondary">
+                <i class="fas fa-copy"></i> Copy as Curl
+              </button>
+            </div>
+            <div id="request-response" class="response-container" style="display: none;"></div>
+          </div>
+        </div>
+        
+        <!-- History Tab -->
+        <div id="history-tab" class="tab-content">
+          <div id="history-list">
+            <!-- History items will be added here dynamically -->
+            <div class="history-item">
+              <div>
+                <span class="method method-get">GET</span>
+                <span>https://api.example.com/users</span>
+              </div>
+              <div class="history-actions">
+                <button class="action-btn" title="Run again"><i class="fas fa-play"></i></button>
+                <button class="action-btn" title="Copy"><i class="fas fa-copy"></i></button>
+                <button class="action-btn" title="Delete"><i class="fas fa-trash"></i></button>
+              </div>
+            </div>
+            <div class="history-item">
+              <div>
+                <span class="method method-post">POST</span>
+                <span>https://api.example.com/users</span>
+              </div>
+              <div class="history-actions">
+                <button class="action-btn" title="Run again"><i class="fas fa-play"></i></button>
+                <button class="action-btn" title="Copy"><i class="fas fa-copy"></i></button>
+                <button class="action-btn" title="Delete"><i class="fas fa-trash"></i></button>
+              </div>
+            </div>
+          </div>
+          <div style="margin-top: 1rem;">
+            <button id="clear-history" class="btn btn-secondary">
+              <i class="fas fa-trash"></i> Clear History
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Tab switching functionality
+    document.querySelectorAll('.api-tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        // Remove active class from all tabs
+        document.querySelectorAll('.api-tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+        
+        // Add active class to clicked tab
+        tab.classList.add('active');
+        document.getElementById(`${tab.dataset.tab}-tab`).classList.add('active');
+      });
+    });
+    
+    // Curl command execution
+    document.getElementById('run-curl').addEventListener('click', function() {
+      const curlCommand = document.getElementById('curl-command').value.trim();
+      if (!curlCommand) {
+        alert('Please enter a curl command');
+        return;
+      }
+      
+      const responseContainer = document.getElementById('curl-response');
+      responseContainer.style.display = 'block';
+      responseContainer.innerHTML = '<div class="spinner"></div> Executing command...';
+      
+      // Send the curl command to the server
+      fetch('/execute_curl', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ command: curlCommand }),
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.error) {
+          responseContainer.innerHTML = `<span style="color: #ff6b6b;">Error: ${data.error}</span>`;
+        } else {
+          // Format the response
+          let formattedResponse = '';
+          
+          // Add status code
+          if (data.status_code) {
+            const statusClass = data.status_code < 400 ? 'status-success' : 'status-error';
+            formattedResponse += `<div><span class="${statusClass}">Status: ${data.status_code}</span></div>`;
+          }
+          
+          // Add headers
+          if (data.headers) {
+            formattedResponse += '<div style="margin-top: 0.5rem;"><strong>Headers:</strong></div>';
+            formattedResponse += '<div style="margin-bottom: 0.5rem;">';
+            for (const [key, value] of Object.entries(data.headers)) {
+              formattedResponse += `<div>${key}: ${value}</div>`;
+            }
+            formattedResponse += '</div>';
+          }
+          
+          // Add response body
+          if (data.body) {
+            formattedResponse += '<div><strong>Body:</strong></div>';
+            try {
+              // Try to parse and format JSON
+              const jsonBody = JSON.parse(data.body);
+              formattedResponse += `<pre>${JSON.stringify(jsonBody, null, 2)}</pre>`;
+            } catch (e) {
+              // If not JSON, display as is
+              formattedResponse += `<pre>${data.body}</pre>`;
+            }
+          }
+          
+          responseContainer.innerHTML = formattedResponse;
+          
+          // Save to history
+          saveToHistory('curl', curlCommand, data);
+        }
+      })
+      .catch(error => {
+        responseContainer.innerHTML = `<span style="color: #ff6b6b;">Error: ${error.message}</span>`;
+      });
+    });
+    
+    // Save curl command
+    document.getElementById('save-curl').addEventListener('click', function() {
+      const curlCommand = document.getElementById('curl-command').value.trim();
+      if (!curlCommand) {
+        alert('Please enter a curl command');
+        return;
+      }
+      
+      saveToHistory('curl', curlCommand);
+      alert('Command saved to history');
+    });
+    
+    // Clear curl command
+    document.getElementById('clear-curl').addEventListener('click', function() {
+      document.getElementById('curl-command').value = '';
+      document.getElementById('curl-response').style.display = 'none';
+    });
+    
+    // Upload collection file
+    document.getElementById('upload-collection').addEventListener('click', function() {
+      document.getElementById('collection-file').click();
+    });
+    
+    document.getElementById('collection-file').addEventListener('change', function(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        try {
+          const collection = JSON.parse(e.target.result);
+          displayCollection(collection);
+        } catch (error) {
+          alert('Invalid JSON file');
+        }
+      };
+      reader.readAsText(file);
+    });
+    
+    // Connect to Postman
+    document.getElementById('connect-postman').addEventListener('click', function() {
+      alert('Postman API integration coming soon!');
+    });
+    
+    // Display collection
+    function displayCollection(collection) {
+      document.getElementById('collection-content').style.display = 'block';
+      document.getElementById('collection-name').textContent = collection.info.name || 'Unnamed Collection';
+      
+      const itemsContainer = document.getElementById('collection-items');
+      itemsContainer.innerHTML = '';
+      
+      // Process collection items recursively
+      function processItems(items, container) {
+        items.forEach(item => {
+          if (item.request) {
+            // This is a request
+            const requestElement = document.createElement('div');
+            requestElement.className = 'collection-item';
+            
+            // Determine method
+            let method = 'GET';
+            if (item.request.method) {
+              method = item.request.method.toUpperCase();
+            }
+            
+            requestElement.innerHTML = `
+              <span class="method method-${method.toLowerCase()}">${method}</span>
+              <span>${item.name}</span>
+            `;
+            
+            requestElement.addEventListener('click', () => {
+              displayRequestDetails(item);
+            });
+            
+            container.appendChild(requestElement);
+          } else if (item.item) {
+            // This is a folder
+            const folderElement = document.createElement('div');
+            folderElement.innerHTML = `
+              <div style="font-weight: 600; margin-top: 0.5rem; margin-bottom: 0.3rem;">
+                <i class="fas fa-folder"></i> ${item.name}
+              </div>
+              <div style="padding-left: 1rem;"></div>
+            `;
+            container.appendChild(folderElement);
+            
+            // Process nested items
+            const nestedContainer = folderElement.querySelector('div:last-child');
+            processItems(item.item, nestedContainer);
+          }
+        });
+      }
+      
+      processItems(collection.item, itemsContainer);
+    }
+    
+    // Display request details
+    function displayRequestDetails(item) {
+      const detailsContainer = document.getElementById('request-details');
+      detailsContainer.style.display = 'block';
+      
+      document.getElementById('request-name').textContent = item.name;
+      
+      // URL
+      let url = '';
+      if (typeof item.request.url === 'string') {
+        url = item.request.url;
+      } else if (item.request.url.raw) {
+        url = item.request.url.raw;
+      }
+      document.getElementById('request-url').value = url;
+      
+      // Headers
+      let headers = '';
+      if (item.request.header && item.request.header.length > 0) {
+        item.request.header.forEach(header => {
+          if (header.key && header.value) {
+            headers += `${header.key}: ${header.value}\n`;
+          }
+        });
+      }
+      document.getElementById('request-headers').value = headers;
+      
+      // Body
+      const bodyContainer = document.getElementById('request-body-container');
+      const bodyTextarea = document.getElementById('request-body');
+      
+      if (item.request.body && item.request.body.mode) {
+        bodyContainer.style.display = 'block';
+        
+        let bodyContent = '';
+        const mode = item.request.body.mode;
+        
+        if (mode === 'raw' && item.request.body.raw) {
+          bodyContent = item.request.body.raw;
+        } else if (mode === 'urlencoded' && item.request.body.urlencoded) {
+          const params = item.request.body.urlencoded.map(p => `${p.key}=${p.value}`).join('&');
+          bodyContent = params;
+        } else if (mode === 'formdata' && item.request.body.formdata) {
+          bodyContent = 'Form data:\n';
+          item.request.body.formdata.forEach(p => {
+            bodyContent += `${p.key}: ${p.value}\n`;
+          });
+        }
+        
+        bodyTextarea.value = bodyContent;
+      } else {
+        bodyContainer.style.display = 'none';
+      }
+      
+      // Set up run request button
+      document.getElementById('run-request').onclick = function() {
+        runPostmanRequest(item);
+      };
+      
+      // Set up copy as curl button
+      document.getElementById('copy-as-curl').onclick = function() {
+        const curlCommand = generateCurlFromRequest(item);
+        document.getElementById('curl-command').value = curlCommand;
+        
+        // Switch to curl tab
+        document.querySelectorAll('.api-tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+        document.querySelector('.api-tab[data-tab="curl"]').classList.add('active');
+        document.getElementById('curl-tab').classList.add('active');
+      };
+    }
+    
+    // Run Postman request
+    function runPostmanRequest(item) {
+      const responseContainer = document.getElementById('request-response');
+      responseContainer.style.display = 'block';
+      responseContainer.innerHTML = '<div class="spinner"></div> Executing request...';
+      
+      // Convert Postman request to format expected by server
+      const requestData = {
+        type: 'postman',
+        request: item.request
+      };
+      
+      // Send the request to the server
+      fetch('/execute_request', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestData),
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.error) {
+          responseContainer.innerHTML = `<span style="color: #ff6b6b;">Error: ${data.error}</span>`;
+        } else {
+          // Format the response (similar to curl response handling)
+          let formattedResponse = '';
+          
+          // Add status code
+          if (data.status_code) {
+            const statusClass = data.status_code < 400 ? 'status-success' : 'status-error';
+            formattedResponse += `<div><span class="${statusClass}">Status: ${data.status_code}</span></div>`;
+          }
+          
+          // Add headers
+          if (data.headers) {
+            formattedResponse += '<div style="margin-top: 0.5rem;"><strong>Headers:</strong></div>';
+            formattedResponse += '<div style="margin-bottom: 0.5rem;">';
+            for (const [key, value] of Object.entries(data.headers)) {
+              formattedResponse += `<div>${key}: ${value}</div>`;
+            }
+            formattedResponse += '</div>';
+          }
+          
+          // Add response body
+          if (data.body) {
+            formattedResponse += '<div><strong>Body:</strong></div>';
+            try {
+              // Try to parse and format JSON
+              const jsonBody = JSON.parse(data.body);
+              formattedResponse += `<pre>${JSON.stringify(jsonBody, null, 2)}</pre>`;
+            } catch (e) {
+              // If not JSON, display as is
+              formattedResponse += `<pre>${data.body}</pre>`;
+            }
+          }
+          
+          responseContainer.innerHTML = formattedResponse;
+          
+          // Save to history
+          saveToHistory('postman', item.name, data, generateCurlFromRequest(item));
+        }
+      })
+      .catch(error => {
+        responseContainer.innerHTML = `<span style="color: #ff6b6b;">Error: ${error.message}</span>`;
+      });
+    }
+    
+    // Generate curl command from Postman request
+    function generateCurlFromRequest(item) {
+      let curl = 'curl';
+      
+      // Method
+      const method = item.request.method || 'GET';
+      curl += ` -X ${method}`;
+      
+      // URL
+      let url = '';
+      if (typeof item.request.url === 'string') {
+        url = item.request.url;
+      } else if (item.request.url.raw) {
+        url = item.request.url.raw;
+      }
+      curl += ` '${url}'`;
+      
+      // Headers
+      if (item.request.header && item.request.header.length > 0) {
+        item.request.header.forEach(header => {
+          if (header.key && header.value) {
+            curl += ` \\\n  -H '${header.key}: ${header.value}'`;
+          }
+        });
+      }
+      
+      // Body
+      if (item.request.body && item.request.body.mode) {
+        const mode = item.request.body.mode;
+        
+        if (mode === 'raw' && item.request.body.raw) {
+          curl += ` \\\n  -d '${item.request.body.raw.replace(/'/g, "\\'")}'`;
+        } else if (mode === 'urlencoded' && item.request.body.urlencoded) {
+          const params = item.request.body.urlencoded.map(p => `${p.key}=${p.value}`).join('&');
+          curl += ` \\\n  -d '${params}'`;
+        } else if (mode === 'formdata' && item.request.body.formdata) {
+          item.request.body.formdata.forEach(p => {
+            curl += ` \\\n  -F '${p.key}=${p.value}'`;
+          });
+        }
+      }
+      
+      return curl;
+    }
+    
+    // Save to history
+    function saveToHistory(type, name, response, curlCommand) {
+      // Implementation would store in localStorage or send to server
+      console.log('Saving to history:', type, name, response, curlCommand);
+      
+      // In a real implementation, we would update the history tab UI here
+    }
+    
+    // Clear history
+    document.getElementById('clear-history').addEventListener('click', function() {
+      if (confirm('Are you sure you want to clear all history?')) {
+        // Implementation would clear localStorage or send request to server
+        document.getElementById('history-list').innerHTML = '<div style="padding: 1rem; text-align: center; color: #757575;">No history items</div>';
+      }
+    });
+  </script>
+</body>
+</html>

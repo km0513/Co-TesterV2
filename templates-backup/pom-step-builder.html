@@ -1,0 +1,722 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>POM Step Builder</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        .step-container {
+            border: 1px solid #ddd;
+            padding: 10px;
+            margin-bottom: 10px;
+            border-radius: 5px;
+            background-color: #f9f9f9;
+        }
+        .step-actions {
+            display: flex;
+            justify-content: flex-end;
+            margin-top: 10px;
+        }
+        .step-actions button {
+            margin-left: 5px;
+        }
+        #steps-container {
+            margin-top: 20px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .drag-handle {
+            cursor: move;
+            padding: 5px;
+            margin-right: 10px;
+        }
+        .page-selector, .element-selector, .action-selector {
+            margin-bottom: 10px;
+        }
+        .form-row {
+            display: flex;
+            margin-bottom: 10px;
+            align-items: center;
+        }
+        .form-row label {
+            width: 100px;
+            margin-right: 10px;
+        }
+        .form-row select, .form-row input {
+            flex-grow: 1;
+        }
+        .value-input {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <nav>
+            <div class="logo">
+                <a href="/">Co-Tester</a>
+            </div>
+            <ul class="nav-links">
+                <li><a href="/" class="{{ 'active' if active_tab == 'home' else '' }}">Home</a></li>
+                <li><a href="/browseruse-automation-stepwise" class="{{ 'active' if active_tab == 'browseruse-stepwise' else '' }}">Browser Automation</a></li>
+                <li><a href="/pom-step-builder" class="{{ 'active' if active_tab == 'pom-step-builder' else '' }}">POM Step Builder</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <main class="container">
+        <h1>POM Step Builder</h1>
+        <p>Create test steps using your Page Object Model elements and generate feature files.</p>
+
+        <div class="card">
+            <h2>POM Project Path</h2>
+            <div class="form-row">
+                <label for="pom-path">Path:</label>
+                <input type="text" id="pom-path" value="C:\Users\KishoreShenoyMurkhan\LXP_PRISM_Automation" class="full-width">
+                <button id="load-pom" class="btn">Load Pages</button>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>Add Step</h2>
+            <div class="form-row">
+                <label for="page-select">Page:</label>
+                <select id="page-select" class="full-width">
+                    <option value="">Select a page</option>
+                </select>
+            </div>
+            <div class="form-row">
+                <label for="element-select">Element:</label>
+                <select id="element-select" class="full-width">
+                    <option value="">Select an element</option>
+                </select>
+            </div>
+            <div class="form-row">
+                <label for="function-select">Function:</label>
+                <select id="function-select" class="full-width">
+                    <option value="">Select a function</option>
+                </select>
+            </div>
+            <div class="form-row">
+                <label for="action-select">Action:</label>
+                <select id="action-select" class="full-width">
+                    <option value="">Select an action</option>
+                    <option value="click">Click</option>
+                    <option value="fill">Fill</option>
+                    <option value="select">Select Option</option>
+                    <option value="check">Check</option>
+                    <option value="verify">Verify Text</option>
+                    <option value="wait">Wait For Element</option>
+                    <option value="navigate">Navigate</option>
+                </select>
+            </div>
+            <div class="form-row value-input" id="value-container">
+                <label for="value-input">Value:</label>
+                <input type="text" id="value-input" class="full-width">
+            </div>
+            <div class="form-row">
+                <label for="description">Description:</label>
+                <input type="text" id="description" class="full-width" placeholder="Step description (optional)">
+            </div>
+            <button id="add-step" class="btn">Add Step</button>
+        </div>
+
+        <div class="card">
+            <h2>Test Steps</h2>
+            <div id="steps-container"></div>
+            <div class="form-actions">
+                <button id="generate-feature" class="btn">Generate Feature File</button>
+                <button id="generate-steps" class="btn">Generate Step Definitions</button>
+                <button id="clear-steps" class="btn btn-danger">Clear All Steps</button>
+            </div>
+        </div>
+
+        <div class="card" id="output-container" style="display: none;">
+            <h2>Generated Code</h2>
+            <div class="form-row">
+                <label for="feature-name">Feature Name:</label>
+                <input type="text" id="feature-name" class="full-width" value="Test Feature">
+            </div>
+            <div class="form-row">
+                <label for="scenario-name">Scenario Name:</label>
+                <input type="text" id="scenario-name" class="full-width" value="Test Scenario">
+            </div>
+            <pre id="output-code"></pre>
+            <div class="form-actions">
+                <button id="copy-code" class="btn">Copy to Clipboard</button>
+                <button id="save-feature" class="btn">Save Feature File</button>
+                <button id="save-steps" class="btn">Save Step Definitions</button>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // DOM elements
+            const pomPathInput = document.getElementById('pom-path');
+            const loadPomBtn = document.getElementById('load-pom');
+            const pageSelect = document.getElementById('page-select');
+            const elementSelect = document.getElementById('element-select');
+            const actionSelect = document.getElementById('action-select');
+            const valueInput = document.getElementById('value-input');
+            const valueContainer = document.getElementById('value-container');
+            const descriptionInput = document.getElementById('description');
+            const addStepBtn = document.getElementById('add-step');
+            const stepsContainer = document.getElementById('steps-container');
+            const generateFeatureBtn = document.getElementById('generate-feature');
+            const generateStepsBtn = document.getElementById('generate-steps');
+            const clearStepsBtn = document.getElementById('clear-steps');
+            const outputContainer = document.getElementById('output-container');
+            const outputCode = document.getElementById('output-code');
+            const copyCodeBtn = document.getElementById('copy-code');
+            const saveFeatureBtn = document.getElementById('save-feature');
+            const saveStepsBtn = document.getElementById('save-steps');
+            const featureNameInput = document.getElementById('feature-name');
+            const scenarioNameInput = document.getElementById('scenario-name');
+
+            // Store steps
+            let steps = [];
+
+            // Load POM pages
+            loadPomBtn.addEventListener('click', async function() {
+                const pomPath = pomPathInput.value;
+                if (!pomPath) {
+                    alert('Please enter a valid POM project path');
+                    return;
+                }
+
+                try {
+                    const response = await fetch('/api/pom/pages', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ path: pomPath }),
+                    });
+
+                    if (!response.ok) {
+                        throw new Error('Failed to load POM pages');
+                    }
+
+                    const data = await response.json();
+                    
+                    // Clear existing options
+                    pageSelect.innerHTML = '<option value="">Select a page</option>';
+                    
+                    // Add new options
+                    data.pages.forEach(page => {
+                        const option = document.createElement('option');
+                        option.value = page.name;
+                        option.textContent = page.name;
+                        pageSelect.appendChild(option);
+                    });
+
+                    alert('POM pages loaded successfully');
+                } catch (error) {
+                    console.error('Error loading POM pages:', error);
+                    alert('Error loading POM pages: ' + error.message);
+                }
+            });
+
+            // DOM elements for the new function dropdown
+            const functionSelect = document.getElementById('function-select');
+            
+            // Load both elements and functions when page is selected
+            pageSelect.addEventListener('change', async function() {
+                const page = pageSelect.value;
+                if (!page) {
+                    elementSelect.innerHTML = '<option value="">Select an element</option>';
+                    functionSelect.innerHTML = '<option value="">Select a function</option>';
+                    return;
+                }
+
+                // Load elements
+                try {
+                    console.log(`Loading elements for page: ${page}`);
+                    const response = await fetch('/api/pom/elements', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ 
+                            path: pomPathInput.value,
+                            page: page 
+                        }),
+                    });
+
+                    if (!response.ok) {
+                        throw new Error('Failed to load elements');
+                    }
+
+                    const data = await response.json();
+                    console.log('Elements loaded:', data.elements);
+                    
+                    // Clear existing options
+                    elementSelect.innerHTML = '<option value="">Select an element</option>';
+                    
+                    // Add new options
+                    if (data.elements && data.elements.length > 0) {
+                        data.elements.forEach(element => {
+                            const option = document.createElement('option');
+                            option.value = element.name;
+                            option.textContent = element.name;
+                            option.dataset.selector = element.selector;
+                            elementSelect.appendChild(option);
+                        });
+                    } else {
+                        console.warn('No elements found for this page');
+                        // Add some default elements for testing
+                        const defaultElements = [
+                            { name: 'usernameInput', selector: '#username' },
+                            { name: 'passwordInput', selector: '#password' },
+                            { name: 'loginButton', selector: 'button[type="submit"]' },
+                            { name: 'errorMessage', selector: '.error-message' }
+                        ];
+                        
+                        defaultElements.forEach(element => {
+                            const option = document.createElement('option');
+                            option.value = element.name;
+                            option.textContent = element.name;
+                            option.dataset.selector = element.selector;
+                            elementSelect.appendChild(option);
+                        });
+                    }
+                } catch (error) {
+                    console.error('Error loading elements:', error);
+                    alert('Error loading elements: ' + error.message);
+                    
+                    // Add some default elements even on error
+                    elementSelect.innerHTML = '<option value="">Select an element</option>';
+                    const defaultElements = [
+                        { name: 'usernameInput', selector: '#username' },
+                        { name: 'passwordInput', selector: '#password' },
+                        { name: 'loginButton', selector: 'button[type="submit"]' },
+                        { name: 'errorMessage', selector: '.error-message' }
+                    ];
+                    
+                    defaultElements.forEach(element => {
+                        const option = document.createElement('option');
+                        option.value = element.name;
+                        option.textContent = element.name;
+                        option.dataset.selector = element.selector;
+                        elementSelect.appendChild(option);
+                    });
+                }
+                
+                // Also load functions for the page
+                try {
+                    console.log(`Loading functions for page: ${page}`);
+                    const response = await fetch('/api/pom/functions', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ 
+                            path: pomPathInput.value,
+                            page: page 
+                        }),
+                    });
+
+                    if (!response.ok) {
+                        throw new Error('Failed to load functions');
+                    }
+
+                    const data = await response.json();
+                    console.log('Functions loaded:', data.functions);
+                    
+                    // Clear existing options
+                    functionSelect.innerHTML = '<option value="">Select a function</option>';
+                    
+                    // Add new options
+                    if (data.functions && data.functions.length > 0) {
+                        data.functions.forEach(func => {
+                            const option = document.createElement('option');
+                            option.value = func.name;
+                            option.textContent = func.name;
+                            option.dataset.actions = JSON.stringify(func.actions);
+                            functionSelect.appendChild(option);
+                        });
+                    }
+                } catch (error) {
+                    console.error('Error loading functions:', error);
+                    functionSelect.innerHTML = '<option value="">Select a function</option>';
+                }
+            });
+            });
+
+            // Show/hide value input based on action
+            actionSelect.addEventListener('change', function() {
+                const action = actionSelect.value;
+                if (['fill', 'select', 'verify'].includes(action)) {
+                    valueContainer.style.display = 'flex';
+                } else {
+                    valueContainer.style.display = 'none';
+                }
+            });
+
+            // Add step
+            addStepBtn.addEventListener('click', function() {
+                const page = pageSelect.value;
+                const elementOption = elementSelect.options[elementSelect.selectedIndex];
+                const element = elementOption ? elementOption.value : '';
+                const selector = elementOption ? elementOption.dataset.selector : '';
+                const action = actionSelect.value;
+                const value = valueInput.value;
+                const description = descriptionInput.value;
+
+                if (!page || !element || !action) {
+                    alert('Please select page, element, and action');
+                    return;
+                }
+
+                if (['fill', 'select', 'verify'].includes(action) && !value) {
+                    alert('Please enter a value for this action');
+                    return;
+                }
+
+                const step = {
+                    page,
+                    element,
+                    selector,
+                    action,
+                    value,
+                    description: description || `${action} ${element} on ${page}`
+                };
+
+                steps.push(step);
+                renderSteps();
+                
+                // Clear inputs
+                elementSelect.value = '';
+                actionSelect.value = '';
+                valueInput.value = '';
+                descriptionInput.value = '';
+                valueContainer.style.display = 'none';
+            });
+
+            // Render steps
+            function renderSteps() {
+                stepsContainer.innerHTML = '';
+                
+                steps.forEach((step, index) => {
+                    const stepEl = document.createElement('div');
+                    stepEl.className = 'step-container';
+                    
+                    let stepDescription = step.description;
+                    let stepDetails = `Page: ${step.page}, Element: ${step.element}, Action: ${step.action}`;
+                    if (step.value) {
+                        stepDetails += `, Value: ${step.value}`;
+                    }
+                    
+                    stepEl.innerHTML = `
+                        <div>
+                            <span class="drag-handle"><i class="fas fa-grip-lines"></i></span>
+                            <strong>Step ${index + 1}:</strong> ${stepDescription}
+                        </div>
+                        <div class="step-details">${stepDetails}</div>
+                        <div class="step-actions">
+                            <button class="btn btn-sm edit-step" data-index="${index}">Edit</button>
+                            <button class="btn btn-sm btn-danger delete-step" data-index="${index}">Delete</button>
+                        </div>
+                    `;
+                    
+                    stepsContainer.appendChild(stepEl);
+                });
+
+                // Add event listeners for edit and delete buttons
+                document.querySelectorAll('.edit-step').forEach(btn => {
+                    btn.addEventListener('click', function() {
+                        const index = parseInt(this.dataset.index);
+                        editStep(index);
+                    });
+                });
+
+                document.querySelectorAll('.delete-step').forEach(btn => {
+                    btn.addEventListener('click', function() {
+                        const index = parseInt(this.dataset.index);
+                        steps.splice(index, 1);
+                        renderSteps();
+                    });
+                });
+            }
+
+            // Edit step
+            function editStep(index) {
+                const step = steps[index];
+                
+                pageSelect.value = step.page;
+                
+                // Trigger change event to load elements
+                const changeEvent = new Event('change');
+                pageSelect.dispatchEvent(changeEvent);
+                
+                // We need to wait for elements to load
+                setTimeout(() => {
+                    // Find and select the correct element
+                    Array.from(elementSelect.options).forEach(option => {
+                        if (option.value === step.element) {
+                            elementSelect.value = step.element;
+                        }
+                    });
+                    
+                    actionSelect.value = step.action;
+                    
+                    if (['fill', 'select', 'verify'].includes(step.action)) {
+                        valueContainer.style.display = 'flex';
+                        valueInput.value = step.value;
+                    } else {
+                        valueContainer.style.display = 'none';
+                    }
+                    
+                    descriptionInput.value = step.description;
+                    
+                    // Remove the step
+                    steps.splice(index, 1);
+                    renderSteps();
+                }, 500);
+            }
+
+            // Generate feature file
+            generateFeatureBtn.addEventListener('click', function() {
+                if (steps.length === 0) {
+                    alert('Please add steps first');
+                    return;
+                }
+
+                const featureName = featureNameInput.value;
+                const scenarioName = scenarioNameInput.value;
+                
+                let featureCode = `Feature: ${featureName}\n\n`;
+                featureCode += `  Scenario: ${scenarioName}\n`;
+                
+                steps.forEach(step => {
+                    let stepText = '';
+                    
+                    switch (step.action) {
+                        case 'navigate':
+                            stepText = `Given I navigate to ${step.page}`;
+                            break;
+                        case 'click':
+                            stepText = `When I click the ${step.element} on ${step.page}`;
+                            break;
+                        case 'fill':
+                            stepText = `When I fill the ${step.element} with "${step.value}" on ${step.page}`;
+                            break;
+                        case 'select':
+                            stepText = `When I select "${step.value}" from the ${step.element} on ${step.page}`;
+                            break;
+                        case 'check':
+                            stepText = `When I check the ${step.element} on ${step.page}`;
+                            break;
+                        case 'verify':
+                            stepText = `Then I should see "${step.value}" in the ${step.element} on ${step.page}`;
+                            break;
+                        case 'wait':
+                            stepText = `When I wait for the ${step.element} on ${step.page}`;
+                            break;
+                        default:
+                            stepText = `When I ${step.action} the ${step.element} on ${step.page}`;
+                    }
+                    
+                    featureCode += `    ${stepText}\n`;
+                });
+                
+                outputCode.textContent = featureCode;
+                outputContainer.style.display = 'block';
+            });
+
+            // Generate step definitions
+            generateStepsBtn.addEventListener('click', function() {
+                if (steps.length === 0) {
+                    alert('Please add steps first');
+                    return;
+                }
+
+                let stepsCode = `const { Given, When, Then } = require('@cucumber/cucumber');\n\n`;
+                
+                // Add page imports
+                const uniquePages = [...new Set(steps.map(step => step.page))];
+                uniquePages.forEach(page => {
+                    stepsCode += `const ${page} = require('../pages/${page}');\n`;
+                });
+                
+                stepsCode += `\n// Page objects initialization\nlet pageObjects = {};\n\n`;
+                stepsCode += `// Before hook to initialize page objects\nBefore(async function() {\n`;
+                stepsCode += `  const { page } = this;\n`;
+                uniquePages.forEach(page => {
+                    stepsCode += `  pageObjects.${page} = new ${page}(page);\n`;
+                });
+                stepsCode += `});\n\n`;
+                
+                // Generate step definitions
+                const stepDefinitions = new Set();
+                
+                steps.forEach(step => {
+                    let stepRegex = '';
+                    let stepImpl = '';
+                    
+                    switch (step.action) {
+                        case 'navigate':
+                            stepRegex = `I navigate to (.*)`;
+                            stepImpl = `async function(page) {\n  await pageObjects[page].navigate();\n}`;
+                            break;
+                        case 'click':
+                            stepRegex = `I click the (.*) on (.*)`;
+                            stepImpl = `async function(element, page) {\n  await pageObjects[page].click(pageObjects[page].elements.${step.element});\n}`;
+                            break;
+                        case 'fill':
+                            stepRegex = `I fill the (.*) with "(.*)" on (.*)`;
+                            stepImpl = `async function(element, value, page) {\n  await pageObjects[page].fill(pageObjects[page].elements.${step.element}, value);\n}`;
+                            break;
+                        case 'select':
+                            stepRegex = `I select "(.*)" from the (.*) on (.*)`;
+                            stepImpl = `async function(value, element, page) {\n  await pageObjects[page].selectOption(pageObjects[page].elements.${step.element}, value);\n}`;
+                            break;
+                        case 'check':
+                            stepRegex = `I check the (.*) on (.*)`;
+                            stepImpl = `async function(element, page) {\n  await pageObjects[page].check(pageObjects[page].elements.${step.element});\n}`;
+                            break;
+                        case 'verify':
+                            stepRegex = `I should see "(.*)" in the (.*) on (.*)`;
+                            stepImpl = `async function(text, element, page) {\n  const actualText = await pageObjects[page].getText(pageObjects[page].elements.${step.element});\n  expect(actualText).to.include(text);\n}`;
+                            break;
+                        case 'wait':
+                            stepRegex = `I wait for the (.*) on (.*)`;
+                            stepImpl = `async function(element, page) {\n  await pageObjects[page].waitForElement(pageObjects[page].elements.${step.element});\n}`;
+                            break;
+                        default:
+                            stepRegex = `I ${step.action} the (.*) on (.*)`;
+                            stepImpl = `async function(element, page) {\n  // Implement custom action\n}`;
+                    }
+                    
+                    let prefix = 'When';
+                    if (step.action === 'navigate') {
+                        prefix = 'Given';
+                    } else if (step.action === 'verify') {
+                        prefix = 'Then';
+                    }
+                    
+                    const stepDef = `${prefix}(/^${stepRegex}$/, ${stepImpl});`;
+                    stepDefinitions.add(stepDef);
+                });
+                
+                stepDefinitions.forEach(stepDef => {
+                    stepsCode += stepDef + '\n\n';
+                });
+                
+                outputCode.textContent = stepsCode;
+                outputContainer.style.display = 'block';
+            });
+
+            // Clear steps
+            clearStepsBtn.addEventListener('click', function() {
+                if (confirm('Are you sure you want to clear all steps?')) {
+                    steps = [];
+                    renderSteps();
+                    outputContainer.style.display = 'none';
+                }
+            });
+
+            // Copy code to clipboard
+            copyCodeBtn.addEventListener('click', function() {
+                const code = outputCode.textContent;
+                navigator.clipboard.writeText(code)
+                    .then(() => alert('Code copied to clipboard'))
+                    .catch(err => console.error('Failed to copy: ', err));
+            });
+
+            // Save feature file
+            saveFeatureBtn.addEventListener('click', async function() {
+                const code = outputCode.textContent;
+                const featureName = featureNameInput.value.toLowerCase().replace(/\s+/g, '-');
+                
+                try {
+                    const response = await fetch('/api/pom/save', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            path: pomPathInput.value,
+                            filename: `${featureName}.feature`,
+                            content: code,
+                            type: 'feature'
+                        }),
+                    });
+
+                    if (!response.ok) {
+                        throw new Error('Failed to save feature file');
+                    }
+
+                    const data = await response.json();
+                    alert(`Feature file saved: ${data.path}`);
+                } catch (error) {
+                    console.error('Error saving feature file:', error);
+                    alert('Error saving feature file: ' + error.message);
+                }
+            });
+
+            // Save step definitions
+            saveStepsBtn.addEventListener('click', async function() {
+                const code = outputCode.textContent;
+                const featureName = featureNameInput.value.toLowerCase().replace(/\s+/g, '-');
+                
+                try {
+                    const response = await fetch('/api/pom/save', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            path: pomPathInput.value,
+                            filename: `${featureName}.steps.js`,
+                            content: code,
+                            type: 'steps'
+                        }),
+                    });
+
+                    if (!response.ok) {
+                        throw new Error('Failed to save step definitions');
+                    }
+
+                    const data = await response.json();
+                    alert(`Step definitions saved: ${data.path}`);
+                } catch (error) {
+                    console.error('Error saving step definitions:', error);
+                    alert('Error saving step definitions: ' + error.message);
+                }
+            });
+            // Function dropdown change handler
+            functionSelect.addEventListener('change', function() {
+                const selectedFunction = functionSelect.value;
+                if (!selectedFunction) {
+                    return;
+                }
+                
+                // Get the actions from the selected function
+                const option = functionSelect.options[functionSelect.selectedIndex];
+                if (option.dataset.actions) {
+                    try {
+                        const actions = JSON.parse(option.dataset.actions);
+                        console.log('Function actions:', actions);
+                        
+                        // Update action dropdown based on function actions
+                        if (actions && actions.length > 0) {
+                            // You can customize this based on how you want to display actions
+                            actionSelect.value = actions[0].type || '';
+                            
+                            // Trigger change event to show/hide value input
+                            const changeEvent = new Event('change');
+                            actionSelect.dispatchEvent(changeEvent);
+                        }
+                    } catch (error) {
+                        console.error('Error parsing actions:', error);
+                    }
+                }
+            });
+        });
+    </script>
+</body>
+</html>

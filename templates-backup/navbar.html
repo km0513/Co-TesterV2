@@ -1,0 +1,228 @@
+<!-- Shared Navigation Bar Include -->
+<link rel="stylesheet" href="/static/navbar-tabs.css">
+<script src="/static/auth-utils.js"></script>
+<div class="navbar-outer">
+  <div class="header navbar-header" style="display: flex; align-items: center;">
+    <a href="/home" style="text-decoration: none; color: inherit;">
+      <div class="navbar-logo" style="flex: 0 0 auto; display: flex; align-items: center; padding: 0 24px 0 16px; font-size: 1.3em; font-weight: bold; white-space: nowrap;">
+        <span class="logo-emoji">🚀</span>
+        <span class="logo-text">Co-Tester</span>
+      </div>
+    </a>
+    <div style="flex: 1 1 auto; display: flex; align-items: center; min-width: 0;">
+      <button id="carouselLeft" style="background:none;border:none;font-size:1.5em;cursor:pointer;padding:0 0.5em;user-select:none;">&#8592;</button>
+      <div class="button-group tabs-container carousel-tabs" id="carouselTabs">
+        <a href="/home" class="tab{% if active_tab == 'home' %} active{% endif %}" data-no-auth="true">Home</a>
+        <a href="#" data-href="/test-generator" class="navbar-nav-link tab{% if active_tab == 'manual' %} active{% endif %}">Test Gen<span class="ai-badge-navbar">🤖 AI</span></a>
+        <a href="#" data-href="/ui-analyzer" class="navbar-nav-link tab{% if active_tab == 'screen-analysis' %} active{% endif %}">UI Analysis🔍<span class="ai-badge-navbar">🤖 AI</span></a>
+        <a href="#" data-href="/browseruse-automation" class="navbar-nav-link tab{% if active_tab == 'browseruse' %} active{% endif %}">UI Automation<span class="ai-badge-navbar">🤖 AI</span></a>
+        <a href="#" data-href="/data-generator" class="navbar-nav-link tab{% if active_tab == 'data' %} active{% endif %}">Data Generator 📊</a>
+        {% if false %}
+        <a href="#" data-href="/api-co-test" class="navbar-nav-link tab{% if active_tab == 'api' %} active{% endif %}">API Co-Test 🧪</a>
+        <a href="#" data-href="/dom-extractor" class="navbar-nav-link tab{% if active_tab == 'ui' %} active{% endif %}">UI Co-Test 🖥️</a>
+        <a href="#" data-href="/pom-step-builder" class="navbar-nav-link tab{% if active_tab == 'pom-step-builder' %} active{% endif %}">POM Builder 🧩</a>
+        {% endif %}
+      </div>
+      <button id="carouselRight" style="background:none;border:none;font-size:1.5em;cursor:pointer;padding:0 0.5em;user-select:none;">&#8594;</button>
+    </div>
+    <!-- Dark Mode Toggle Button -->
+    <button id="darkModeToggle" title="Toggle dark mode" style="margin-left: 1em; background: none; border: none; font-size: 1.3em; cursor: pointer;">
+      <span id="darkModeIcon">🌙</span>
+    </button>
+  </div>
+</div>
+<style>
+.carousel-tabs {
+  display: flex;
+  overflow-x: auto;
+  white-space: nowrap;
+  gap: 0.5em;
+  padding: 0 16px 2px 16px;
+  scrollbar-width: none; /* Firefox */
+  position: relative;
+}
+.carousel-tabs::-webkit-scrollbar {
+  display: none; /* Chrome, Safari */
+}
+.tab {
+  flex: 0 0 auto;
+  min-width: 110px;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  white-space: nowrap;
+}
+#carouselLeft, #carouselRight {
+  background: #f2f8ff;
+  border: 1.5px solid #1976D2;
+  color: #1976D2;
+  border-radius: 50%;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s, box-shadow 0.2s, color 0.2s;
+  font-size: 1.5em;
+  cursor: pointer;
+  margin: 0 0.2em;
+}
+#carouselLeft:hover, #carouselRight:hover {
+  background: #1976D2;
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(25,118,210,0.12);
+}
+</style>
+<script>
+const carousel = document.getElementById('carouselTabs');
+const leftBtn = document.getElementById('carouselLeft');
+const rightBtn = document.getElementById('carouselRight');
+leftBtn.onclick = () => {
+  carousel.scrollBy({left: -150, behavior: 'smooth'});
+};
+rightBtn.onclick = () => {
+  carousel.scrollBy({left: 150, behavior: 'smooth'});
+};
+function updateArrows() {
+  leftBtn.style.visibility = carousel.scrollLeft > 5 ? 'visible' : 'hidden';
+  rightBtn.style.visibility = (carousel.scrollLeft + carousel.offsetWidth < carousel.scrollWidth - 5) ? 'visible' : 'hidden';
+}
+carousel.addEventListener('scroll', updateArrows);
+window.addEventListener('resize', updateArrows);
+updateArrows();
+
+// Authentication checking for navbar navigation
+document.querySelectorAll('.navbar-nav-link').forEach(link => {
+  link.addEventListener('click', function(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    // Get target URL from data-href
+    let targetUrl = this.getAttribute('data-href');
+    
+    // Validate URL
+    if (!targetUrl || targetUrl === '#' || targetUrl === 'null') {
+      console.error('No valid target URL found for navigation');
+      return;
+    }
+
+    // Show authentication checking
+    showNavbarAuthLoader();
+    
+    // Check authentication before navigation
+    fetch('/api/jira/status')
+      .then(response => response.json())
+      .then(data => {
+        hideNavbarAuthLoader();
+        
+        if (data.connected) {
+          // Connected - proceed to the page
+          navigateToPage(targetUrl);
+        } else {
+          // Not connected - show login prompt
+          showJiraLoginModal(targetUrl);
+        }
+      })
+      .catch(error => {
+        hideNavbarAuthLoader();
+        console.error('Error checking authentication status:', error);
+        showJiraLoginModal(targetUrl);
+      });
+  });
+});
+
+// Ensure selected tab is scrolled into view on click
+// (If page reloads, this will only work for SPAs. For server-side, see below)
+document.querySelectorAll('.carousel-tabs .tab').forEach(tab => {
+  tab.addEventListener('click', function(e) {
+    // Only handle scroll for regular tabs, not auth-checked ones
+    if (!this.classList.contains('navbar-nav-link')) {
+      setTimeout(() => {
+        this.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+      }, 100);
+    }
+  });
+});
+
+// If your app reloads the page on tab click, scroll the active tab into view on load
+window.addEventListener('DOMContentLoaded', function() {
+  const activeTab = document.querySelector('.carousel-tabs .tab.active');
+  if (activeTab) {
+    activeTab.scrollIntoView({ behavior: 'auto', inline: 'center', block: 'nearest' });
+  }
+});
+
+// Helper functions for navigation and authentication
+function navigateToPage(url) {
+  // Add smooth transition
+  document.body.style.opacity = '0.98';
+  document.body.style.transition = 'opacity 0.15s ease';
+  
+  setTimeout(() => {
+    window.location.href = url;
+  }, 50);
+}
+
+function showNavbarAuthLoader() {
+  // Create or show a simple loader
+  let loader = document.getElementById('navbar-auth-loader');
+  if (!loader) {
+    loader = document.createElement('div');
+    loader.id = 'navbar-auth-loader';
+    loader.innerHTML = '<div style="position: fixed; top: 0; left: 0; right: 0; background: rgba(99, 102, 241, 0.1); height: 3px; z-index: 9999;"><div style="height: 100%; background: #6366f1; width: 0; animation: navbarProgress 1s ease-in-out infinite alternate;"></div></div>';
+    document.body.appendChild(loader);
+    
+    // Add progress animation
+    const style = document.createElement('style');
+    style.textContent = `
+      @keyframes navbarProgress {
+        0% { width: 0%; }
+        100% { width: 100%; }
+      }
+    `;
+    document.head.appendChild(style);
+  }
+  loader.style.display = 'block';
+}
+
+function hideNavbarAuthLoader() {
+  const loader = document.getElementById('navbar-auth-loader');
+  if (loader) {
+    loader.style.display = 'none';
+  }
+}
+
+function showJiraLoginModal(targetUrl) {
+  // Try to use the existing modal from sidebar if available
+  if (typeof window.showJiraLoginModal === 'function') {
+    window.showJiraLoginModal(targetUrl);
+    return;
+  }
+  
+  // Fallback: show a simple alert and redirect to login
+  if (confirm('Jira authentication is required to access this feature. Would you like to login now?')) {
+    window.location.href = '/api/jira/oauth/login';
+  }
+}
+
+// Dark mode toggle logic
+const darkModeToggle = document.getElementById('darkModeToggle');
+const darkModeIcon = document.getElementById('darkModeIcon');
+function setDarkMode(on) {
+  if (on) {
+    document.body.classList.add('dark-mode');
+    darkModeIcon.textContent = '☀️';
+    localStorage.setItem('darkMode', 'on');
+  } else {
+    document.body.classList.remove('dark-mode');
+    darkModeIcon.textContent = '🌙';
+    localStorage.setItem('darkMode', 'off');
+  }
+}
+// On load, set mode from localStorage
+if (localStorage.getItem('darkMode') === 'on') {
+  setDarkMode(true);
+}
+darkModeToggle.addEventListener('click', () => {
+  setDarkMode(!document.body.classList.contains('dark-mode'));
+});
+</script>

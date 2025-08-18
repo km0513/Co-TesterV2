@@ -1,0 +1,83 @@
+const { test, expect } = require('@playwright/test');
+const { AutoHealingPage } = require('./auto-healing-page');
+
+class TestPage extends AutoHealingPage {
+  constructor(page) {
+    super(page);
+    this.defineElements({
+    });
+  }
+
+  async goto() {
+    await this.page.goto('https://stage-lxp.upgrad.dev/');
+  }
+}
+
+test('test', async { page } => {
+  const testPage = new TestPage(page);
+  await testPage.goto();
+});
+
+// Auto-healing Page base class
+// Save this to auto-healing-page.js
+class AutoHealingPage {
+  constructor(page) {
+    this.page = page;
+    this.elements = {};
+    this.healingAttempts = {};
+  }
+
+  defineElements(elements) {
+    this.elements = elements;
+  }
+
+  async getElement(name) {
+    if (!this.elements[name]) {
+      throw new Error(`Element '${name}' not defined`);
+    }
+
+    const locators = this.elements[name];
+    let lastError;
+
+    // Try each locator strategy in order
+    for (const locator of locators) {
+      try {
+        const element = this.page.locator(locator);
+        await element.waitFor({ state: 'attached', timeout: 1000 });
+        return element;
+      } catch (error) {
+        lastError = error;
+        // Continue to the next locator
+      }
+    }
+
+    // If we get here, all locators failed
+    throw new Error(`Failed to find element '${name}' using any locator strategy. Last error: ${lastError}`);
+  }
+
+  async clickElement(name) {
+    const element = await this.getElement(name);
+    await element.click();
+  }
+
+  async fillElement(name, value) {
+    const element = await this.getElement(name);
+    await element.fill(value);
+  }
+
+  async getElementText(name) {
+    const element = await this.getElement(name);
+    return await element.textContent() || '';
+  }
+
+  async isElementVisible(name) {
+    try {
+      const element = await this.getElement(name);
+      return await element.isVisible();
+    } catch (error) {
+      return false;
+    }
+  }
+}
+
+module.exports = { AutoHealingPage };

@@ -1,0 +1,1027 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Data Generator - Co-Tester</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='0.9em' font-size='90'>🚀</text></svg>">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="/static/styles.css">
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-hover: #4f46e5;
+            --primary-light: #a5b4fc;
+            --secondary: #1f2937;
+            --secondary-light: #374151;
+            --bg-light: #f8fafc;
+            --bg-dark: #0f172a;
+            --text-light: #64748b;
+            --text-dark: #0f172a;
+            --text-white: #ffffff;
+            --border: #e2e8f0;
+            --success: #10b981;
+            --error: #ef4444;
+            --warning: #f59e0b;
+            --info: #3b82f6;
+            --glass-bg: rgba(255, 255, 255, 0.7);
+            --glass-border: rgba(255, 255, 255, 0.2);
+            --shadow-xl: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+            --transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg-light);
+            min-height: 100vh;
+            color: var(--text-dark);
+            line-height: 1.6;
+        }
+
+        .main-content {
+            margin-left: 280px;
+            min-height: 100vh;
+            transition: var(--transition);
+            background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 50%, #cbd5e1 100%);
+            position: relative;
+        }
+
+        .main-content::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 280px;
+            right: 0;
+            bottom: 0;
+            background: radial-gradient(circle at 40% 20%, rgba(16, 185, 129, 0.05) 0%, transparent 50%),
+                        radial-gradient(circle at 60% 80%, rgba(59, 130, 246, 0.05) 0%, transparent 50%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* Header Section */
+        .page-header {
+            text-align: center;
+            margin-bottom: 3rem;
+        }
+
+        .page-title {
+            font-size: 3rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 1rem;
+        }
+
+        .page-subtitle {
+            font-size: 1.2rem;
+            color: var(--text-light);
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        /* Instructions Card */
+        .instructions-card {
+            background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+            border: 2px solid #f59e0b;
+            border-radius: 20px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .instructions-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--warning), #f59e0b, var(--warning));
+            background-size: 200% 100%;
+            animation: shimmer 3s ease-in-out infinite;
+        }
+
+        @keyframes shimmer {
+            0%, 100% { background-position: 200% 0; }
+            50% { background-position: -200% 0; }
+        }
+
+        .instructions-title {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: #92400e;
+            margin-bottom: 1rem;
+        }
+
+        .instructions-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .instructions-list li {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.75rem;
+            margin-bottom: 0.75rem;
+            color: #92400e;
+            font-weight: 500;
+        }
+
+        .instructions-list li::before {
+            content: counter(step-counter);
+            counter-increment: step-counter;
+            background: var(--warning);
+            color: white;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8rem;
+            font-weight: 700;
+            flex-shrink: 0;
+            margin-top: 2px;
+        }
+
+        .instructions-list {
+            counter-reset: step-counter;
+        }
+
+        /* Configuration Section */
+        .config-section {
+            background: white;
+            border-radius: 24px;
+            padding: 2.5rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+            border: 1px solid var(--border);
+        }
+
+        .section-title {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--text-dark);
+            margin-bottom: 2rem;
+            padding-bottom: 1rem;
+            border-bottom: 2px solid var(--border);
+        }
+
+        /* Data Columns Grid */
+        .columns-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .column-card {
+            background: var(--bg-light);
+            border: 2px solid var(--border);
+            border-radius: 16px;
+            padding: 1.5rem;
+            transition: var(--transition);
+            cursor: pointer;
+            position: relative;
+        }
+
+        .column-card:hover {
+            border-color: var(--primary);
+            box-shadow: 0 4px 15px rgba(99, 102, 241, 0.1);
+        }
+
+        .column-card.selected {
+            border-color: var(--primary);
+            background: rgba(99, 102, 241, 0.05);
+        }
+
+        .column-header {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .column-checkbox {
+            width: 20px;
+            height: 20px;
+            accent-color: var(--primary);
+        }
+
+        .column-icon {
+            width: 40px;
+            height: 40px;
+            background: var(--primary);
+            color: white;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+        }
+
+        .column-info {
+            flex: 1;
+        }
+
+        .column-name {
+            font-weight: 600;
+            color: var(--text-dark);
+            margin-bottom: 0.25rem;
+        }
+
+        .column-description {
+            font-size: 0.9rem;
+            color: var(--text-light);
+        }
+
+        .column-options {
+            margin-top: 1rem;
+            display: none;
+        }
+
+        .column-card.selected .column-options {
+            display: block;
+        }
+
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        .form-label {
+            display: block;
+            font-weight: 600;
+            color: var(--text-dark);
+            margin-bottom: 0.5rem;
+            font-size: 0.9rem;
+        }
+
+        .form-input, .form-select {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-size: 0.9rem;
+            background: white;
+            transition: var(--transition);
+        }
+
+        .form-input:focus, .form-select:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+        }
+
+        /* Generation Controls */
+        .generation-controls {
+            display: flex;
+            align-items: center;
+            gap: 2rem;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+        }
+
+        .rows-control {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .rows-input {
+            width: 120px;
+            padding: 0.75rem;
+            border: 2px solid var(--border);
+            border-radius: 12px;
+            font-size: 1rem;
+            font-weight: 600;
+            text-align: center;
+        }
+
+        .generate-btn {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 1rem 2rem;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-hover) 100%);
+            color: white;
+            border: none;
+            border-radius: 16px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+            box-shadow: 0 8px 25px rgba(99, 102, 241, 0.3);
+        }
+
+        .generate-btn:hover:not(:disabled) {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 35px rgba(99, 102, 241, 0.4);
+        }
+
+        .generate-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .format-controls {
+            display: flex;
+            gap: 1rem;
+        }
+
+        .format-btn {
+            padding: 0.75rem 1.5rem;
+            border: 2px solid var(--border);
+            background: white;
+            border-radius: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .format-btn.active {
+            border-color: var(--primary);
+            background: rgba(99, 102, 241, 0.05);
+            color: var(--primary);
+        }
+
+        /* Results Section */
+        .results-section {
+            background: white;
+            border-radius: 24px;
+            padding: 2.5rem;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+            border: 1px solid var(--border);
+            display: none;
+        }
+
+        .results-section.show {
+            display: block;
+            animation: fadeInUp 0.6s ease-out;
+        }
+
+        @keyframes fadeInUp {
+            0% {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            100% {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .results-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 2rem;
+        }
+
+        .results-actions {
+            display: flex;
+            gap: 1rem;
+        }
+
+        .action-btn {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.75rem 1.5rem;
+            border: 2px solid var(--border);
+            border-radius: 12px;
+            background: white;
+            color: var(--text-dark);
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 0.9rem;
+            transition: var(--transition);
+            cursor: pointer;
+        }
+
+        .action-btn:hover {
+            border-color: var(--primary);
+            color: var(--primary);
+            text-decoration: none;
+        }
+
+        .output-container {
+            background: var(--bg-dark);
+            color: #e2e8f0;
+            border-radius: 16px;
+            padding: 1.5rem;
+            font-family: 'Fira Code', 'Consolas', monospace;
+            font-size: 0.9rem;
+            line-height: 1.5;
+            overflow: auto;
+            max-height: 500px;
+            border: 1px solid #374151;
+        }
+
+        .loading-spinner {
+            width: 20px;
+            height: 20px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-top: 2px solid white;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Statistics */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: var(--bg-light);
+            border-radius: 12px;
+            padding: 1rem;
+            text-align: center;
+            border: 1px solid var(--border);
+        }
+
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--primary);
+            margin-bottom: 0.25rem;
+        }
+
+        .stat-label {
+            font-size: 0.9rem;
+            color: var(--text-light);
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .main-content {
+                margin-left: 0;
+            }
+
+            .main-content::before {
+                left: 0;
+            }
+
+            .container {
+                padding: 1rem;
+            }
+
+            .page-title {
+                font-size: 2rem;
+                flex-direction: column;
+                gap: 0.5rem;
+            }
+
+            .config-section, .results-section {
+                padding: 1.5rem;
+            }
+
+            .columns-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .generation-controls {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .results-header {
+                flex-direction: column;
+                gap: 1rem;
+                align-items: stretch;
+            }
+
+            .results-actions {
+                justify-content: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    {% set active_tab = 'data' %}
+    {% include 'left-sidebar.html' %}
+
+    <div class="main-content">
+        <div class="container">
+            <!-- Page Header -->
+            <div class="page-header">
+                <h1 class="page-title">
+                    <i class="fas fa-database"></i>
+                    Data Generator
+                </h1>
+                <p class="page-subtitle">
+                    Generate realistic test data for your applications. Create mock datasets, user profiles, and complex data structures with ease.
+                </p>
+            </div>
+
+            <!-- Instructions -->
+            <div class="instructions-card">
+                <div class="instructions-title">
+                    <i class="fas fa-lightbulb"></i>
+                    Quick Start Guide
+                </div>
+                <ol class="instructions-list">
+                    <li>Select the data columns you want to generate from the options below</li>
+                    <li>Configure any specific options for your selected columns</li>
+                    <li>Set the number of rows and choose your preferred output format</li>
+                    <li>Click "Generate Data" to create your dataset</li>
+                </ol>
+            </div>
+
+            <!-- Configuration Section -->
+            <div class="config-section">
+                <h2 class="section-title">
+                    <i class="fas fa-cogs"></i>
+                    Data Configuration
+                </h2>
+
+                <form id="dataGenForm">
+                    <!-- Data Columns -->
+                    <div class="columns-grid">
+                        <!-- Name Column -->
+                        <div class="column-card" onclick="toggleColumn('name')">
+                            <div class="column-header">
+                                <input type="checkbox" class="column-checkbox" id="nameCheckbox" checked>
+                                <div class="column-icon">
+                                    <i class="fas fa-user"></i>
+                                </div>
+                                <div class="column-info">
+                                    <div class="column-name">Name</div>
+                                    <div class="column-description">Generate realistic names</div>
+                                </div>
+                            </div>
+                            <div class="column-options">
+                                <div class="form-group">
+                                    <label class="form-label">Name Type</label>
+                                    <select class="form-select" id="nameType">
+                                        <option value="full">Full Name</option>
+                                        <option value="first">First Name Only</option>
+                                        <option value="last">Last Name Only</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Email Column -->
+                        <div class="column-card" onclick="toggleColumn('email')">
+                            <div class="column-header">
+                                <input type="checkbox" class="column-checkbox" id="emailCheckbox" checked>
+                                <div class="column-icon">
+                                    <i class="fas fa-envelope"></i>
+                                </div>
+                                <div class="column-info">
+                                    <div class="column-name">Email</div>
+                                    <div class="column-description">Generate email addresses</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Phone Column -->
+                        <div class="column-card" onclick="toggleColumn('phone')">
+                            <div class="column-header">
+                                <input type="checkbox" class="column-checkbox" id="phoneCheckbox">
+                                <div class="column-icon">
+                                    <i class="fas fa-phone"></i>
+                                </div>
+                                <div class="column-info">
+                                    <div class="column-name">Phone</div>
+                                    <div class="column-description">Generate phone numbers</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Address Column -->
+                        <div class="column-card" onclick="toggleColumn('address')">
+                            <div class="column-header">
+                                <input type="checkbox" class="column-checkbox" id="addressCheckbox">
+                                <div class="column-icon">
+                                    <i class="fas fa-map-marker-alt"></i>
+                                </div>
+                                <div class="column-info">
+                                    <div class="column-name">Address</div>
+                                    <div class="column-description">Generate street addresses</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Country Column -->
+                        <div class="column-card" onclick="toggleColumn('country')">
+                            <div class="column-header">
+                                <input type="checkbox" class="column-checkbox" id="countryCheckbox">
+                                <div class="column-icon">
+                                    <i class="fas fa-globe"></i>
+                                </div>
+                                <div class="column-info">
+                                    <div class="column-name">Country</div>
+                                    <div class="column-description">Generate country names</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Date Column -->
+                        <div class="column-card" onclick="toggleColumn('date')">
+                            <div class="column-header">
+                                <input type="checkbox" class="column-checkbox" id="dateCheckbox">
+                                <div class="column-icon">
+                                    <i class="fas fa-calendar"></i>
+                                </div>
+                                <div class="column-info">
+                                    <div class="column-name">Date</div>
+                                    <div class="column-description">Generate random dates</div>
+                                </div>
+                            </div>
+                            <div class="column-options">
+                                <div class="form-group">
+                                    <label class="form-label">Date Range</label>
+                                    <select class="form-select" id="dateRange">
+                                        <option value="past">Past Year</option>
+                                        <option value="future">Next Year</option>
+                                        <option value="both">Past & Future</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- UUID Column -->
+                        <div class="column-card" onclick="toggleColumn('uuid')">
+                            <div class="column-header">
+                                <input type="checkbox" class="column-checkbox" id="uuidCheckbox">
+                                <div class="column-icon">
+                                    <i class="fas fa-fingerprint"></i>
+                                </div>
+                                <div class="column-info">
+                                    <div class="column-name">UUID</div>
+                                    <div class="column-description">Generate unique identifiers</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Credit Card Column -->
+                        <div class="column-card" onclick="toggleColumn('creditcard')">
+                            <div class="column-header">
+                                <input type="checkbox" class="column-checkbox" id="creditcardCheckbox">
+                                <div class="column-icon">
+                                    <i class="fas fa-credit-card"></i>
+                                </div>
+                                <div class="column-info">
+                                    <div class="column-name">Credit Card</div>
+                                    <div class="column-description">Generate test card numbers</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Generation Controls -->
+                    <div class="generation-controls">
+                        <div class="rows-control">
+                            <label class="form-label" for="rowCount">Number of Rows:</label>
+                            <input type="number" id="rowCount" class="rows-input" value="10" min="1" max="1000">
+                        </div>
+
+                        <div class="format-controls">
+                            <button type="button" class="format-btn active" data-format="json">
+                                <i class="fas fa-code"></i> JSON
+                            </button>
+                            <button type="button" class="format-btn" data-format="csv">
+                                <i class="fas fa-table"></i> CSV
+                            </button>
+                            <button type="button" class="format-btn" data-format="xml">
+                                <i class="fas fa-file-code"></i> XML
+                            </button>
+                        </div>
+
+                        <button type="submit" class="generate-btn" id="generateBtn">
+                            <i class="fas fa-magic"></i>
+                            Generate Data
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Results Section -->
+            <div class="results-section" id="resultsSection">
+                <div class="results-header">
+                    <h2 class="section-title">
+                        <i class="fas fa-chart-bar"></i>
+                        Generated Dataset
+                    </h2>
+                    <div class="results-actions">
+                        <button class="action-btn" onclick="downloadData()">
+                            <i class="fas fa-download"></i>
+                            Download
+                        </button>
+                        <button class="action-btn" onclick="copyToClipboard()">
+                            <i class="fas fa-copy"></i>
+                            Copy
+                        </button>
+                        <button class="action-btn" onclick="regenerateData()">
+                            <i class="fas fa-sync-alt"></i>
+                            Regenerate
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Statistics -->
+                <div class="stats-grid" id="statsGrid">
+                    <!-- Stats will be populated here -->
+                </div>
+
+                <!-- Output -->
+                <div class="output-container" id="outputContainer">
+                    <!-- Generated data will appear here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let generatedData = [];
+        let currentFormat = 'json';
+
+        // Form handling
+        document.getElementById('dataGenForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            generateDataset();
+        });
+
+        // Format button handling
+        document.querySelectorAll('.format-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                document.querySelectorAll('.format-btn').forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+                currentFormat = this.dataset.format;
+                
+                if (generatedData.length > 0) {
+                    displayData();
+                }
+            });
+        });
+
+        function toggleColumn(columnName) {
+            const checkbox = document.getElementById(columnName + 'Checkbox');
+            const card = checkbox.closest('.column-card');
+            
+            checkbox.checked = !checkbox.checked;
+            card.classList.toggle('selected', checkbox.checked);
+        }
+
+        async function generateDataset() {
+            const rowCount = parseInt(document.getElementById('rowCount').value);
+            const selectedColumns = getSelectedColumns();
+            
+            if (selectedColumns.length === 0) {
+                alert('Please select at least one data column.');
+                return;
+            }
+
+            setLoadingState(true);
+
+            try {
+                const response = await fetch('/api/generate-data', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        columns: selectedColumns,
+                        rowCount: rowCount,
+                        format: currentFormat
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to generate data');
+                }
+
+                const data = await response.json();
+                
+                if (data.success) {
+                    generatedData = data.data;
+                    displayResults();
+                    showResults();
+                } else {
+                    throw new Error(data.error || 'Generation failed');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error generating data: ' + error.message);
+            } finally {
+                setLoadingState(false);
+            }
+        }
+
+        function getSelectedColumns() {
+            const columns = [];
+            const checkboxes = document.querySelectorAll('.column-checkbox:checked');
+            
+            checkboxes.forEach(checkbox => {
+                const columnName = checkbox.id.replace('Checkbox', '');
+                const columnConfig = { name: columnName };
+                
+                // Add specific configurations
+                if (columnName === 'name') {
+                    columnConfig.type = document.getElementById('nameType').value;
+                } else if (columnName === 'date') {
+                    columnConfig.range = document.getElementById('dateRange').value;
+                }
+                
+                columns.push(columnConfig);
+            });
+            
+            return columns;
+        }
+
+        function setLoadingState(loading) {
+            const generateBtn = document.getElementById('generateBtn');
+            const icon = generateBtn.querySelector('i');
+            const text = generateBtn.textContent.trim().split(' ').slice(1).join(' ');
+            
+            if (loading) {
+                generateBtn.disabled = true;
+                icon.className = 'loading-spinner';
+                generateBtn.innerHTML = `<span class="loading-spinner"></span> Generating...`;
+            } else {
+                generateBtn.disabled = false;
+                generateBtn.innerHTML = `<i class="fas fa-magic"></i> Generate Data`;
+            }
+        }
+
+        function displayResults() {
+            displayStats();
+            displayData();
+        }
+
+        function displayStats() {
+            const statsGrid = document.getElementById('statsGrid');
+            const rowCount = generatedData.length;
+            const columnCount = Object.keys(generatedData[0] || {}).length;
+            const dataSize = new Blob([JSON.stringify(generatedData)]).size;
+            
+            statsGrid.innerHTML = `
+                <div class="stat-card">
+                    <div class="stat-value">${rowCount}</div>
+                    <div class="stat-label">Rows Generated</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">${columnCount}</div>
+                    <div class="stat-label">Columns</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">${(dataSize / 1024).toFixed(1)}</div>
+                    <div class="stat-label">KB Size</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">${currentFormat.toUpperCase()}</div>
+                    <div class="stat-label">Format</div>
+                </div>
+            `;
+        }
+
+        function displayData() {
+            const outputContainer = document.getElementById('outputContainer');
+            let formattedData = '';
+            
+            switch (currentFormat) {
+                case 'json':
+                    formattedData = JSON.stringify(generatedData, null, 2);
+                    break;
+                case 'csv':
+                    formattedData = convertToCSV(generatedData);
+                    break;
+                case 'xml':
+                    formattedData = convertToXML(generatedData);
+                    break;
+            }
+            
+            outputContainer.textContent = formattedData;
+        }
+
+        function convertToCSV(data) {
+            if (data.length === 0) return '';
+            
+            const headers = Object.keys(data[0]);
+            const csvHeaders = headers.join(',');
+            const csvRows = data.map(row => 
+                headers.map(header => `"${(row[header] || '').toString().replace(/"/g, '""')}"`).join(',')
+            );
+            
+            return [csvHeaders, ...csvRows].join('\n');
+        }
+
+        function convertToXML(data) {
+            let xml = '<?xml version="1.0" encoding="UTF-8"?>\n<dataset>\n';
+            
+            data.forEach((row, index) => {
+                xml += `  <record id="${index + 1}">\n`;
+                Object.entries(row).forEach(([key, value]) => {
+                    xml += `    <${key}>${escapeXml(value)}</${key}>\n`;
+                });
+                xml += '  </record>\n';
+            });
+            
+            xml += '</dataset>';
+            return xml;
+        }
+
+        function escapeXml(unsafe) {
+            return unsafe.toString()
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+
+        function showResults() {
+            document.getElementById('resultsSection').classList.add('show');
+        }
+
+        function downloadData() {
+            if (generatedData.length === 0) {
+                alert('No data to download.');
+                return;
+            }
+
+            const filename = `generated_data.${currentFormat}`;
+            const outputContainer = document.getElementById('outputContainer');
+            const content = outputContainer.textContent;
+            
+            const blob = new Blob([content], { type: 'text/plain' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            a.click();
+            window.URL.revokeObjectURL(url);
+        }
+
+        function copyToClipboard() {
+            const outputContainer = document.getElementById('outputContainer');
+            const content = outputContainer.textContent;
+            
+            navigator.clipboard.writeText(content).then(() => {
+                // Show success message
+                const btn = event.target.closest('.action-btn');
+                const originalText = btn.innerHTML;
+                btn.innerHTML = '<i class="fas fa-check"></i> Copied!';
+                setTimeout(() => {
+                    btn.innerHTML = originalText;
+                }, 2000);
+            }).catch(err => {
+                console.error('Failed to copy:', err);
+                alert('Failed to copy to clipboard');
+            });
+        }
+
+        function regenerateData() {
+            generateDataset();
+        }
+
+        // Initialize selected columns
+        document.addEventListener('DOMContentLoaded', function() {
+            // Set initial state for checked columns
+            document.querySelectorAll('.column-checkbox:checked').forEach(checkbox => {
+                checkbox.closest('.column-card').classList.add('selected');
+            });
+        });
+    </script>
+</body>
+</html>
