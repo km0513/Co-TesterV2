@@ -84,7 +84,6 @@ wheel==0.45.1
 zopfli==0.2.3.post1
 pytesseract==0.3.10
 google-generativeai==0.5.4
-browser-use
 playwright
 PyPDF2==3.0.1
 selenium==4.27.1
