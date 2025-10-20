@@ -5,36 +5,61 @@ class BugBuilder {
     this.recordingTimer = null;
     this.mediaRecorder = null;
     this.recordedChunks = [];
-    this.annotations = [];
-    this.actionLogs = [];
     this.currentSessionId = null;
     this.videoAlreadyUploaded = false;
+    this.actions = [];  // Track user actions during recording
+    this.annotations = [];  // Track user annotations
     
     this.initializeElements();
     this.bindEvents();
     this.checkJiraConnection();
+    this.setupActionLogging();
   }
 
   initializeElements() {
+    console.log('Initializing elements...');
+    
+    // Recording elements
     this.recordBtn = document.getElementById('recordBtn');
     this.recordingStatus = document.getElementById('recordingStatus');
     this.timerEl = document.getElementById('timer');
+    
+    // Video preview elements
     this.videoPreviewSection = document.getElementById('videoPreviewSection');
     this.recordingPreview = document.getElementById('recordingPreview');
     this.videoLoadingOverlay = document.getElementById('videoLoadingOverlay');
-    this.actionSummary = document.getElementById('actionSummary');
+    this.generateStepsBtn = document.getElementById('generateStepsBtn');
     this.retakeBtn = document.getElementById('retakeBtn');
-    this.proceedBtn = document.getElementById('proceedBtn');
+    
+    // Generated steps elements
+    this.generatedStepsSection = document.getElementById('generatedStepsSection');
+    this.aiGeneratedSteps = document.getElementById('aiGeneratedSteps');
+    this.generateFinalReportBtn = document.getElementById('generateFinalReportBtn');
+    this.backToVideoBtn = document.getElementById('backToVideoBtn');
+    this.retakeBtn2 = document.getElementById('retakeBtn2');
+    
+    // Bug report elements
     this.bugReportSection = document.getElementById('bugReportSection');
-    this.loadingOverlay = document.getElementById('loadingOverlay');
     this.submitBtn = document.getElementById('submitBtn');
+    this.editBtn = document.getElementById('editBtn');
+    this.loadingOverlay = document.getElementById('loadingOverlay');
+
+    console.log('Elements initialized:', {
+      recordBtn: !!this.recordBtn,
+      generateStepsBtn: !!this.generateStepsBtn,
+      generatedStepsSection: !!this.generatedStepsSection
+    });
   }
 
   bindEvents() {
-    this.recordBtn.addEventListener('click', () => this.toggleRecording());
-    this.retakeBtn.addEventListener('click', () => this.retakeRecording());
-    this.proceedBtn.addEventListener('click', () => this.proceedToBugReport());
-    this.submitBtn.addEventListener('click', () => this.submitToJira());
+    if (this.recordBtn) this.recordBtn.addEventListener('click', () => this.toggleRecording());
+    if (this.generateStepsBtn) this.generateStepsBtn.addEventListener('click', () => this.generateSteps());
+    if (this.generateFinalReportBtn) this.generateFinalReportBtn.addEventListener('click', () => this.generateFinalBugReport());
+    if (this.backToVideoBtn) this.backToVideoBtn.addEventListener('click', () => this.backToVideo());
+    if (this.retakeBtn) this.retakeBtn.addEventListener('click', () => this.retakeRecording());
+    if (this.retakeBtn2) this.retakeBtn2.addEventListener('click', () => this.retakeRecording());
+    if (this.submitBtn) this.submitBtn.addEventListener('click', () => this.submitToJira());
+    if (this.editBtn) this.editBtn.addEventListener('click', () => this.editReport());
   }
 
   async checkJiraConnection() {
@@ -48,6 +73,226 @@ class BugBuilder {
       }
     } catch (error) {
       console.error('Failed to check Jira status:', error);
+    }
+  }
+
+  setupActionLogging() {
+    if (this.actionLoggingInitialized) {
+      return;
+    }
+
+    this.actionLoggingInitialized = true;
+    console.log('✅ Bug Builder action logging initialized');
+
+    const captureClick = (event) => {
+      if (!this.isRecording) return;
+      const target = event.target;
+      this.recordAction({
+        type: 'click',
+        target: this.describeElement(target),
+        coordinates: { x: event.clientX, y: event.clientY },
+        button: event.button,
+        modifiers: {
+          altKey: event.altKey,
+          ctrlKey: event.ctrlKey,
+          metaKey: event.metaKey,
+          shiftKey: event.shiftKey
+        }
+      });
+    };
+
+    const captureInput = (event) => {
+      if (!this.isRecording) return;
+      const target = event.target;
+      if (!target) return;
+      this.recordAction({
+        type: event.type === 'change' ? 'change' : 'input',
+        target: this.describeElement(target),
+        value: this.truncate(target.value, 200)
+      });
+    };
+
+    const captureSubmit = (event) => {
+      if (!this.isRecording) return;
+      const target = event.target;
+      if (!target) return;
+      const formData = new FormData(target);
+      const entries = {};
+      formData.forEach((value, key) => {
+        entries[key] = this.truncate(value, 120);
+      });
+      this.recordAction({
+        type: 'submit',
+        target: this.describeElement(target),
+        formData: entries
+      });
+    };
+
+    const captureKeydown = (event) => {
+      if (!this.isRecording) return;
+      const interestingKeys = ['Enter', 'Escape', 'Tab', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'];
+      if (!interestingKeys.includes(event.key) && !(event.ctrlKey || event.metaKey)) {
+        return;
+      }
+      this.recordAction({
+        type: 'keydown',
+        key: event.key,
+        target: this.describeElement(event.target),
+        modifiers: {
+          altKey: event.altKey,
+          ctrlKey: event.ctrlKey,
+          metaKey: event.metaKey,
+          shiftKey: event.shiftKey
+        }
+      });
+    };
+
+    const captureMessage = (event) => {
+      if (!this.isRecording) return;
+      const data = event.data;
+      if (!data || typeof data !== 'object') return;
+      if (['UI_ACTION', 'RECORD_ACTION', 'bb-action'].includes(data.type)) {
+        this.recordAction({
+          type: data.actionType || data.action || data.type,
+          target: data.target || {},
+          value: data.value,
+          pageUrl: data.url || data.pageUrl,
+          metadata: data.metadata || data.meta
+        });
+      }
+    };
+
+    document.addEventListener('click', captureClick, true);
+    document.addEventListener('input', captureInput, true);
+    document.addEventListener('change', captureInput, true);
+    document.addEventListener('submit', captureSubmit, true);
+    document.addEventListener('keydown', captureKeydown, true);
+    window.addEventListener('message', captureMessage);
+
+    const recordNavigation = (source) => {
+      if (!this.isRecording) return;
+      this.recordAction({
+        type: 'navigation',
+        source,
+        url: window.location.href
+      });
+    };
+
+    if (!this.historyPatched) {
+      const originalPushState = history.pushState;
+      const originalReplaceState = history.replaceState;
+      history.pushState = (...args) => {
+        const result = originalPushState.apply(history, args);
+        recordNavigation('pushState');
+        return result;
+      };
+      history.replaceState = (...args) => {
+        const result = originalReplaceState.apply(history, args);
+        recordNavigation('replaceState');
+        return result;
+      };
+      window.addEventListener('popstate', () => recordNavigation('popstate'));
+      window.addEventListener('hashchange', () => recordNavigation('hashchange'));
+      this.historyPatched = true;
+    }
+
+    const originalFetch = window.fetch.bind(window);
+    if (!this.fetchPatched) {
+      const self = this;
+      window.fetch = async function(...args) {
+        const [resource, config] = args;
+        const url = typeof resource === 'string' ? resource : resource.url;
+        const method = (config && config.method) || 'GET';
+        const requestId = `fetch_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 7)}`;
+        if (self.isRecording) {
+          self.recordAction({ type: 'fetch_request', method, url, requestId });
+        }
+        try {
+          const response = await originalFetch(...args);
+          if (self.isRecording) {
+            self.recordAction({
+              type: 'fetch_response',
+              method,
+              url,
+              status: response.status,
+              ok: response.ok,
+              requestId
+            });
+          }
+          return response;
+        } catch (error) {
+          if (self.isRecording) {
+            self.recordAction({
+              type: 'fetch_error',
+              method,
+              url,
+              message: error.message,
+              requestId
+            });
+          }
+          throw error;
+        }
+      };
+      this.fetchPatched = true;
+    }
+
+    if (!this.xhrPatched) {
+      const self = this;
+      const originalOpen = XMLHttpRequest.prototype.open;
+      const originalSend = XMLHttpRequest.prototype.send;
+
+      XMLHttpRequest.prototype.open = function(method, url, async, user, password) {
+        this.__bugBuilderMeta = { method, url };
+        return originalOpen.call(this, method, url, async, user, password);
+      };
+
+      XMLHttpRequest.prototype.send = function(body) {
+        const meta = this.__bugBuilderMeta || { method: 'GET', url: '' };
+        const requestId = `xhr_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 7)}`;
+        if (self.isRecording) {
+          let serializedBody = null;
+          try {
+            serializedBody = body ? self.truncate(typeof body === 'string' ? body : JSON.stringify(body), 200) : null;
+          } catch (error) {
+            serializedBody = '[unserializable body]';
+          }
+          self.recordAction({
+            type: 'xhr_request',
+            method: meta.method,
+            url: meta.url,
+            body: serializedBody,
+            requestId
+          });
+        }
+
+        this.addEventListener('load', function() {
+          if (self.isRecording) {
+            self.recordAction({
+              type: 'xhr_response',
+              method: meta.method,
+              url: meta.url,
+              status: this.status,
+              requestId
+            });
+          }
+        });
+
+        this.addEventListener('error', function() {
+          if (self.isRecording) {
+            self.recordAction({
+              type: 'xhr_error',
+              method: meta.method,
+              url: meta.url,
+              status: this.status,
+              requestId
+            });
+          }
+        });
+
+        return originalSend.call(this, body);
+      };
+
+      this.xhrPatched = true;
     }
   }
 
@@ -66,10 +311,19 @@ class BugBuilder {
         audio: true
       });
 
+      // Listen for when the user stops screen sharing
+      const videoTrack = stream.getVideoTracks()[0];
+      if (videoTrack) {
+        videoTrack.addEventListener('ended', () => {
+          console.log('Screen sharing ended by user');
+          this.handleScreenSharingEnded();
+        });
+      }
+
       this.mediaRecorder = new MediaRecorder(stream);
       this.recordedChunks = [];
-      this.annotations = [];
-      this.actionLogs = [];
+      this.actions = [];  // Reset actions for new recording
+      this.annotations = [];  // Reset annotations for new recording
 
       this.mediaRecorder.ondataavailable = (event) => {
         if (event.data.size > 0) {
@@ -84,23 +338,49 @@ class BugBuilder {
       this.mediaRecorder.start();
       this.isRecording = true;
       this.recordingStartTime = Date.now();
-      
+
+      this.recordAction({
+        type: 'recording_started',
+        url: window.location.href
+      }, { force: true });
+      this.recordAction({
+        type: 'navigation',
+        source: 'initial_state',
+        url: window.location.href
+      }, { force: true });
+
+      this.updateRecordingState('recording');
+      this.startCrossPageSync();
+
       this.recordBtn.classList.add('recording');
       this.recordBtn.innerHTML = '<i class="fas fa-stop"></i> Stop Recording';
       this.recordingStatus.classList.add('active');
-      
+
       this.startTimer();
       this.currentSessionId = await this.initializeSession();
-      this.startActionLogging();
+      this.updateRecordingState('recording');
+
+      console.log('🎬 Recording started - video capture enabled');
+      console.log('📹 AI will analyze video frames to generate reproduction steps');
 
     } catch (error) {
       console.error('Error starting recording:', error);
+
+      // Handle user cancellation
+      if (error.name === 'NotAllowedError') {
+        console.log('User cancelled screen sharing');
+        this.resetRecordingUI();
+        return;
+      }
+
       alert('Failed to start recording. Please ensure you grant screen capture permissions.');
     }
   }
 
   async stopRecording() {
     if (this.mediaRecorder && this.isRecording) {
+      console.log('⏹️ Stopping recording...');
+
       this.mediaRecorder.stop();
       this.isRecording = false;
       
@@ -111,7 +391,32 @@ class BugBuilder {
       this.recordBtn.innerHTML = '<i class="fas fa-cog fa-spin"></i> Processing...';
       this.recordBtn.disabled = true;
       
-      this.stopActionLogging();
+      console.log(`✅ Recording stopped. Video will be analyzed by AI.`);
+    }
+  }
+
+  handleScreenSharingEnded() {
+    console.log('Screen sharing ended, auto-stopping recording');
+
+    // Auto-stop recording when user stops screen sharing
+    if (this.isRecording && this.mediaRecorder && this.mediaRecorder.state !== 'inactive') {
+      this.mediaRecorder.stop();
+      this.isRecording = false;
+
+      if (this.recordingTimer) {
+        clearInterval(this.recordingTimer);
+      }
+
+      // Update UI to show recording has ended
+      this.recordBtn.classList.remove('recording');
+      this.recordBtn.innerHTML = '<i class="fas fa-check"></i> Recording Complete';
+      this.recordBtn.disabled = true;
+      this.recordingStatus.classList.remove('active');
+
+      // Show message to user
+      setTimeout(() => {
+        alert('Screen sharing ended. Your recording is being processed...');
+      }, 100);
     }
   }
 
@@ -120,7 +425,9 @@ class BugBuilder {
       const elapsed = Date.now() - this.recordingStartTime;
       const minutes = Math.floor(elapsed / 60000);
       const seconds = Math.floor((elapsed % 60000) / 1000);
-      this.timerEl.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+      if (this.timerEl) {
+        this.timerEl.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+      }
     }, 1000);
   }
 
@@ -130,8 +437,7 @@ class BugBuilder {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          timestamp: Date.now(),
-          url: window.location.href
+          timestamp: new Date().toISOString()
         })
       });
       const data = await response.json();
@@ -142,551 +448,6 @@ class BugBuilder {
     }
   }
 
-  startActionLogging() {
-    // Bind all event handlers
-    this.clickHandler = this.logClick.bind(this);
-    this.inputHandler = this.logInput.bind(this);
-    this.changeHandler = this.logChange.bind(this);
-    this.keydownHandler = this.logKeydown.bind(this);
-    this.mousemoveHandler = this.throttle(this.logMouseMove.bind(this), 500);
-    this.scrollHandler = this.throttle(this.logScroll.bind(this), 300);
-    this.focusHandler = this.logFocus.bind(this);
-    this.blurHandler = this.logBlur.bind(this);
-    this.submitHandler = this.logSubmit.bind(this);
-    this.contextmenuHandler = this.logContextMenu.bind(this);
-    this.dragHandler = this.logDrag.bind(this);
-    this.dropHandler = this.logDrop.bind(this);
-    
-    // Add comprehensive event listeners
-    document.addEventListener('click', this.clickHandler, true);
-    document.addEventListener('input', this.inputHandler, true);
-    document.addEventListener('change', this.changeHandler, true);
-    document.addEventListener('keydown', this.keydownHandler, true);
-    document.addEventListener('mousemove', this.mousemoveHandler, true);
-    document.addEventListener('scroll', this.scrollHandler, true);
-    document.addEventListener('focus', this.focusHandler, true);
-    document.addEventListener('blur', this.blurHandler, true);
-    document.addEventListener('submit', this.submitHandler, true);
-    document.addEventListener('contextmenu', this.contextmenuHandler, true);
-    document.addEventListener('dragstart', this.dragHandler, true);
-    document.addEventListener('drop', this.dropHandler, true);
-    
-    // Monitor page navigation
-    this.originalPushState = history.pushState;
-    this.originalReplaceState = history.replaceState;
-    
-    history.pushState = (...args) => {
-      this.logNavigation('pushState', args[2]);
-      return this.originalPushState.apply(history, args);
-    };
-    
-    history.replaceState = (...args) => {
-      this.logNavigation('replaceState', args[2]);
-      return this.originalReplaceState.apply(history, args);
-    };
-    
-    window.addEventListener('popstate', (e) => {
-      this.logNavigation('popstate', window.location.href);
-    });
-    
-    // Monitor AJAX requests
-    this.interceptXHR();
-    this.interceptFetch();
-    
-    // Monitor console errors
-    this.originalConsoleError = console.error;
-    console.error = (...args) => {
-      this.logConsoleError(args);
-      return this.originalConsoleError.apply(console, args);
-    };
-    
-    // Monitor window errors
-    window.addEventListener('error', this.logWindowError.bind(this));
-    window.addEventListener('unhandledrejection', this.logUnhandledRejection.bind(this));
-  }
-
-  stopActionLogging() {
-    // Remove all event listeners
-    document.removeEventListener('click', this.clickHandler, true);
-    document.removeEventListener('input', this.inputHandler, true);
-    document.removeEventListener('change', this.changeHandler, true);
-    document.removeEventListener('keydown', this.keydownHandler, true);
-    document.removeEventListener('mousemove', this.mousemoveHandler, true);
-    document.removeEventListener('scroll', this.scrollHandler, true);
-    document.removeEventListener('focus', this.focusHandler, true);
-    document.removeEventListener('blur', this.blurHandler, true);
-    document.removeEventListener('submit', this.submitHandler, true);
-    document.removeEventListener('contextmenu', this.contextmenuHandler, true);
-    document.removeEventListener('dragstart', this.dragHandler, true);
-    document.removeEventListener('drop', this.dropHandler, true);
-    
-    // Restore original functions
-    if (this.originalPushState) {
-      history.pushState = this.originalPushState;
-    }
-    if (this.originalReplaceState) {
-      history.replaceState = this.originalReplaceState;
-    }
-    if (this.originalConsoleError) {
-      console.error = this.originalConsoleError;
-    }
-    
-    window.removeEventListener('error', this.logWindowError.bind(this));
-    window.removeEventListener('unhandledrejection', this.logUnhandledRejection.bind(this));
-  }
-
-  logClick(event) {
-    if (!this.isRecording) return;
-    
-    const timestamp = Date.now() - this.recordingStartTime;
-    const element = event.target;
-    const action = {
-      timestamp,
-      type: 'click',
-      target: this.getDetailedElementInfo(element),
-      coordinates: { x: event.clientX, y: event.clientY },
-      button: event.button, // 0=left, 1=middle, 2=right
-      modifiers: {
-        ctrl: event.ctrlKey,
-        shift: event.shiftKey,
-        alt: event.altKey,
-        meta: event.metaKey
-      },
-      url: window.location.href,
-      viewport: { width: window.innerWidth, height: window.innerHeight }
-    };
-    
-    this.actionLogs.push(action);
-  }
-
-  logInput(event) {
-    if (!this.isRecording) return;
-    
-    const timestamp = Date.now() - this.recordingStartTime;
-    const element = event.target;
-    const action = {
-      timestamp,
-      type: 'input',
-      target: this.getDetailedElementInfo(element),
-      value: this.sanitizeValue(element.value),
-      inputType: event.inputType,
-      url: window.location.href
-    };
-    
-    this.actionLogs.push(action);
-  }
-
-  logChange(event) {
-    if (!this.isRecording) return;
-    
-    const timestamp = Date.now() - this.recordingStartTime;
-    const element = event.target;
-    const action = {
-      timestamp,
-      type: 'change',
-      target: this.getDetailedElementInfo(element),
-      value: this.sanitizeValue(element.value),
-      checked: element.checked,
-      selected: element.selected,
-      url: window.location.href
-    };
-    
-    this.actionLogs.push(action);
-  }
-
-  logKeydown(event) {
-    if (!this.isRecording) return;
-    
-    // Only log significant keystrokes
-    const significantKeys = ['Enter', 'Tab', 'Escape', 'Backspace', 'Delete', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'];
-    if (!significantKeys.includes(event.key) && !event.ctrlKey && !event.altKey && !event.metaKey) {
-      return;
-    }
-    
-    const timestamp = Date.now() - this.recordingStartTime;
-    const action = {
-      timestamp,
-      type: 'keydown',
-      key: event.key,
-      code: event.code,
-      target: this.getDetailedElementInfo(event.target),
-      modifiers: {
-        ctrl: event.ctrlKey,
-        shift: event.shiftKey,
-        alt: event.altKey,
-        meta: event.metaKey
-      },
-      url: window.location.href
-    };
-    
-    this.actionLogs.push(action);
-  }
-
-  logMouseMove(event) {
-    if (!this.isRecording) return;
-    
-    const timestamp = Date.now() - this.recordingStartTime;
-    const action = {
-      timestamp,
-      type: 'mousemove',
-      coordinates: { x: event.clientX, y: event.clientY },
-      target: this.getElementSelector(event.target),
-      url: window.location.href
-    };
-    
-    this.actionLogs.push(action);
-  }
-
-  logScroll(event) {
-    if (!this.isRecording) return;
-    
-    const timestamp = Date.now() - this.recordingStartTime;
-    const action = {
-      timestamp,
-      type: 'scroll',
-      scrollX: window.scrollX,
-      scrollY: window.scrollY,
-      target: event.target === document ? 'document' : this.getElementSelector(event.target),
-      url: window.location.href
-    };
-    
-    this.actionLogs.push(action);
-  }
-
-  logFocus(event) {
-    if (!this.isRecording) return;
-    
-    const timestamp = Date.now() - this.recordingStartTime;
-    const action = {
-      timestamp,
-      type: 'focus',
-      target: this.getDetailedElementInfo(event.target),
-      url: window.location.href
-    };
-    
-    this.actionLogs.push(action);
-  }
-
-  logBlur(event) {
-    if (!this.isRecording) return;
-    
-    const timestamp = Date.now() - this.recordingStartTime;
-    const action = {
-      timestamp,
-      type: 'blur',
-      target: this.getDetailedElementInfo(event.target),
-      value: this.sanitizeValue(event.target.value),
-      url: window.location.href
-    };
-    
-    this.actionLogs.push(action);
-  }
-
-  logSubmit(event) {
-    if (!this.isRecording) return;
-    
-    const timestamp = Date.now() - this.recordingStartTime;
-    const form = event.target;
-    const formData = new FormData(form);
-    const formFields = {};
-    
-    for (let [key, value] of formData.entries()) {
-      formFields[key] = this.sanitizeValue(value);
-    }
-    
-    const action = {
-      timestamp,
-      type: 'submit',
-      target: this.getDetailedElementInfo(form),
-      formData: formFields,
-      action: form.action,
-      method: form.method,
-      url: window.location.href
-    };
-    
-    this.actionLogs.push(action);
-  }
-
-  logContextMenu(event) {
-    if (!this.isRecording) return;
-    
-    const timestamp = Date.now() - this.recordingStartTime;
-    const action = {
-      timestamp,
-      type: 'contextmenu',
-      target: this.getDetailedElementInfo(event.target),
-      coordinates: { x: event.clientX, y: event.clientY },
-      url: window.location.href
-    };
-    
-    this.actionLogs.push(action);
-  }
-
-  logDrag(event) {
-    if (!this.isRecording) return;
-    
-    const timestamp = Date.now() - this.recordingStartTime;
-    const action = {
-      timestamp,
-      type: 'dragstart',
-      target: this.getDetailedElementInfo(event.target),
-      coordinates: { x: event.clientX, y: event.clientY },
-      url: window.location.href
-    };
-    
-    this.actionLogs.push(action);
-  }
-
-  logDrop(event) {
-    if (!this.isRecording) return;
-    
-    const timestamp = Date.now() - this.recordingStartTime;
-    const action = {
-      timestamp,
-      type: 'drop',
-      target: this.getDetailedElementInfo(event.target),
-      coordinates: { x: event.clientX, y: event.clientY },
-      files: event.dataTransfer.files.length,
-      url: window.location.href
-    };
-    
-    this.actionLogs.push(action);
-  }
-
-  logNavigation(type, url) {
-    if (!this.isRecording) return;
-    
-    const timestamp = Date.now() - this.recordingStartTime;
-    const action = {
-      timestamp,
-      type: 'navigation',
-      navigationMethod: type,
-      fromUrl: this.currentUrl || window.location.href,
-      toUrl: url,
-      title: document.title
-    };
-    
-    this.currentUrl = url;
-    this.actionLogs.push(action);
-  }
-
-  logConsoleError(args) {
-    if (!this.isRecording) return;
-    
-    const timestamp = Date.now() - this.recordingStartTime;
-    const action = {
-      timestamp,
-      type: 'console_error',
-      message: args.map(arg => String(arg)).join(' '),
-      url: window.location.href
-    };
-    
-    this.actionLogs.push(action);
-  }
-
-  logWindowError(event) {
-    if (!this.isRecording) return;
-    
-    const timestamp = Date.now() - this.recordingStartTime;
-    const action = {
-      timestamp,
-      type: 'javascript_error',
-      message: event.message,
-      filename: event.filename,
-      lineno: event.lineno,
-      colno: event.colno,
-      stack: event.error?.stack,
-      url: window.location.href
-    };
-    
-    this.actionLogs.push(action);
-  }
-
-  logUnhandledRejection(event) {
-    if (!this.isRecording) return;
-    
-    const timestamp = Date.now() - this.recordingStartTime;
-    const action = {
-      timestamp,
-      type: 'unhandled_promise_rejection',
-      reason: String(event.reason),
-      url: window.location.href
-    };
-    
-    this.actionLogs.push(action);
-  }
-
-  interceptXHR() {
-    const originalOpen = XMLHttpRequest.prototype.open;
-    const originalSend = XMLHttpRequest.prototype.send;
-    const self = this;
-    
-    XMLHttpRequest.prototype.open = function(method, url, ...args) {
-      this._bugBuilderMethod = method;
-      this._bugBuilderUrl = url;
-      return originalOpen.apply(this, [method, url, ...args]);
-    };
-    
-    XMLHttpRequest.prototype.send = function(data) {
-      if (self.isRecording) {
-        const timestamp = Date.now() - self.recordingStartTime;
-        const action = {
-          timestamp,
-          type: 'xhr_request',
-          method: this._bugBuilderMethod,
-          url: this._bugBuilderUrl,
-          data: data ? String(data).slice(0, 200) : null,
-          currentUrl: window.location.href
-        };
-        
-        this.addEventListener('load', function() {
-          if (self.isRecording) {
-            const responseAction = {
-              timestamp: Date.now() - self.recordingStartTime,
-              type: 'xhr_response',
-              method: this._bugBuilderMethod,
-              url: this._bugBuilderUrl,
-              status: this.status,
-              statusText: this.statusText,
-              response: this.responseText ? this.responseText.slice(0, 500) : null,
-              currentUrl: window.location.href
-            };
-            self.actionLogs.push(responseAction);
-          }
-        });
-        
-        self.actionLogs.push(action);
-      }
-      
-      return originalSend.apply(this, arguments);
-    };
-  }
-
-  interceptFetch() {
-    const originalFetch = window.fetch;
-    const self = this;
-    
-    window.fetch = async function(resource, options = {}) {
-      if (self.isRecording) {
-        const timestamp = Date.now() - self.recordingStartTime;
-        const url = typeof resource === 'string' ? resource : resource.url;
-        const method = options.method || 'GET';
-        
-        const action = {
-          timestamp,
-          type: 'fetch_request',
-          method,
-          url,
-          data: options.body ? String(options.body).slice(0, 200) : null,
-          currentUrl: window.location.href
-        };
-        
-        self.actionLogs.push(action);
-        
-        try {
-          const response = await originalFetch.apply(this, arguments);
-          
-          if (self.isRecording) {
-            const responseAction = {
-              timestamp: Date.now() - self.recordingStartTime,
-              type: 'fetch_response',
-              method,
-              url,
-              status: response.status,
-              statusText: response.statusText,
-              currentUrl: window.location.href
-            };
-            self.actionLogs.push(responseAction);
-          }
-          
-          return response;
-        } catch (error) {
-          if (self.isRecording) {
-            const errorAction = {
-              timestamp: Date.now() - self.recordingStartTime,
-              type: 'fetch_error',
-              method,
-              url,
-              error: String(error),
-              currentUrl: window.location.href
-            };
-            self.actionLogs.push(errorAction);
-          }
-          throw error;
-        }
-      }
-      
-      return originalFetch.apply(this, arguments);
-    };
-  }
-
-  throttle(func, limit) {
-    let inThrottle;
-    return function() {
-      const args = arguments;
-      const context = this;
-      if (!inThrottle) {
-        func.apply(context, args);
-        inThrottle = true;
-        setTimeout(() => inThrottle = false, limit);
-      }
-    };
-  }
-
-  sanitizeValue(value) {
-    if (!value) return value;
-    
-    // Don't log sensitive information
-    const sensitivePatterns = [
-      /password/i,
-      /ssn/i,
-      /social.security/i,
-      /credit.card/i,
-      /cvv/i,
-      /pin/i
-    ];
-    
-    const valueStr = String(value);
-    for (let pattern of sensitivePatterns) {
-      if (pattern.test(valueStr)) {
-        return '[SENSITIVE_DATA_HIDDEN]';
-      }
-    }
-    
-    return valueStr.slice(0, 200); // Limit length
-  }
-
-  getDetailedElementInfo(element) {
-    const info = {
-      tagName: element.tagName?.toLowerCase(),
-      id: element.id,
-      className: element.className,
-      name: element.name,
-      type: element.type,
-      placeholder: element.placeholder,
-      title: element.title,
-      text: element.textContent?.slice(0, 100),
-      selector: this.getElementSelector(element),
-      attributes: {}
-    };
-    
-    // Capture important attributes
-    const importantAttrs = ['data-testid', 'data-cy', 'aria-label', 'role', 'href', 'src', 'alt'];
-    importantAttrs.forEach(attr => {
-      if (element.hasAttribute(attr)) {
-        info.attributes[attr] = element.getAttribute(attr);
-      }
-    });
-    
-    return info;
-  }
-
-  getElementSelector(element) {
-    if (element.id) return `#${element.id}`;
-    if (element.className) return `.${element.className.split(' ')[0]}`;
-    return element.tagName.toLowerCase();
-  }
-
   async showVideoPreview() {
     try {
       // Show video preview section first
@@ -694,13 +455,25 @@ class BugBuilder {
       this.videoPreviewSection.scrollIntoView({ behavior: 'smooth' });
       
       // Show loading overlay
-      this.videoLoadingOverlay.style.display = 'flex';
+      if (this.videoLoadingOverlay) {
+        this.videoLoadingOverlay.style.display = 'flex';
+      }
       
-      // Upload video to server first for reliable playback
+      // Upload video to server for AI analysis
       const videoBlob = new Blob(this.recordedChunks, { type: 'video/webm' });
       const formData = new FormData();
       formData.append('video', videoBlob, 'bug-recording.webm');
       formData.append('session_id', this.currentSessionId);
+      const imported = this.flushExternalActions();
+      if (imported > 0) {
+        console.log(`🔁 Imported ${imported} cross-page actions prior to upload`);
+      }
+      if (this.actions && this.actions.length > 0) {
+        formData.append('actions', JSON.stringify(this.actions));
+        console.log(`📝 Uploading ${this.actions.length} captured actions with video`);
+      } else {
+        console.warn('⚠️ No user actions captured during recording');
+      }
       
       const uploadResponse = await fetch('/api/bug-builder/upload-video', {
         method: 'POST',
@@ -723,24 +496,25 @@ class BugBuilder {
       }
       
       // Set up video preview events
-      this.recordingPreview.onloadeddata = () => {
-        this.videoLoadingOverlay.style.display = 'none';
-      };
-      
-      this.recordingPreview.onerror = () => {
-        this.videoLoadingOverlay.style.display = 'none';
-        console.error('Video playback error');
-      };
-      
-      // Populate action summary
-      this.populateActionSummary();
-      
+      if (this.recordingPreview && this.videoLoadingOverlay) {
+        this.recordingPreview.onloadeddata = () => {
+          this.videoLoadingOverlay.style.display = 'none';
+        };
+
+        this.recordingPreview.onerror = () => {
+          this.videoLoadingOverlay.style.display = 'none';
+          console.error('Video playback error');
+        };
+      }
+
       // Reset recording UI
       this.resetRecordingUI();
       
     } catch (error) {
       console.error('Error showing video preview:', error);
-      this.videoLoadingOverlay.style.display = 'none';
+      if (this.videoLoadingOverlay) {
+        this.videoLoadingOverlay.style.display = 'none';
+      }
       
       // Fallback to blob URL
       try {
@@ -758,9 +532,170 @@ class BugBuilder {
     }
   }
 
-  retakeRecording() {
-    // Hide video preview
+  async generateSteps() {
+    if (!this.currentSessionId) {
+      alert('No video session found. Please record a video first.');
+      return;
+    }
+
+    this.loadingOverlay.classList.add('active');
+    
+    // Add progress indicator
+    const progressDiv = document.createElement('div');
+    progressDiv.innerHTML = `
+      <div style="text-align: center; color: #374151; margin-top: 1rem;">
+        <div style="margin-bottom: 0.5rem;">🎥 Analyzing video frames...</div>
+        <div style="font-size: 0.9rem; color: #6b7280;">This may take 30-60 seconds</div>
+      </div>
+    `;
+    this.loadingOverlay.appendChild(progressDiv);
+    
+    try {
+      console.log('Starting video analysis for session:', this.currentSessionId);
+      
+      const response = await fetch('/api/bug-builder/generate-steps', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          session_id: this.currentSessionId
+        })
+      });
+      
+      const result = await response.json();
+      console.log('Video analysis result:', result);
+      
+      if (result.success) {
+        this.displayGeneratedSteps(result.steps);
+        this.showGeneratedStepsSection();
+        
+        // Show analysis method info
+        if (result.analysis_method) {
+          const methodInfo = document.createElement('div');
+          methodInfo.style.cssText = 'margin-top: 1rem; padding: 0.75rem; background: #f0f9ff; border: 1px solid #0ea5e9; border-radius: 8px; font-size: 0.9rem;';
+          
+          if (result.analysis_method === 'video_frame_analysis') {
+            methodInfo.innerHTML = `
+              <div style="color: #0369a1; font-weight: 600;">✅ Real Video Analysis</div>
+              <div style="color: #075985; margin-top: 0.25rem;">
+                Analyzed ${result.frames_analyzed || 'multiple'} video frames using AI vision
+              </div>
+            `;
+          } else if (result.analysis_method === 'fallback') {
+            methodInfo.innerHTML = `
+              <div style="color: #dc2626; font-weight: 600;">⚠️ Fallback Mode</div>
+              <div style="color: #991b1b; margin-top: 0.25rem;">
+                ${result.error_reason || 'Video analysis failed'} - Using intelligent defaults
+              </div>
+            `;
+          }
+          
+          this.aiGeneratedSteps.appendChild(methodInfo);
+        }
+        
+      } else {
+        throw new Error(result.error || 'Failed to generate steps from video');
+      }
+      
+    } catch (error) {
+      console.error('Error generating steps:', error);
+      alert('Failed to generate steps from video. Please try again.');
+    } finally {
+      this.loadingOverlay.classList.remove('active');
+      // Remove progress indicator
+      if (progressDiv && progressDiv.parentNode) {
+        progressDiv.parentNode.removeChild(progressDiv);
+      }
+    }
+  }
+
+  displayGeneratedSteps(steps) {
+    if (!this.aiGeneratedSteps) return;
+
+    this.aiGeneratedSteps.innerHTML = '';
+    
+    if (Array.isArray(steps) && steps.length > 0) {
+      const stepsList = document.createElement('ol');
+      stepsList.style.cssText = 'margin: 0; padding-left: 1.5rem; color: #374151;';
+      
+      steps.forEach(step => {
+        const listItem = document.createElement('li');
+        listItem.style.cssText = 'margin-bottom: 0.75rem; line-height: 1.6;';
+        listItem.textContent = step;
+        stepsList.appendChild(listItem);
+      });
+      
+      this.aiGeneratedSteps.appendChild(stepsList);
+    } else {
+      this.aiGeneratedSteps.innerHTML = '<p style="color: #6b7280; text-align: center;">No steps could be generated from the video. Please try recording again with clearer actions.</p>';
+    }
+  }
+
+  showGeneratedStepsSection() {
+    // Hide video preview section
     this.videoPreviewSection.style.display = 'none';
+    
+    // Show generated steps section
+    this.generatedStepsSection.style.display = 'block';
+    this.generatedStepsSection.scrollIntoView({ behavior: 'smooth' });
+  }
+
+  backToVideo() {
+    // Hide generated steps section
+    this.generatedStepsSection.style.display = 'none';
+    
+    // Show video preview section
+    this.videoPreviewSection.style.display = 'block';
+    this.videoPreviewSection.scrollIntoView({ behavior: 'smooth' });
+  }
+
+  async generateFinalBugReport() {
+    // Validate required fields
+    const expectedResult = document.getElementById('expectedResultInput').value.trim();
+    const actualResult = document.getElementById('actualResultInput').value.trim();
+    
+    if (!expectedResult || !actualResult) {
+      alert('Please fill in both Expected and Actual results to generate the bug report.');
+      return;
+    }
+
+    this.loadingOverlay.classList.add('active');
+    
+    try {
+      const additionalData = document.getElementById('additionalData').value.trim();
+      
+      const response = await fetch('/api/bug-builder/generate-final-report', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          session_id: this.currentSessionId,
+          expected_result: expectedResult,
+          actual_result: actualResult,
+          additional_data: additionalData
+        })
+      });
+      
+      const result = await response.json();
+      
+      if (result.success) {
+        this.populateBugReport(result.bug_report);
+        this.showBugReport();
+      } else {
+        throw new Error(result.error || 'Failed to generate final bug report');
+      }
+      
+    } catch (error) {
+      console.error('Error generating final bug report:', error);
+      alert('Failed to generate bug report. Please try again.');
+    } finally {
+      this.loadingOverlay.classList.remove('active');
+    }
+  }
+
+  retakeRecording() {
+    // Hide all sections
+    this.videoPreviewSection.style.display = 'none';
+    this.generatedStepsSection.style.display = 'none';
+    this.bugReportSection.style.display = 'none';
     
     // Clean up video URL
     if (this.recordingPreview.src) {
@@ -770,8 +705,7 @@ class BugBuilder {
     
     // Reset data
     this.recordedChunks = [];
-    this.annotations = [];
-    this.actionLogs = [];
+    this.currentSessionId = null;
     this.videoAlreadyUploaded = false;
     
     // Reset UI
@@ -781,109 +715,19 @@ class BugBuilder {
     document.querySelector('.recording-section').scrollIntoView({ behavior: 'smooth' });
   }
 
-  async proceedToBugReport() {
-    this.loadingOverlay.classList.add('active');
-    
-    try {
-      await this.processRecording();
-    } catch (error) {
-      console.error('Error proceeding to bug report:', error);
-      this.loadingOverlay.classList.remove('active');
-    }
-  }
-
-  populateActionSummary() {
-    const summary = {
-      'Total Actions': this.actionLogs.length,
-      'Clicks': this.actionLogs.filter(a => a.type === 'click').length,
-      'Inputs': this.actionLogs.filter(a => a.type === 'input').length,
-      'API Calls': this.actionLogs.filter(a => a.type.includes('request')).length,
-      'Errors': this.actionLogs.filter(a => a.type.includes('error')).length,
-      'Annotations': this.annotations.length
-    };
-    
-    this.actionSummary.innerHTML = '';
-    
-    Object.entries(summary).forEach(([key, value]) => {
-      const summaryItem = document.createElement('div');
-      summaryItem.style.cssText = `
-        background: white;
-        padding: 1rem;
-        border-radius: 8px;
-        border: 1px solid #e2e8f0;
-        text-align: center;
-      `;
-      
-      const icon = this.getSummaryIcon(key);
-      
-      summaryItem.innerHTML = `
-        <div style="font-size: 1.5rem; margin-bottom: 0.5rem;">${icon}</div>
-        <div style="font-size: 1.5rem; font-weight: 600; color: #1f2937; margin-bottom: 0.25rem;">${value}</div>
-        <div style="font-size: 0.875rem; color: #6b7280;">${key}</div>
-      `;
-      
-      this.actionSummary.appendChild(summaryItem);
-    });
-  }
-
-  getSummaryIcon(type) {
-    const icons = {
-      'Total Actions': '📊',
-      'Clicks': '👆',
-      'Inputs': '⌨️',
-      'API Calls': '🌐',
-      'Errors': '❌',
-      'Annotations': '📝'
-    };
-    return icons[type] || '📋';
-  }
-
-  async processRecording() {
-    try {
-      const formData = new FormData();
-      
-      // Only upload video if not already uploaded during preview
-      if (!this.videoAlreadyUploaded) {
-        const videoBlob = new Blob(this.recordedChunks, { type: 'video/webm' });
-        formData.append('video', videoBlob, 'bug-recording.webm');
-      }
-      
-      formData.append('annotations', JSON.stringify(this.annotations));
-      formData.append('actions', JSON.stringify(this.actionLogs));
-      formData.append('session_id', this.currentSessionId);
-      
-      const response = await fetch('/api/bug-builder/process-recording', {
-        method: 'POST',
-        body: formData
-      });
-      
-      const result = await response.json();
-      
-      if (result.success) {
-        this.populateBugReport(result.bug_report);
-        this.showBugReport();
-        
-        // Hide video preview section
-        this.videoPreviewSection.style.display = 'none';
-      } else {
-        throw new Error(result.error || 'Failed to process recording');
-      }
-      
-    } catch (error) {
-      console.error('Error processing recording:', error);
-      alert('Failed to process recording. Please try again.');
-    } finally {
-      this.loadingOverlay.classList.remove('active');
-    }
-  }
-
   populateBugReport(bugReport) {
-    document.getElementById('bugTitle').value = bugReport.title || '';
+    document.getElementById('bugSummary').value = bugReport.summary || '';
     document.getElementById('bugDescription').value = bugReport.description || '';
     document.getElementById('stepsToReproduce').value = bugReport.steps_to_reproduce || '';
+    document.getElementById('expectedResult').value = bugReport.expected || '';
+    document.getElementById('actualResult').value = bugReport.actual || '';
   }
 
   showBugReport() {
+    // Hide generated steps section
+    this.generatedStepsSection.style.display = 'none';
+    
+    // Show bug report section
     this.bugReportSection.style.display = 'block';
     this.bugReportSection.scrollIntoView({ behavior: 'smooth' });
   }
@@ -895,11 +739,20 @@ class BugBuilder {
     this.recordingStatus.classList.remove('active');
   }
 
+  editReport() {
+    // Hide bug report section and show generated steps section again
+    this.bugReportSection.style.display = 'none';
+    this.generatedStepsSection.style.display = 'block';
+    this.generatedStepsSection.scrollIntoView({ behavior: 'smooth' });
+  }
+
   async submitToJira() {
     const bugData = {
-      title: document.getElementById('bugTitle').value,
+      summary: document.getElementById('bugSummary').value,
       description: document.getElementById('bugDescription').value,
       steps_to_reproduce: document.getElementById('stepsToReproduce').value,
+      expected: document.getElementById('expectedResult').value,
+      actual: document.getElementById('actualResult').value,
       session_id: this.currentSessionId
     };
 
@@ -915,6 +768,8 @@ class BugBuilder {
       if (result.success) {
         alert('Bug report submitted to Jira successfully!');
         window.open(result.jira_url, '_blank');
+        // Reset the entire form
+        this.resetEverything();
       } else {
         throw new Error(result.error || 'Failed to submit to Jira');
       }
@@ -923,9 +778,159 @@ class BugBuilder {
       alert('Failed to submit bug report to Jira. Please try again.');
     }
   }
+
+  resetEverything() {
+    // Hide all sections
+    this.videoPreviewSection.style.display = 'none';
+    this.generatedStepsSection.style.display = 'none';
+    this.bugReportSection.style.display = 'none';
+    
+    // Reset data
+    this.recordedChunks = [];
+    this.currentSessionId = null;
+    this.videoAlreadyUploaded = false;
+    
+    // Reset forms
+    if (document.getElementById('resultsForm')) {
+      document.getElementById('resultsForm').reset();
+    }
+    if (document.getElementById('bugReportForm')) {
+      document.getElementById('bugReportForm').reset();
+    }
+    
+    // Reset UI
+    this.resetRecordingUI();
+    
+    // Scroll back to top
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
 }
 
 // Initialize when DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {
-  new BugBuilder();
+  window.bugBuilder = new BugBuilder();
 });
+
+BugBuilder.prototype.recordAction = function(action, { force = false } = {}) {
+  if (!force && !this.isRecording) {
+    return;
+  }
+
+  const timestamp = this.recordingStartTime ? Date.now() - this.recordingStartTime : 0;
+  const actionEntry = {
+    timestamp,
+    pageUrl: action.url || action.pageUrl || window.location.href,
+    type: action.type,
+    target: action.target,
+    value: action.value,
+    coordinates: action.coordinates,
+    button: action.button,
+    modifiers: action.modifiers,
+    formData: action.formData,
+    key: action.key,
+    status: action.status,
+    method: action.method,
+    requestId: action.requestId,
+    metadata: action.metadata,
+    message: action.message,
+    ok: action.ok,
+    body: action.body,
+    source: action.source
+  };
+
+  this.actions.push(actionEntry);
+  if (this.actions.length > this.maxActions) {
+    this.actions = this.actions.slice(-this.maxActions);
+  }
+
+  console.debug('📝 Action logged:', actionEntry);
+};
+
+BugBuilder.prototype.updateRecordingState = function(status) {
+  try {
+    const payload = {
+      status,
+      sessionId: this.currentSessionId,
+      startTime: this.recordingStartTime,
+      timestamp: Date.now()
+    };
+    localStorage.setItem('bugBuilderRecording', JSON.stringify(payload));
+  } catch (error) {
+    console.warn('Unable to update recording state:', error);
+  }
+};
+
+BugBuilder.prototype.startCrossPageSync = function() {
+  if (this.crossPageActionInterval) {
+    clearInterval(this.crossPageActionInterval);
+  }
+  this.crossPageActionInterval = setInterval(() => {
+    const imported = this.flushExternalActions();
+    if (imported > 0) {
+      console.debug(`🔄 Synced ${imported} actions from other tabs`);
+    }
+  }, 750);
+};
+
+BugBuilder.prototype.stopCrossPageSync = function() {
+  if (this.crossPageActionInterval) {
+    clearInterval(this.crossPageActionInterval);
+    this.crossPageActionInterval = null;
+  }
+};
+
+BugBuilder.prototype.flushExternalActions = function() {
+  try {
+    const stored = localStorage.getItem('bugBuilderActions');
+    if (!stored) {
+      return 0;
+    }
+    const actions = JSON.parse(stored);
+    if (!Array.isArray(actions) || actions.length === 0) {
+      localStorage.removeItem('bugBuilderActions');
+      return 0;
+    }
+    actions.forEach(action => {
+      this.recordAction({ ...action, pageUrl: action.url || action.pageUrl }, { force: true });
+    });
+    localStorage.removeItem('bugBuilderActions');
+    return actions.length;
+  } catch (error) {
+    console.warn('Failed to import cross-page actions:', error);
+    return 0;
+  }
+};
+
+BugBuilder.prototype.describeElement = function(element) {
+  if (!element) return null;
+  return {
+    tagName: element.tagName || null,
+    id: element.id || null,
+    className: element.className || null,
+    name: element.name || null,
+    text: this.truncate(element.innerText || element.value || '', 80),
+    role: element.getAttribute && element.getAttribute('role') || null,
+    ariaLabel: element.getAttribute && element.getAttribute('aria-label') || null,
+    placeholder: element.getAttribute && element.getAttribute('placeholder') || null,
+    href: element.href || null
+  };
+};
+
+BugBuilder.prototype.truncate = function(value, maxLength = 100) {
+  if (value === null || value === undefined) return value;
+  const stringValue = String(value);
+  if (stringValue.length <= maxLength) return stringValue;
+  return `${stringValue.slice(0, maxLength)}…`;
+};
+
+BugBuilder.prototype.addAnnotation = function(note) {
+  const sanitizedNote = this.truncate(note, 200);
+  this.annotations.push({
+    timestamp: Date.now() - (this.recordingStartTime || Date.now()),
+    note: sanitizedNote
+  });
+  this.recordAction({
+    type: 'annotation',
+    value: sanitizedNote
+  }, { force: true });
+};

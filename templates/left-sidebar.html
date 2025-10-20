@@ -49,16 +49,17 @@
       </div>
     </div>
   </div>
-  
+
   <div class="sidebar-menu">
 
-    <a href="#" data-href="/home" class="nav-link sidebar-item{% if active_tab == 'home' %} active{% endif %}" data-no-auth="true">
+    <a href="#" data-href="/home" class="nav-link sidebar-item{% if active_tab == 'home' %} active{% endif %}"
+      data-no-auth="true">
       <span class="sidebar-icon"><i class="fas fa-home"></i></span>
       <span class="sidebar-label">Home</span>
     </a>
 
-   
-    
+
+
     <!-- Manual Test Generator (Parent with Sub-menu) -->
     <div class="sidebar-parent-item{% if active_tab == 'manual' %} active{% endif %}">
       <a href="#" class="nav-link sidebar-item sidebar-parent" data-toggle="manual-submenu">
@@ -66,53 +67,57 @@
         <span class="sidebar-label">Test Generator <span class="ai-badge">AI</span></span>
         <span class="sidebar-arrow"><i class="fas fa-chevron-down"></i></span>
       </a>
-      
+
       <div class="sidebar-submenu" id="manual-submenu">
-        <a href="#" data-href="/test-generator/individual" class="nav-link sidebar-subitem{% if active_tab == 'manual' and request.endpoint == 'test_generator_individual' %} active{% endif %}">
+        <a href="#" data-href="/test-generator/individual"
+          class="nav-link sidebar-subitem{% if active_tab == 'manual' and request.endpoint == 'test_generator_individual' %} active{% endif %}">
           <span class="sidebar-subicon"><i class="fas fa-user"></i></span>
           <span class="sidebar-sublabel">User Story / PRD</span>
         </a>
-        
-        <a href="#" data-href="/test-generator/bulk" class="nav-link sidebar-subitem{% if active_tab == 'manual' and request.endpoint == 'test_generator_bulk' %} active{% endif %}">
+
+        <a href="#" data-href="/test-generator/bulk"
+          class="nav-link sidebar-subitem{% if active_tab == 'manual' and request.endpoint == 'test_generator_bulk' %} active{% endif %}">
           <span class="sidebar-subicon"><i class="fas fa-layer-group"></i></span>
           <span class="sidebar-sublabel">Bulk (JQL)</span>
         </a>
       </div>
     </div>
-    
-    <a href="#" data-href="/ui-analyzer" class="nav-link sidebar-item{% if active_tab == 'screen-analysis' %} active{% endif %}">
+
+    <a href="#" data-href="/ui-analyzer"
+      class="nav-link sidebar-item{% if active_tab == 'screen-analysis' %} active{% endif %}">
       <span class="sidebar-icon"><i class="fas fa-search-plus"></i></span>
       <span class="sidebar-label">UI Analyzer <span class="ai-badge">AI</span></span>
-      
+
     </a>
 
-    
-   
+
+
     <a href="#" data-href="/api-co-test" class="nav-link sidebar-item{% if active_tab == 'api' %} active{% endif %}">
       <span class="sidebar-icon"><i class="fas fa-code"></i></span>
       <span class="sidebar-label">API Co-Test</span>
     </a>
-    
-    <a href="#" data-href="/pom-builder" data-auth-required class="nav-link sidebar-item{% if active_tab == 'pom-builder' %} active{% endif %}">
+
+    <a href="#" data-href="/pom-builder" data-auth-required
+      class="nav-link sidebar-item{% if active_tab == 'pom-builder' %} active{% endif %}">
       <span class="sidebar-icon"><i class="fas fa-cubes"></i></span>
       <span class="sidebar-label">POM Builder <span class="ai-badge">AI</span></span>
     </a>
-    
-    <a href="#" data-href="/data-generator" class="nav-link sidebar-item{% if active_tab == 'data' %} active{% endif %}">
+
+    <a href="#" data-href="/data-generator"
+      class="nav-link sidebar-item{% if active_tab == 'data' %} active{% endif %}">
       <span class="sidebar-icon"><i class="fas fa-database"></i></span>
       <span class="sidebar-label">Data Generator</span>
     </a>
-    
+
     <!-- Auto-Healing Recorder temporarily removed for redesign -->
-    
-    <!-- Bug Builder hidden until ready -->
-    <!--
-    <a href="#" data-href="/bug-builder" class="nav-link sidebar-item{% if active_tab == 'bug-builder' %} active{% endif %}">
+
+    <!-- Bug Builder -->
+    <a href="#" data-href="/bug-builder"
+      class="nav-link sidebar-item{% if active_tab == 'bug-builder' %} active{% endif %}">
       <span class="sidebar-icon"><i class="fas fa-bug"></i></span>
       <span class="sidebar-label">Bug Builder <span class="ai-badge">AI</span></span>
     </a>
-    -->
-    
+
     <!-- Context Builder hidden until ready -->
     <!--
     <a href="#" data-href="/context-builder" class="nav-link sidebar-item{% if active_tab == 'context-builder' %} active{% endif %}">
@@ -120,36 +125,62 @@
       <span class="sidebar-label">Context Builder <span class="ai-badge">AI</span></span>
     </a>
     -->
-    
-    <a href="#" data-href="/learning-resources" class="nav-link sidebar-item{% if active_tab == 'learning' %} active{% endif %}" data-no-auth="true">
+
+    <a href="#" data-href="/learning-resources"
+      class="nav-link sidebar-item{% if active_tab == 'learning' %} active{% endif %}" data-no-auth="true">
       <span class="sidebar-icon"><i class="fas fa-graduation-cap"></i></span>
       <span class="sidebar-label">Learning Resources</span>
     </a>
-    
+
+    <!-- Jira Dashboard (Parent with Sub-menu) -->
+    <div
+      class="sidebar-parent-item{% if active_tab == 'dashboards' or active_tab == 'admin-dashboards' %} active{% endif %}">
+      <a href="#" class="nav-link sidebar-item sidebar-parent" data-toggle="jira-dashboard-submenu">
+        <span class="sidebar-icon"><i class="fas fa-chart-pie"></i></span>
+        <span class="sidebar-label">Jira Dashboard</span>
+        <span class="sidebar-arrow"><i class="fas fa-chevron-down"></i></span>
+      </a>
+
+      <div class="sidebar-submenu" id="jira-dashboard-submenu">
+        <a href="#" data-href="/dashboards"
+          class="nav-link sidebar-subitem{% if active_tab == 'dashboards' %} active{% endif %}">
+          <span class="sidebar-subicon"><i class="fas fa-project-diagram"></i></span>
+          <span class="sidebar-sublabel">Release Dashboard</span>
+        </a>
+
+        {% if is_admin %}
+        <a href="#" data-href="/admin/dashboards"
+          class="nav-link sidebar-subitem{% if request.endpoint == 'admin_jira_dashboards_page' %} active{% endif %}">
+          <span class="sidebar-subicon"><i class="fas fa-chart-line"></i></span>
+          <span class="sidebar-sublabel">Admin Dashboard</span>
+        </a>
+        {% endif %}
+      </div>
+    </div>
+
     <a href="#" data-href="/my-details" class="nav-link sidebar-item{% if active_tab == 'jira' %} active{% endif %}">
       <span class="sidebar-icon"><i class="fas fa-user-circle"></i></span>
       <span class="sidebar-label">My Details</span>
     </a>
-    
+
     {% if is_admin %}
-    <a href="#" data-href="/admin/time-entries" class="nav-link sidebar-item{% if request.endpoint == 'admin_time_entries_page' %} active{% endif %}">
+    <a href="#" data-href="/admin/time-entries"
+      class="nav-link sidebar-item{% if request.endpoint == 'admin_time_entries_page' %} active{% endif %}">
       <span class="sidebar-icon"><i class="fas fa-user-shield"></i></span>
       <span class="sidebar-label">Admin Panel</span>
     </a>
-    <a href="#" data-href="/admin/dashboards" class="nav-link sidebar-item{% if request.endpoint == 'admin_jira_dashboards_page' %} active{% endif %}">
-      <span class="sidebar-icon"><i class="fas fa-chart-line"></i></span>
-      <span class="sidebar-label">Dashboards</span>
-    </a>
     {% endif %}
-    
+
     {% if false %}
-    
-    
-    <a href="#" data-href="/browseruse-automation" class="nav-link sidebar-item{% if active_tab == 'browseruse' %} active{% endif %}">
+
+
+    <a href="#" data-href="/browseruse-automation"
+      class="nav-link sidebar-item{% if active_tab == 'browseruse' %} active{% endif %}">
       <span class="sidebar-icon">🤖</span>
       <span class="sidebar-label">UI Automation</span>
     </a>
-    <a href="#" data-href="/dom-extractor" class="nav-link sidebar-item{% if active_tab == 'dom-extractor' %} active{% endif %}">
+    <a href="#" data-href="/dom-extractor"
+      class="nav-link sidebar-item{% if active_tab == 'dom-extractor' %} active{% endif %}">
       <span class="sidebar-icon">💻</span>
       <span class="sidebar-label">DOM Extractor</span>
     </a>
@@ -160,7 +191,8 @@
 
 <div class="mobile-toggle">
   <button id="sidebarToggle">
-    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
       <line x1="3" y1="12" x2="21" y2="12"></line>
       <line x1="3" y1="6" x2="21" y2="6"></line>
       <line x1="3" y1="18" x2="21" y2="18"></line>
@@ -170,46 +202,46 @@
 
 <script>
   // Mobile sidebar toggle functionality
-  document.getElementById('sidebarToggle').addEventListener('click', function() {
+  document.getElementById('sidebarToggle').addEventListener('click', function () {
     document.querySelector('.sidebar').classList.toggle('sidebar-open');
   });
 
   // Hierarchical navigation functionality
-  document.addEventListener('DOMContentLoaded', function() {
+  document.addEventListener('DOMContentLoaded', function () {
     // Handle submenu toggles
     const parentToggles = document.querySelectorAll('[data-toggle]');
-    
+
     parentToggles.forEach(toggle => {
-      toggle.addEventListener('click', function(e) {
+      toggle.addEventListener('click', function (e) {
         e.preventDefault();
         const submenuId = this.getAttribute('data-toggle');
         const submenu = document.getElementById(submenuId);
         const arrow = this.querySelector('.sidebar-arrow');
-        
+
         if (submenu) {
           // Toggle expanded state
           this.classList.toggle('expanded');
           submenu.classList.toggle('expanded');
-          
+
           // Store expanded state in localStorage
           const isExpanded = submenu.classList.contains('expanded');
           localStorage.setItem(`sidebar-${submenuId}`, isExpanded);
         }
       });
     });
-    
+
     // Restore expanded states from localStorage
     parentToggles.forEach(toggle => {
       const submenuId = toggle.getAttribute('data-toggle');
       const submenu = document.getElementById(submenuId);
       const isExpanded = localStorage.getItem(`sidebar-${submenuId}`) === 'true';
-      
+
       if (isExpanded && submenu) {
         toggle.classList.add('expanded');
         submenu.classList.add('expanded');
       }
     });
-    
+
     // Auto-expand parent menu if child is active
     const activeSubitems = document.querySelectorAll('.sidebar-subitem.active');
     activeSubitems.forEach(activeItem => {
@@ -223,16 +255,16 @@
       }
     });
   });
-  
+
   // Close sidebar when clicking outside on mobile
-  document.addEventListener('click', function(event) {
+  document.addEventListener('click', function (event) {
     const sidebar = document.querySelector('.sidebar');
     const toggle = document.getElementById('sidebarToggle');
-    
-    if (window.innerWidth <= 768 && 
-        sidebar.classList.contains('sidebar-open') && 
-        !sidebar.contains(event.target) && 
-        event.target !== toggle) {
+
+    if (window.innerWidth <= 768 &&
+      sidebar.classList.contains('sidebar-open') &&
+      !sidebar.contains(event.target) &&
+      event.target !== toggle) {
       sidebar.classList.remove('sidebar-open');
     }
   });
@@ -308,14 +340,14 @@
   function connectToJira() {
     window.location.href = '/api/jira/oauth/login';
   }
-  
+
   // Navigation handling
-  document.addEventListener('DOMContentLoaded', function() {
+  document.addEventListener('DOMContentLoaded', function () {
     let isConnectedToJira = false;
 
     // Navigation state management
     let previousActiveItem = null;
-    
+
     // Restore sidebar visibility if navigating between pages
     if (sessionStorage.getItem('sidebarVisible') === 'true') {
       const sidebar = document.querySelector('.sidebar');
@@ -326,17 +358,17 @@
         sidebar.style.zIndex = '1000';
       }
     }
-    
+
     // Handle all navigation links
     const navLinks = document.querySelectorAll('.nav-link');
     navLinks.forEach(link => {
-      link.addEventListener('click', function(e) {
+      link.addEventListener('click', function (e) {
         e.preventDefault();
         e.stopPropagation();
-        
+
         // Get target URL from data-href
         let targetUrl = this.getAttribute('data-href');
-        
+
         // Validate URL
         if (!targetUrl || targetUrl === '#' || targetUrl === 'null') {
           console.error('No valid target URL found for navigation');
@@ -345,17 +377,17 @@
 
         // Check if this link requires authentication
         const noAuth = this.getAttribute('data-no-auth') === 'true';
-        
+
         // Update active state immediately for smooth UX
         updateActiveNavState(this);
-        
+
         if (noAuth) {
           // Navigate directly for no-auth pages (like dashboard)
           performNavigation(targetUrl, false);
         } else {
           // Show loading indicator for authentication check
           showNavigationLoader('Verifying Authentication', 'Please wait while we check your Jira connection...');
-          
+
           // Check authentication before navigation
           fetch('/api/jira/status')
             .then(response => response.json())
@@ -381,55 +413,55 @@
         }
       });
     });
-    
+
     // Perform navigation with proper state management
     function performNavigation(url, keepLoader = false) {
       // Store sidebar state in sessionStorage
       sessionStorage.setItem('sidebarVisible', 'true');
-      
+
       // Ensure the sidebar remains visible during navigation
       const sidebar = document.querySelector('.sidebar');
       if (sidebar) {
         sidebar.style.zIndex = '10000'; // Keep sidebar above loader
       }
-      
+
       // If we're already showing a loader, update it
       if (!keepLoader) {
         showNavigationLoader('Navigating', 'Loading your requested page...');
       }
-      
+
       // Navigate after a short delay to allow loader to display
       setTimeout(() => {
         window.location.href = url;
       }, 200);
     }
-    
+
     // Update active navigation state
     function updateActiveNavState(clickedItem) {
       // Store current active item for potential restoration
       previousActiveItem = document.querySelector('.sidebar-item.active');
-      
+
       // Remove active class from all sidebar items
       document.querySelectorAll('.sidebar-item').forEach(item => {
         item.classList.remove('active');
       });
-      
+
       // Add active class to clicked item
       clickedItem.classList.add('active');
     }
-    
+
     function restorePreviousActiveState() {
       // Remove active from current
       document.querySelectorAll('.sidebar-item').forEach(item => {
         item.classList.remove('active');
       });
-      
+
       // Restore previous active state
       if (previousActiveItem) {
         previousActiveItem.classList.add('active');
       }
     }
-    
+
     // Full-screen navigation loader to prevent layout shifts
     function showNavigationLoader(title = 'Verifying Authentication', message = 'Please wait while we check your Jira connection...') {
       if (document.getElementById('navigationLoader')) {
@@ -437,7 +469,7 @@
         updateLoaderMessage(title, message);
         return;
       }
-      
+
       const loader = document.createElement('div');
       loader.id = 'navigationLoader';
       loader.style.cssText = `
@@ -454,7 +486,7 @@
         align-items: center;
         transition: opacity 0.2s ease;
       `;
-      
+
       // Create loader content
       const loaderContent = document.createElement('div');
       loaderContent.id = 'loaderContent';
@@ -467,7 +499,7 @@
         max-width: 90%;
         width: 400px;
       `;
-      
+
       // Create spinner
       const spinner = document.createElement('div');
       spinner.style.cssText = `
@@ -479,7 +511,7 @@
         border-top-color: #6366f1;
         animation: spin 1s ease-in-out infinite;
       `;
-      
+
       // Create message container
       const messageContainer = document.createElement('div');
       messageContainer.id = 'loaderMessageContainer';
@@ -487,7 +519,7 @@
         <h3 id="loaderTitle" style="margin: 0 0 0.5rem 0; color: #1f2937; font-weight: 600;">${title}</h3>
         <p id="loaderMessage" style="margin: 0; color: #6b7280;">${message}</p>
       `;
-      
+
       // Add animation style
       if (!document.getElementById('spinnerStyle')) {
         const style = document.createElement('style');
@@ -500,57 +532,57 @@
         `;
         document.head.appendChild(style);
       }
-      
+
       // Assemble loader
       loaderContent.appendChild(spinner);
       loaderContent.appendChild(messageContainer);
       loader.appendChild(loaderContent);
       document.body.appendChild(loader);
-      
+
       // Ensure the sidebar stays visible above the loader
       const sidebar = document.querySelector('.sidebar');
       if (sidebar) {
         sidebar.style.zIndex = '10000';
       }
-      
+
       // Prevent layout shifts by disabling scrolling temporarily
       document.body.style.overflow = 'hidden';
     }
-    
+
     // Update loader message without recreating the loader
     function updateLoaderMessage(title, message) {
       const titleElement = document.getElementById('loaderTitle');
       const messageElement = document.getElementById('loaderMessage');
-      
+
       if (titleElement && messageElement) {
         titleElement.textContent = title;
         messageElement.textContent = message;
       }
     }
-    
+
     function hideNavigationLoader() {
       const loader = document.getElementById('navigationLoader');
       if (loader) {
         // Fade out the loader
         loader.style.opacity = '0';
-        
+
         // Re-enable scrolling
         document.body.style.overflow = '';
-        
+
         // Remove loader after animation completes
         setTimeout(() => {
           loader.remove();
         }, 200);
       }
     }
-    
+
     // Check Jira connection status
     function checkJiraStatus() {
       fetch('/api/jira/status')
         .then(response => response.json())
         .then(data => {
           isConnectedToJira = data.connected;
-          
+
           if (data.connected) {
             // Check user info if connected
             checkUserInfo();
@@ -565,7 +597,7 @@
           hideUserProfile();
         });
     }
-    
+
     // Check for user info and welcome message
     function checkUserInfo() {
       fetch('/api/jira/user-info')
@@ -593,29 +625,29 @@
           hideUserProfile();
         });
     }
-    
+
     // Update user profile in sidebar
     function updateUserProfile(userData) {
       console.log('Updating user profile with data:', userData);
-      
+
       const userName = document.getElementById('userName');
       const userEmail = document.getElementById('userEmail');
       const userAvatarImg = document.getElementById('userAvatarImg');
       const userAvatarPlaceholder = document.getElementById('userAvatarPlaceholder');
-      
+
       // Show the profile section and hide login section
       showUserProfile();
-      
+
       // Update user name and email
       const displayName = userData.user_name || 'User';
       const displayEmail = userData.user_email || 'Connected to Jira';
-      
+
       console.log('Setting user name to:', displayName);
       console.log('Setting user email to:', displayEmail);
-      
+
       userName.textContent = displayName;
       userEmail.textContent = displayEmail;
-      
+
       // Update avatar
       if (userData.user_avatar) {
         userAvatarImg.src = userData.user_avatar;
@@ -627,7 +659,7 @@
         userAvatarPlaceholder.textContent = displayName.charAt(0).toUpperCase();
       }
     }
-    
+
     // Hide user profile and show login section - HIDE ENTIRE SIDEBAR when not authenticated
     function hideUserProfile() {
       const userProfileSection = document.getElementById('userProfileSection');
@@ -635,26 +667,26 @@
       const sidebar = document.getElementById('sidebar');
       const mainContent = document.querySelector('.main-content');
       const quotesHeader = document.querySelector('.quotes-header');
-      
+
       // Hide the entire sidebar when not authenticated
       sidebar.style.display = 'none';
-      
+
       // Adjust main content to take full width
       if (mainContent) {
         mainContent.style.marginLeft = '0px';
         mainContent.style.transition = 'margin-left 0.4s cubic-bezier(0.4, 0, 0.2, 1)';
       }
-      
+
       // Trigger authentication state change event for quotes header
-      window.dispatchEvent(new CustomEvent('authStateChanged', { 
-        detail: { authenticated: false, sidebarVisible: false } 
+      window.dispatchEvent(new CustomEvent('authStateChanged', {
+        detail: { authenticated: false, sidebarVisible: false }
       }));
-      
+
       // Keep the original profile switching logic for when sidebar is shown
       userProfileSection.style.display = 'none';
       loginProfileSection.style.display = 'block';
     }
-    
+
     // Show user profile and hide login section - SHOW ENTIRE SIDEBAR when authenticated
     function showUserProfile() {
       const userProfileSection = document.getElementById('userProfileSection');
@@ -662,14 +694,14 @@
       const sidebar = document.getElementById('sidebar');
       const mainContent = document.querySelector('.main-content');
       const quotesHeader = document.querySelector('.quotes-header');
-      
+
       // Show the entire sidebar when authenticated
       sidebar.style.display = 'flex';
-      
+
       // Restore main content margin based on sidebar state
       const isCollapsed = sidebar.classList.contains('collapsed');
       const isMobile = window.innerWidth <= 768;
-      
+
       if (mainContent) {
         let newMargin;
         if (isMobile) {
@@ -680,17 +712,17 @@
         mainContent.style.marginLeft = newMargin;
         mainContent.style.transition = 'margin-left 0.4s cubic-bezier(0.4, 0, 0.2, 1)';
       }
-      
+
       // Trigger authentication state change event for quotes header
-      window.dispatchEvent(new CustomEvent('authStateChanged', { 
-        detail: { authenticated: true, sidebarVisible: true, collapsed: isCollapsed } 
+      window.dispatchEvent(new CustomEvent('authStateChanged', {
+        detail: { authenticated: true, sidebarVisible: true, collapsed: isCollapsed }
       }));
-      
+
       // Show user profile and hide login section
       userProfileSection.style.display = 'block';
       loginProfileSection.style.display = 'none';
     }
-    
+
     // Show welcome message
     function showWelcomeMessage(userName, userEmail, userAvatar) {
       // Create welcome modal
@@ -709,7 +741,7 @@
         z-index: 10000;
         animation: fadeIn 0.3s ease;
       `;
-      
+
       const welcomeContent = document.createElement('div');
       welcomeContent.style.cssText = `
         background: white;
@@ -720,9 +752,9 @@
         box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
         animation: slideIn 0.3s ease;
       `;
-      
+
       const avatarImg = userAvatar ? `<img src="${userAvatar}" style="width: 60px; height: 60px; border-radius: 50%; margin-bottom: 1rem;" alt="User Avatar">` : '';
-      
+
       welcomeContent.innerHTML = `
         ${avatarImg}
         <h2 style="color: #6366f1; margin-bottom: 0.5rem; font-size: 1.5rem;">🎉 Welcome to Co-Tester!</h2>
@@ -746,10 +778,10 @@
           font-size: 1rem;
         ">Get Started</button>
       `;
-      
+
       welcomeModal.appendChild(welcomeContent);
       document.body.appendChild(welcomeModal);
-      
+
       // Add CSS animations
       const style = document.createElement('style');
       style.textContent = `
@@ -771,7 +803,7 @@
         }
       `;
       document.head.appendChild(style);
-      
+
       // Helper to format local date as YYYY-MM-DD
       function formatYYYYMMDDLocal(date) {
         const y = date.getFullYear();
@@ -826,7 +858,7 @@
               `;
 
               const navigateToMyDetails = () => {
-                try { localStorage.setItem('prefillTimeEntriesDate', dateStr); } catch (e) {}
+                try { localStorage.setItem('prefillTimeEntriesDate', dateStr); } catch (e) { }
                 window.location.href = `/my-details?date=${dateStr}`;
               };
 
@@ -857,7 +889,7 @@
               const fb = document.getElementById('fallbackViewYesterdayBtn');
               if (fb) {
                 fb.addEventListener('click', () => {
-                  try { localStorage.setItem('prefillTimeEntriesDate', dateStr); } catch (e) {}
+                  try { localStorage.setItem('prefillTimeEntriesDate', dateStr); } catch (e) { }
                   window.location.href = `/my-details?date=${dateStr}`;
                 });
               }
@@ -868,14 +900,14 @@
       })();
 
       // Close modal functionality
-      document.getElementById('welcomeOkBtn').addEventListener('click', function() {
+      document.getElementById('welcomeOkBtn').addEventListener('click', function () {
         welcomeModal.style.animation = 'fadeOut 0.3s ease';
         setTimeout(() => {
           document.body.removeChild(welcomeModal);
           document.head.removeChild(style);
         }, 300);
       });
-      
+
       // Auto close after 10 seconds
       setTimeout(() => {
         if (document.getElementById('welcomeModal')) {
@@ -883,20 +915,20 @@
         }
       }, 10000);
     }
-    
 
-    
+
+
     // User profile and login buttons
-    document.addEventListener('click', function(e) {
+    document.addEventListener('click', function (e) {
       if (e.target.closest('#userLogoutBtn')) {
         logoutFromJira();
       }
       if (e.target.closest('#userLoginBtn')) {
-      window.location.href = '/api/jira/oauth/login';
+        window.location.href = '/api/jira/oauth/login';
       }
     });
-    
-    
+
+
     // Logout function
     function logoutFromJira() {
       // Ask for confirmation before proceeding with logout
@@ -930,64 +962,64 @@
           alert('Error disconnecting from Jira. Please try again.');
         });
     }
-    
+
     // Initial status check
     checkJiraStatus();
-    
+
     // Sidebar toggle functionality
     const sidebarToggle = document.getElementById('sidebarToggle');
     const sidebar = document.getElementById('sidebar');
     const mainContent = document.querySelector('.main-content');
-    
-    sidebarToggle.addEventListener('click', function() {
+
+    sidebarToggle.addEventListener('click', function () {
       sidebar.classList.toggle('collapsed');
       updateSidebarState();
     });
-    
+
     function updateSidebarState() {
       const isMobile = window.innerWidth <= 768;
       const isCollapsed = sidebar.classList.contains('collapsed');
-      
-              // Update main content margin with consistent logic
-        if (mainContent) {
-          let newMargin;
-          if (isMobile) {
-            newMargin = isCollapsed ? '280px' : '80px';
-          } else {
-            newMargin = isCollapsed ? '80px' : '280px';
-          }
-          mainContent.style.marginLeft = newMargin;
-          mainContent.style.transition = 'margin-left 0.4s cubic-bezier(0.4, 0, 0.2, 1)';
+
+      // Update main content margin with consistent logic
+      if (mainContent) {
+        let newMargin;
+        if (isMobile) {
+          newMargin = isCollapsed ? '280px' : '80px';
+        } else {
+          newMargin = isCollapsed ? '80px' : '280px';
         }
-      
+        mainContent.style.marginLeft = newMargin;
+        mainContent.style.transition = 'margin-left 0.4s cubic-bezier(0.4, 0, 0.2, 1)';
+      }
+
       // Update toggle icon - use chevron left/right consistently
-      const iconClass = isCollapsed 
+      const iconClass = isCollapsed
         ? 'fas fa-chevron-right'  // Collapsed: show right arrow (expand)
         : 'fas fa-chevron-left';  // Expanded: show left arrow (collapse)
       sidebarToggle.querySelector('i').className = iconClass;
     }
-    
+
     // Initialize sidebar state from localStorage
     const isCollapsed = localStorage.getItem('sidebarCollapsed') === 'true';
     if (isCollapsed) {
       sidebar.classList.add('collapsed');
     }
-    
+
     // Initial state update
     updateSidebarState();
-    
+
     // Handle window resize
-    window.addEventListener('resize', function() {
+    window.addEventListener('resize', function () {
       // Debounce resize events
       clearTimeout(window.resizeTimeout);
-      window.resizeTimeout = setTimeout(function() {
+      window.resizeTimeout = setTimeout(function () {
         updateSidebarState();
       }, 100);
     });
-    
+
     // Save sidebar state when toggled
-    const observer = new MutationObserver(function(mutations) {
-      mutations.forEach(function(mutation) {
+    const observer = new MutationObserver(function (mutations) {
+      mutations.forEach(function (mutation) {
         if (mutation.attributeName === 'class') {
           const isCollapsed = sidebar.classList.contains('collapsed');
           localStorage.setItem('sidebarCollapsed', isCollapsed);

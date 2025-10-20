@@ -1,6 +1,6 @@
 # ==============================
 # Simple Auto-Healing Recorder
-from threading import Lock
+from threading import Lock, Thread
 try:
     from playwright.sync_api import sync_playwright
 except Exception:
@@ -14,8 +14,22 @@ from collections import defaultdict
 from datetime import datetime
 import base64
 import json
-from flask import Flask, Blueprint, render_template, request, jsonify, session, redirect, url_for
+from flask import Flask, Blueprint, render_template, request, jsonify, session, redirect, url_for, send_file, current_app
 from sqlalchemy import or_
+from werkzeug.utils import safe_join
+
+import subprocess
+import sys
+import glob
+import shutil
+
+from utils.playwright_replay import (
+    ensure_replay_directories,
+    generate_script_text,
+    run_replay,
+    save_script,
+    summarize_actions,
+)
 
 autoheal_bp = Blueprint('autoheal', __name__)
 
@@ -1632,6 +1646,9 @@ from langchain_openai import AzureChatOpenAI
 import codecs
 import socket
 
+# Load environment variables from .env file
+load_dotenv(override=True)
+
 # Initialize logger
 logger = logging.getLogger('curlrunner')
 logger.setLevel(logging.INFO)
@@ -1680,8 +1697,14 @@ public_routes = [
     '/api/jira/logout',  # Allow logout without authentication
     '/api/autoheal/',  # Allow all autoheal APIs without Jira auth
     '/static/',  # CSS, JS, and other static assets
-    '/favicon.ico'
+    '/favicon.ico',
+    '/favicon.png'
 ]
+
+@app.route('/favicon.ico')
+def favicon():
+    """Serve favicon to prevent 404 errors - returns empty response"""
+    return '', 204  # No Content
 
 # Jira authentication decorator for additional security
 def jira_auth_required(f):
@@ -4342,8 +4365,8 @@ def generate_structured_context(content):
         
         # Call Google Generative AI
         genai.configure(api_key=os.environ.get('GOOGLE_API_KEY'))
-        # Use gemini-1.5-pro instead of gemini-pro for newer API compatibility
-        model = genai.GenerativeModel('gemini-1.5-pro')
+        # Use model from environment variable
+        model = genai.GenerativeModel(os.environ.get('GOOGLE_API_MODEL'))
         response = model.generate_content(prompt)
         
         # Extract and parse the JSON from the response
@@ -4743,42 +4766,58 @@ def generate_testcases():
 
         # --- ORIGINAL LOGIC FOR SMALL CONTEXT OR NO CONTEXT ---
         prompt = (
-    (context_text + "\n\n" if context_text else "") +
-    (visual_section if visual_section else "") +
-    "You are a senior QA engineer with deep expertise in functional, UI, API, and data validation testing. "
-    "Your task is to create a **comprehensive, well-categorized, and exhaustive set of manual test scenarios** for the following functionality.\n\n"
+    "[ADVANCED] PROMPT TEMPLATE FOR QA TEST GENERATION (FINAL VERSION)\n"
+    "Persona:\n"
+    "You are a Senior QA Engineer and a specialist in Software Test Design. You are an expert at applying formal test methodologies to achieve maximum coverage with minimum effort. You will rigorously apply techniques like Equivalence Partitioning (EP), Boundary Value Analysis (BVA), Decision Table Testing, and State Transition Testing where appropriate. Your primary goal is to generate a lean, precise, and highly effective test suite.\n\n"
 
-    "Each test case must be a **JSON object** with these exact keys:\n"
-    "- 'step': The specific user/system action or starting condition\n"
-    "- 'expected': The precise, verifiable, and observable system behavior\n"
-    "- 'estimate_minutes': A realistic execution time that includes setup, action, validation, and documentation\n\n"
+    "Core Task:\n"
+    "Analyze the provided feature specifications. First, mentally identify the relevant test conditions, equivalence classes, and boundary values. Then, generate a comprehensive suite of manual test scenarios based on your analysis.\n\n"
 
-    "Allowed values for 'estimate_minutes': **5, 10, 15, 20, 30, 45, 60**\n"
-    "Use the following guidelines for estimates:\n"
-    "- 5 mins → Basic UI checks (e.g., visibility, button states, tooltips)\n"
-    "- 10 mins → Single interaction or API hit with straightforward validation\n"
-    "- 15 mins → Multi-step flows or validations with intermediate logic\n"
-    "- 20 mins → Tests involving multiple dependencies or permission-based conditions\n"
-    "- 30 mins → Full user workflows or partial integration checks\n"
-    "- 45–60 mins → End-to-end journeys with environment/data setup, multi-role interaction, or cross-module validation\n\n"
+    "Output Requirements:\n"
+    "Format: A single, raw JSON array. Do not include markdown formatting or any text outside the JSON structure.\n"
+    "JSON Object Structure: Each test case must be a JSON object with the following keys. The category and rationale fields are critical for demonstrating that formal methodologies were used.\n\n"
 
-    "Ensure your test cases **thoroughly cover the following dimensions**:\n"
-    "- Core happy path workflows and expected flows\n"
-    "- Edge and boundary conditions (length, values, state switches)\n"
-    "- Negative test cases (invalid inputs, forbidden actions, missing dependencies)\n"
-    "- Input/output data validation and transformation\n"
-    "- API responses, contract structure, and error handling (if applicable)\n"
-    "- UI/UX behaviors (feedback messages, element state, dynamic rendering)\n"
-    "- Role-based or conditional behaviors (if implied)\n"
-    "- Cross-module or integrated system logic (only if within scenario scope)\n\n"
+    "{\n"
+    '  "test_case_id": "CATEGORY-001",\n'
+    '  "category": "Happy Path | EP | BVA | Decision Table | Negative | UI/UX | State Transition",\n'
+    '  "step": "A clear, concise, and repeatable action taken by the user or system.",\n'
+    '  "expected": "The specific, verifiable, and observable outcome. Should be unambiguous.",\n'
+    '  "rationale": "Briefly explains which test design principle justifies this test case.",\n'
+    '  "estimate_minutes": 10\n'
+    "}\n\n"
 
-    "⚠️ Do **NOT** assume anything beyond the described functionality (e.g., login, unrelated features, system-wide settings).\n"
-    "⚠️ Your output must be a **single JSON array**. Each object must follow this format exactly:\n"
-    "{'step': '...', 'expected': '...', 'estimate_minutes': 15}\n"
-    "⚠️ Do **NOT** include headings, explanations, markdown, groupings, or extra fields.\n\n"
+    "Key Definitions:\n"
+    "test_case_id: Unique ID (e.g., BVA-001, EP-002).\n"
+    "category: The primary test design technique used.\n"
+    "step: The action to perform.\n"
+    "expected: The exact expected result.\n"
+    "rationale: Crucial. A short explanation of the testing theory behind the case.\n"
+    "estimate_minutes: Rounded up to the nearest top 10th minute block (see below).\n\n"
 
-    f"Scenario:\n{scenario}\n\n"
-    "Test Cases:"
+    "Estimation Guidelines (estimate_minutes):\n"
+    "Assume an experienced tester working in a fast, stable test environment.\n"
+    "The estimate covers execution and validation only, not test authoring.\n"
+    "Allowed Values: 10, 20 (minimum is 10 minutes)\n"
+    "10 mins: All basic to moderate complexity test scenarios including UI checks, single interactions, API calls, and multi-step flows.\n"
+    "20 mins: Complex scenarios with dependencies, role/permission checks, data branching, or end-to-end workflows.\n"
+    "(Example: Any scenario that would normally take 1-10 mins is set to 10. Scenarios taking 11-20 mins are set to 20.)\n\n"
+
+    "FEATURE CONTEXT (FILL THIS IN)\n"
+    "1. Feature Description & User Story:\n"
+    f"{scenario}\n"
+    "2. UI/UX Details & Visuals:\n"
+    f"{visual_section if visual_section else 'No visual context provided.'}\n"
+    "3. Business Rules & Acceptance Criteria (AC):\n"
+    f"{context_text if context_text else 'Extract business rules from the feature description above.'}\n"
+    "4. API Endpoint(s) (if applicable):\n"
+    "(Include any relevant API information.)\n"
+    "5. User Roles & Permissions (if applicable):\n"
+    "(Define different user types.)\n"
+    "6. Data Validation Rules & Field Boundaries:\n"
+    "(Be explicit about boundaries for BVA and classes for EP.)\n\n"
+
+    "Final Instruction:\n"
+    "Based on all the context provided, generate the test scenarios. Apply the specified test design techniques to ensure the test suite is efficient and robust. For each test case, populate the rationale field to justify its existence based on those techniques. Ensure estimate_minutes is set to either 10 or 20 (minimum is 10 minutes)."
 )
 
 
@@ -4795,6 +4834,7 @@ def generate_testcases():
             if not model_name:
                 logging.error("GOOGLE_API_MODEL is not set in environment variables.")
                 return jsonify({'error': 'GOOGLE_API_MODEL is not set'}), 500
+            logging.info(f"Using Gemini model: {model_name}")
             model = genai.GenerativeModel(model_name)
             response = model.generate_content(prompt)
             content = response.text
@@ -5089,8 +5129,8 @@ def fetch_jira_issues():
             'Content-Type': 'application/json'
         }
 
-        # Now fetch issues using stored cloud ID
-        issues_url = f'https://api.atlassian.com/ex/jira/{cloud_id}/rest/api/3/search'
+        # Now fetch issues using stored cloud ID - Updated to use /search/jql endpoint
+        issues_url = f'https://api.atlassian.com/ex/jira/{cloud_id}/rest/api/3/search/jql'
         params = {
             'jql': jql,
             'maxResults': max_results,
@@ -5247,152 +5287,10 @@ def data():
 
 # Jira API endpoints
 
-@app.route('/api/jira/issues')
-def jira_issues():
-    """Fetch Jira issues for the authenticated user"""
-    # Check if user is authenticated with Jira
-    access_token = session.get('jira_access_token')
-    if not access_token:
-        return jsonify({'error': 'Not authenticated with Jira'}), 401
-    
-    # Get query parameters
-    search_query = request.args.get('search', '')
-    status_filter = request.args.get('status', '')
-    project_filter = request.args.get('project', '')
-    
-    # Get Jira cloud ID from session
-    cloud_id = session.get('jira_cloud_id')
-    if not cloud_id:
-        return jsonify({'error': 'Jira cloud ID not found in session'}), 400
-    
-    # Construct JQL query
-    jql_parts = []
-    if project_filter:
-        jql_parts.append(f"project = '{project_filter}'")
-    if status_filter:
-        jql_parts.append(f"status = '{status_filter}'")
-    if search_query:
-        jql_parts.append(f"summary ~ '{search_query}*' OR description ~ '{search_query}*'")
-    
-    # Add assignee filter to show only the user's issues if no specific filters
-    if not jql_parts:
-        jql_parts.append("assignee = currentUser() OR reporter = currentUser()")
-    
-    jql_query = " AND ".join(jql_parts)
-    
-    # Prepare API request
-    headers = {
-        'Authorization': f'Bearer {access_token}',
-        'Accept': 'application/json',
-        'Content-Type': 'application/json'
-    }
-    
-    # API endpoint for searching issues
-    url = f"https://api.atlassian.com/ex/jira/{cloud_id}/rest/api/3/search"
-    
-    try:
-        # Make the API request
-        response = requests.post(
-            url,
-            headers=headers,
-            json={
-                'jql': jql_query,
-                'maxResults': 50,
-                'fields': [
-                    'summary',
-                    'description',
-                    'status',
-                    'assignee',
-                    'reporter',
-                    'created',
-                    'updated',
-                    'priority',
-                    'issuetype',
-                    'project'
-                ]
-            }
-        )
-        
-        # Check for errors
-        if response.status_code != 200:
-            return jsonify({
-                'error': 'Failed to fetch Jira issues',
-                'details': response.text
-            }), response.status_code
-        
-        # Process the response
-        data = response.json()
-        issues = []
-        
-        for issue in data.get('issues', []):
-            # Extract issue fields
-            fields = issue.get('fields', {})
-            
-            # Process description to handle attachments
-            description = ''
-            if fields.get('description'):
-                # Handle different description formats
-                if isinstance(fields['description'], dict) and 'content' in fields['description']:
-                    # Process Atlassian Document Format
-                    description_content = fields['description'].get('content', [])
-                    for content in description_content:
-                        if content.get('type') == 'paragraph' and 'content' in content:
-                            for text_content in content.get('content', []):
-                                if text_content.get('type') == 'text':
-                                    description += text_content.get('text', '')
-                            description += '\n'
-                else:
-                    # Handle plain text description
-                    description = str(fields.get('description', ''))
-            
-            # Get assignee information
-            assignee = None
-            if fields.get('assignee'):
-                assignee = {
-                    'name': fields['assignee'].get('displayName', 'Unassigned'),
-                    'email': fields['assignee'].get('emailAddress', ''),
-                    'avatar': fields['assignee'].get('avatarUrls', {}).get('48x48', '')
-                }
-            
-            # Get status information
-            status = None
-            if fields.get('status'):
-                status = fields['status'].get('name', 'Unknown')
-            
-            # Format created and updated dates
-            created = fields.get('created')
-            updated = fields.get('updated')
-            
-            # Build issue URL
-            domain = session.get('jira_domain', '')
-            issue_url = f"https://{domain}/browse/{issue.get('key')}" if domain else ''
-            
-            # Add processed issue to the list
-            issues.append({
-                'key': issue.get('key', ''),
-                'summary': fields.get('summary', ''),
-                'description': description,
-                'status': status,
-                'assignee': assignee,
-                'created': created,
-                'updated': updated,
-                'url': issue_url
-            })
-        
-        # Return the processed issues
-        return jsonify({
-            'issues': issues,
-            'total': data.get('total', 0),
-            'jira_domain': session.get('jira_domain', 'https://upgrad-jira.atlassian.net')
-        })
-    
-    except Exception as e:
-        return jsonify({
-            'error': 'Failed to fetch Jira issues',
-            'details': str(e)
-        }), 500
+# Duplicate route removed - using fetch_jira_issues() at line 5021 instead
 
 @app.route('/api/jira/time-entries', methods=['GET'])
+@jira_auth_required
 def get_jira_time_entries():
     """Get time entries for Jira issues for a specific date"""
     logger.info("=== Time Entries API Called ===")
@@ -5401,37 +5299,16 @@ def get_jira_time_entries():
     date_filter = request.args.get('date', '')
     logger.info(f"Date filter: {date_filter}")
     
-    # Use hardcoded credentials like team_manager - check team_manager .env first
-    jira_email = "kishore.murkhanad@upgrad.com"
-    jira_token = os.getenv('JIRA_API_TOKEN')
+    # Use OAuth token from session
+    access_token = session.get('jira_access_token')
+    cloud_id = session.get('jira_cloud_id')
     
-    # If not found, try loading from team_manager directory
-    if not jira_token:
-        import sys
-        sys.path.append('team_manager')
-        try:
-            from dotenv import load_dotenv
-            load_dotenv('team_manager/.env')
-            jira_token = os.getenv('JIRA_API_TOKEN')
-            logger.info(f"Loaded token from team_manager .env: {bool(jira_token)}")
-        except:
-            logger.error("Could not load team_manager .env file")
+    if not access_token or not cloud_id:
+        logger.error("Missing OAuth credentials in session")
+        return jsonify({'error': 'Jira OAuth not configured. Please re-authenticate.'}), 401
     
-    jira_base_url = "https://upgrad-jira.atlassian.net"
-    
-    logger.info(f"Environment check - JIRA_API_TOKEN exists: {bool(jira_token)}")
-    if jira_token:
-        logger.info(f"Token length: {len(jira_token)}")
-    
-    if jira_email and jira_token:
-        logger.info("Using basic authentication for time entries (primary method)")
-        return get_time_entries_basic_auth(jira_email, jira_token, jira_base_url)
-    else:
-        logger.error(f"Missing credentials - Email: {jira_email}, Token available: {bool(jira_token)}")
-        return jsonify({'error': 'JIRA_API_TOKEN environment variable not set'}), 500
-    
-    # This code should never be reached now
-    return jsonify({'error': 'Unexpected error in authentication flow'}), 500
+    logger.info("Using OAuth authentication for time entries")
+    return get_time_entries_oauth(access_token, cloud_id, date_filter)
 
 
 def _extract_comment_text(comment):
@@ -5504,7 +5381,7 @@ def get_time_entries_basic_auth(jira_email, jira_token, jira_base_url):
             worklog_jql = f'worklogAuthor = "{user_account_id}"'
         
         # Search for issues with worklogs - exactly like team_manager
-        search_url = f'{jira_base_url}/rest/api/3/search'
+        search_url = f'{jira_base_url}/rest/api/3/search/jql'
         search_params = {
             'jql': worklog_jql,
             'fields': 'worklog,summary',
@@ -5599,16 +5476,7 @@ def get_time_entries_oauth(access_token, cloud_id, date_filter):
         
         if user_response.status_code != 200:
             logger.error(f"Myself endpoint failed: {user_response.text}")
-            # If OAuth fails, try basic auth as fallback
-            jira_email = os.getenv('JIRA_EMAIL')
-            jira_token = os.getenv('JIRA_API_TOKEN')
-            jira_base_url = os.getenv('JIRA_BASE_URL', 'https://upgrad-jira.atlassian.net')
-            
-            if jira_email and jira_token:
-                logger.info("OAuth failed, falling back to basic auth")
-                return get_time_entries_basic_auth(jira_email, jira_token, jira_base_url)
-            
-            return jsonify({'error': f'Failed to get user information (status: {user_response.status_code})'}), 401
+            return jsonify({'error': f'Failed to authenticate with Jira. Please re-authenticate. (status: {user_response.status_code})'}), 401
             
         user_data = user_response.json()
         user_account_id = user_data.get('accountId')
@@ -5623,7 +5491,7 @@ def get_time_entries_oauth(access_token, cloud_id, date_filter):
             worklog_jql = f'worklogAuthor = currentUser()'
         
         # Search for issues with worklogs
-        search_url = f'https://api.atlassian.com/ex/jira/{cloud_id}/rest/api/3/search'
+        search_url = f'https://api.atlassian.com/ex/jira/{cloud_id}/rest/api/3/search/jql'
         search_params = {
             'jql': worklog_jql,
             'fields': 'summary,worklog',
@@ -5762,32 +5630,201 @@ def admin_time_entries_page():
 
 
 # ===================== Admin: Jira Dashboards =====================
+@app.route('/dashboards')
+@jira_auth_required
+def jira_dashboards_page():
+    """Jira-helper dashboard - Release progress & Issue tracking."""
+    jira_domain = session.get('jira_domain', 'https://upgrad-jira.atlassian.net')
+    return render_template('jira-helper-dashboard.html', active_tab='dashboards', jira_domain=jira_domain)
+
 @app.route('/admin/dashboards')
 @jira_auth_required
 @admin_required
 def admin_jira_dashboards_page():
     """Admin UI for Jira dashboards with JQL-powered views and charts."""
-    return render_template('admin-jira-dashboards.html', active_tab='admin')
+    return render_template('admin-jira-dashboards.html', active_tab='admin-dashboards')
 
+
+@app.route('/api/jira-helper/jql', methods=['POST'])
+@jira_auth_required
+def jira_helper_jql():
+    """Jira-helper API: Run JQL and return issues with status buckets."""
+    try:
+        payload = request.get_json(silent=True) or {}
+        jql_query = (payload.get('jql') or '').strip()
+        
+        if not jql_query:
+            return jsonify({'error': 'JQL query is required'}), 400
+        
+        # Auth/session
+        access_token = session.get('jira_access_token')
+        cloud_id = session.get('jira_cloud_id')
+        jira_domain = session.get('jira_domain', 'https://upgrad-jira.atlassian.net')
+        
+        if not access_token:
+            return jsonify({'error': 'Jira authentication required'}), 401
+        if not cloud_id:
+            return jsonify({'error': 'Jira cloud ID not found in session'}), 400
+        
+        # Ensure token fresh
+        try:
+            token_expires = session.get('jira_token_expires', 0)
+            if time.time() >= token_expires:
+                if refresh_jira_token():
+                    access_token = session.get('jira_access_token')
+                else:
+                    return jsonify({'error': 'Token expired. Please reconnect to Jira.'}), 401
+        except Exception:
+            pass
+        
+        headers = {
+            'Authorization': f'Bearer {access_token}',
+            'Accept': 'application/json',
+            'Content-Type': 'application/json'
+        }
+        
+        # Define status buckets
+        STATUS_BUCKETS = {
+            'qa': ['Ready for QA', 'QA-Ready', 'QA Progress - Blocked', 'Resolved', 'QA In Progress', 'QA Inprogress', 'Ready for UAT'],
+            'dev': ['OPEN', 'Reopen', 'ToDo', 'To Do', 'Reopened', 'Dev Inprogress', 'Dev - Building', 'Build Broken', 'Ready for Development', 'Dev - Frontend - InProgress', 'Dev - Backend - InProgress', 'Dev - Backend - Todo', 'Dev - Frontend - Todo', 'Dev- UI - InProgress', 'Dev- UI - Todo', 'Backlog Item', 'Open (migrated)', 'Open', 'QA - Building', 'Groomed'],
+            'product': ['UAT', 'UAT In Progress', 'UAT Inprogress', 'UAT Status'],
+            'completed': ['Accepted', 'Closed in QA', 'In Stage'],
+            'dropped': ['Dropped'],
+            'deployed': ['In Production']
+        }
+        
+        def normalize_status(status):
+            return status.lower().strip().replace('-', ' ').replace('_', ' ').replace('  ', ' ')
+        
+        # Build normalized bucket map
+        normalized_buckets = {}
+        for bucket, statuses in STATUS_BUCKETS.items():
+            for status in statuses:
+                normalized = normalize_status(status)
+                normalized_buckets[normalized] = bucket
+        
+        def get_bucket(status):
+            if not status:
+                return 'other'
+            normalized = normalize_status(status)
+            return normalized_buckets.get(normalized, 'other')
+        
+        # Fetch all issues with pagination using nextPageToken (not startAt)
+        all_issues = []
+        page_size = 100
+        next_page_token = None
+        page_number = 1
+        
+        logger.info(f"Starting JQL query: {jql_query}")
+        
+        while True:
+            logger.info(f"Fetching page {page_number}, pageSize={page_size}")
+            
+            # Build request payload for POST
+            search_payload = {
+                'jql': jql_query,
+                'maxResults': page_size,
+                'fields': ['id', 'key', 'summary', 'status', 'assignee', 'priority', 'updated', 'created', 'issuetype', 'project', 'parent', 'fixVersions', 'timetracking', 'timeoriginalestimate', 'timeestimate', 'timespent', 'aggregatetimeoriginalestimate', 'aggregatetimeestimate', 'aggregatetimespent'],
+                'expand': 'changelog'
+            }
+            
+            # Add nextPageToken for subsequent requests
+            if next_page_token:
+                search_payload['nextPageToken'] = next_page_token
+            
+            resp = requests.post(
+                f"https://api.atlassian.com/ex/jira/{cloud_id}/rest/api/3/search/jql",
+                headers=headers,
+                json=search_payload,
+                timeout=30
+            )
+            
+            if resp.status_code == 401:
+                if refresh_jira_token():
+                    access_token = session.get('jira_access_token')
+                    headers['Authorization'] = f'Bearer {access_token}'
+                    resp = requests.post(
+                        f"https://api.atlassian.com/ex/jira/{cloud_id}/rest/api/3/search/jql",
+                        headers=headers,
+                        json=search_payload,
+                        timeout=30
+                    )
+            
+            if resp.status_code != 200:
+                body = resp.text[:500] if resp.text else ''
+                logger.error(f"Jira API error: {resp.status_code} - {body}")
+                return jsonify({'error': f'Jira API error {resp.status_code}', 'details': body}), 400
+            
+            data = resp.json() or {}
+            issues = data.get('issues', []) or []
+            total_issues = data.get('total', 0)
+            next_page_token = data.get('nextPageToken')
+            is_last = data.get('isLast', True)
+            
+            logger.info(f"Page {page_number}: Fetched {len(issues)} issues ({len(all_issues) + len(issues)} collected so far, Jira reports {total_issues} total)")
+            logger.info(f"  - nextPageToken: {'EXISTS' if next_page_token else 'NULL'}, isLast: {is_last}")
+            
+            if not issues:
+                logger.info("No more issues to fetch")
+                break
+            
+            for issue in issues:
+                # Add bucket classification
+                status_name = issue.get('fields', {}).get('status', {}).get('name')
+                issue['bucket'] = get_bucket(status_name)
+                all_issues.append(issue)
+            
+            page_number += 1
+            
+            # Continue if there's more data (either nextPageToken exists or we got a full page)
+            has_more_pages = next_page_token or (len(issues) == page_size and not is_last)
+            
+            if not has_more_pages:
+                logger.info(f"  - Stopping: {'No nextPageToken' if not next_page_token else ''} {'isLast=true' if is_last else ''} {'Partial page' if len(issues) < page_size else ''}")
+                break
+        
+        logger.info(f"✓ Completed: Fetched all {len(all_issues)} issues in {page_number - 1} page(s)")
+        
+        # Organize issues into buckets
+        buckets = {
+            'dev': [],
+            'qa': [],
+            'product': [],
+            'completed': [],
+            'dropped': [],
+            'deployed': [],
+            'other': []
+        }
+        
+        for issue in all_issues:
+            bucket = issue.get('bucket', 'other')
+            buckets[bucket].append(issue)
+        
+        bucket_counts = {k: len(v) for k, v in buckets.items()}
+        
+        return jsonify({
+            'total': len(all_issues),
+            'issues': all_issues,
+            'buckets': buckets,
+            'bucketCounts': bucket_counts
+        })
+        
+    except Exception as e:
+        logger.error(f"Jira-helper JQL error: {str(e)}")
+        return jsonify({'error': 'Failed to fetch Jira issues', 'details': str(e)}), 500
 
 @app.route('/api/jira/admin/run-jql', methods=['POST'])
 @jira_auth_required
 @admin_required
 def admin_run_jql():
-    """Admin API: Run arbitrary JQL and return issues plus useful aggregates for dashboards.
+    """Admin API: Run arbitrary JQL and return ALL issues with proper pagination plus useful aggregates.
     Body JSON:
       - jql: string (required)
-      - maxResults: int (optional, default 200, hard cap 1000)
     """
     try:
         payload = request.get_json(silent=True) or {}
         import requests
         jql_query = (payload.get('jql') or '').strip()
-        try:
-            max_results = int(payload.get('maxResults') or 200)
-            max_results = max(1, min(max_results, 1000))
-        except Exception:
-            max_results = 200
 
         if not jql_query:
             return jsonify({'success': False, 'error': 'JQL is required'}), 400
@@ -5801,7 +5838,7 @@ def admin_run_jql():
         if not cloud_id:
             return jsonify({'success': False, 'error': 'Jira cloud ID not found in session'}), 400
 
-        # Ensure token fresh if we track expiry
+        # Ensure token fresh
         try:
             token_expires = session.get('jira_token_expires', 0)
             if time.time() >= token_expires:
@@ -5814,94 +5851,135 @@ def admin_run_jql():
 
         headers = {
             'Authorization': f'Bearer {access_token}',
-            'Accept': 'application/json'
+            'Accept': 'application/json',
+            'Content-Type': 'application/json'
         }
 
-        # Page through search results up to max_results
+        # Fetch ALL issues using nextPageToken pagination
         items = []
-        start_at = 0
         page_size = 100
-        while start_at < max_results:
-            size = min(page_size, max_results - start_at)
-            resp = requests.get(
-                f"https://api.atlassian.com/ex/jira/{cloud_id}/rest/api/3/search",
+        next_page_token = None
+        page_number = 1
+        
+        logger.info(f"Admin JQL query: {jql_query}")
+        
+        while True:
+            logger.info(f"Admin fetching page {page_number}")
+            
+            search_payload = {
+                'jql': jql_query,
+                'maxResults': page_size,
+                'fields': ['key', 'summary', 'status', 'assignee', 'reporter', 'priority', 'created', 'updated', 'resolutiondate', 'issuetype', 'labels', 'customfield_10026', 'project']
+            }
+            
+            if next_page_token:
+                search_payload['nextPageToken'] = next_page_token
+            
+            resp = requests.post(
+                f"https://api.atlassian.com/ex/jira/{cloud_id}/rest/api/3/search/jql",
                 headers=headers,
-                params={
-                    'jql': jql_query,
-                    'startAt': start_at,
-                    'maxResults': size,
-                    'fields': 'key,summary,status,assignee,reporter,priority,created,updated,resolutiondate,issuetype,labels,customfield_10026'
-                },
+                json=search_payload,
                 timeout=30
             )
+            
             if resp.status_code == 401:
-                # Try to refresh once
                 if refresh_jira_token():
                     access_token = session.get('jira_access_token')
                     headers['Authorization'] = f'Bearer {access_token}'
-                    resp = requests.get(
-                        f"https://api.atlassian.com/ex/jira/{cloud_id}/rest/api/3/search",
+                    resp = requests.post(
+                        f"https://api.atlassian.com/ex/jira/{cloud_id}/rest/api/3/search/jql",
                         headers=headers,
-                        params={
-                            'jql': jql_query,
-                            'startAt': start_at,
-                            'maxResults': size,
-                            'fields': 'key,summary,status,assignee,reporter,priority,created,updated,resolutiondate,issuetype,labels,customfield_10026'
-                        },
+                        json=search_payload,
                         timeout=30
                     )
                 
             if resp.status_code != 200:
-                body = ''
-                try:
-                    body = resp.text[:500]
-                except Exception:
-                    body = ''
+                body = resp.text[:500] if resp.text else ''
+                logger.error(f"Admin JQL error: {resp.status_code} - {body}")
                 return jsonify({'success': False, 'error': f'Jira API error {resp.status_code}', 'details': body}), 400
 
             data = resp.json() or {}
             issues = data.get('issues', []) or []
+            next_page_token = data.get('nextPageToken')
+            is_last = data.get('isLast', True)
+            
+            logger.info(f"Page {page_number}: Fetched {len(issues)} issues ({len(items) + len(issues)} total)")
+            
+            if not issues:
+                break
+            
             for it in issues:
                 f = it.get('fields', {}) or {}
                 items.append({
                     'key': it.get('key'),
                     'summary': f.get('summary'),
                     'status': (f.get('status') or {}).get('name'),
+                    'statusCategory': (f.get('status') or {}).get('statusCategory', {}).get('name'),
                     'assignee': (f.get('assignee') or {}).get('displayName') if f.get('assignee') else None,
                     'reporter': (f.get('reporter') or {}).get('displayName') if f.get('reporter') else None,
                     'priority': (f.get('priority') or {}).get('name'),
                     'issuetype': (f.get('issuetype') or {}).get('name'),
+                    'project': (f.get('project') or {}).get('name'),
                     'labels': f.get('labels') or [],
                     'created': f.get('created'),
                     'updated': f.get('updated'),
                     'resolved': f.get('resolutiondate'),
-                    'storyPoints': f.get('customfield_10026')  # common cloud default; may be null
+                    'storyPoints': f.get('customfield_10026')
                 })
-
-            start_at += len(issues)
-            total = data.get('total', start_at)
-            if not issues or start_at >= total or start_at >= max_results:
+            
+            page_number += 1
+            
+            # Continue if there's more data
+            has_more_pages = next_page_token or (len(issues) == page_size and not is_last)
+            if not has_more_pages:
+                logger.info(f"Admin completed: Fetched all {len(items)} issues in {page_number - 1} pages")
                 break
 
-        # Build aggregates
+        # Build comprehensive aggregates
         def _inc(map_obj, key):
             map_obj[key or 'Unassigned'] = map_obj.get(key or 'Unassigned', 0) + 1
 
         agg_status = {}
+        agg_status_category = {}
         agg_priority = {}
         agg_assignee = {}
+        agg_issuetype = {}
+        agg_project = {}
         created_by_day = {}
-        now = datetime.utcnow()
+        resolved_by_day = {}
+        total_story_points = 0
+        story_points_by_status = {}
 
         for it in items:
             _inc(agg_status, it.get('status'))
+            _inc(agg_status_category, it.get('statusCategory'))
             _inc(agg_priority, it.get('priority'))
             _inc(agg_assignee, it.get('assignee'))
+            _inc(agg_issuetype, it.get('issuetype'))
+            _inc(agg_project, it.get('project'))
+            
+            # Story points
+            sp = it.get('storyPoints')
+            if sp and isinstance(sp, (int, float)):
+                total_story_points += sp
+                status = it.get('status') or 'Unknown'
+                story_points_by_status[status] = story_points_by_status.get(status, 0) + sp
+            
+            # Created by day
             c = it.get('created')
             if c:
                 try:
                     d = c.split('T')[0]
                     created_by_day[d] = created_by_day.get(d, 0) + 1
+                except Exception:
+                    pass
+            
+            # Resolved by day
+            r = it.get('resolved')
+            if r:
+                try:
+                    d = r.split('T')[0]
+                    resolved_by_day[d] = resolved_by_day.get(d, 0) + 1
                 except Exception:
                     pass
 
@@ -5916,9 +5994,17 @@ def admin_run_jql():
             'issues': items,
             'aggregates': {
                 'byStatus': to_kv_arr(agg_status),
+                'byStatusCategory': to_kv_arr(agg_status_category),
                 'byPriority': to_kv_arr(agg_priority),
-                'byAssignee': to_kv_arr(agg_assignee)[:20],  # top 20
-                'createdByDay': [{'key': k, 'value': created_by_day[k]} for k in sorted(created_by_day.keys())]
+                'byAssignee': to_kv_arr(agg_assignee)[:15],
+                'byIssueType': to_kv_arr(agg_issuetype),
+                'byProject': to_kv_arr(agg_project),
+                'createdByDay': [{'key': k, 'value': created_by_day[k]} for k in sorted(created_by_day.keys())],
+                'resolvedByDay': [{'key': k, 'value': resolved_by_day[k]} for k in sorted(resolved_by_day.keys())],
+                'storyPoints': {
+                    'total': total_story_points,
+                    'byStatus': to_kv_arr(story_points_by_status)
+                }
             }
         }
         return jsonify(result)
@@ -5943,29 +6029,20 @@ def admin_get_time_entries_by_user():
     account_id = request.args.get('accountId', '').strip()
     date_filter = request.args.get('date', '').strip()
 
-    # Server-side Jira credentials (basic auth), same as existing time-entries endpoint
-    jira_email = os.getenv('JIRA_EMAIL') or "kishore.murkhanad@upgrad.com"
-    jira_token = os.getenv('JIRA_API_TOKEN')
-    jira_base_url = os.getenv('JIRA_BASE_URL', 'https://upgrad-jira.atlassian.net')
-
-    if not jira_token:
-        # Attempt to load from team_manager/.env as in existing code
-        try:
-            import sys
-            sys.path.append('team_manager')
-            from dotenv import load_dotenv
-            load_dotenv('team_manager/.env')
-            jira_token = os.getenv('JIRA_API_TOKEN')
-        except Exception:
-            pass
-
-    if not (jira_email and jira_token):
-        return jsonify({'error': 'Jira credentials not configured on server'}), 500
+    # Use OAuth token from session instead of server credentials
+    access_token = session.get('jira_access_token')
+    cloud_id = session.get('jira_cloud_id')
+    
+    if not access_token or not cloud_id:
+        return jsonify({'error': 'Jira OAuth not configured. Please reconnect to Jira.'}), 401
 
     try:
-        from requests.auth import HTTPBasicAuth
-        auth = HTTPBasicAuth(jira_email, jira_token)
-        headers = {"Accept": "application/json"}
+        import requests
+        headers = {
+            "Accept": "application/json",
+            "Authorization": f"Bearer {access_token}"
+        }
+        jira_base_url = f"https://api.atlassian.com/ex/jira/{cloud_id}"
 
         # Resolve accountId if not provided
         user_info = None
@@ -5974,7 +6051,7 @@ def admin_get_time_entries_by_user():
                 return jsonify({'error': 'Missing user query (q) or accountId'}), 400
             search_url = f'{jira_base_url}/rest/api/3/user/search'
             params = { 'query': q, 'maxResults': 10 }
-            s_resp = requests.get(search_url, headers=headers, params=params, auth=auth, timeout=20)
+            s_resp = requests.get(search_url, headers=headers, params=params, timeout=20)
             if s_resp.status_code != 200:
                 return jsonify({'error': f'User search failed: {s_resp.status_code}'}), 502
             users = s_resp.json() if isinstance(s_resp.json(), list) else []
@@ -5988,7 +6065,7 @@ def admin_get_time_entries_by_user():
         else:
             # Optionally fetch user info for display
             user_url = f'{jira_base_url}/rest/api/3/user'
-            u_resp = requests.get(user_url, headers=headers, params={'accountId': account_id}, auth=auth, timeout=20)
+            u_resp = requests.get(user_url, headers=headers, params={'accountId': account_id}, timeout=20)
             if u_resp.status_code == 200:
                 user_info = u_resp.json()
 
@@ -6001,13 +6078,13 @@ def admin_get_time_entries_by_user():
         else:
             worklog_jql = f'worklogAuthor = "{account_id}"'
 
-        search_url = f'{jira_base_url}/rest/api/3/search'
+        search_url = f'{jira_base_url}/rest/api/3/search/jql'
         search_params = {
             'jql': worklog_jql,
             'fields': 'worklog,summary',
             'maxResults': 1000
         }
-        search_response = requests.get(search_url, headers=headers, params=search_params, auth=auth, timeout=30)
+        search_response = requests.get(search_url, headers=headers, params=search_params, timeout=30)
         if search_response.status_code != 200:
             return jsonify({'error': 'Failed to search for issues with worklogs'}), 500
 
@@ -6031,7 +6108,7 @@ def admin_get_time_entries_by_user():
                 while fetched < total_wl and fetched < 10000:  # sane upper bound
                     wl_url = f"{jira_base_url}/rest/api/3/issue/{issue_key}/worklog"
                     wl_params = { 'startAt': fetched, 'maxResults': 1000 }
-                    wl_resp = requests.get(wl_url, headers=headers, params=wl_params, auth=auth, timeout=30)
+                    wl_resp = requests.get(wl_url, headers=headers, params=wl_params, timeout=30)
                     if wl_resp.status_code != 200:
                         break
                     wl_page = wl_resp.json() or {}
@@ -6109,33 +6186,23 @@ def admin_time_entries_overview():
     if not date_filter:
         return jsonify({'error': 'Missing required date (YYYY-MM-DD)'}), 400
 
-    # Server-side Jira credentials (basic auth), same pattern as existing admin endpoint
-    jira_email = os.getenv('JIRA_EMAIL') or "kishore.murkhanad@upgrad.com"
-    jira_token = os.getenv('JIRA_API_TOKEN')
-    jira_base_url = os.getenv('JIRA_BASE_URL', 'https://upgrad-jira.atlassian.net')
-
-    if not jira_token:
-        # Attempt to load from team_manager/.env as in existing code
-        try:
-            import sys
-            sys.path.append('team_manager')
-            from dotenv import load_dotenv
-            load_dotenv('team_manager/.env')
-            jira_token = os.getenv('JIRA_API_TOKEN')
-        except Exception:
-            pass
-
-    if not (jira_email and jira_token):
-        return jsonify({'error': 'Jira credentials not configured on server'}), 500
+    # Use OAuth token from session instead of server credentials
+    access_token = session.get('jira_access_token')
+    cloud_id = session.get('jira_cloud_id')
+    
+    if not access_token or not cloud_id:
+        return jsonify({'error': 'Jira OAuth not configured. Please reconnect to Jira.'}), 401
 
     try:
         import requests
-        from requests.auth import HTTPBasicAuth
-        auth = HTTPBasicAuth(jira_email, jira_token)
-        headers = {"Accept": "application/json"}
+        headers = {
+            "Accept": "application/json",
+            "Authorization": f"Bearer {access_token}"
+        }
+        jira_base_url = f"https://api.atlassian.com/ex/jira/{cloud_id}"
 
         # Search for all issues that have worklogs on the specified date
-        search_url = f'{jira_base_url}/rest/api/3/search'
+        search_url = f'{jira_base_url}/rest/api/3/search/jql'
         start_at = 0
         page_size = 100
         max_issues = 2000  # safeguard cap
@@ -6149,7 +6216,7 @@ def admin_time_entries_overview():
                 'startAt': start_at,
                 'maxResults': page_size
             }
-            resp = requests.get(search_url, headers=headers, params=params, auth=auth, timeout=30)
+            resp = requests.get(search_url, headers=headers, params=params, timeout=30)
             if resp.status_code != 200:
                 return jsonify({'error': f'Failed to search issues: {resp.status_code}'}), 500
             data = resp.json() or {}
@@ -6172,7 +6239,7 @@ def admin_time_entries_overview():
                     while fetched < total_wl and fetched < 10000:  # sane upper bound
                         wl_url = f"{jira_base_url}/rest/api/3/issue/{issue_key}/worklog"
                         wl_params = { 'startAt': fetched, 'maxResults': 1000 }
-                        wl_resp = requests.get(wl_url, headers=headers, params=wl_params, auth=auth, timeout=30)
+                        wl_resp = requests.get(wl_url, headers=headers, params=wl_params, timeout=30)
                         if wl_resp.status_code != 200:
                             break
                         wl_page = wl_resp.json() or {}
@@ -8694,8 +8761,8 @@ def image_to_text():
                         with open(temp_file_path, 'rb') as f:
                             image_data = f.read()
                         
-                        # Use Gemini Pro Vision model
-                        model = genai.GenerativeModel('gemini-pro-vision', safety_settings=safety_settings)
+                        # Use Gemini model for vision tasks
+                        model = genai.GenerativeModel(os.environ.get('GOOGLE_API_MODEL'), safety_settings=safety_settings)
                         response = model.generate_content(["Extract and return all text visible in this image. Return only the text content, no descriptions or explanations.", image_data])
                         
                         if response and hasattr(response, 'text'):
@@ -8746,7 +8813,7 @@ def call_vision_api(image_url):
             image_data = response.content
             
             # Use Gemini model
-            model = genai.GenerativeModel('gemini-pro-vision')
+            model = genai.GenerativeModel(os.environ.get('GOOGLE_API_MODEL'))
             response = model.generate_content(["Extract all text visible in this image", image_data])
             if response and hasattr(response, 'text'):
                 return response.text
@@ -10006,6 +10073,97 @@ class BugSession(db.Model):
     jira_issue_key = db.Column(db.String(50))
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     status = db.Column(db.String(20), default='recording')  # recording, processing, completed
+    playwright_script_path = db.Column(db.String(500))
+    playwright_trace_path = db.Column(db.String(500))
+    playwright_video_path = db.Column(db.String(500))
+    playwright_status = db.Column(db.String(20))  # pending, running, success, failed
+    playwright_error = db.Column(db.Text)
+
+def _get_playwright_output_root() -> str:
+    root = current_app.config.get('PLAYWRIGHT_OUTPUT_DIR', 'playwright-output')
+    if not os.path.isabs(root):
+        root = os.path.join(current_app.root_path, root)
+    os.makedirs(root, exist_ok=True)
+    return root
+
+
+def _playwright_worker(app, session_id: str):
+    with app.app_context():
+        session = BugSession.query.filter_by(session_id=session_id).first()
+        if not session:
+            return
+
+        session.playwright_status = 'running'
+        session.playwright_error = None
+        db.session.commit()
+
+        try:
+            actions = json.loads(session.action_logs or '[]')
+        except Exception as parse_exc:
+            actions = []
+            session.playwright_status = 'failed'
+            session.playwright_error = f'Failed to parse action logs: {parse_exc}'
+            db.session.commit()
+            return
+
+        if not actions:
+            session.playwright_status = 'failed'
+            session.playwright_error = 'No action logs available for replay.'
+            db.session.commit()
+            return
+
+        output_root = _get_playwright_output_root()
+        artifacts = ensure_replay_directories(output_root, session_id)
+
+        try:
+            script_text = generate_script_text(actions, artifacts)
+            save_script(script_text, artifacts.script_path)
+        except Exception as script_error:
+            session.playwright_status = 'failed'
+            session.playwright_error = f'Failed to generate Playwright script: {script_error}'
+            db.session.commit()
+            return
+
+        replay_result = run_replay(actions, artifacts)
+
+        script_rel = os.path.relpath(artifacts.script_path, current_app.root_path)
+        trace_rel = os.path.relpath(artifacts.trace_path, current_app.root_path)
+        video_path = replay_result.get('video_path') or artifacts.video_path
+        video_rel = os.path.relpath(video_path, current_app.root_path) if video_path else None
+
+        session.playwright_script_path = script_rel
+        session.playwright_trace_path = trace_rel
+        session.playwright_video_path = video_rel
+
+        if replay_result.get('status') == 'success':
+            session.playwright_status = 'success'
+            warnings = replay_result.get('warnings')
+            if warnings:
+                session.playwright_error = json.dumps({'warnings': warnings})
+            else:
+                session.playwright_error = None
+        else:
+            session.playwright_status = 'failed'
+            error_msg = replay_result.get('error') or 'Unknown Playwright error.'
+            session.playwright_error = error_msg
+
+        db.session.commit()
+
+
+def trigger_playwright_replay(session: BugSession):
+    if sync_playwright is None:
+        session.playwright_status = 'failed'
+        session.playwright_error = 'Playwright is not installed on the server.'
+        db.session.commit()
+        return
+
+    session.playwright_status = 'pending'
+    session.playwright_error = None
+    db.session.commit()
+
+    app_obj = current_app._get_current_object()
+    worker = Thread(target=_playwright_worker, args=(app_obj, session.session_id), daemon=True)
+    worker.start()
 
 # Bulk Test Generator Models
 class JQLSession(db.Model):
@@ -10044,11 +10202,13 @@ class JQLStory(db.Model):
     generated_at = db.Column(db.DateTime)
 
 @app.route('/bug-builder')
+@jira_auth_required
 def bug_builder():
     """Bug Builder main page"""
     return render_template('bug-builder.html', active_tab='bug-builder')
 
 @app.route('/api/bug-builder/start-session', methods=['POST'])
+@jira_auth_required
 def start_bug_session():
     """Initialize a new bug recording session"""
     try:
@@ -10077,7 +10237,428 @@ def start_bug_session():
         logger.error(f"Error starting bug session: {str(e)}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
+@app.route('/api/bug-builder/start-playwright-recording', methods=['POST'])
+@jira_auth_required
+def start_playwright_recording():
+    """Start Playwright recorder with video recording"""
+    try:
+        data = request.get_json()
+        url = data.get('url', '').strip()
+        
+        if not url:
+            return jsonify({'success': False, 'error': 'URL required'}), 400
+        
+        import uuid
+        import subprocess
+        import os
+        from threading import Thread
+        
+        session_id = str(uuid.uuid4())
+        user_id = get_user_identifier()
+        
+        # Create session
+        session = BugSession(
+            user_id=user_id,
+            session_id=session_id,
+            status='recording'
+        )
+        
+        # Create output directory
+        output_dir = os.path.join('playwright-output', 'bug-builder', session_id)
+        os.makedirs(output_dir, exist_ok=True)
+        script_path = os.path.join(output_dir, 'recording.py')
+        video_dir = os.path.join(output_dir, 'videos')
+        os.makedirs(video_dir, exist_ok=True)
+        
+        session.playwright_script_path = script_path
+        session.playwright_status = 'recording'
+        session.video_path = video_dir  # Store video directory path
+        
+        db.session.add(session)
+        db.session.commit()
+        
+        # Custom recorder with video + action logging
+        def run_playwright_with_video():
+            try:
+                logger.info(f"Starting Playwright with video recording for session {session_id}")
+                
+                # Create a custom recorder script that records video AND logs actions
+                recorder_script = f'''
+import sys
+import os
+import json
+from playwright.sync_api import sync_playwright
+import time
+
+actions = []
+
+def log_action(action_type, selector="", value=""):
+    """Log an action for later conversion to steps"""
+    actions.append({{
+        "type": action_type,
+        "selector": selector,
+        "value": value,
+        "timestamp": time.time()
+    }})
+
+def run():
+    with sync_playwright() as p:
+        # Launch browser
+        browser = p.chromium.launch(
+            headless=False,
+            args=['--start-maximized']
+        )
+        
+        # Create context with video recording
+        context = browser.new_context(
+            record_video_dir=r"{video_dir}",
+            record_video_size={{"width": 1280, "height": 720}},
+            viewport={{"width": 1280, "height": 720}}
+        )
+        
+        # Create page
+        page = context.new_page()
+        
+        # Log navigation
+        log_action("navigate", "{url}")
+        
+        # Navigate to URL
+        print(f"Navigating to {url}")
+        page.goto("{url}", wait_until="domcontentloaded", timeout=60000)
+        
+        print("=" * 70)
+        print("🎬 RECORDING STARTED!")
+        print("📹 Video is being recorded")
+        print("📝 Actions are being logged")
+        print("🎯 Perform your bug reproduction steps in THIS browser window")
+        print("⚠️  CLOSE THIS BROWSER WINDOW when you're done")
+        print("=" * 70)
+        
+        # Keep browser open until user closes it
+        try:
+            while True:
+                try:
+                    page.title()  # Check if page is still alive
+                    time.sleep(0.5)
+                except:
+                    break
+        except KeyboardInterrupt:
+            pass
+        
+        print("Browser closed. Saving recordings...")
+        
+        # Save actions to file
+        actions_file = r"{os.path.join(output_dir, 'actions.json')}"
+        try:
+            with open(actions_file, 'w') as f:
+                json.dump(actions, f, indent=2)
+            print(f"✅ Actions saved to {{actions_file}}")
+        except Exception as e:
+            print(f"Warning: Could not save actions: {{e}}")
+        
+        # Close context to finalize video
+        context.close()
+        browser.close()
+        
+        print("✅ Video saved!")
+
+if __name__ == "__main__":
+    run()
+'''
+                
+                recorder_path = os.path.join(output_dir, 'recorder_with_video.py')
+                with open(recorder_path, 'w', encoding='utf-8') as f:
+                    f.write(recorder_script)
+                
+                logger.info("Starting custom recorder with video...")
+                
+                # Run the custom recorder
+                process = subprocess.Popen(
+                    [sys.executable, recorder_path],
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.STDOUT,
+                    cwd=os.getcwd()
+                )
+                
+                # Wait for user to close the browser
+                stdout, _ = process.communicate()
+                
+                if stdout:
+                    logger.info(f"Recorder output: {stdout.decode('utf-8', errors='ignore')}")
+                
+                # Also run codegen briefly to get better step extraction
+                logger.info("Running codegen for step extraction...")
+                cmd_codegen = [
+                    sys.executable, '-m', 'playwright',
+                    'codegen',
+                    url,
+                    '--target=python',
+                    f'--output={script_path}'
+                ]
+                
+                codegen_process = subprocess.Popen(
+                    cmd_codegen,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    cwd=os.getcwd()
+                )
+                
+                # Give codegen a moment to start, then kill it (we just want the initial script)
+                import time
+                time.sleep(3)
+                try:
+                    codegen_process.terminate()
+                    codegen_process.wait(timeout=5)
+                except:
+                    pass
+                
+                logger.info(f"Playwright recording completed for session {session_id}")
+                
+                # Update session status
+                with app.app_context():
+                    sess = BugSession.query.filter_by(session_id=session_id).first()
+                    if sess:
+                        sess.playwright_status = 'completed'
+                        sess.status = 'completed'
+                        
+                        # Find the generated video file
+                        if os.path.exists(video_dir):
+                            video_files = [f for f in os.listdir(video_dir) if f.endswith('.webm')]
+                            if video_files:
+                                sess.video_path = os.path.join(video_dir, video_files[0])
+                                logger.info(f"Video saved at: {sess.video_path}")
+                            else:
+                                logger.warning("No video file found in video directory")
+                                sess.video_path = None
+                        else:
+                            logger.warning("Video directory does not exist")
+                            sess.video_path = None
+                        
+                        db.session.commit()
+                        logger.info(f"Session {session_id} marked as completed")
+                        
+            except Exception as e:
+                logger.error(f"Error in Playwright recording: {str(e)}")
+                import traceback
+                logger.error(traceback.format_exc())
+                with app.app_context():
+                    sess = BugSession.query.filter_by(session_id=session_id).first()
+                    if sess:
+                        sess.playwright_status = 'failed'
+                        sess.playwright_error = str(e)
+                        db.session.commit()
+        
+        thread = Thread(target=run_playwright_with_video)
+        thread.daemon = True
+        thread.start()
+        
+        return jsonify({
+            'success': True,
+            'session_id': session_id,
+            'message': 'Playwright recorder starting with video recording...'
+        })
+        
+    except Exception as e:
+        logger.error(f"Error starting Playwright recording: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/bug-builder/get-playwright-recording/<session_id>', methods=['GET'])
+@jira_auth_required
+def get_playwright_recording(session_id):
+    """Get the recorded Playwright script, video, and extract steps"""
+    try:
+        session = BugSession.query.filter_by(session_id=session_id).first()
+        
+        if not session:
+            return jsonify({'success': False, 'error': 'Session not found'}), 404
+        
+        # Check if user owns this session
+        user_id = get_user_identifier()
+        if session.user_id != user_id:
+            return jsonify({'success': False, 'error': 'Unauthorized'}), 403
+        
+        # Check status
+        if session.playwright_status == 'recording':
+            return jsonify({
+                'success': True,
+                'status': 'recording',
+                'message': 'Recording in progress...'
+            })
+        
+        if session.playwright_status == 'failed':
+            return jsonify({
+                'success': False,
+                'status': 'failed',
+                'error': session.playwright_error or 'Recording failed'
+            })
+        
+        # Read the generated script
+        steps = []
+        script_content = ''
+        video_url = None
+        
+        if session.playwright_script_path and os.path.exists(session.playwright_script_path):
+            with open(session.playwright_script_path, 'r', encoding='utf-8') as f:
+                script_content = f.read()
+            
+            # Parse steps from Playwright script with better extraction
+            lines = script_content.split('\n')
+            for i, line in enumerate(lines):
+                line = line.strip()
+                
+                # Skip imports and setup
+                if any(skip in line for skip in ['import ', 'from ', 'def ', 'with ', 'browser =', 'context =', 'page =']):
+                    continue
+                
+                if 'page.goto(' in line:
+                    # Extract URL from goto
+                    try:
+                        if '"' in line:
+                            url = line.split('"')[1]
+                        elif "'" in line:
+                            url = line.split("'")[1]
+                        else:
+                            url = 'the application'
+                        steps.append(f"Navigate to {url}")
+                    except:
+                        steps.append("Navigate to the application")
+                        
+                elif 'page.get_by_role(' in line or 'getByRole(' in line:
+                    # Extract role-based locator
+                    try:
+                        if 'name=' in line or 'name:' in line:
+                            name_part = line.split('name')[1]
+                            if '"' in name_part:
+                                name = name_part.split('"')[1]
+                            elif "'" in name_part:
+                                name = name_part.split("'")[1]
+                            else:
+                                name = 'element'
+                            
+                            if '.click()' in line:
+                                steps.append(f"Click on '{name}'")
+                            elif '.fill(' in line:
+                                steps.append(f"Enter text in '{name}'")
+                            else:
+                                steps.append(f"Interact with '{name}'")
+                    except:
+                        if '.click()' in line:
+                            steps.append("Click on element")
+                        elif '.fill(' in line:
+                            steps.append("Enter text in field")
+                            
+                elif 'page.click(' in line or '.click()' in line:
+                    try:
+                        if '"' in line:
+                            selector = line.split('"')[1]
+                        elif "'" in line:
+                            selector = line.split("'")[1]
+                        else:
+                            selector = 'element'
+                        # Simplify selector for readability
+                        if selector.startswith('#'):
+                            selector = selector[1:]
+                        steps.append(f"Click on: {selector}")
+                    except:
+                        steps.append("Click on element")
+                        
+                elif 'page.fill(' in line or '.fill(' in line:
+                    try:
+                        parts = line.split('"') if '"' in line else line.split("'")
+                        if len(parts) >= 2:
+                            selector = parts[1]
+                            if selector.startswith('#'):
+                                selector = selector[1:]
+                            steps.append(f"Enter text in: {selector}")
+                    except:
+                        steps.append("Enter text in field")
+                        
+                elif 'page.press(' in line or '.press(' in line:
+                    try:
+                        if '"' in line:
+                            key = line.split('"')[-2]
+                        elif "'" in line:
+                            key = line.split("'")[-2]
+                        else:
+                            key = 'key'
+                        steps.append(f"Press {key}")
+                    except:
+                        steps.append("Press key")
+                        
+                elif 'page.select_option(' in line:
+                    try:
+                        if '"' in line:
+                            selector = line.split('"')[1]
+                        elif "'" in line:
+                            selector = line.split("'")[1]
+                        else:
+                            selector = 'dropdown'
+                        steps.append(f"Select option in: {selector}")
+                    except:
+                        steps.append("Select option from dropdown")
+            
+            # If still no steps, provide a helpful message
+            if not steps:
+                logger.warning(f"No steps extracted from Playwright script for session {session_id}")
+                logger.info(f"Script content preview: {script_content[:500]}")
+                steps = ["Recording completed but no actions were captured. Please try recording again and perform clear actions like clicks and typing."]
+        
+        # Check for video file
+        if session.video_path:
+            if os.path.isdir(session.video_path):
+                # It's a directory, find the video file
+                video_files = [f for f in os.listdir(session.video_path) if f.endswith('.webm')]
+                if video_files:
+                    video_url = f"/api/bug-builder/video/{session_id}/{video_files[0]}"
+            elif os.path.isfile(session.video_path):
+                # It's a file
+                video_filename = os.path.basename(session.video_path)
+                video_url = f"/api/bug-builder/video/{session_id}/{video_filename}"
+        
+        return jsonify({
+            'success': True,
+            'status': 'completed',
+            'steps': steps,
+            'script': script_content,
+            'video_url': video_url
+        })
+            
+    except Exception as e:
+        logger.error(f"Error getting Playwright recording: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/bug-builder/video/<session_id>/<filename>', methods=['GET'])
+@jira_auth_required
+def get_bug_builder_video(session_id, filename):
+    """Serve the recorded video file"""
+    try:
+        session = BugSession.query.filter_by(session_id=session_id).first()
+        
+        if not session:
+            return jsonify({'success': False, 'error': 'Session not found'}), 404
+        
+        # Check if user owns this session
+        user_id = get_user_identifier()
+        if session.user_id != user_id:
+            return jsonify({'success': False, 'error': 'Unauthorized'}), 403
+        
+        # Construct video path
+        if os.path.isdir(session.video_path):
+            video_path = os.path.join(session.video_path, filename)
+        else:
+            video_path = session.video_path
+        
+        if not os.path.exists(video_path):
+            return jsonify({'success': False, 'error': 'Video not found'}), 404
+        
+        return send_file(video_path, mimetype='video/webm')
+        
+    except Exception as e:
+        logger.error(f"Error serving video: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
 @app.route('/api/bug-builder/process-recording', methods=['POST'])
+@jira_auth_required
 @llm_rate_limit
 def process_bug_recording():
     """Process recorded video and generate bug report using AI"""
@@ -10085,6 +10666,7 @@ def process_bug_recording():
         session_id = request.form.get('session_id')
         annotations = json.loads(request.form.get('annotations', '[]'))
         action_logs = json.loads(request.form.get('actions', '[]'))
+        clarification = json.loads(request.form.get('clarification', '{}'))
         
         # Get session
         session = BugSession.query.filter_by(session_id=session_id).first()
@@ -10109,8 +10691,8 @@ def process_bug_recording():
         session.status = 'processing'
         db.session.commit()
         
-        # Generate bug report using AI
-        bug_report = generate_ai_bug_report(action_logs, annotations)
+        # Generate bug report using AI with clarification
+        bug_report = generate_ai_bug_report(action_logs, annotations, clarification)
         
         # Save bug report
         session.bug_report = json.dumps(bug_report)
@@ -10126,13 +10708,14 @@ def process_bug_recording():
         logger.error(f"Error processing bug recording: {str(e)}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
-def generate_ai_bug_report(action_logs, annotations):
+def generate_ai_bug_report(action_logs, annotations, clarification=None):
     """Generate bug report using AI analysis"""
     try:
         # Prepare context for AI
         context = {
             'actions': action_logs,
             'annotations': annotations,
+            'clarification': clarification,
             'total_actions': len(action_logs),
             'total_annotations': len(annotations)
         }
@@ -10141,7 +10724,16 @@ def generate_ai_bug_report(action_logs, annotations):
         action_summary = analyze_action_patterns(action_logs)
         
         prompt = f"""
-Analyze this comprehensive bug recording data and generate a detailed bug report.
+Analyze this comprehensive bug recording data and generate a detailed, structured bug report.
+
+=== USER ISSUE DESCRIPTION ===
+{clarification.get('issue_description', 'No specific issue described')}
+
+=== USER EXPECTED BEHAVIOR ===
+{clarification.get('expected_behavior', 'Not specified')}
+
+=== USER ACTUAL BEHAVIOR ===
+{clarification.get('actual_behavior', 'Not specified')}
 
 === RECORDING SUMMARY ===
 Total Actions Recorded: {len(action_logs)}
@@ -10158,42 +10750,55 @@ Recording Duration: {action_logs[-1]['timestamp'] if action_logs else 0}ms
 {format_annotations_for_ai(annotations)}
 
 === ANALYSIS REQUIREMENTS ===
-Generate a comprehensive bug report with:
-1. Clear, descriptive title that captures the core issue
-2. Detailed description including context and impact
-3. Step-by-step reproduction steps (extracted from actions)
-4. Expected vs actual results (from annotations and behavior)
-5. Priority assessment based on error severity and user impact
-6. Technical details (API calls, errors, data mismatches)
+Generate a comprehensive bug report with the following EXACT structure:
+
+SUMMARY: [Brief one-line summary of the bug]
+
+DESCRIPTION: [Detailed description of the issue, including context from user clarification and observed behavior]
+
+STEPS TO REPRODUCE:
+1. [Step 1]
+2. [Step 2]
+3. [Step 3]
+[... continue with numbered steps based on the action logs]
+
+EXPECTED RESULT:
+[What should happen according to user expectation and normal behavior]
+
+ACTUAL RESULT:
+[What actually happened according to user observation and recorded actions]
 
 Pay special attention to:
-- Behavioral issues where data doesn't match expectations
+- User's specific issue description
+- Behavioral issues where actions don't match expectations
 - API response inconsistencies
 - JavaScript errors or console warnings
 - Form submission issues
 - Navigation problems
 - Performance or timing issues
 
-Format the response as a structured bug report.
+Make the steps to reproduce clear and actionable, based on the recorded user actions.
+Ensure the summary is concise and captures the core issue.
+The description should provide context and impact of the bug.
 """
         
         # Use Google AI if available
         if genai:
-            model = genai.GenerativeModel('gemini-pro')
+            model = genai.GenerativeModel(os.environ.get('GOOGLE_API_MODEL'))
             response = model.generate_content(prompt)
             ai_analysis = response.text
         else:
             # Fallback to basic analysis
-            ai_analysis = generate_basic_bug_report(action_logs, annotations)
+            ai_analysis = generate_basic_bug_report(action_logs, annotations, clarification)
         
         # Parse AI response into structured format
-        bug_report = parse_ai_bug_report(ai_analysis, action_logs, annotations)
+        bug_report = parse_ai_bug_report(ai_analysis, action_logs, annotations, clarification)
         
         return bug_report
         
     except Exception as e:
         logger.error(f"Error generating AI bug report: {str(e)}")
-        return generate_basic_bug_report(action_logs, annotations)
+        return generate_basic_bug_report(action_logs, annotations, clarification)
 
 def analyze_action_patterns(action_logs):
     """Analyze action patterns to identify potential issues"""
@@ -10478,8 +11083,9 @@ def generate_basic_bug_report(action_logs, annotations):
     }
 
 @app.route('/api/bug-builder/upload-video', methods=['POST'])
+@jira_auth_required
 def upload_bug_video():
-    """Upload video for preview"""
+    """Upload video for preview and save action logs"""
     try:
         session_id = request.form.get('session_id')
         if not session_id:
@@ -10494,6 +11100,17 @@ def upload_bug_video():
         user_id = get_user_identifier()
         if session.user_id != user_id:
             return jsonify({'success': False, 'error': 'Unauthorized'}), 403
+        
+        # Save action logs if provided (optional - for future enhancement)
+        action_logs_str = request.form.get('actions')
+        if action_logs_str:
+            try:
+                import json
+                action_logs = json.loads(action_logs_str)
+                session.action_logs = action_logs_str
+                logger.info(f"📝 Saved {len(action_logs)} actions to session {session_id}")
+            except Exception as log_error:
+                logger.error(f"Error saving action logs: {log_error}")
         
         # Save video file
         video_file = request.files.get('video')
@@ -10512,16 +11129,20 @@ def upload_bug_video():
             
             return jsonify({
                 'success': True,
-                'video_url': f'/api/bug-builder/video/{session_id}'
+                'video_url': f'/api/bug-builder/video/{session_id}',
+                'actions_saved': len(json.loads(action_logs_str)) if action_logs_str else 0
             })
         else:
             return jsonify({'success': False, 'error': 'No video file provided'}), 400
             
     except Exception as e:
         logger.error(f"Error uploading video: {str(e)}")
+        import traceback
+        logger.error(f"Upload error traceback: {traceback.format_exc()}")
         return jsonify({'success': False, 'error': 'Failed to upload video'}), 500
 
 @app.route('/api/bug-builder/video/<session_id>')
+@jira_auth_required
 def serve_bug_video(session_id):
     """Serve recorded video for preview"""
     try:
@@ -10535,51 +11156,154 @@ def serve_bug_video(session_id):
         if session.user_id != user_id:
             return jsonify({'error': 'Unauthorized'}), 403
         
-        # Serve video file
+        # Serve video file with proper headers for streaming
         import os
         if os.path.exists(session.video_path):
-            return send_file(session.video_path, mimetype='video/webm')
+            from flask import Response
+            
+            def generate():
+                with open(session.video_path, 'rb') as f:
+                    data = f.read(1024)
+                    while data:
+                        yield data
+                        data = f.read(1024)
+            
+            # Get file size for Content-Length header
+            file_size = os.path.getsize(session.video_path)
+            
+            return Response(
+                generate(),
+                mimetype='video/webm',
+                headers={
+                    'Content-Length': str(file_size),
+                    'Accept-Ranges': 'bytes',
+                    'Cache-Control': 'no-cache',
+                    'Access-Control-Allow-Origin': '*',
+                    'Access-Control-Allow-Methods': 'GET',
+                    'Access-Control-Allow-Headers': 'Range'
+                }
+            )
         else:
             return jsonify({'error': 'Video file not found'}), 404
             
     except Exception as e:
         logger.error(f"Error serving video: {str(e)}")
         return jsonify({'error': 'Failed to serve video'}), 500
-
-@app.route('/api/bug-builder/submit-to-jira', methods=['POST'])
+@app.route('/api/bug-builder/session-summary/<session_id>', methods=['GET'])
 @jira_auth_required
-def submit_bug_to_jira():
-    """Submit bug report to Jira"""
+def bug_builder_session_summary(session_id):
     try:
-        data = request.get_json()
-        session_id = data.get('session_id')
-        
-        # Get session
         session = BugSession.query.filter_by(session_id=session_id).first()
         if not session:
             return jsonify({'success': False, 'error': 'Session not found'}), 404
+
+        user_id = get_user_identifier()
+        if session.user_id != user_id:
+            return jsonify({'success': False, 'error': 'Unauthorized'}), 403
+
+        try:
+            actions = json.loads(session.action_logs or '[]')
+        except Exception:
+            actions = []
+
+        summary = {
+            'session_id': session.session_id,
+            'status': session.status,
+            'created_at': session.created_at.isoformat() if session.created_at else None,
+            'video_path': session.video_path,
+            'action_count': len(actions),
+            'action_highlights': summarize_actions(actions)[:10],
+            'playwright': {
+                'status': session.playwright_status,
+                'script_path': session.playwright_script_path,
+                'trace_path': session.playwright_trace_path,
+                'video_path': session.playwright_video_path,
+                'error': session.playwright_error,
+            },
+        }
+
+        return jsonify({'success': True, 'summary': summary})
+    except Exception as exc:
+        logger.error(f"Error fetching session summary: {exc}")
+        return jsonify({'success': False, 'error': str(exc)}), 500
         
-        # Get Jira credentials from session
+@app.route('/api/bug-builder/submit-to-jira', methods=['POST'])
+@jira_auth_required
+def submit_bug_to_jira():
+    """Submit bug report to Jira with optional video attachment"""
+    try:
+        data = request.get_json()
+        project_key = data.get('project_key')
+        summary = data.get('summary', 'Bug Report from Co-Tester')
+        description = data.get('description', '')
+        priority = data.get('priority', 'Medium')
+        steps = data.get('steps', [])
+        expected_result = data.get('expected_result', '')
+        actual_result = data.get('actual_result', '')
+        attach_video = data.get('attach_video', False)
+        session_id = data.get('session_id')
+        
+        if not project_key:
+            return jsonify({'success': False, 'error': 'Project key is required'}), 400
+        
+        # Check if token needs refresh
+        token_expires = session.get('jira_token_expires', 0)
+        if time.time() >= token_expires:
+            logger.info("Jira token expired, attempting refresh...")
+            if not refresh_jira_token():
+                return jsonify({'success': False, 'error': 'Jira token expired. Please reconnect to Jira.'}), 401
+        
+        # Get Jira credentials from Flask session
         jira_token = session.get('jira_access_token')
-        jira_site = session.get('jira_site')
+        jira_domain = session.get('jira_domain')
         
-        if not jira_token or not jira_site:
-            return jsonify({'success': False, 'error': 'Jira authentication required'}), 401
+        if not jira_token:
+            return jsonify({'success': False, 'error': 'Jira authentication required. Please connect to Jira first.'}), 401
+        
+        if not jira_domain:
+            # Fallback to default domain
+            jira_domain = 'https://upgrad-jira.atlassian.net'
+            logger.warning("No jira_domain in session, using default")
+        
+        # Format description with steps
+        steps_text = '\n'.join(f"{i+1}. {step}" for i, step in enumerate(steps)) if steps else "No steps provided"
+        full_description = f"""{description}
+
+*Steps to Reproduce:*
+{steps_text}
+
+*Expected Result:*
+{expected_result}
+
+*Actual Result:*
+{actual_result}
+
+---
+_Generated by Co-Tester Bug Builder_"""
+        
+        # Extract base URL from jira_domain (remove https:// if present)
+        if jira_domain.startswith('http'):
+            jira_base_url = jira_domain
+        else:
+            jira_base_url = f"https://{jira_domain}"
         
         # Prepare Jira issue data
         issue_data = {
             "fields": {
-                "project": {"key": "TEST"},  # Default project, should be configurable
-                "summary": data.get('title', 'Bug Report from Co-Tester'),
-                "description": format_jira_description(data),
+                "project": {"key": project_key},
+                "summary": summary,
+                "description": full_description,
                 "issuetype": {"name": "Bug"},
-                "priority": {"name": data.get('priority', 'Medium').title()}
+                "priority": {"name": priority.title()}
             }
         }
         
         # Create Jira issue
+        logger.info(f"Creating Jira issue in project {project_key}")
+        logger.info(f"Using Jira base URL: {jira_base_url}")
+        
         jira_response = requests.post(
-            f"https://{jira_site}.atlassian.net/rest/api/3/issue",
+            f"{jira_base_url}/rest/api/3/issue",
             headers={
                 'Authorization': f'Bearer {jira_token}',
                 'Content-Type': 'application/json'
@@ -10587,26 +11311,95 @@ def submit_bug_to_jira():
             json=issue_data
         )
         
+        logger.info(f"Jira API response status: {jira_response.status_code}")
+        
         if jira_response.status_code == 201:
             issue_key = jira_response.json()['key']
+            issue_id = jira_response.json()['id']
+            video_attached = False
             
-            # Update session with Jira issue key
-            session.jira_issue_key = issue_key
-            db.session.commit()
+            # Attach video if requested and available
+            if attach_video and session_id:
+                bug_session = BugSession.query.filter_by(session_id=session_id).first()
+                if bug_session and bug_session.video_path and os.path.exists(bug_session.video_path):
+                    try:
+                        logger.info(f"Attaching video to Jira issue {issue_key}")
+                        
+                        # Upload video as attachment
+                        with open(bug_session.video_path, 'rb') as video_file:
+                            files = {
+                                'file': ('bug-recording.webm', video_file, 'video/webm')
+                            }
+                            attach_response = requests.post(
+                                f"{jira_base_url}/rest/api/3/issue/{issue_key}/attachments",
+                                headers={
+                                    'Authorization': f'Bearer {jira_token}',
+                                    'X-Atlassian-Token': 'no-check'
+                                },
+                                files=files
+                            )
+                            
+                            if attach_response.status_code == 200:
+                                video_attached = True
+                                logger.info(f"Video attached successfully to {issue_key}")
+                            else:
+                                logger.warning(f"Failed to attach video: {attach_response.text}")
+                    except Exception as attach_error:
+                        logger.error(f"Error attaching video: {str(attach_error)}")
+            
+            # Update bug session if exists
+            if session_id:
+                bug_session = BugSession.query.filter_by(session_id=session_id).first()
+                if bug_session:
+                    bug_session.jira_issue_key = issue_key
+                    db.session.commit()
             
             return jsonify({
                 'success': True,
-                'jira_key': issue_key,
-                'jira_url': f"https://{jira_site}.atlassian.net/browse/{issue_key}"
+                'issue_key': issue_key,
+                'issue_url': f"{jira_base_url}/browse/{issue_key}",
+                'video_attached': video_attached
             })
         else:
+            error_text = jira_response.text
+            logger.error(f"Jira API error: {error_text}")
+            
+            # Check if it's an authentication error
+            if jira_response.status_code == 401:
+                # Try to refresh token and retry once
+                if refresh_jira_token():
+                    jira_token = session.get('jira_access_token')
+                    logger.info("Token refreshed, retrying Jira API call...")
+                    
+                    jira_response = requests.post(
+                        f"{jira_base_url}/rest/api/3/issue",
+                        headers={
+                            'Authorization': f'Bearer {jira_token}',
+                            'Content-Type': 'application/json'
+                        },
+                        json=issue_data
+                    )
+                    
+                    if jira_response.status_code == 201:
+                        issue_key = jira_response.json()['key']
+                        issue_id = jira_response.json()['id']
+                        
+                        return jsonify({
+                            'success': True,
+                            'issue_key': issue_key,
+                            'issue_url': f"{jira_base_url}/browse/{issue_key}",
+                            'video_attached': False
+                        })
+            
             return jsonify({
                 'success': False,
-                'error': f'Jira API error: {jira_response.text}'
+                'error': f'Jira API error ({jira_response.status_code}): {error_text}'
             }), 400
             
     except Exception as e:
         logger.error(f"Error submitting to Jira: {str(e)}")
+        import traceback
+        logger.error(traceback.format_exc())
         return jsonify({'success': False, 'error': str(e)}), 500
 
 def format_jira_description(bug_data):
@@ -10674,7 +11467,7 @@ def validate_jql():
         
         # Test JQL query with maxResults=1 to validate syntax
         jira_response = requests.get(
-            f"https://api.atlassian.com/ex/jira/{cloud_id}/rest/api/3/search",
+            f"https://api.atlassian.com/ex/jira/{cloud_id}/rest/api/3/search/jql",
             headers={
                 'Authorization': f'Bearer {jira_token}',
                 'Content-Type': 'application/json'
@@ -10719,7 +11512,7 @@ def validate_jql():
                 logger.info("Retrying request with refreshed token")
                 # Retry the request with new token
                 jira_response = requests.get(
-                    f"https://api.atlassian.com/ex/jira/{cloud_id}/rest/api/3/search",
+                    f"https://api.atlassian.com/ex/jira/{cloud_id}/rest/api/3/search/jql",
                     headers={
                         'Authorization': f'Bearer {session["jira_access_token"]}',
                         'Content-Type': 'application/json'
@@ -10851,7 +11644,7 @@ def fetch_stories():
         
         while True:
             jira_response = requests.get(
-                f"https://api.atlassian.com/ex/jira/{cloud_id}/rest/api/3/search",
+                f"https://api.atlassian.com/ex/jira/{cloud_id}/rest/api/3/search/jql",
                 headers={
                     'Authorization': f'Bearer {jira_token}',
                     'Content-Type': 'application/json'
@@ -11574,7 +12367,7 @@ def fetch_jql_stories():
         while True:
             logger.info(f"Making Jira API request with JQL: {jql_query}")
             jira_response = requests.get(
-                f"https://api.atlassian.com/ex/jira/{cloud_id}/rest/api/3/search",
+                f"https://api.atlassian.com/ex/jira/{cloud_id}/rest/api/3/search/jql",
                 headers={
                     'Authorization': f'Bearer {jira_token}',
                     'Content-Type': 'application/json'
@@ -11779,41 +12572,58 @@ def generate_test_cases_for_story(story, context_name=None):
         
         # Use the EXACT same prompt structure as individual test generator (no fixed count)
         prompt = (
-            (context_text + "\n\n" if context_text else "") +
-            "You are a senior QA engineer with deep expertise in functional, UI, API, and data validation testing. "
-            "Your task is to create a **comprehensive, well-categorized, and exhaustive set of manual test scenarios** for the following functionality.\n\n"
+            "[ADVANCED] PROMPT TEMPLATE FOR QA TEST GENERATION (FINAL VERSION)\n"
+            "Persona:\n"
+            "You are a Senior QA Engineer and a specialist in Software Test Design. You are an expert at applying formal test methodologies to achieve maximum coverage with minimum effort. You will rigorously apply techniques like Equivalence Partitioning (EP), Boundary Value Analysis (BVA), Decision Table Testing, and State Transition Testing where appropriate. Your primary goal is to generate a lean, precise, and highly effective test suite.\n\n"
 
-            "Each test case must be a **JSON object** with these exact keys:\n"
-            "- 'step': The specific user/system action or starting condition\n"
-            "- 'expected': The precise, verifiable, and observable system behavior\n"
-            "- 'estimate_minutes': A realistic execution time that includes setup, action, validation, and documentation\n\n"
+            "Core Task:\n"
+            "Analyze the provided feature specifications. First, mentally identify the relevant test conditions, equivalence classes, and boundary values. Then, generate a comprehensive suite of manual test scenarios based on your analysis.\n\n"
 
-            "Allowed values for 'estimate_minutes': **5, 10, 15, 20, 30, 45, 60**\n"
-            "Use the following guidelines for estimates:\n"
-            "- 5 mins → Basic UI checks (e.g., visibility, button states, tooltips)\n"
-            "- 10 mins → Single interaction or API hit with straightforward validation\n"
-            "- 15 mins → Multi-step flows or validations with intermediate logic\n"
-            "- 20 mins → Tests involving multiple dependencies or permission-based conditions\n"
-            "- 30 mins → Full user workflows or partial integration checks\n"
-            "- 45–60 mins → End-to-end journeys with environment/data setup, multi-role interaction, or cross-module validation\n\n"
+            "Output Requirements:\n"
+            "Format: A single, raw JSON array. Do not include markdown formatting or any text outside the JSON structure.\n"
+            "JSON Object Structure: Each test case must be a JSON object with the following keys. The category and rationale fields are critical for demonstrating that formal methodologies were used.\n\n"
 
-            "Ensure your test cases **thoroughly cover the following dimensions**:\n"
-            "- Core happy path workflows and expected flows\n"
-            "- Edge and boundary conditions (length, values, state switches)\n"
-            "- Negative test cases (invalid inputs, forbidden actions, missing dependencies)\n"
-            "- Input/output data validation and transformation\n"
-            "- API responses, contract structure, and error handling (if applicable)\n"
-            "- UI/UX behaviors (feedback messages, element state, dynamic rendering)\n"
-            "- Role-based or conditional behaviors (if implied)\n"
-            "- Cross-module or integrated system logic (only if within scenario scope)\n\n"
+            "{\n"
+            '  "test_case_id": "CATEGORY-001",\n'
+            '  "category": "Happy Path | EP | BVA | Decision Table | Negative | UI/UX | State Transition",\n'
+            '  "step": "A clear, concise, and repeatable action taken by the user or system.",\n'
+            '  "expected": "The specific, verifiable, and observable outcome. Should be unambiguous.",\n'
+            '  "rationale": "Briefly explains which test design principle justifies this test case.",\n'
+            '  "estimate_minutes": 10\n'
+            "}\n\n"
 
-            "⚠️ Do **NOT** assume anything beyond the described functionality (e.g., login, unrelated features, system-wide settings).\n"
-            "⚠️ Your output must be a **single JSON array**. Each object must follow this format exactly:\n"
-            "{'step': '...', 'expected': '...', 'estimate_minutes': 15}\n"
-            "⚠️ Do **NOT** include headings, explanations, markdown, groupings, or extra fields.\n\n"
+            "Key Definitions:\n"
+            "test_case_id: Unique ID (e.g., BVA-001, EP-002).\n"
+            "category: The primary test design technique used.\n"
+            "step: The action to perform.\n"
+            "expected: The exact expected result.\n"
+            "rationale: Crucial. A short explanation of the testing theory behind the case.\n"
+            "estimate_minutes: Rounded up to the nearest top 10th minute block (see below).\n\n"
 
-            f"Scenario:\n{scenario}\n\n"
-            "Test Cases:"
+            "Estimation Guidelines (estimate_minutes):\n"
+            "Assume an experienced tester working in a fast, stable test environment.\n"
+            "The estimate covers execution and validation only, not test authoring.\n"
+            "Allowed Values: 10, 20 (minimum is 10 minutes)\n"
+            "10 mins: All basic to moderate complexity test scenarios including UI checks, single interactions, API calls, and multi-step flows.\n"
+            "20 mins: Complex scenarios with dependencies, role/permission checks, data branching, or end-to-end workflows.\n"
+            "(Example: Any scenario that would normally take 1-10 mins is set to 10. Scenarios taking 11-20 mins are set to 20.)\n\n"
+
+            "FEATURE CONTEXT (FILL THIS IN)\n"
+            "1. Feature Description & User Story:\n"
+            f"{scenario}\n"
+            "2. UI/UX Details & Visuals:\n"
+            "No visual context provided.\n"
+            "3. Business Rules & Acceptance Criteria (AC):\n"
+            f"{context_text if context_text else 'Extract business rules from the feature description above.'}\n"
+            "4. API Endpoint(s) (if applicable):\n"
+            "(Include any relevant API information.)\n"
+            "5. User Roles & Permissions (if applicable):\n"
+            "(Define different user types.)\n"
+            "6. Data Validation Rules & Field Boundaries:\n"
+            "(Be explicit about boundaries for BVA and classes for EP.)\n\n"
+
+            "Final Instruction:\n"
+            "Based on all the context provided, generate the test scenarios. Apply the specified test design techniques to ensure the test suite is efficient and robust. For each test case, populate the rationale field to justify its existence based on those techniques. Ensure estimate_minutes is set to either 10 or 20 (minimum is 10 minutes)."
         )
         
         # Try to use Google AI first (same as individual generator)
@@ -11831,7 +12641,7 @@ def generate_test_cases_for_story(story, context_name=None):
             
         try:
             genai.configure(api_key=api_key)
-            model_name = os.environ.get('GOOGLE_API_MODEL', 'gemini-1.5-flash')
+            model_name = os.environ.get('GOOGLE_API_MODEL')
             model = genai.GenerativeModel(model_name)
             
             logger.info(f"Calling Google AI API for {story.jira_key} with model {model_name}")
@@ -12668,6 +13478,769 @@ def auto_healing_recorder_v2():
 # Create tables for bug builder
 with app.app_context():
     db.create_all()
+
+def generate_steps_from_text(steps_text):
+    """Helper function to generate structured steps from plain text using AI"""
+    try:
+        # Use AI to structure the steps
+        prompt = f"""You are a QA expert. Convert the following bug reproduction notes into clear, numbered steps.
+
+Input text:
+{steps_text}
+
+Requirements:
+- Create clear, actionable steps
+- Number them sequentially
+- Be specific and concise
+- Each step should be one action
+- Return ONLY the steps, one per line, without numbering (I'll add numbers)
+
+Example output format:
+Navigate to the login page
+Enter username in the email field
+Enter password in the password field
+Click the Login button
+Observe the error message
+
+Now convert the input text above:"""
+
+        # Use Gemini API
+        model_name = os.environ.get('GOOGLE_API_MODEL', 'gemini-1.5-flash-latest')
+        model = genai.GenerativeModel(model_name)
+        
+        response = model.generate_content(prompt)
+        ai_response = response.text.strip()
+        
+        # Parse steps from AI response
+        steps = []
+        for line in ai_response.split('\n'):
+            line = line.strip()
+            if line:
+                # Remove any existing numbering
+                line = line.lstrip('0123456789.-) ')
+                if line:
+                    steps.append(line)
+        
+        if not steps:
+            # Fallback: split by newlines
+            steps = [s.strip() for s in steps_text.split('\n') if s.strip()]
+        
+        return jsonify({
+            'success': True,
+            'steps': steps[:10],  # Limit to 10 steps
+            'raw_response': ai_response
+        })
+        
+    except Exception as e:
+        logger.error(f"Error generating steps from text: {str(e)}")
+        import traceback
+        logger.error(traceback.format_exc())
+        # Fallback: return original text split by lines
+        steps = [s.strip() for s in steps_text.split('\n') if s.strip()]
+        return jsonify({
+            'success': True,
+            'steps': steps[:10],
+            'error': str(e)
+        })
+
+@app.route('/api/bug-builder/generate-steps', methods=['POST'])
+@jira_auth_required
+@llm_rate_limit
+def generate_steps_from_video():
+    """Generate steps from video OR text using AI analysis"""
+    try:
+        data = request.get_json()
+        
+        # Check if this is text-based input (new feature)
+        steps_text = data.get('steps_text')
+        if steps_text:
+            return generate_steps_from_text(steps_text)
+        
+        # Otherwise, process as video (existing feature)
+        session_id = data.get('session_id')
+        
+        if not session_id:
+            return jsonify({'success': False, 'error': 'Session ID or steps_text required'}), 400
+        
+        # Get session
+        session = BugSession.query.filter_by(session_id=session_id).first()
+        if not session:
+            return jsonify({'success': False, 'error': 'Session not found'}), 404
+        
+        # Check if user owns this session
+        user_id = get_user_identifier()
+        if session.user_id != user_id:
+            return jsonify({'success': False, 'error': 'Unauthorized'}), 403
+        
+        # Check if video exists
+        if not session.video_path or not os.path.exists(session.video_path):
+            return jsonify({'success': False, 'error': 'Video not found for analysis'}), 404
+        
+        # Prepare analysis metadata holders (used in success and fallback paths)
+        frames = []
+        frame_info = []
+        last_ai_response = None
+        analysis_error = None
+        
+        # Process video and extract frames for AI analysis
+        try:
+            logger.info(f"Starting video analysis for session {session_id}")
+            logger.info(f"Video path: {session.video_path}")
+            
+            # Check if video file actually exists and is readable
+            if not os.path.exists(session.video_path):
+                logger.error(f"Video file does not exist: {session.video_path}")
+                raise Exception(f"Video file not found: {session.video_path}")
+            
+            file_size = os.path.getsize(session.video_path)
+            logger.info(f"Video file size: {file_size} bytes")
+            
+            if file_size == 0:
+                logger.error("Video file is empty")
+                raise Exception("Video file is empty")
+            
+            # Extract frames from video
+            logger.info("Attempting to extract frames from video...")
+            frames = extract_video_frames(session.video_path)
+            
+            if not frames:
+                logger.error("Could not extract any frames from video")
+                raise Exception("Could not extract frames from video - check video format and OpenCV installation")
+            
+            logger.info(f"Successfully extracted {len(frames)} frames from video")
+            frame_info = [
+                {
+                    'index': frame.get('frame_index'),
+                    'timestamp': round(frame.get('timestamp', 0.0), 2)
+                }
+                for frame in frames
+            ]
+            used_fallback = any(frame.get('source') == 'imageio' for frame in frames)
+            
+            # Parse action log from session (if available)
+            action_log = []
+            if session.action_logs:
+                try:
+                    import json
+                    action_log = json.loads(session.action_logs)
+                    logger.info(f"✅ Loaded {len(action_log)} actions from session - will enhance AI analysis")
+                except Exception as parse_error:
+                    logger.error(f"Error parsing action log: {parse_error}")
+                    action_log = []
+            
+            # Analyze frames using Gemini Vision with action context
+            logger.info("Sending frames and action log to Gemini Vision for analysis...")
+            analysis_result = analyze_video_frames_with_ai(frames, action_log)
+            if isinstance(analysis_result, dict):
+                steps = analysis_result.get('steps') or []
+                last_ai_response = analysis_result.get('raw_response')
+                analysis_error = analysis_result.get('error')
+            else:
+                steps = analysis_result or []
+            
+            if steps and len(steps) > 0:
+                logger.info(f"Successfully generated {len(steps)} steps from video analysis")
+                logger.info(f"Generated steps: {steps}")
+                return jsonify({
+                    'success': True,
+                    'steps': steps,
+                    'analysis_method': 'video_frame_analysis',
+                    'frames_analyzed': len(frames),
+                    'frame_info': frame_info,
+                    'analysis_details': {
+                        'ai_parse_method': analysis_result.get('parse_method') if isinstance(analysis_result, dict) else 'unknown',
+                        'used_fallback_frames': used_fallback
+                    }
+                })
+            else:
+                logger.warning("AI analysis returned empty or invalid steps")
+                raise Exception(analysis_error or "AI could not generate meaningful steps from video frames")
+                
+        except Exception as video_error:
+            logger.error(f"Video analysis failed with error: {str(video_error)}")
+            logger.error(f"Error type: {type(video_error).__name__}")
+            import traceback
+            logger.error(f"Full traceback: {traceback.format_exc()}")
+            
+            # Fallback to intelligent default steps with context
+            logger.info("Using fallback step generation due to video analysis failure")
+            steps = [
+                "Open the web application in a browser",
+                "Navigate to the main feature or page where the issue occurs", 
+                "Perform the primary user action that triggers the bug",
+                "Interact with any relevant UI elements or forms",
+                "Complete the workflow or process being tested",
+                "Observe the unexpected behavior or error that occurred"
+            ]
+            
+            return jsonify({
+                'success': True,
+                'steps': steps,
+                'analysis_method': 'fallback',
+                'error_reason': str(video_error),
+                'note': 'Steps generated using fallback analysis due to video processing limitations',
+                'frame_info': frame_info,
+                'debug_info': {
+                    'analysis_error': analysis_error,
+                    'ai_response_excerpt': (last_ai_response[:300] if last_ai_response else None)
+                }
+            })
+        
+    except Exception as e:
+        logger.error(f"Error generating steps: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+def extract_video_frames(video_path, max_frames=10):
+    """Extract frames from video for AI analysis"""
+    try:
+        logger.info(f"Starting frame extraction from: {video_path}")
+
+        import base64
+        from PIL import Image
+        import io
+
+        try:
+            import cv2
+        except ImportError:
+            cv2 = None
+            logger.warning("OpenCV not available; will rely on imageio fallback")
+
+        frames = []
+        frame_source = 'opencv'
+        fps = 0.0
+
+        if cv2 is not None:
+            logger.info("Opening video file with OpenCV...")
+            cap = cv2.VideoCapture(video_path)
+
+            if cap.isOpened():
+                total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+                fps = cap.get(cv2.CAP_PROP_FPS)
+                duration = total_frames / fps if fps and fps > 0 else 0
+                width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+                height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+
+                logger.info("Video properties (OpenCV):")
+                logger.info(f"  - Total frames: {total_frames}")
+                logger.info(f"  - FPS: {fps}")
+                logger.info(f"  - Duration: {duration:.2f}s")
+                logger.info(f"  - Resolution: {width}x{height}")
+
+                if total_frames == 0:
+                    logger.error("Video has 0 frames - possibly corrupted or unsupported format")
+                else:
+                    if total_frames <= max_frames:
+                        frame_indices = list(range(0, total_frames))
+                    else:
+                        step = max(1, total_frames // max_frames)
+                        frame_indices = list(range(0, total_frames, step))
+                    frame_indices = frame_indices[:max_frames]
+                    logger.info(f"Will extract frames at indices: {frame_indices}")
+
+                    opencv_frames = []
+                    for index, frame_idx in enumerate(frame_indices):
+                        logger.debug(f"Extracting frame {index+1}/{len(frame_indices)} at index {frame_idx}")
+                        cap.set(cv2.CAP_PROP_POS_FRAMES, frame_idx)
+                        ret, frame = cap.read()
+
+                        if ret and frame is not None:
+                            try:
+                                frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                                pil_image = Image.fromarray(frame_rgb)
+                                max_size = 1024
+                                original_size = pil_image.size
+                                if pil_image.width > max_size or pil_image.height > max_size:
+                                    pil_image.thumbnail((max_size, max_size), Image.Resampling.LANCZOS)
+                                    logger.debug(f"Resized frame from {original_size} to {pil_image.size}")
+                                buffer = io.BytesIO()
+                                pil_image.save(buffer, format='JPEG', quality=85)
+                                img_base64 = base64.b64encode(buffer.getvalue()).decode()
+                                opencv_frames.append({
+                                    'frame_index': frame_idx,
+                                    'timestamp': frame_idx / fps if fps and fps > 0 else 0,
+                                    'image_data': img_base64,
+                                    'size': pil_image.size,
+                                    'source': 'opencv'
+                                })
+                                logger.debug(f"Successfully processed frame {frame_idx}")
+                            except Exception as frame_error:
+                                logger.error(f"Error processing frame {frame_idx}: {frame_error}")
+                        else:
+                            logger.warning(f"Could not read frame at index {frame_idx}")
+
+                    cap.release()
+
+                    required_frames = min(max_frames, 3)
+                    if len(opencv_frames) < required_frames and frame_indices:
+                        logger.warning("OpenCV random seek produced only %s/%s frames; retrying sequential capture", len(opencv_frames), len(frame_indices))
+                        sequential_frames = []
+                        cap_seq = cv2.VideoCapture(video_path)
+                        if cap_seq.isOpened():
+                            frame_source = 'opencv-sequential'
+                            target_iter = iter(frame_indices)
+                            target_idx = next(target_iter, None)
+                            current_idx = 0
+                            while target_idx is not None:
+                                ret, frame = cap_seq.read()
+                                if not ret or frame is None:
+                                    logger.warning(f"Sequential read failed at frame {current_idx}")
+                                    break
+                                if current_idx == target_idx:
+                                    try:
+                                        frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                                        pil_image = Image.fromarray(frame_rgb)
+                                        max_size = 1024
+                                        original_size = pil_image.size
+                                        if pil_image.width > max_size or pil_image.height > max_size:
+                                            pil_image.thumbnail((max_size, max_size), Image.Resampling.LANCZOS)
+                                            logger.debug(f"Sequential resized frame from {original_size} to {pil_image.size}")
+                                        buffer = io.BytesIO()
+                                        pil_image.save(buffer, format='JPEG', quality=85)
+                                        img_base64 = base64.b64encode(buffer.getvalue()).decode()
+                                        sequential_frames.append({
+                                            'frame_index': target_idx,
+                                            'timestamp': target_idx / fps if fps and fps > 0 else current_idx / (fps or 1),
+                                            'image_data': img_base64,
+                                            'size': pil_image.size,
+                                            'source': 'opencv-sequential'
+                                        })
+                                        logger.debug(f"Sequentially captured frame {target_idx}")
+                                    except Exception as seq_error:
+                                        logger.error(f"Error processing sequential frame {target_idx}: {seq_error}")
+                                    target_idx = next(target_iter, None)
+                                current_idx += 1
+                            cap_seq.release()
+                            opencv_frames = sequential_frames if sequential_frames else opencv_frames
+                        else:
+                            logger.error("OpenCV sequential fallback could not reopen the video file")
+
+                    frames.extend(opencv_frames)
+
+                    if len(frames) < required_frames:
+                        logger.warning("OpenCV extraction yielded only %s frames (<%s required); will rely on imageio fallback", len(frames), required_frames)
+                        frames = []
+                        frame_source = 'opencv-insufficient'
+            else:
+                logger.error(f"OpenCV could not open video file: {video_path}")
+        else:
+            logger.info("Skipping OpenCV extraction because cv2 is unavailable")
+
+        # Fallback to imageio/ffmpeg if needed
+        if not frames:
+            logger.info("Attempting imageio fallback for frame extraction")
+            try:
+                import imageio
+
+                reader = imageio.get_reader(video_path, format='ffmpeg')
+                metadata = reader.get_meta_data()
+                fps = metadata.get('fps', fps or 0.0)
+                total_frames = metadata.get('nframes')
+                frame_source = 'imageio'
+                
+                logger.info(f"imageio metadata: fps={fps}, nframes={total_frames}")
+
+                # Calculate sampling step to only decode needed frames
+                # Estimate ~1000 frames if metadata doesn't provide count (common for VP8/WebM)
+                estimated_total = int(total_frames) if total_frames and total_frames != float('inf') else 1000
+                step = max(1, estimated_total // max_frames)
+                logger.info(f"imageio sampling: will process every {step}th frame, targeting {max_frames} frames")
+
+                try:
+                    frame_count = 0
+                    for idx, frame_array in enumerate(reader):
+                        # Only process frames at the sampling interval
+                        if idx % step == 0:
+                            try:
+                                pil_image = Image.fromarray(frame_array)
+                                max_size = 1024
+                                original_size = pil_image.size
+                                if pil_image.width > max_size or pil_image.height > max_size:
+                                    pil_image.thumbnail((max_size, max_size), Image.Resampling.LANCZOS)
+                                    logger.debug(f"Fallback resized frame from {original_size} to {pil_image.size}")
+                                buffer = io.BytesIO()
+                                pil_image.save(buffer, format='JPEG', quality=85)
+                                img_base64 = base64.b64encode(buffer.getvalue()).decode()
+                                frame_timestamp = idx / fps if fps and fps > 0 else idx / 30.0
+                                frames.append({
+                                    'frame_index': idx,
+                                    'timestamp': frame_timestamp,
+                                    'image_data': img_base64,
+                                    'size': pil_image.size,
+                                    'source': 'imageio'
+                                })
+                                frame_count += 1
+                                logger.debug(f"Processed imageio frame {idx} ({frame_count}/{max_frames})")
+                                
+                                # Stop after collecting enough frames
+                                if frame_count >= max_frames:
+                                    logger.info(f"Collected {frame_count} frames, stopping imageio extraction")
+                                    break
+                            except Exception as fallback_frame_error:
+                                logger.error(f"Error processing fallback frame {idx}: {fallback_frame_error}")
+                finally:
+                    try:
+                        reader.close()
+                    except Exception:
+                        pass
+                    logger.info(f"imageio extraction complete: collected {len(frames)} frames")
+
+                if not frames:
+                    logger.error("imageio fallback found 0 frames")
+            except ImportError as fallback_import_error:
+                logger.error(f"imageio fallback unavailable: {fallback_import_error}")
+            except Exception as fallback_error:
+                logger.error(f"imageio fallback failed: {fallback_error}")
+                import traceback
+                logger.error(f"imageio fallback traceback: {traceback.format_exc()}")
+
+        if frames:
+            logger.info(f"Successfully extracted {len(frames)} frames for analysis using {frame_source}")
+            frame_timestamps = ["{:.2f}s".format(frame.get('timestamp', 0.0)) for frame in frames]
+            logger.info(f"Frame timestamps: {frame_timestamps}")
+        else:
+            logger.error("No frames were successfully extracted from the video")
+
+        return frames
+
+    except Exception as e:
+        logger.error(f"Error extracting video frames: {str(e)}")
+        import traceback
+        logger.error(f"Full traceback: {traceback.format_exc()}")
+        return []
+
+def analyze_video_frames_with_ai(frames, action_log=None):
+    """Analyze video frames using Gemini Vision to generate steps
+    
+    Args:
+        frames: List of frame dicts with image_data, timestamp, etc.
+        action_log: Optional list of user actions (clicks, inputs, navigation) captured during recording
+    """
+    try:
+        logger.info("Starting AI analysis of video frames")
+        
+        # Check API key first
+        api_key = os.environ.get('GOOGLE_API_KEY')
+        if not api_key:
+            logger.error("GOOGLE_API_KEY environment variable is not set")
+            return {'steps': [], 'error': 'GOOGLE_API_KEY not configured', 'raw_response': None}
+        
+        logger.info("Google API key is configured")
+        
+        import google.generativeai as genai
+        genai.configure(api_key=api_key)
+        
+        if not frames:
+            logger.error("No frames provided for AI analysis")
+            return {'steps': [], 'error': 'No frames provided for analysis', 'raw_response': None}
+        
+        logger.info(f"Preparing {len(frames)} frames for Gemini Vision analysis")
+        
+        # Prepare frames for Gemini Vision
+        frame_parts = []
+        max_ai_frames = 8
+        if len(frames) <= max_ai_frames:
+            selected_indices = list(range(len(frames)))
+        else:
+            selected_indices = [
+                int(round(i * (len(frames) - 1) / (max_ai_frames - 1)))
+                for i in range(max_ai_frames)
+            ]
+
+        logger.info(f"Selected frame indices for AI: {selected_indices}")
+
+        for idx_position, frame_index in enumerate(selected_indices):
+            frame = frames[frame_index]
+            try:
+                frame_parts.append({
+                    'mime_type': 'image/jpeg',
+                    'data': base64.b64decode(frame['image_data'])
+                })
+                logger.debug(
+                    f"Prepared frame {idx_position + 1} (source index {frame_index}, timestamp: {frame['timestamp']:.2f}s)"
+                )
+            except Exception as frame_prep_error:
+                logger.error(f"Error preparing frame {frame_index}: {str(frame_prep_error)}")
+                continue
+        
+        if not frame_parts:
+            logger.error("No frames could be prepared for AI analysis")
+            return {'steps': [], 'error': 'No frames available after preparation', 'raw_response': None}
+        
+        logger.info(f"Successfully prepared {len(frame_parts)} frames for analysis")
+        
+        # Build action log context if available
+        action_context = ""
+        if action_log and len(action_log) > 0:
+            logger.info(f"Building context from {len(action_log)} user actions")
+            action_lines = []
+            for action in action_log[:60]:  # Limit for token efficiency
+                timestamp = action.get('timestamp', 0) / 1000.0
+                action_type = (action.get('type') or 'unknown').lower()
+
+                if action_type == 'click':
+                    target = action.get('target', {})
+                    target_desc = target.get('text') or target.get('ariaLabel') or target.get('placeholder')
+                    if not target_desc:
+                        tag = target.get('tagName') or 'element'
+                        target_desc = f"<{tag.lower()}>"
+                    action_lines.append(f"  {timestamp:.1f}s: Clicked {target_desc}")
+                elif action_type in ('input', 'change'):
+                    target = action.get('target', {})
+                    field_name = target.get('name') or target.get('placeholder') or target.get('ariaLabel') or target.get('tagName', 'field')
+                    value = (action.get('value') or '')[:80]
+                    display_value = value if value else '[cleared]'
+                    action_lines.append(f"  {timestamp:.1f}s: Updated {field_name} with '{display_value}'")
+                elif action_type == 'submit':
+                    target = action.get('target', {}).get('name') or 'form'
+                    action_lines.append(f"  {timestamp:.1f}s: Submitted {target}")
+                elif action_type == 'keydown':
+                    key = action.get('key', '').upper()
+                    action_lines.append(f"  {timestamp:.1f}s: Pressed {key} key")
+                elif action_type == 'navigation':
+                    url = action.get('url') or action.get('pageUrl') or '(unknown URL)'
+                    source = action.get('source') or 'navigation'
+                    action_lines.append(f"  {timestamp:.1f}s: {source} → {url}")
+                elif action_type in ('fetch_request', 'xhr_request'):
+                    method = action.get('method', 'GET')
+                    url = action.get('url', '')
+                    action_lines.append(f"  {timestamp:.1f}s: {method} request to {url}")
+                elif action_type in ('fetch_response', 'xhr_response'):
+                    method = action.get('method', 'GET')
+                    url = action.get('url', '')
+                    status = action.get('status')
+                    action_lines.append(f"  {timestamp:.1f}s: {method} response {status} from {url}")
+                elif action_type in ('fetch_error', 'xhr_error'):
+                    method = action.get('method', 'GET')
+                    url = action.get('url', '')
+                    message = action.get('message') or action.get('status')
+                    action_lines.append(f"  {timestamp:.1f}s: {method} request error on {url} ({message})")
+                elif action_type == 'annotation':
+                    note = (action.get('value') or action.get('note') or '')[:100]
+                    action_lines.append(f"  {timestamp:.1f}s: USER NOTE – {note}")
+                elif action_type in ('recording_started', 'recording_stopped'):
+                    continue
+                else:
+                    # Generic fallback for unknown types
+                    summary = action.get('value') or action.get('message') or ''
+                    summary = summary[:60] if summary else ''
+                    action_lines.append(f"  {timestamp:.1f}s: {action_type} {summary}")
+
+            if action_lines:
+                action_context = "\n\nUSER ACTIONS CAPTURED DURING RECORDING:\n" + "\n".join(action_lines) + "\n"
+                logger.info(f"Generated action context with {len(action_lines)} formatted actions")
+        
+        # Create comprehensive prompt for video analysis
+        prompt = f"""
+        Analyze this screen recording ({len(frame_parts)} frames in chronological order) and generate concise reproduction steps.
+        {action_context if action_context else ""}
+        
+        RULES:
+        1. Identify USER ACTIONS (clicks, navigation, typing) by looking for UI changes between frames
+        2. Summarize what happened, don't describe every visible element
+        3. Include URLs from address bar when they change
+        4. Mention key UI elements only when they're interacted with or when they appear/disappear
+        5. Be CONCISE - combine related observations into single steps
+        6. Do NOT conclude what the bug is - just document what was observed
+        
+        GOOD examples:
+        1. Open Chrome Incognito window
+        2. Navigate to https://example.com/dashboard
+        3. Click on "Getting Started with NoSQL" course card
+        4. "Access Paused!" modal appears blocking course content
+        
+        BAD examples (too verbose):
+        1. The screen displays "You've gone Incognito" page in a Chrome browser
+        2. The text "Chrome won't save: Your browsing history..." is visible
+        3. The text "Your activity might still be visible to..." is visible
+        4. The message "Third-party cookies are blocked" is visible at the bottom
+        
+        Generate 3-6 concise steps describing the user's actions and key observations:
+        """
+        
+        # Use Gemini Vision model from environment configuration
+        try:
+            model_name = os.environ.get('GOOGLE_API_MODEL', 'gemini-1.5-flash-latest')
+            logger.info(f"Initializing Gemini Vision model: {model_name}")
+            model = genai.GenerativeModel(model_name)
+            
+            # Combine prompt with images
+            content = [prompt] + frame_parts
+            
+            logger.info(f"Sending request to Gemini Vision with {len(frame_parts)} frames...")
+            response = model.generate_content(content)
+            
+            if response and response.text:
+                ai_text = response.text.strip()
+                logger.info(f"Received AI response ({len(ai_text)} characters)")
+                logger.info(f"AI response preview: {ai_text[:300]}...")
+                
+                # Parse steps from AI response
+                steps = []
+                lines = ai_text.split('\n')
+                
+                logger.info(f"Parsing {len(lines)} lines from AI response")
+                
+                for line_num, line in enumerate(lines):
+                    line = line.strip()
+                    if line and (line[0].isdigit() or line.startswith('-') or line.startswith('*')):
+                        # Clean up the step text
+                        step = line
+                        # Remove numbering and bullet points
+                        step = re.sub(r'^\d+\.?\s*', '', step)
+                        step = re.sub(r'^[-*]\s*', '', step)
+                        if step and len(step) > 10:  # Ensure meaningful steps
+                            steps.append(step.strip())
+                            logger.debug(f"Parsed step {len(steps)}: {step[:50]}...")
+                
+                logger.info(f"Parsed {len(steps)} steps from AI response")
+                
+                # Ensure we have reasonable number of steps
+                if len(steps) > 7:
+                    logger.info(f"Limiting steps from {len(steps)} to 7")
+                    steps = steps[:7]
+                elif len(steps) < 3:
+                    logger.warning(f"Only {len(steps)} steps parsed, adding descriptive fallback messaging")
+                    if len(steps) == 0:
+                        steps = [
+                            "Start the screen recording",
+                            "Perform the actions related to the bug scenario",
+                            "Recording ends with the same screen displayed; no additional interactions captured"
+                        ]
+                    elif len(steps) == 1:
+                        steps.append("No additional user interactions were detected after this step")
+                        steps.append("Recording ends with the screen unchanged")
+                    elif len(steps) == 2:
+                        steps.append("Recording ends with the same interface visible; no further actions captured")
+                
+                logger.info(f"Final step count: {len(steps)}")
+                for i, step in enumerate(steps):
+                    logger.info(f"Step {i+1}: {step}")
+                
+                return {
+                    'steps': steps,
+                    'raw_response': ai_text,
+                    'parse_method': 'numbered_lines',
+                    'error': None
+                }
+                
+            else:
+                logger.error("Gemini Vision returned empty or null response")
+                return {'steps': [], 'error': 'Gemini Vision returned empty response', 'raw_response': None}
+                
+        except Exception as api_error:
+            logger.error(f"Error calling Gemini Vision API: {str(api_error)}")
+            logger.error(f"API error type: {type(api_error).__name__}")
+            import traceback
+            logger.error(f"API error traceback: {traceback.format_exc()}")
+            return {'steps': [], 'error': str(api_error), 'raw_response': None}
+            
+    except Exception as e:
+        logger.error(f"Error in AI video analysis: {str(e)}")
+        import traceback
+        logger.error(f"Full traceback: {traceback.format_exc()}")
+        return {'steps': [], 'error': str(e), 'raw_response': None}
+
+@app.route('/api/bug-builder/generate-final-report', methods=['POST'])
+@jira_auth_required
+@llm_rate_limit
+def generate_final_bug_report():
+    """Generate final bug report with AI summary"""
+    try:
+        data = request.get_json()
+        steps = data.get('steps', [])
+        expected_result = data.get('expected_result', '')
+        actual_result = data.get('actual_result', '')
+        additional_data = data.get('additional_data', '')
+        
+        if not expected_result or not actual_result:
+            return jsonify({'success': False, 'error': 'Expected and actual results are required'}), 400
+        
+        # Format steps for the prompt
+        steps_text = '\n'.join(f"{i+1}. {step}" for i, step in enumerate(steps)) if steps else "No steps provided"
+        
+        # Generate AI summary and bug report
+        try:
+            # Create AI prompt for bug report generation
+            prompt = f"""Generate a professional bug report based on the following information:
+
+Steps to Reproduce:
+{steps_text}
+
+Expected Result: {expected_result}
+Actual Result: {actual_result}
+Additional Context: {additional_data}
+
+Please create:
+1. A concise bug title (one line, max 100 characters)
+2. A detailed description that includes:
+   - What the issue is
+   - The steps to reproduce (formatted nicely)
+   - Expected vs Actual results
+   - Any additional context
+
+Format your response EXACTLY like this:
+TITLE: [your bug title here]
+
+DESCRIPTION:
+[your detailed description here including all the information above]
+"""
+            
+            # Generate bug report using AI
+            model_name = os.environ.get('GOOGLE_API_MODEL', 'gemini-1.5-flash-latest')
+            model = genai.GenerativeModel(model_name)
+            response = model.generate_content(prompt)
+            
+            if response and response.text:
+                ai_text = response.text.strip()
+                
+                # Extract title and description
+                title_match = re.search(r'TITLE:\s*(.+?)(?:\n|$)', ai_text, re.IGNORECASE)
+                desc_match = re.search(r'DESCRIPTION:\s*(.*)', ai_text, re.IGNORECASE | re.DOTALL)
+                
+                if title_match and desc_match:
+                    title = title_match.group(1).strip()
+                    description = desc_match.group(1).strip()
+                else:
+                    # Fallback parsing
+                    lines = ai_text.split('\n')
+                    title = lines[0].strip() if lines else f"Bug: {expected_result[:50]}"
+                    description = '\n'.join(lines[1:]).strip() if len(lines) > 1 else ai_text
+                
+                # Clean up title
+                title = title.replace('TITLE:', '').replace('Title:', '').strip()
+                title = title[:100]  # Limit length
+                
+            else:
+                raise Exception("AI did not generate a valid response")
+                
+        except Exception as ai_error:
+            logger.error(f"AI bug report generation failed: {str(ai_error)}")
+            import traceback
+            logger.error(traceback.format_exc())
+            
+            # Fallback to structured template
+            title = f"Bug: {expected_result[:50]}" if len(expected_result) > 50 else f"Bug: {expected_result}"
+            description = f"""**Steps to Reproduce:**
+{steps_text}
+
+**Expected Result:**
+{expected_result}
+
+**Actual Result:**
+{actual_result}"""
+            
+            if additional_data:
+                description += f"\n\n**Additional Context:**\n{additional_data}"
+        
+        return jsonify({
+            'success': True,
+            'title': title,
+            'description': description
+        })
+        
+    except Exception as e:
+        logger.error(f"Error generating final report: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)

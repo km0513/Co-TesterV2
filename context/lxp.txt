@@ -1,5 +1,4 @@
 ### Chunk 1 — LMS Structure & Hierarchy
-
 ```
 Entities & Relationships:
 - Program → contains Courses
@@ -12,247 +11,276 @@ Asset Locking:
 - Next asset unlocks only when previous asset is completed.
 
 Sequential vs Non-Sequential:
-- Can configure containers (Course/Module/Segment) as sequential or non-sequential.
-- If sequential, learner must finish prior container before next unlocks.
+- Containers can be sequential or non-sequential.
+- Sequential: learner must finish prior container before next unlocks.
 - Availability & Due Dates apply at each container level.
 ```
+---
 
 ### Chunk 2 — Asset Types & Behaviors
-
 ```
 Asset Types:
 1. Video
 2. PDF/Document
 3. Graded Assessment (MCQ, MSQ)
-4. Assignments
-   - Manual-graded
-   - Auto-graded
+4. Assignments (Manual-graded / Auto-graded)
 5. Super Asset (Video + Text)
 6. Recall Quiz (Non-graded)
 
 Behavior:
-- Videos: can Bookmark at timestamp; Watch Now plays video.
-- PDFs: open in viewer; can Bookmark page.
-- Graded Assessments: immediate score display.
-- Assignments: submission workflow, file upload, grading panel.
+- Videos: Watch Now; bookmarks at timestamp.
+- PDFs: viewer with bookmark by page.
+- Graded Assessments: immediate scoring.
+- Assignments: submission workflow, grading panel (lenient/strict).
 - Super Assets: combined media/text view.
-- Recall Quizzes: for self-assessment, no score stored.
+- Recall Quizzes: no score stored.
+- Notes: free text notes, timestamped, linked to asset.
 ```
+---
 
-### Chunk 3 — Navigation & UI Flows
-
-```
-Main Navigation:
-- Home → Dashboard
-- Courses → Module list → Asset list
-- Sessions tab → Live session links (Zoom, UGlive, External)
-- Profile dropdown → Profile, Help & Support, Logout
-
-Help & Support:
-- Accessible via navbar and profile dropdown.
-- Pages:
-  • My Queries (tabs: Open, Closed)
-  • “No Queries Found” when empty (with header & subtext).
-  • Only shows queries ≤120 days old.
-
-Bookmarks & Notes:
-- Bookmark icon on assets; stores timestamp/context.
-- Notes tab: free text notes linked to assets; timestamped.
-- Notes and Bookmarks appear under their respective pages.
-```
-
-### Chunk 4 — Enrollment & Access Rules
-
+### Chunk 3 — Enrollment & Access Rules
 ```
 Enrollment:
-- Learner enrolls in Program → all courses added to learner’s view.
-- Enrollment date captured; used for availability windows.
+- Program enrollment → all courses visible.
+- Enrollment date captured; drives availability.
 
 Access Control:
 - Assets locked/unlocked per sequence & due dates.
-- Direct URL to locked asset → “Access Denied” message.
-- Admin/Delivery Manager roles bypass locking rules.
+- Direct URL to locked asset → “Access Denied”.
+- Admin/Delivery Manager bypasses locks.
 
 Guest Link:
-- Generates temporary access URL for non-learners.
-- Instructor privileges: view & present session via iPad (IIITB use-case).
+- Temporary URL for external learners/instructors.
+- Guest cannot submit or see dashboards.
 ```
+---
 
-### Chunk 5 — Assignment Submission & Grading
-
+### Chunk 4 — Assignment Submission, Grading & Penalties
 ```
-Manual Assignment Workflow:
-- Learner uploads file before due date.
-- Post-due: can request extension; if approved, due date shifts.
+Manual Assignments:
+- File upload before due date.
+- Post-due: request extension (reason, days).
 
-Auto-Graded Assignment:
-- System runs against answer key; instant feedback.
+Auto-Graded Assignments:
+- System checks answer key → instant feedback.
 
 Grading Panel:
-- Display submission details (timestamp, file link).
-- Grader enters marks; UI supports lenient/strict schema.
+- Submission details (timestamp, file link).
+- Marks entry with strict/lenient schema.
+- Deferral tag visible on scorecard if deferred.
 
-Deferral Tag:
-- If learner defers submission, “Deferral” shown on scorecard.
-
-Penalties:
-- Late penalty % per day (configurable).
-- Grace period days exempt from penalty.
-- Max penalty cap per assignment.
+Penalty Logic:
+- Parameters: penalty_percent_per_day, grace_period_days, max_penalty.
+- Late submission beyond grace → final_score reduced.
+- Floor at 0, cap applies.
+- Known bug: penalties exceeded cap in some cases (fixed).
 ```
+---
 
-### Chunk 6 — Penalty & Extension Logic
-
+### Chunk 5 — Program Versioning & Cohort Logic
 ```
-Penalty Configuration:
-- Parameters:
-  • penalty_percent_per_day
-  • grace_period_days
-  • max_penalty_percent
-
-Application:
-- If submission_date > due_date + grace_period:
-   final_score = raw_score * (1 − penalty_percent_per_day * days_late)
-   final_score ≥ 0; floor at zero.
-- If penalty exceeds max_penalty_percent, apply cap.
-
-Extension Requests:
-- Learner clicks “Request Extension” → form (reason, days).
-- Delivery Manager approves/denies → due_date updated or stays.
-```
-
-### Chunk 7 — Program Versioning & Cohort Logic
-
-```
-Versioning Epic (IRA-59024 → 59090):
+Versioning (IRA-59024 → 59090):
 - Cohort-specific curriculum versions.
-- Create new version → edits apply only to new cohort.
-- Discard unpublished versions; history retained.
+- New versions apply only to new/future cohorts.
+- Completed cohorts locked.
+- Current cohorts → upgrade rules differ for graded vs non-graded assets.
 
 Cohort Cloning:
-- Clone curriculum from one cohort to another.
-- Can choose to include only published assets or drafts too.
+- Copy curriculum to another cohort.
+- Option: include drafts.
 
-Enrollment Impact:
-- Learners in “current” cohorts see active version.
-- “Future” cohorts inherit new versions automatically.
-- Completed cohorts locked; no further updates.
+Learner Impacts:
+- Scorecards updated on replacement.
+- Help tickets raised if mismatch occurs.
 ```
+---
 
-### Chunk 8 — Session & Live Class Management
-
+### Chunk 6 — Sessions & Live Class Management
 ```
-Live Sessions:
-- Types: Zoom, UGlive, External link.
-- “Join” button initiates attendance recording.
-- Attendance logged when learner clicks “Join”.
+Types: Zoom, UGlive, External.
+Attendance: logged when learner clicks “Join”.
+Recordings: “Watch Now” post-session, retention configurable.
 
-Recording Access:
-- After session, “Watch Now” link appears under Sessions.
-- Recording retention policy: X days after session.
+Reschedule/Cancel:
+- Notifications sent to learners/instructors.
+- UI shows “Rescheduled” / “Cancelled”.
 
-Rescheduling & Cancellation:
-- System sends notifications to learners & instructors.
-- UI indicates “Rescheduled” or “Cancelled” with new date/time.
+Enhancements:
+- Session groups for multiple sessions.
+- Delivery Managers/Mentors can edit session windows/resources.
 ```
+---
 
-### Chunk 9 — Auto-Allocation of Evaluators
-
+### Chunk 7 — Evaluator Allocation
 ```
-AutoAllocator Workflow:
-- Input: evaluator-to-assignment CSV at cohort level.
-- Modes:
-  • Round-Robin
-  • Load-Based (least active load first)
+Auto-Allocator:
+- Input: evaluator-to-assignment CSV.
+- Modes: Round-Robin, Load-based.
 
 Rules:
-- Skip evaluators with capacity = 0.
-- Active_load and capacity updated on each assignment.
-- Manual override: change capacity or active_load → reallocate remaining.
+- Skip evaluators with capacity=0.
+- Active load updated dynamically.
+
+Manual Override:
+- Adjust load/capacity → triggers reallocation.
 
 Error Handling:
-- Invalid CSV rows → error file download with line numbers.
+- Invalid CSV rows → downloadable error file.
 ```
+---
 
-### Chunk 10 — Bulk Operations & Sync
-
+### Chunk 8 — Help & Support
 ```
-Bulk Assignment:
-- Enroll multiple learners via CSV.
-- Bulk track/elective assignment via Enrollment Manager.
+My Queries:
+- Tabs: Open, Closed.
+- Default view: queries ≤120 days.
+- Bug: older queries not retrievable.
+
+Admin/DM Bypass:
+- Full query visibility (beyond 120 days).
+
+Empty State:
+- “No Queries Found” with header/subtext.
+```
+---
+
+### Chunk 9 — Profile & CPS
+```
+One Profile Sections:
+- Personal, Work Experience, Education, Aspirations, Contact Info.
+
+CPS Sync:
+- Applied Jobs, Certificates sync with learner profile.
+
+Profile Blocker:
+- Progress restricted if mandatory fields missing.
+
+Delivery-Side Visibility:
+- Rules define which fields visible/hidden to learners, mentors, DMs.
+```
+---
+
+### Chunk 10 — Micro-Interactions
+```
+Mascot Intro (IRA-65720):
+- Popup at learner’s first login after feature launch.
+
+Known Bug (IRA-67884):
+- Intro reappears on every login.
+```
+---
+
+### Chunk 11 — Coding Console
+```
+Current Limitations:
+- Slow load.
+- Stub code not editable.
+- Editor lacks advanced features.
+- Language mismatch (Java 8 vs Python).
+
+Planned Enhancements:
+- Editable stubs.
+- Multi-language alignment.
+- Rich editor (autocomplete, formatting).
+```
+---
+
+### Chunk 12 — Bulk Operations & Sync
+```
+Bulk Enrollment:
+- Add multiple learners via CSV.
+
+Tracks/Electives:
+- Bulk assignment by Enrollment Manager.
 
 Content Sync:
-- Push updates from “Woolf” widget to course pages.
-- Bulk file download for videos/documents on multiple pages.
+- From Woolf widget to courses.
+
+Bulk Downloads:
+- Videos/docs.
 
 Learner Name Sync:
-- Ensure consistent naming across UI and reports.
-- Touchpoints: Scorecard, Profile, Notifications.
+- Scorecard, profile, notifications.
 ```
+---
 
-### Chunk 11 — Duplicate & Version Conflict Handling
-
+### Chunk 13 — Duplicate & Rollback Handling
 ```
-Duplicate Asset Guardrails:
-- Prevent adding same asset twice in a curriculum.
-- If attempted:
-  • Show warning: “Asset already exists”
-  • Option: link existing asset instead of creating new.
+Duplicate Prevention:
+- Detect and warn: “Asset already exists”.
+- Option: link existing asset.
 
-Unpublished vs Published:
-- Editing unpublished asset doesn’t affect live cohorts.
-- Publishing moves asset from draft to active timeline.
+Draft vs Published:
+- Edits in draft don’t affect live cohorts.
 
 Rollback:
-- Delivery Manager can revert published asset → previous version restored.
+- Delivery Manager can revert published asset → restore previous version.
 ```
+---
 
-### Chunk 12 — Error Pages & Edge Cases
-
+### Chunk 14 — Error Pages & Edge Cases
 ```
-Error & Support Screens:
-- 404 Page: custom design, support link.
-- Browser‐not‐supported Page: lists required browsers.
+Error Screens:
+- 404 custom page with support link.
+- Unsupported Browser page.
 
 Edge Cases:
-- If no modules in course → “Coming Soon” placeholder.
-- If all assets locked → show countdown to availability.
-- If API fails fetching assignments → retry logic & user message.
-
-API Rate-Limiting:
-- Context file coverage ensures fallback for partial failures.
+- Empty course → “Coming Soon”.
+- All assets locked → availability countdown.
+- API failure → retry with user message.
+- Rate limiting → fallback to partial data.
 ```
+---
 
-### Chunk 13 — Roles & Permissions
-
+### Chunk 15 — Roles & Permissions
 ```
-- **Learner**
-  • Enrolls in programs, navigates courses/modules/assets
-  • Can view/open unlocked assets, bookmark, take notes, submit assignments, request extensions
-  • Sees only their own queries in Help & Support
+Learner:
+- Enroll, navigate, bookmark, notes, submit, request extensions.
 
-- **Instructor / SME**
-  • Creates and schedules live sessions (Zoom, UGlive, External)
-  • Views session attendance, reschedules/cancels sessions
-  • Accesses guest link features (e.g. present via iPad)
+Instructor/SME:
+- Create/schedule live sessions.
+- View attendance, reschedule/cancel.
+- Guest link use.
 
-- **Content Manager**
-  • Publishes/unpublishes assets across program versions
-  • Edits draft assets without affecting live cohorts
-  • Clones curricula between cohorts
+Content Manager:
+- Publish/unpublish assets.
+- Edit drafts.
+- Clone curricula.
 
-- **Delivery Manager / Admin**
-  • Overrides locking rules (can unlock any asset)
-  • Approves/denies extension requests
-  • Rolls back published versions, manages bulk enrollment/tracks
-  • Views all learner queries (not limited by 120-day filter)
+Delivery Manager/Admin:
+- Override locks.
+- Approve extensions.
+- Rollback versions.
+- Bulk enrollment/tracks.
+- View all queries.
 
-- **Grader / Evaluator**
-  • Receives auto-allocator assignments
-  • Uses grading panel (strict/lenient) for manual assignments
-  • Cannot change penalty configs, but can apply deferral tags
+Evaluator/Grader:
+- Receives allocated assignments.
+- Grades via panel (lenient/strict).
+- Apply deferral tags.
 
-- **Guest (External)**
-  • Access via time-limited URL
-  • Can join live sessions but cannot submit or view internal dashboards
+Guest:
+- Access via temporary URL.
+- Join sessions, no submissions/dashboards.
+```
+---
+
+### Chunk 16 — QA References
+```
+Test Scenarios:
+- 150+ module extension test cases.
+- Program versioning (IRA-59024 → 59090).
+- Profile Blocker & CPS rules.
+- Auto-Allocator edge cases.
+
+Known Bugs:
+- Mascot intro reappears (IRA-67884).
+- Penalty exceeding cap.
+- Queries older than 120 days not retrievable.
+
+Trackers:
+- “One Profile Bugs (JIRA)” – central tracker.
+
+Release Touchpoints:
+- Session Groups, Help & Support, Track/Electives, CGPA & Scorecard, Coding Console.
 ```
