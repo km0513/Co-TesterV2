@@ -44,7 +44,6 @@ async function loadWorkspaces() {
             }
             
             renderWorkspaceSelector();
-            renderWorkspaceList();
         }
     } catch (error) {
         console.error('Error loading workspaces:', error);
