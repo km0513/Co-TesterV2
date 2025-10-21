@@ -9,6 +9,7 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link rel="stylesheet" href="/static/styles.css">
   <link rel="stylesheet" href="/static/left-sidebar.css">
+  <link rel="stylesheet" href="/static/api-cotest-v2.css">
   <style>
     :root {
       --primary: #6366f1;
@@ -621,6 +622,36 @@
     {% set page_title = 'API Co-Test <span style="background: linear-gradient(45deg, #3b82f6, #1d4ed8); color: white; padding: 0.25rem 0.75rem; border-radius: 8px; font-size: 0.8rem; font-weight: 600; margin-left: 0.75rem; vertical-align: middle; box-shadow: 0 2px 6px rgba(59, 130, 246, 0.3);">Partially Complete</span>' %}
     {% set page_subtitle = 'Professional API testing suite with cURL runner, collection management, Postman integration, and comprehensive REST & GraphQL support. <strong>Note:</strong> This feature is currently under active development with more tools and enhancements coming soon!' %}
     {% include 'page-header.html' %}
+    
+    <!-- New V2 Toolbar -->
+    <div class="api-toolbar">
+      <div id="workspace-selector"></div>
+      <div id="environment-selector"></div>
+      <div style="flex: 1"></div>
+      <button class="btn-secondary" onclick="showManageVariablesModal()">
+        <i class="fas fa-cog"></i> Variables
+      </button>
+    </div>
+
+    <div class="api-cotest-container">
+      <!-- Sidebar with History & Favorites -->
+      <div class="api-sidebar">
+        <div class="sidebar-tabs">
+          <button class="sidebar-tab active" onclick="switchSidebarTab('history')">
+            <i class="fas fa-history"></i> History
+          </button>
+          <button class="sidebar-tab" onclick="switchSidebarTab('favorites')">
+            <i class="fas fa-star"></i> Favorites
+          </button>
+        </div>
+        <div class="sidebar-content">
+          <div id="history-panel"></div>
+          <div id="favorites-panel" style="display: none;"></div>
+        </div>
+      </div>
+
+      <!-- Main Content Area -->
+      <div class="api-main">
     
     <div class="api-container">
       
@@ -2225,6 +2256,110 @@ ${typeof result.body === 'object' ? JSON.stringify(result.body, null, 2) : (resu
       document.getElementById('curl-command').value = '';
       document.getElementById('curl-response-body').textContent = 'Response will appear here...';
       showMessage('curl-response-meta', 'Command cleared', 'success');
+    }
+  </script>
+
+  <!-- Close new V2 containers -->
+  </div> <!-- Close api-main -->
+  </div> <!-- Close api-cotest-container -->
+
+  <!-- Modals -->
+  <div id="create-workspace-modal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Create Workspace</h2>
+        <button class="modal-close" onclick="closeModal('create-workspace-modal')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label>Workspace Name</label>
+          <input type="text" id="new-workspace-name" placeholder="My Workspace">
+        </div>
+        <div class="form-group">
+          <label>Description (optional)</label>
+          <textarea id="new-workspace-description" rows="3" placeholder="Workspace description..."></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-secondary" onclick="closeModal('create-workspace-modal')">Cancel</button>
+        <button class="btn-primary" onclick="handleCreateWorkspace()">Create</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="create-environment-modal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Create Environment</h2>
+        <button class="modal-close" onclick="closeModal('create-environment-modal')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label>Environment Name</label>
+          <input type="text" id="new-environment-name" placeholder="Development">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-secondary" onclick="closeModal('create-environment-modal')">Cancel</button>
+        <button class="btn-primary" onclick="handleCreateEnvironment()">Create</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="manage-variables-modal" class="modal">
+    <div class="modal-content" style="max-width: 800px;">
+      <div class="modal-header">
+        <h2>Manage Variables</h2>
+        <button class="modal-close" onclick="closeModal('manage-variables-modal')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div id="variable-editor"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- API Co-Test V2 JavaScript -->
+  <script src="/static/api-cotest-v2.js"></script>
+  <script>
+    // Modal handlers
+    async function handleCreateWorkspace() {
+      const name = document.getElementById('new-workspace-name').value;
+      const description = document.getElementById('new-workspace-description').value;
+      
+      if (!name) {
+        showNotification('Please enter a workspace name', 'warning');
+        return;
+      }
+      
+      await window.apiCoTest.createWorkspace(name, description);
+      closeModal('create-workspace-modal');
+      document.getElementById('new-workspace-name').value = '';
+      document.getElementById('new-workspace-description').value = '';
+    }
+
+    async function handleCreateEnvironment() {
+      const name = document.getElementById('new-environment-name').value;
+      
+      if (!name) {
+        showNotification('Please enter an environment name', 'warning');
+        return;
+      }
+      
+      await window.apiCoTest.createEnvironment(name);
+      closeModal('create-environment-modal');
+      document.getElementById('new-environment-name').value = '';
+    }
+
+    function switchSidebarTab(tab) {
+      // Update tab buttons
+      document.querySelectorAll('.sidebar-tab').forEach(btn => {
+        btn.classList.remove('active');
+      });
+      event.target.closest('.sidebar-tab').classList.add('active');
+      
+      // Show/hide panels
+      document.getElementById('history-panel').style.display = tab === 'history' ? 'block' : 'none';
+      document.getElementById('favorites-panel').style.display = tab === 'favorites' ? 'block' : 'none';
     }
   </script>
 </body>
