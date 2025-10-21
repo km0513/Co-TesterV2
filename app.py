@@ -1672,6 +1672,140 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 CORS(app, supports_credentials=True)
 db = SQLAlchemy(app)
 
+# API Co-Test Models - defined inline after db initialization
+from datetime import datetime as dt
+try:
+    from sqlalchemy.dialects.postgresql import JSONB, ARRAY
+    # For SQLite, use JSON instead of JSONB
+    JSONType = db.JSON
+    ArrayType = db.Text  # SQLite doesn't support arrays, use Text
+except:
+    JSONType = db.JSON
+    ArrayType = db.Text
+
+class APIWorkspace(db.Model):
+    __tablename__ = 'api_workspaces'
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(255), nullable=False)
+    description = db.Column(db.Text)
+    user_id = db.Column(db.Integer)
+    is_team = db.Column(db.Boolean, default=False)
+    created_at = db.Column(db.DateTime, default=dt.utcnow)
+    updated_at = db.Column(db.DateTime, default=dt.utcnow, onupdate=dt.utcnow)
+    
+    def to_dict(self):
+        return {
+            'id': self.id, 'name': self.name, 'description': self.description,
+            'user_id': self.user_id, 'is_team': self.is_team,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None
+        }
+
+class APIEnvironment(db.Model):
+    __tablename__ = 'api_environments'
+    id = db.Column(db.Integer, primary_key=True)
+    workspace_id = db.Column(db.Integer, db.ForeignKey('api_workspaces.id', ondelete='CASCADE'), nullable=False)
+    name = db.Column(db.String(255), nullable=False)
+    is_active = db.Column(db.Boolean, default=False)
+    created_at = db.Column(db.DateTime, default=dt.utcnow)
+    updated_at = db.Column(db.DateTime, default=dt.utcnow, onupdate=dt.utcnow)
+    
+    def to_dict(self, include_variables=False):
+        result = {
+            'id': self.id, 'workspace_id': self.workspace_id, 'name': self.name,
+            'is_active': self.is_active,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None
+        }
+        if include_variables:
+            result['variables'] = [v.to_dict() for v in APIEnvironmentVariable.query.filter_by(environment_id=self.id).all()]
+        return result
+
+class APIEnvironmentVariable(db.Model):
+    __tablename__ = 'api_environment_variables'
+    id = db.Column(db.Integer, primary_key=True)
+    environment_id = db.Column(db.Integer, db.ForeignKey('api_environments.id', ondelete='CASCADE'), nullable=False)
+    key = db.Column(db.String(255), nullable=False)
+    value = db.Column(db.Text)
+    is_secret = db.Column(db.Boolean, default=False)
+    description = db.Column(db.Text)
+    created_at = db.Column(db.DateTime, default=dt.utcnow)
+    
+    def to_dict(self, mask_secrets=True):
+        return {
+            'id': self.id, 'environment_id': self.environment_id, 'key': self.key,
+            'value': '***HIDDEN***' if (self.is_secret and mask_secrets) else self.value,
+            'is_secret': self.is_secret, 'description': self.description,
+            'created_at': self.created_at.isoformat() if self.created_at else None
+        }
+
+class APIGlobalVariable(db.Model):
+    __tablename__ = 'api_global_variables'
+    id = db.Column(db.Integer, primary_key=True)
+    workspace_id = db.Column(db.Integer, db.ForeignKey('api_workspaces.id', ondelete='CASCADE'), nullable=False)
+    key = db.Column(db.String(255), nullable=False)
+    value = db.Column(db.Text)
+    is_secret = db.Column(db.Boolean, default=False)
+    description = db.Column(db.Text)
+    created_at = db.Column(db.DateTime, default=dt.utcnow)
+    
+    def to_dict(self, mask_secrets=True):
+        return {
+            'id': self.id, 'workspace_id': self.workspace_id, 'key': self.key,
+            'value': '***HIDDEN***' if (self.is_secret and mask_secrets) else self.value,
+            'is_secret': self.is_secret, 'description': self.description,
+            'created_at': self.created_at.isoformat() if self.created_at else None
+        }
+
+class APIRequestHistory(db.Model):
+    __tablename__ = 'api_request_history'
+    id = db.Column(db.Integer, primary_key=True)
+    workspace_id = db.Column(db.Integer, db.ForeignKey('api_workspaces.id', ondelete='CASCADE'), nullable=False)
+    user_id = db.Column(db.Integer)
+    method = db.Column(db.String(10), nullable=False)
+    url = db.Column(db.Text, nullable=False)
+    headers = db.Column(JSONType)
+    body = db.Column(db.Text)
+    response_status = db.Column(db.Integer)
+    response_time = db.Column(db.Integer)
+    response_body = db.Column(db.Text)
+    response_headers = db.Column(JSONType)
+    environment_id = db.Column(db.Integer, db.ForeignKey('api_environments.id', ondelete='SET NULL'))
+    executed_at = db.Column(db.DateTime, default=dt.utcnow)
+    
+    def to_dict(self):
+        return {
+            'id': self.id, 'workspace_id': self.workspace_id, 'user_id': self.user_id,
+            'method': self.method, 'url': self.url, 'headers': self.headers, 'body': self.body,
+            'response_status': self.response_status, 'response_time': self.response_time,
+            'response_body': self.response_body, 'response_headers': self.response_headers,
+            'environment_id': self.environment_id,
+            'executed_at': self.executed_at.isoformat() if self.executed_at else None
+        }
+
+class APIFavorite(db.Model):
+    __tablename__ = 'api_favorites'
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer)
+    request_id = db.Column(db.Integer)
+    name = db.Column(db.String(255))
+    tags = db.Column(db.Text)  # Store as JSON string for SQLite
+    method = db.Column(db.String(10), nullable=False)
+    url = db.Column(db.Text, nullable=False)
+    headers = db.Column(JSONType)
+    body = db.Column(db.Text)
+    created_at = db.Column(db.DateTime, default=dt.utcnow)
+    
+    def to_dict(self):
+        return {
+            'id': self.id, 'user_id': self.user_id, 'request_id': self.request_id,
+            'name': self.name, 'tags': self.tags, 'method': self.method,
+            'url': self.url, 'headers': self.headers, 'body': self.body,
+            'created_at': self.created_at.isoformat() if self.created_at else None
+        }
+
+print("✅ API Co-Test models loaded")
+
 # Run database migration on startup (safe to run multiple times)
 try:
     from run_migration import run_migration
@@ -1685,6 +1819,22 @@ except Exception as e:
 
 # Register blueprints
 app.register_blueprint(autoheal_bp)
+
+# Import and register API Co-Test routes
+try:
+    from routes import api_cotest_routes
+    # Inject models into routes module
+    api_cotest_routes.db = db
+    api_cotest_routes.APIWorkspace = APIWorkspace
+    api_cotest_routes.APIEnvironment = APIEnvironment
+    api_cotest_routes.APIEnvironmentVariable = APIEnvironmentVariable
+    api_cotest_routes.APIGlobalVariable = APIGlobalVariable
+    api_cotest_routes.APIRequestHistory = APIRequestHistory
+    api_cotest_routes.APIFavorite = APIFavorite
+    app.register_blueprint(api_cotest_routes.api_cotest_bp)
+    print("✅ API Co-Test routes registered")
+except Exception as e:
+    print(f"⚠️  Warning: Could not register API Co-Test routes: {e}")
 
 # Define Jira OAuth URLs
 JIRA_AUTH_URL = 'https://auth.atlassian.com/authorize'
