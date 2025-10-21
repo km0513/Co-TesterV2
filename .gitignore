@@ -27,3 +27,6 @@ npm-debug.log*
 
 #ignore top folder
 team_manager/
+playwright-output/
+Jira-helper/
+instance/db.sqlite3
