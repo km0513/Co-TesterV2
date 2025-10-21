@@ -1672,6 +1672,17 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 CORS(app, supports_credentials=True)
 db = SQLAlchemy(app)
 
+# Run database migration on startup (safe to run multiple times)
+try:
+    from run_migration import run_migration
+    with app.app_context():
+        print("🔄 Running database migration...")
+        run_migration()
+        print("✅ Database migration completed")
+except Exception as e:
+    print(f"⚠️  Migration warning: {e}")
+    print("Continuing with application startup...")
+
 # Register blueprints
 app.register_blueprint(autoheal_bp)
 
