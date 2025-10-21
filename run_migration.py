@@ -18,12 +18,24 @@ import os
 import sys
 from datetime import datetime
 
+# Import SQLAlchemy at module level
+try:
+    import sqlalchemy as sa
+except ImportError:
+    sa = None
+
 def run_migration():
     """Run the database migration"""
     print("=" * 60)
     print("BugSession Playwright Fields Migration")
     print(f"Started at: {datetime.utcnow().isoformat()}Z")
     print("=" * 60)
+    
+    # Check if SQLAlchemy is available
+    if sa is None:
+        print("❌ SQLAlchemy not available. Skipping migration.")
+        print("Migration will need to be run manually.")
+        return True  # Return True to not block startup
     
     try:
         # Import Flask app and database
@@ -124,10 +136,8 @@ def run_migration():
 
 
 if __name__ == '__main__':
-    # Add SQLAlchemy import
-    try:
-        import sqlalchemy as sa
-    except ImportError:
+    # SQLAlchemy is already imported at module level
+    if sa is None:
         print("❌ SQLAlchemy not installed. Please install it first:")
         print("   pip install sqlalchemy")
         sys.exit(1)
