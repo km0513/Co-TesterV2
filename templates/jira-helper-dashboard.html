@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -18,106 +19,132 @@
             --muted: #6b7280;
             --border: #e5e7eb;
         }
-        
+
         body {
             margin: 0;
             padding: 0;
             background: var(--bg);
             font-family: 'Inter', system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
         }
-        
-        .page {
-            margin-left: var(--sidebar-width, 280px);
-            padding: 2rem;
-            transition: margin-left 0.3s ease;
+
+        .main-content {
+            margin-left: 280px;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 50%, #cbd5e1 100%);
+            position: relative;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
         }
         
+        .main-content::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 280px;
+            right: 0;
+            bottom: 0;
+            background: radial-gradient(circle at 20% 80%, rgba(99, 102, 241, 0.05) 0%, transparent 50%),
+                        radial-gradient(circle at 80% 20%, rgba(139, 92, 246, 0.05) 0%, transparent 50%);
+            pointer-events: none;
+            z-index: 0;
+        }
+        
+        .container {
+            padding: 2rem;
+            max-width: 1400px;
+            margin: 0 auto;
+            position: relative;
+            z-index: 1;
+        }
+        
+        /* Add spacing between elements */
+        .query-section,
+        .results-section,
+        .release-cards-grid {
+            margin-top: 2rem;
+        }
+        
+        .query-section:first-child {
+            margin-top: 0;
+        }
+
         /* When sidebar is collapsed */
-        body.sidebar-collapsed .page {
+        body.sidebar-collapsed .main-content {
             margin-left: 60px;
         }
         
+        body.sidebar-collapsed .main-content::before {
+            left: 60px;
+        }
+
         /* Adjust card grid when sidebar is collapsed for more space */
         body.sidebar-collapsed .release-cards-grid {
             grid-template-columns: repeat(5, 1fr);
         }
-        
+
         @media (max-width: 1600px) {
             body.sidebar-collapsed .release-cards-grid {
                 grid-template-columns: repeat(4, 1fr);
             }
         }
-        
+
         @media (max-width: 1200px) {
             body.sidebar-collapsed .release-cards-grid {
                 grid-template-columns: repeat(3, 1fr);
             }
         }
-        
-        .container {
-            max-width: 100%;
-            margin: 0;
-            padding: 0;
-        }
-        
+
         /* Match app's card styling */
-        header {
-            background: white !important;
-            border: 1px solid var(--border);
-            box-shadow: 0 4px 16px rgba(0,0,0,0.08);
-        }
-        
         .query-section {
             background: white;
             border: 1px solid var(--border);
-            box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
         }
-        
+
         .btn-primary {
             background: linear-gradient(135deg, var(--primary), var(--primary-dark)) !important;
             border: none !important;
-            box-shadow: 0 6px 16px rgba(79,70,229,.25) !important;
+            box-shadow: 0 6px 16px rgba(79, 70, 229, .25) !important;
         }
-        
+
         .btn-secondary {
             background: white;
             border: 1px solid var(--border);
             color: var(--text);
         }
-        
+
         .btn-secondary:hover {
             background: #f9fafb;
         }
-        
+
         /* Match bucket styling with app cards */
         .bucket {
             background: white;
             border: 1px solid var(--border);
             border-radius: 16px;
-            box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
         }
-        
+
         /* Keep the original bucket header gradient colors - DO NOT override */
         .bucket-header {
             /* Original gradient is preserved from jira-helper.css */
-            border-bottom: 1px solid rgba(255,255,255,0.2);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
         }
-        
+
         /* Results section styling */
         .results {
             background: white;
             border: 1px solid var(--border);
             border-radius: 16px;
-            box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
             padding: 1.5rem;
         }
-        
+
         .results-header {
             border-bottom: 1px solid var(--border);
             padding-bottom: 1rem;
             margin-bottom: 1.5rem;
         }
-        
+
         /* Fix modal z-index and positioning - USE MORE SCREEN SPACE */
         .modal {
             z-index: 10000 !important;
@@ -126,11 +153,11 @@
             justify-content: center;
             padding: 2rem;
         }
-        
+
         .modal-backdrop {
             z-index: 9999 !important;
         }
-        
+
         .modal-content {
             position: relative;
             z-index: 10001 !important;
@@ -141,40 +168,40 @@
             overflow-y: auto;
             padding: 2rem !important;
         }
-        
+
         /* Ensure modal is above sidebar */
         .sidebar {
             z-index: 1000;
         }
-        
+
         /* Fix modal table layout - wider columns */
         .modal-content table {
             width: 100%;
             table-layout: fixed;
         }
-        
+
         .modal-content th:first-child,
         .modal-content td:first-child {
             width: 120px;
         }
-        
+
         .modal-content th:nth-child(2),
         .modal-content td:nth-child(2) {
             width: auto;
         }
-        
+
         .modal-content th:last-child,
         .modal-content td:last-child {
             width: 150px;
         }
-        
+
         .modal-content th,
         .modal-content td {
             padding: 1rem;
             word-wrap: break-word;
             vertical-align: top;
         }
-        
+
         /* Make issue distribution section more spacious */
         .modal-content .issue-distribution {
             display: grid;
@@ -182,19 +209,19 @@
             gap: 1rem;
             margin: 1.5rem 0;
         }
-        
+
         /* Larger modal header */
         .modal-content h2,
         .modal-content h3 {
             font-size: 1.5rem;
             margin-bottom: 1rem;
         }
-        
+
         /* Better spacing for modal sections */
-        .modal-content > div {
+        .modal-content>div {
             margin-bottom: 2rem;
         }
-        
+
         /* Responsive modal for smaller screens */
         @media (max-width: 1200px) {
             .modal-content {
@@ -202,12 +229,12 @@
                 max-height: 85vh !important;
             }
         }
-        
+
         @media (max-width: 768px) {
             .modal {
                 padding: 1rem;
             }
-            
+
             .modal-content {
                 width: 95vw !important;
                 max-height: 90vh !important;
@@ -216,15 +243,19 @@
         }
     </style>
 </head>
+
 <body>
+    {% include 'quotes-header.html' %}
+    {% set active_tab = 'dashboards' %}
     {% include 'left-sidebar.html' %}
-    
-    <div class="page">
+
+    <div class="main-content">
+        {% set page_title = '<i class="fas fa-chart-pie"></i> Release Dashboard' %}
+        {% set allow_html = true %}
+        {% set page_subtitle = 'Release progress & Issue tracking' %}
+        {% include 'page-header.html' %}
+        
         <div class="container">
-            <header>
-                <h1>📊 Release Dashboard</h1>
-                <p>Release progress & Issue tracking</p>
-            </header>
 
             <div class="query-section">
                 <div class="query-section-header" id="querySectionHeader">
@@ -245,11 +276,8 @@
                     </div>
                     <div class="query-input">
                         <label for="jql">JQL Query:</label>
-                        <textarea 
-                            id="jql" 
-                            placeholder="project = MYPROJ AND assignee = currentUser()"
-                            rows="2"
-                        ></textarea>
+                        <textarea id="jql" placeholder="project = MYPROJ AND assignee = currentUser()"
+                            rows="2"></textarea>
                     </div>
                     <div class="query-controls">
                         <button id="runQuery" class="btn-primary">🔍 Run Query</button>
@@ -392,14 +420,14 @@
     </div>
 
     {% include 'footer.html' %}
-    
+
     <script>
         // Set Jira base URL from Flask template
         window.JIRA_BASE_URL = {{ jira_domain | tojson }};
         window.API_ENDPOINT = '/api/jira-helper/jql';
-        
+
         // Watch for sidebar collapse/expand
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', function () {
             const sidebar = document.getElementById('sidebar');
             if (sidebar) {
                 // Check initial state
@@ -410,10 +438,10 @@
                         document.body.classList.remove('sidebar-collapsed');
                     }
                 };
-                
+
                 // Initial check
                 updateSidebarState();
-                
+
                 // Watch for changes using MutationObserver
                 const observer = new MutationObserver(updateSidebarState);
                 observer.observe(sidebar, { attributes: true, attributeFilter: ['class'] });
@@ -422,4 +450,5 @@
     </script>
     <script src="{{ url_for('static', filename='jira-helper.js') }}"></script>
 </body>
+
 </html>

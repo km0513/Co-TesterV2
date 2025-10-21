@@ -10204,7 +10204,13 @@ class JQLStory(db.Model):
 @app.route('/bug-builder')
 @jira_auth_required
 def bug_builder():
-    """Bug Builder main page"""
+    """Bug Builder main page - Simple version"""
+    return render_template('bug-builder-simple.html', active_tab='bug-builder')
+
+@app.route('/bug-builder-old')
+@jira_auth_required
+def bug_builder_old():
+    """Bug Builder old version"""
     return render_template('bug-builder.html', active_tab='bug-builder')
 
 @app.route('/api/bug-builder/start-session', methods=['POST'])
@@ -10277,104 +10283,25 @@ def start_playwright_recording():
         db.session.add(session)
         db.session.commit()
         
-        # Custom recorder with video + action logging
+        # Custom recorder with optional video recording via button
         def run_playwright_with_video():
             try:
-                logger.info(f"Starting Playwright with video recording for session {session_id}")
+                logger.info(f"Starting Playwright with optional video recording for session {session_id}")
                 
-                # Create a custom recorder script that records video AND logs actions
-                recorder_script = f'''
-import sys
-import os
-import json
-from playwright.sync_api import sync_playwright
-import time
-
-actions = []
-
-def log_action(action_type, selector="", value=""):
-    """Log an action for later conversion to steps"""
-    actions.append({{
-        "type": action_type,
-        "selector": selector,
-        "value": value,
-        "timestamp": time.time()
-    }})
-
-def run():
-    with sync_playwright() as p:
-        # Launch browser
-        browser = p.chromium.launch(
-            headless=False,
-            args=['--start-maximized']
-        )
-        
-        # Create context with video recording
-        context = browser.new_context(
-            record_video_dir=r"{video_dir}",
-            record_video_size={{"width": 1280, "height": 720}},
-            viewport={{"width": 1280, "height": 720}}
-        )
-        
-        # Create page
-        page = context.new_page()
-        
-        # Log navigation
-        log_action("navigate", "{url}")
-        
-        # Navigate to URL
-        print(f"Navigating to {url}")
-        page.goto("{url}", wait_until="domcontentloaded", timeout=60000)
-        
-        print("=" * 70)
-        print("🎬 RECORDING STARTED!")
-        print("📹 Video is being recorded")
-        print("📝 Actions are being logged")
-        print("🎯 Perform your bug reproduction steps in THIS browser window")
-        print("⚠️  CLOSE THIS BROWSER WINDOW when you're done")
-        print("=" * 70)
-        
-        # Keep browser open until user closes it
-        try:
-            while True:
-                try:
-                    page.title()  # Check if page is still alive
-                    time.sleep(0.5)
-                except:
-                    break
-        except KeyboardInterrupt:
-            pass
-        
-        print("Browser closed. Saving recordings...")
-        
-        # Save actions to file
-        actions_file = r"{os.path.join(output_dir, 'actions.json')}"
-        try:
-            with open(actions_file, 'w') as f:
-                json.dump(actions, f, indent=2)
-            print(f"✅ Actions saved to {{actions_file}}")
-        except Exception as e:
-            print(f"Warning: Could not save actions: {{e}}")
-        
-        # Close context to finalize video
-        context.close()
-        browser.close()
-        
-        print("✅ Video saved!")
-
-if __name__ == "__main__":
-    run()
-'''
+                # Use simple Playwright codegen for step recording
+                logger.info("Starting Playwright codegen for step recording...")
                 
-                recorder_path = os.path.join(output_dir, 'recorder_with_video.py')
-                with open(recorder_path, 'w', encoding='utf-8') as f:
-                    f.write(recorder_script)
+                # Run Playwright codegen
+                cmd_codegen = [
+                    sys.executable, '-m', 'playwright',
+                    'codegen',
+                    url,
+                    '--target=python',
+                    f'--output={script_path}'
+                ]
                 
-                logger.info("Starting custom recorder with video...")
-                
-                # Run the custom recorder
                 process = subprocess.Popen(
-                    [sys.executable, recorder_path],
+                    cmd_codegen,
                     stdout=subprocess.PIPE,
                     stderr=subprocess.STDOUT,
                     cwd=os.getcwd()
@@ -10384,33 +10311,7 @@ if __name__ == "__main__":
                 stdout, _ = process.communicate()
                 
                 if stdout:
-                    logger.info(f"Recorder output: {stdout.decode('utf-8', errors='ignore')}")
-                
-                # Also run codegen briefly to get better step extraction
-                logger.info("Running codegen for step extraction...")
-                cmd_codegen = [
-                    sys.executable, '-m', 'playwright',
-                    'codegen',
-                    url,
-                    '--target=python',
-                    f'--output={script_path}'
-                ]
-                
-                codegen_process = subprocess.Popen(
-                    cmd_codegen,
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.PIPE,
-                    cwd=os.getcwd()
-                )
-                
-                # Give codegen a moment to start, then kill it (we just want the initial script)
-                import time
-                time.sleep(3)
-                try:
-                    codegen_process.terminate()
-                    codegen_process.wait(timeout=5)
-                except:
-                    pass
+                    logger.info(f"Codegen output: {stdout.decode('utf-8', errors='ignore')}")
                 
                 logger.info(f"Playwright recording completed for session {session_id}")
                 
@@ -10482,6 +10383,7 @@ def get_playwright_recording(session_id):
             return jsonify({
                 'success': True,
                 'status': 'recording',
+                'playwright_status': 'recording',
                 'message': 'Recording in progress...'
             })
         
@@ -10492,116 +10394,173 @@ def get_playwright_recording(session_id):
                 'error': session.playwright_error or 'Recording failed'
             })
         
-        # Read the generated script
+        # Read the actions and generate steps
         steps = []
         script_content = ''
         video_url = None
         
-        if session.playwright_script_path and os.path.exists(session.playwright_script_path):
-            with open(session.playwright_script_path, 'r', encoding='utf-8') as f:
-                script_content = f.read()
-            
-            # Parse steps from Playwright script with better extraction
-            lines = script_content.split('\n')
-            for i, line in enumerate(lines):
-                line = line.strip()
+        # First try to read from actions.json (our new format)
+        output_dir = os.path.dirname(session.playwright_script_path) if session.playwright_script_path else None
+        actions_file = os.path.join(output_dir, 'actions.json') if output_dir else None
+        
+        if actions_file and os.path.exists(actions_file):
+            try:
+                with open(actions_file, 'r') as f:
+                    actions_data = json.load(f)
                 
-                # Skip imports and setup
-                if any(skip in line for skip in ['import ', 'from ', 'def ', 'with ', 'browser =', 'context =', 'page =']):
-                    continue
+                logger.info(f"Found {len(actions_data)} actions in JSON file")
                 
-                if 'page.goto(' in line:
-                    # Extract URL from goto
-                    try:
-                        if '"' in line:
-                            url = line.split('"')[1]
-                        elif "'" in line:
-                            url = line.split("'")[1]
+                # Convert actions to readable steps
+                for i, action in enumerate(actions_data):
+                    action_type = action.get('type', '')
+                    selector = action.get('selector', '')
+                    value = action.get('value', '')
+                    
+                    if action_type == 'navigate':
+                        if selector.startswith('http'):
+                            steps.append(f"Navigate to {selector}")
                         else:
-                            url = 'the application'
-                        steps.append(f"Navigate to {url}")
-                    except:
-                        steps.append("Navigate to the application")
-                        
-                elif 'page.get_by_role(' in line or 'getByRole(' in line:
-                    # Extract role-based locator
-                    try:
-                        if 'name=' in line or 'name:' in line:
-                            name_part = line.split('name')[1]
-                            if '"' in name_part:
-                                name = name_part.split('"')[1]
-                            elif "'" in name_part:
-                                name = name_part.split("'")[1]
-                            else:
-                                name = 'element'
-                            
-                            if '.click()' in line:
-                                steps.append(f"Click on '{name}'")
-                            elif '.fill(' in line:
-                                steps.append(f"Enter text in '{name}'")
-                            else:
-                                steps.append(f"Interact with '{name}'")
-                    except:
-                        if '.click()' in line:
+                            steps.append(f"Navigate to {selector}")
+                    elif action_type == 'click':
+                        if value:  # Text content
+                            steps.append(f"Click on '{value}'")
+                        elif selector:
+                            # Clean up selector for readability
+                            clean_selector = selector.replace('#', '').replace('.', ' ')
+                            steps.append(f"Click on {clean_selector}")
+                        else:
                             steps.append("Click on element")
-                        elif '.fill(' in line:
-                            steps.append("Enter text in field")
-                            
-                elif 'page.click(' in line or '.click()' in line:
-                    try:
-                        if '"' in line:
-                            selector = line.split('"')[1]
-                        elif "'" in line:
-                            selector = line.split("'")[1]
+                    elif action_type == 'input':
+                        if value:  # Placeholder text
+                            steps.append(f"Enter text in field ({value})")
+                        elif selector:
+                            clean_selector = selector.replace('#', '').replace('.', ' ')
+                            steps.append(f"Enter text in {clean_selector}")
                         else:
-                            selector = 'element'
-                        # Simplify selector for readability
-                        if selector.startswith('#'):
-                            selector = selector[1:]
-                        steps.append(f"Click on: {selector}")
-                    except:
-                        steps.append("Click on element")
-                        
-                elif 'page.fill(' in line or '.fill(' in line:
-                    try:
-                        parts = line.split('"') if '"' in line else line.split("'")
-                        if len(parts) >= 2:
-                            selector = parts[1]
+                            steps.append("Enter text in field")
+                    else:
+                        steps.append(f"Perform action: {action_type}")
+                
+            except Exception as e:
+                logger.warning(f"Could not read actions.json: {e}")
+        
+        # Fallback to Playwright script parsing if no actions.json or no steps
+        if not steps and session.playwright_script_path and os.path.exists(session.playwright_script_path):
+            try:
+                logger.info(f"Reading Playwright script from: {session.playwright_script_path}")
+                with open(session.playwright_script_path, 'r', encoding='utf-8') as f:
+                    script_content = f.read()
+                logger.info(f"Script content preview: {script_content[:500]}")
+                
+                # Parse steps from Playwright script with better extraction
+                logger.info(f"Parsing Playwright script, length: {len(script_content)}")
+                lines = script_content.split('\n')
+                
+                for line in lines:
+                    line = line.strip()
+                    
+                    # Skip empty lines, comments, imports and setup
+                    if not line or line.startswith('#'):
+                        continue
+                    if any(skip in line for skip in ['import ', 'from ', 'def ', 'with sync_playwright', 'browser =', 'context =', 'page = ', 'browser.close', 'context.close']):
+                        continue
+                    
+                    # Extract goto
+                    if 'page.goto(' in line or '.goto(' in line:
+                        try:
+                            if '"' in line:
+                                url = line.split('"')[1]
+                            elif "'" in line:
+                                url = line.split("'")[1]
+                            else:
+                                url = 'the application'
+                            steps.append(f"Navigate to {url}")
+                        except:
+                            steps.append("Navigate to the application")
+                    
+                    # Extract get_by_role clicks
+                    elif 'get_by_role(' in line and 'click()' in line:
+                        try:
+                            # Extract role and name
+                            if 'name=' in line:
+                                name_part = line.split('name=')[1]
+                                if '"' in name_part:
+                                    name = name_part.split('"')[1]
+                                elif "'" in name_part:
+                                    name = name_part.split("'")[1]
+                                else:
+                                    name = 'element'
+                                steps.append(f"Click on '{name}'")
+                            else:
+                                steps.append("Click on element")
+                        except:
+                            steps.append("Click on element")
+                    
+                    # Extract get_by_text clicks
+                    elif 'get_by_text(' in line and 'click()' in line:
+                        try:
+                            if '"' in line:
+                                text = line.split('"')[1]
+                            elif "'" in line:
+                                text = line.split("'")[1]
+                            else:
+                                text = 'element'
+                            steps.append(f"Click on text '{text}'")
+                        except:
+                            steps.append("Click on element")
+                    
+                    # Extract regular clicks
+                    elif 'page.click(' in line or '.click(' in line:
+                        try:
+                            if '"' in line:
+                                selector = line.split('"')[1]
+                            elif "'" in line:
+                                selector = line.split("'")[1]
+                            else:
+                                selector = 'element'
+                            # Simplify selector
                             if selector.startswith('#'):
                                 selector = selector[1:]
-                            steps.append(f"Enter text in: {selector}")
-                    except:
-                        steps.append("Enter text in field")
-                        
-                elif 'page.press(' in line or '.press(' in line:
-                    try:
-                        if '"' in line:
-                            key = line.split('"')[-2]
-                        elif "'" in line:
-                            key = line.split("'")[-2]
-                        else:
-                            key = 'key'
-                        steps.append(f"Press {key}")
-                    except:
-                        steps.append("Press key")
-                        
-                elif 'page.select_option(' in line:
-                    try:
-                        if '"' in line:
-                            selector = line.split('"')[1]
-                        elif "'" in line:
-                            selector = line.split("'")[1]
-                        else:
-                            selector = 'dropdown'
-                        steps.append(f"Select option in: {selector}")
-                    except:
-                        steps.append("Select option from dropdown")
-            
-            # If still no steps, provide a helpful message
-            if not steps:
-                logger.warning(f"No steps extracted from Playwright script for session {session_id}")
-                logger.info(f"Script content preview: {script_content[:500]}")
-                steps = ["Recording completed but no actions were captured. Please try recording again and perform clear actions like clicks and typing."]
+                            steps.append(f"Click on {selector}")
+                        except:
+                            steps.append("Click on element")
+                    
+                    # Extract fill/type actions
+                    elif 'page.fill(' in line or '.fill(' in line or 'page.type(' in line or '.type(' in line:
+                        try:
+                            parts = line.split('"') if '"' in line else line.split("'")
+                            if len(parts) >= 2:
+                                selector = parts[1]
+                                if selector.startswith('#'):
+                                    selector = selector[1:]
+                                steps.append(f"Enter text in {selector}")
+                        except:
+                            steps.append("Enter text in field")
+                    
+                    # Extract press/keyboard actions
+                    elif 'page.press(' in line or '.press(' in line:
+                        try:
+                            if '"' in line:
+                                key = line.split('"')[-2]
+                            elif "'" in line:
+                                key = line.split("'")[-2]
+                            else:
+                                key = 'key'
+                            steps.append(f"Press {key}")
+                        except:
+                            steps.append("Press key")
+                
+                logger.info(f"Extracted {len(steps)} steps from script")
+                
+            except Exception as e:
+                logger.warning(f"Could not read Playwright script: {e}")
+                import traceback
+                logger.warning(traceback.format_exc())
+        
+        # If still no steps, provide a helpful message
+        if not steps:
+            logger.warning(f"No steps extracted for session {session_id}")
+            steps = ["Recording completed but no actions were captured. Please try recording again and perform clear actions like clicks and typing."]
         
         # Check for video file
         if session.video_path:
@@ -10655,6 +10614,63 @@ def get_bug_builder_video(session_id, filename):
         
     except Exception as e:
         logger.error(f"Error serving video: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/bug-builder/upload-video', methods=['POST'])
+@jira_auth_required
+def upload_bug_builder_video():
+    """Upload screen recording video for a bug session"""
+    try:
+        session_id = request.form.get('session_id')
+        if not session_id:
+            return jsonify({'success': False, 'error': 'Session ID required'}), 400
+        
+        session = BugSession.query.filter_by(session_id=session_id).first()
+        if not session:
+            return jsonify({'success': False, 'error': 'Session not found'}), 404
+        
+        # Check if user owns this session
+        user_id = get_user_identifier()
+        if session.user_id != user_id:
+            return jsonify({'success': False, 'error': 'Unauthorized'}), 403
+        
+        # Get the uploaded video file
+        if 'video' not in request.files:
+            return jsonify({'success': False, 'error': 'No video file provided'}), 400
+        
+        video_file = request.files['video']
+        if video_file.filename == '':
+            return jsonify({'success': False, 'error': 'No video file selected'}), 400
+        
+        # Create video directory if it doesn't exist
+        output_dir = os.path.dirname(session.playwright_script_path) if session.playwright_script_path else None
+        if not output_dir:
+            output_dir = os.path.join('playwright-output', 'bug-builder', session_id)
+            os.makedirs(output_dir, exist_ok=True)
+        
+        video_dir = os.path.join(output_dir, 'videos')
+        os.makedirs(video_dir, exist_ok=True)
+        
+        # Save the video file
+        video_filename = f"screen-recording-{int(time.time())}.webm"
+        video_path = os.path.join(video_dir, video_filename)
+        
+        video_file.save(video_path)
+        
+        # Update session with video path
+        session.video_path = video_path
+        db.session.commit()
+        
+        logger.info(f"Screen recording uploaded for session {session_id}: {video_path}")
+        
+        return jsonify({
+            'success': True,
+            'video_url': f"/api/bug-builder/video/{session_id}/{video_filename}",
+            'message': 'Video uploaded successfully'
+        })
+        
+    except Exception as e:
+        logger.error(f"Error uploading video: {str(e)}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/api/bug-builder/process-recording', methods=['POST'])
@@ -11553,7 +11569,8 @@ def validate_jql():
         else:
             try:
                 error_data = jira_response.json() if jira_response.content else {}
-                error_message = error_data.get('errorMessages', ['Invalid JQL query'])[0]
+                error_messages = error_data.get('errorMessages', [])
+                error_message = error_messages[0] if error_messages else 'Invalid JQL query'
             except ValueError:
                 logger.error(f"Failed to parse Jira error response: {jira_response.text}")
                 error_message = f'Jira API error (Status: {jira_response.status_code})'
@@ -13527,7 +13544,7 @@ Now convert the input text above:"""
         
         return jsonify({
             'success': True,
-            'steps': steps[:10],  # Limit to 10 steps
+            'steps': steps,  # No limit on steps
             'raw_response': ai_response
         })
         
@@ -13539,7 +13556,7 @@ Now convert the input text above:"""
         steps = [s.strip() for s in steps_text.split('\n') if s.strip()]
         return jsonify({
             'success': True,
-            'steps': steps[:10],
+            'steps': steps,  # No limit on steps
             'error': str(e)
         })
 
@@ -14240,6 +14257,280 @@ DESCRIPTION:
         
     except Exception as e:
         logger.error(f"Error generating final report: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+# Bug Builder - Jira Integration
+@app.route('/api/jira/create-issue', methods=['POST'])
+@jira_auth_required
+def create_jira_issue_from_bug():
+    """Create a Jira issue from bug builder"""
+    try:
+        data = request.get_json()
+        project_key = data.get('project_key')
+        summary = data.get('summary')
+        description = data.get('description')
+        priority = data.get('priority', 'Medium')
+        trivial_bug = data.get('trivial_bug', 'No')
+        
+        if not project_key or not summary:
+            return jsonify({'success': False, 'error': 'Project key and summary are required'}), 400
+        
+        # Get Jira credentials
+        access_token = session.get('jira_access_token')
+        cloud_id = session.get('jira_cloud_id')
+        domain = session.get('jira_domain', 'https://upgrad-jira.atlassian.net')
+        
+        if not access_token or not cloud_id:
+            return jsonify({'success': False, 'error': 'Not authenticated with Jira'}), 401
+        
+        # Check token expiry
+        token_expires = session.get('jira_token_expires', 0)
+        if time.time() >= token_expires:
+            if not refresh_jira_token():
+                return jsonify({'success': False, 'error': 'Token expired'}), 401
+            access_token = session['jira_access_token']
+        
+        # Create issue
+        url = f'https://api.atlassian.com/ex/jira/{cloud_id}/rest/api/3/issue'
+        headers = {
+            'Authorization': f'Bearer {access_token}',
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+        }
+        
+        # Build fields payload
+        fields = {
+            'project': {'key': project_key},
+            'summary': summary,
+            'description': {
+                'type': 'doc',
+                'version': 1,
+                'content': [
+                    {
+                        'type': 'paragraph',
+                        'content': [
+                            {
+                                'type': 'text',
+                                'text': description
+                            }
+                        ]
+                    }
+                ]
+            },
+            'issuetype': {'name': 'Bug'},
+            'priority': {'name': priority},
+            'customfield_10290': {'value': trivial_bug}  # Trivial bug field
+        }
+        
+        payload = {'fields': fields}
+        
+        response = requests.post(url, headers=headers, json=payload)
+        
+        if response.status_code in [200, 201]:
+            issue_data = response.json()
+            issue_key = issue_data.get('key')
+            issue_url = f"{domain}/browse/{issue_key}"
+            
+            logger.info(f"Created Jira issue: {issue_key}")
+            
+            return jsonify({
+                'success': True,
+                'issue_key': issue_key,
+                'issue_url': issue_url,
+                'issue_id': issue_data.get('id')
+            })
+        else:
+            # Better error handling
+            try:
+                error_data = response.json()
+                error_messages = error_data.get('errorMessages', [])
+                errors_dict = error_data.get('errors', {})
+                
+                if error_messages:
+                    error_msg = error_messages[0]
+                elif errors_dict:
+                    error_msg = '; '.join([f"{k}: {v}" for k, v in errors_dict.items()])
+                else:
+                    error_msg = error_data.get('message', response.text)
+            except:
+                error_msg = response.text
+            
+            logger.error(f"Failed to create Jira issue: {error_msg}")
+            return jsonify({'success': False, 'error': error_msg}), response.status_code
+            
+    except Exception as e:
+        logger.error(f"Error creating Jira issue: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/jira/project-create-meta', methods=['GET'])
+@jira_auth_required
+def get_project_create_meta():
+    """Get project metadata for creating issues"""
+    try:
+        project_key = request.args.get('project_key')
+        if not project_key:
+            return jsonify({'success': False, 'error': 'Project key is required'}), 400
+        
+        # Get Jira credentials
+        access_token = session.get('jira_access_token')
+        cloud_id = session.get('jira_cloud_id')
+        
+        if not access_token or not cloud_id:
+            return jsonify({'success': False, 'error': 'Not authenticated with Jira'}), 401
+        
+        # Check token expiry
+        token_expires = session.get('jira_token_expires', 0)
+        if time.time() >= token_expires:
+            if not refresh_jira_token():
+                return jsonify({'success': False, 'error': 'Token expired'}), 401
+            access_token = session['jira_access_token']
+        
+        # Get create metadata
+        url = f'https://api.atlassian.com/ex/jira/{cloud_id}/rest/api/3/issue/createmeta'
+        params = {
+            'projectKeys': project_key,
+            'expand': 'projects.issuetypes.fields'
+        }
+        headers = {
+            'Authorization': f'Bearer {access_token}',
+            'Accept': 'application/json'
+        }
+        
+        response = requests.get(url, headers=headers, params=params)
+        
+        if response.status_code != 200:
+            return jsonify({'success': False, 'error': 'Failed to fetch project metadata'}), response.status_code
+        
+        data = response.json()
+        projects = data.get('projects', [])
+        
+        if not projects:
+            return jsonify({'success': False, 'error': f'Project {project_key} not found or you don\'t have access'}), 404
+        
+        project = projects[0]
+        issue_types = project.get('issuetypes', [])
+        
+        # Find Bug issue type or use first one
+        bug_type = next((it for it in issue_types if it['name'] == 'Bug'), issue_types[0] if issue_types else None)
+        
+        if not bug_type:
+            return jsonify({'success': False, 'error': 'No issue types available'}), 400
+        
+        fields = bug_type.get('fields', {})
+        
+        # Extract priorities
+        priorities = []
+        if 'priority' in fields:
+            priority_field = fields['priority']
+            if 'allowedValues' in priority_field:
+                priorities = [{'id': p['id'], 'name': p['name']} for p in priority_field['allowedValues']]
+        
+        # Extract custom fields
+        custom_fields = []
+        for field_id, field_data in fields.items():
+            if field_id.startswith('customfield_'):
+                field_name = field_data.get('name', field_id)
+                field_required = field_data.get('required', False)
+                field_schema = field_data.get('schema', {})
+                field_type = field_schema.get('type', 'string')
+                
+                custom_field = {
+                    'id': field_id,
+                    'name': field_name,
+                    'required': field_required,
+                    'type': 'text'
+                }
+                
+                # Determine field type
+                if 'allowedValues' in field_data:
+                    custom_field['type'] = 'select'
+                    custom_field['allowed_values'] = [
+                        {'id': v.get('id'), 'value': v.get('value', v.get('name', str(v)))}
+                        for v in field_data['allowedValues']
+                    ]
+                elif field_type in ['number', 'float']:
+                    custom_field['type'] = 'number'
+                
+                custom_fields.append(custom_field)
+        
+        return jsonify({
+            'success': True,
+            'project_key': project_key,
+            'issue_types': [{'id': it['id'], 'name': it['name']} for it in issue_types],
+            'priorities': priorities,
+            'custom_fields': custom_fields
+        })
+        
+    except Exception as e:
+        logger.error(f"Error fetching project metadata: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/jira/attach-file', methods=['POST'])
+@jira_auth_required
+def attach_file_to_jira():
+    """Attach a file to a Jira issue"""
+    try:
+        issue_key = request.form.get('issue_key')
+        if not issue_key:
+            return jsonify({'success': False, 'error': 'Issue key is required'}), 400
+        
+        if 'file' not in request.files:
+            return jsonify({'success': False, 'error': 'No file provided'}), 400
+        
+        file = request.files['file']
+        if file.filename == '':
+            return jsonify({'success': False, 'error': 'No file selected'}), 400
+        
+        # Get Jira credentials
+        access_token = session.get('jira_access_token')
+        cloud_id = session.get('jira_cloud_id')
+        
+        if not access_token or not cloud_id:
+            return jsonify({'success': False, 'error': 'Not authenticated with Jira'}), 401
+        
+        # Check token expiry
+        token_expires = session.get('jira_token_expires', 0)
+        if time.time() >= token_expires:
+            if not refresh_jira_token():
+                return jsonify({'success': False, 'error': 'Token expired'}), 401
+            access_token = session['jira_access_token']
+        
+        # Upload attachment
+        url = f'https://api.atlassian.com/ex/jira/{cloud_id}/rest/api/3/issue/{issue_key}/attachments'
+        headers = {
+            'Authorization': f'Bearer {access_token}',
+            'X-Atlassian-Token': 'no-check',
+            'Accept': 'application/json'
+        }
+        
+        files = {'file': (file.filename, file.stream, file.content_type)}
+        
+        response = requests.post(url, headers=headers, files=files)
+        
+        if response.status_code in [200, 201]:
+            logger.info(f"Attached file to Jira issue: {issue_key}")
+            return jsonify({'success': True, 'message': 'File attached successfully'})
+        else:
+            # Better error handling
+            try:
+                error_data = response.json()
+                error_messages = error_data.get('errorMessages', [])
+                errors_dict = error_data.get('errors', {})
+                
+                if error_messages:
+                    error_msg = error_messages[0]
+                elif errors_dict:
+                    error_msg = '; '.join([f"{k}: {v}" for k, v in errors_dict.items()])
+                else:
+                    error_msg = error_data.get('message', response.text)
+            except:
+                error_msg = response.text
+            
+            logger.error(f"Failed to attach file: {error_msg}")
+            return jsonify({'success': False, 'error': error_msg}), response.status_code
+            
+    except Exception as e:
+        logger.error(f"Error attaching file to Jira: {str(e)}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
 if __name__ == '__main__':
