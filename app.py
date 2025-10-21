@@ -2407,6 +2407,14 @@ def save_data(data):
     # Implement persistent storage as needed
     pass
 
+# Health check endpoints for Kubernetes
+@app.route('/health')
+@app.route('/healthz')
+@app.route('/ready')
+def health_check():
+    """Health check endpoint for Kubernetes readiness and liveness probes"""
+    return jsonify({'status': 'healthy', 'timestamp': time.time()}), 200
+
 @app.route('/')
 def index():
     return render_template('home.html', active_tab='home')
