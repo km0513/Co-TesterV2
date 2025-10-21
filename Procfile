@@ -1,2 +1,2 @@
 web: gunicorn app:app
-release: python -m playwright install 
+release: python -m playwright install && python run_migration.py 
