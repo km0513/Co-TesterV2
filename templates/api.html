@@ -72,15 +72,16 @@
 
 
 
-    /* Modern Tab Design */
+    /* Modern Tab Design - Enhanced */
     .api-tabs {
       display: flex;
       background: white;
-      border-radius: 20px;
+      border-radius: 16px;
       padding: 0.5rem;
       margin-bottom: 2rem;
-      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+      box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
       border: 1px solid var(--border);
+      gap: 0.25rem;
     }
     
     .api-tab {
@@ -88,28 +89,39 @@
       padding: 1rem 1.5rem;
       background: none;
       border: none;
-      border-radius: 16px;
+      border-radius: 12px;
       cursor: pointer;
       font-weight: 600;
+      font-size: 14px;
       color: var(--text-light);
-      transition: var(--transition);
+      transition: all 0.2s ease;
       text-align: center;
       display: flex;
       align-items: center;
       justify-content: center;
       gap: 0.5rem;
+      position: relative;
+    }
+    
+    .api-tab i {
+      font-size: 16px;
     }
     
     .api-tab:hover {
       color: var(--primary);
-      background: rgba(99, 102, 241, 0.05);
+      background: rgba(99, 102, 241, 0.08);
+      transform: translateY(-1px);
     }
     
     .api-tab.active {
-      color: var(--primary);
-      background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%);
-      box-shadow: 0 2px 8px rgba(99, 102, 241, 0.2);
-      border: 1px solid rgba(99, 102, 241, 0.2);
+      color: white;
+      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-hover) 100%);
+      box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+    }
+    
+    .api-tab.active:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 16px rgba(99, 102, 241, 0.4);
     }
     
     .tab-content {
@@ -122,65 +134,115 @@
     
     .request-builder {
       background: white;
-      border-radius: 8px;
-      padding: 20px;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-      margin-bottom: 20px;
+      border-radius: 12px;
+      padding: 2rem;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+      margin-bottom: 1.5rem;
+      border: 1px solid var(--border);
+    }
+    
+    .request-builder h4 {
+      margin: 0 0 1.5rem 0;
+      color: var(--text-dark);
+      font-size: 18px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    
+    .request-builder h4 i {
+      color: var(--primary);
     }
     
     .url-row {
       display: flex;
-      gap: 15px;
-      margin-bottom: 20px;
-      align-items: center;
+      gap: 12px;
+      margin-bottom: 1.5rem;
+      align-items: stretch;
       width: 100%;
     }
     
     .method-select {
-      padding: 12px;
-      border: 1px solid #ddd;
-      border-radius: 4px;
-      width: 110px;
-      flex: 0 0 110px; /* Fixed width, don't grow or shrink */
-      font-weight: bold;
-      font-size: 15px;
-      min-height: 45px;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      padding: 0 16px;
+      border: 2px solid var(--border);
+      border-radius: 8px;
+      width: 120px;
+      flex: 0 0 120px;
+      font-weight: 700;
+      font-size: 14px;
+      height: 48px;
+      background: white;
+      color: var(--text-dark);
       cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    
+    .method-select:hover {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+    }
+    
+    .method-select:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
     }
     
     .url-input {
       flex: 1;
-      padding: 12px 15px;
-      border: 1px solid #ddd;
-      border-radius: 4px;
-      font-size: 15px;
-      min-height: 45px;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-      min-width: 400px; /* Ensure URI field has enough width */
+      padding: 0 16px;
+      border: 2px solid var(--border);
+      border-radius: 8px;
+      font-size: 14px;
+      height: 48px;
+      font-family: 'Monaco', 'Courier New', monospace;
+      background: white;
+      transition: all 0.2s ease;
+      min-width: 300px;
+    }
+    
+    .url-input:hover {
+      border-color: var(--primary-light);
+    }
+    
+    .url-input:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
     }
     
     .send-btn {
-      padding: 12px 24px;
-      background: #007bff;
+      padding: 0 32px;
+      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-hover) 100%);
       color: white;
       border: none;
-      border-radius: 4px;
+      border-radius: 8px;
       cursor: pointer;
-      font-weight: bold;
-      transition: all 0.2s;
-      min-height: 45px;
-      font-size: 15px;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+      font-weight: 700;
+      font-size: 14px;
+      height: 48px;
+      transition: all 0.2s ease;
+      box-shadow: 0 2px 8px rgba(99, 102, 241, 0.3);
+      display: flex;
+      align-items: center;
+      gap: 8px;
     }
     
     .send-btn:hover {
-      background: #0056b3;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
+    }
+    
+    .send-btn:active {
+      transform: translateY(0);
     }
     
     .send-btn:disabled {
-      background: #6c757d;
+      background: #9ca3af;
       cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
     }
     
     .headers-section {
@@ -242,18 +304,33 @@
     
     .body-textarea {
       width: 100%;
-      min-height: 150px;
-      padding: 10px;
-      border: 1px solid #ddd;
-      border-radius: 4px;
-      font-family: 'Monaco', 'Menlo', monospace;
+      min-height: 200px;
+      padding: 16px;
+      border: 2px solid var(--border);
+      border-radius: 8px;
+      font-family: 'Monaco', 'Courier New', monospace;
       font-size: 13px;
+      line-height: 1.6;
       resize: vertical;
+      background: white;
+      transition: all 0.2s ease;
+    }
+    
+    .body-textarea:hover {
+      border-color: var(--primary-light);
+    }
+    
+    .body-textarea:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
     }
     
     .response-section {
       background: white;
-      border-radius: 8px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
       padding: 20px;
       box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     }
@@ -269,21 +346,43 @@
     }
     
     .status-badge {
-      padding: 4px 8px;
-      border-radius: 3px;
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-weight: 700;
+      font-size: 13px;
       color: white;
       font-weight: bold;
       font-size: 12px;
     }
     
-    .status-2xx { background: #28a745; }
-    .status-3xx { background: #ffc107; color: #000; }
-    .status-4xx { background: #fd7e14; }
-    .status-5xx { background: #dc3545; }
+    .status-2xx { 
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      color: white;
+      box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
+    }
+    .status-3xx { 
+      background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+      color: white;
+      box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+    }
+    .status-4xx { 
+      background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+      color: white;
+      box-shadow: 0 2px 8px rgba(245, 158, 11, 0.3);
+    }
+    .status-5xx { 
+      background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+      color: white;
+      box-shadow: 0 2px 8px rgba(239, 68, 68, 0.3);
+    }
     
     .response-body {
-      background: #f8f9fa;
-      border: 1px solid #ddd;
+      background: #f8fafc;
+      border: 2px solid var(--border);
+      border-radius: 8px;
+      font-family: 'Monaco', 'Courier New', monospace;
+      font-size: 13px;
+      line-height: 1.6;
       border-radius: 4px;
       padding: 15px;
       min-height: 200px;
@@ -430,14 +529,29 @@
     }
     
     .copy-btn {
-      background: #6c757d;
+      background: var(--secondary-light);
       color: white;
       border: none;
-      border-radius: 4px;
-      padding: 6px 12px;
+      border-radius: 8px;
+      padding: 10px 20px;
       cursor: pointer;
-      font-size: 12px;
-      margin-left: 10px;
+      font-size: 13px;
+      font-weight: 600;
+      margin-top: 12px;
+      transition: all 0.2s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    .copy-btn:hover {
+      background: var(--secondary);
+      transform: translateY(-1px);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    }
+    
+    .copy-btn:active {
+      transform: translateY(0);
     }
     
     /* Request and Response Tabs */
@@ -447,18 +561,26 @@
     }
     
     .request-tab, .response-tab {
-      padding: 8px 16px;
+      padding: 10px 20px;
       border: none;
-      background: #f8f9fa;
-      color: #495057;
+      background: transparent;
+      color: var(--text-light);
       cursor: pointer;
-      border-radius: 4px 4px 0 0;
+      border-bottom: 3px solid transparent;
       font-size: 14px;
+      font-weight: 600;
+      transition: all 0.2s ease;
+    }
+    
+    .request-tab:hover, .response-tab:hover {
+      color: var(--primary);
+      background: rgba(99, 102, 241, 0.05);
     }
     
     .request-tab.active, .response-tab.active {
-      background: #007bff;
-      color: white;
+      background: transparent;
+      color: var(--primary);
+      border-bottom-color: var(--primary);
     }
     
     .request-tab-content, .response-tab-content {
@@ -474,11 +596,17 @@
       display: flex;
       align-items: center;
       gap: 12px;
-      margin-bottom: 10px;
+      margin-bottom: 12px;
       padding: 12px;
-      border: 1px solid #eee;
-      border-radius: 4px;
-      background: #f8f9fa;
+      border: 2px solid var(--border);
+      border-radius: 8px;
+      background: white;
+      transition: all 0.2s ease;
+    }
+    
+    .param-row:hover, .header-row:hover {
+      border-color: var(--primary-light);
+      box-shadow: 0 2px 8px rgba(99, 102, 241, 0.1);
     }
     
     .param-input, .header-input {
@@ -624,32 +752,7 @@
     {% include 'page-header.html' %}
     
     <!-- New V2 Toolbar -->
-    <div class="api-toolbar">
-      <div id="workspace-selector"></div>
-      <div id="environment-selector"></div>
-      <div style="flex: 1"></div>
-      <button class="btn-secondary" onclick="showManageVariablesModal()">
-        <i class="fas fa-cog"></i> Variables
-      </button>
-    </div>
-
-    <div class="api-cotest-container">
-      <!-- Sidebar with History & Favorites -->
-      <div class="api-sidebar">
-        <div class="sidebar-tabs">
-          <button class="sidebar-tab active" onclick="switchSidebarTab('history')">
-            <i class="fas fa-history"></i> History
-          </button>
-          <button class="sidebar-tab" onclick="switchSidebarTab('favorites')">
-            <i class="fas fa-star"></i> Favorites
-          </button>
-        </div>
-        <div class="sidebar-content">
-          <div id="history-panel"></div>
-          <div id="favorites-panel" style="display: none;"></div>
-        </div>
-      </div>
-
+    
       <!-- Main Content Area -->
       <div class="api-main">
     
@@ -2266,60 +2369,7 @@ ${typeof result.body === 'object' ? JSON.stringify(result.body, null, 2) : (resu
   </div> <!-- Close api-cotest-container -->
   </div> <!-- Close main-content -->
 
-  <!-- Modals -->
-  <div id="create-workspace-modal" class="modal">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h2>Create Workspace</h2>
-        <button class="modal-close" onclick="closeModal('create-workspace-modal')">&times;</button>
-      </div>
-      <div class="modal-body">
-        <div class="form-group">
-          <label>Workspace Name</label>
-          <input type="text" id="new-workspace-name" placeholder="My Workspace">
-        </div>
-        <div class="form-group">
-          <label>Description (optional)</label>
-          <textarea id="new-workspace-description" rows="3" placeholder="Workspace description..."></textarea>
-        </div>
-      </div>
-      <div class="modal-footer">
-        <button class="btn-secondary" onclick="closeModal('create-workspace-modal')">Cancel</button>
-        <button class="btn-primary" onclick="handleCreateWorkspace()">Create</button>
-      </div>
-    </div>
-  </div>
 
-  <div id="create-environment-modal" class="modal">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h2>Create Environment</h2>
-        <button class="modal-close" onclick="closeModal('create-environment-modal')">&times;</button>
-      </div>
-      <div class="modal-body">
-        <div class="form-group">
-          <label>Environment Name</label>
-          <input type="text" id="new-environment-name" placeholder="Development">
-        </div>
-      </div>
-      <div class="modal-footer">
-        <button class="btn-secondary" onclick="closeModal('create-environment-modal')">Cancel</button>
-        <button class="btn-primary" onclick="handleCreateEnvironment()">Create</button>
-      </div>
-    </div>
-  </div>
-
-  <div id="manage-variables-modal" class="modal">
-    <div class="modal-content" style="max-width: 800px;">
-      <div class="modal-header">
-        <h2>Manage Variables</h2>
-        <button class="modal-close" onclick="closeModal('manage-variables-modal')">&times;</button>
-      </div>
-      <div class="modal-body">
-        <div id="variable-editor"></div>
-      </div>
-    </div>
-  </div>
 
   <!-- API Co-Test V2 JavaScript -->
   <script src="/static/api-cotest-v2.js"></script>
