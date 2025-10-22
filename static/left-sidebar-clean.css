@@ -277,29 +277,26 @@
 .sidebar-toggle {
   position: absolute;
   top: 50px;
-  right: -12px;
-  width: 32px;
-  height: 32px;
-  background: linear-gradient(135deg, rgba(99, 102, 241, 0.9) 0%, rgba(139, 92, 246, 0.9) 100%);
-  border: 2px solid rgba(99, 102, 241, 0.3);
+  right: -8px;
+  width: 24px;
+  height: 24px;
+  background: var(--primary);
+  border: none;
   border-radius: 50%;
   color: white;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 12px;
-  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4), 0 0 20px rgba(99, 102, 241, 0.2);
+  font-size: 10px;
+  box-shadow: 0 3px 8px rgba(99, 102, 241, 0.3);
   transition: all 0.3s ease;
   z-index: 1001;
-  backdrop-filter: blur(10px);
 }
 
 .sidebar-toggle:hover {
-  background: linear-gradient(135deg, var(--primary) 0%, rgba(139, 92, 246, 1) 100%);
-  transform: scale(1.15);
-  box-shadow: 0 6px 16px rgba(99, 102, 241, 0.6), 0 0 30px rgba(99, 102, 241, 0.3);
-  border-color: rgba(99, 102, 241, 0.6);
+  background: var(--primary-hover);
+  transform: scale(1.1);
 }
 
 /* Collapsed State */
@@ -333,15 +330,15 @@
     width: 85vw;
     max-width: 320px;
   }
-
+  
   .sidebar.sidebar-open {
     transform: translateX(0);
   }
-
+  
   .main-content {
     margin-left: 0;
   }
-
+  
   .mobile-toggle {
     display: block;
   }

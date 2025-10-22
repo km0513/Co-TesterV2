@@ -17,7 +17,8 @@
   <div class="user-profile-section" id="userProfileSection" style="display: none;">
     <div class="user-profile">
       <div class="user-avatar">
-        <img id="userAvatarImg" src="" alt="User Avatar" style="display: none;" onerror="this.style.display='none'; document.getElementById('userAvatarPlaceholder').style.display='flex';">
+        <img id="userAvatarImg" src="" alt="User Avatar" style="display: none;"
+          onerror="this.style.display='none'; document.getElementById('userAvatarPlaceholder').style.display='flex';">
         <div id="userAvatarPlaceholder" class="avatar-placeholder">👤</div>
       </div>
       <div class="user-info">
@@ -97,17 +98,8 @@
       <span class="sidebar-label">API Co-Test</span>
     </a>
 
-    <a href="#" data-href="/pom-builder" data-auth-required
-      class="nav-link sidebar-item{% if active_tab == 'pom-builder' %} active{% endif %}">
-      <span class="sidebar-icon"><i class="fas fa-cubes"></i></span>
-      <span class="sidebar-label">POM Builder <span class="ai-badge">AI</span></span>
-    </a>
 
-    <a href="#" data-href="/data-generator"
-      class="nav-link sidebar-item{% if active_tab == 'data' %} active{% endif %}">
-      <span class="sidebar-icon"><i class="fas fa-database"></i></span>
-      <span class="sidebar-label">Data Generator</span>
-    </a>
+
 
     <!-- Auto-Healing Recorder temporarily removed for redesign -->
 
@@ -126,11 +118,14 @@
     </a>
     -->
 
-    <a href="#" data-href="/learning-resources"
-      class="nav-link sidebar-item{% if active_tab == 'learning' %} active{% endif %}" data-no-auth="true">
-      <span class="sidebar-icon"><i class="fas fa-graduation-cap"></i></span>
-      <span class="sidebar-label">Learning Resources</span>
+
+
+    <a href="#" data-href="/data-generator"
+      class="nav-link sidebar-item{% if active_tab == 'data' %} active{% endif %}">
+      <span class="sidebar-icon"><i class="fas fa-database"></i></span>
+      <span class="sidebar-label">Data Generator</span>
     </a>
+
 
     <!-- Jira Dashboard (Parent with Sub-menu) -->
     <div
@@ -185,7 +180,13 @@
       <span class="sidebar-label">DOM Extractor</span>
     </a>
     {% endif %}
+    <a href="#" data-href="/learning-resources"
+      class="nav-link sidebar-item{% if active_tab == 'learning' %} active{% endif %}">
+      <span class="sidebar-icon"><i class="fas fa-graduation-cap"></i></span>
+      <span class="sidebar-label">Learning Resources</span>
+    </a>
   </div>
+
 
 </div>
 
@@ -651,19 +652,19 @@
       // Update avatar with error handling
       if (userData.user_avatar) {
         // Add error handler before setting src
-        userAvatarImg.onerror = function() {
+        userAvatarImg.onerror = function () {
           console.warn('Failed to load user avatar, using placeholder');
           this.style.display = 'none';
           userAvatarPlaceholder.style.display = 'flex';
           userAvatarPlaceholder.textContent = displayName.charAt(0).toUpperCase();
         };
-        
-        userAvatarImg.onload = function() {
+
+        userAvatarImg.onload = function () {
           console.log('User avatar loaded successfully');
           this.style.display = 'block';
           userAvatarPlaceholder.style.display = 'none';
         };
-        
+
         userAvatarImg.src = userData.user_avatar;
       } else {
         userAvatarImg.style.display = 'none';
@@ -672,29 +673,37 @@
       }
     }
 
-    // Hide user profile and show login section - HIDE ENTIRE SIDEBAR when not authenticated
+    // Hide user profile and show login section - KEEP SIDEBAR VISIBLE
     function hideUserProfile() {
       const userProfileSection = document.getElementById('userProfileSection');
       const loginProfileSection = document.getElementById('loginProfileSection');
       const sidebar = document.getElementById('sidebar');
       const mainContent = document.querySelector('.main-content');
-      const quotesHeader = document.querySelector('.quotes-header');
 
-      // Hide the entire sidebar when not authenticated
-      sidebar.style.display = 'none';
+      // KEEP the sidebar visible - just show login section instead of user profile
+      sidebar.style.display = 'flex';
 
-      // Adjust main content to take full width
+      // Maintain proper main content margin
+      const isCollapsed = sidebar.classList.contains('collapsed');
+      const isMobile = window.innerWidth <= 768;
+
       if (mainContent) {
-        mainContent.style.marginLeft = '0px';
+        let newMargin;
+        if (isMobile) {
+          newMargin = '0px';
+        } else {
+          newMargin = isCollapsed ? '80px' : '280px';
+        }
+        mainContent.style.marginLeft = newMargin;
         mainContent.style.transition = 'margin-left 0.4s cubic-bezier(0.4, 0, 0.2, 1)';
       }
 
-      // Trigger authentication state change event for quotes header
+      // Trigger authentication state change event
       window.dispatchEvent(new CustomEvent('authStateChanged', {
-        detail: { authenticated: false, sidebarVisible: false }
+        detail: { authenticated: false, sidebarVisible: true, collapsed: isCollapsed }
       }));
 
-      // Keep the original profile switching logic for when sidebar is shown
+      // Show login section, hide user profile
       userProfileSection.style.display = 'none';
       loginProfileSection.style.display = 'block';
     }
@@ -767,7 +776,7 @@
 
       // Create avatar with fallback to initials
       const firstInitial = (userName || 'U').charAt(0).toUpperCase();
-      const avatarHTML = userAvatar 
+      const avatarHTML = userAvatar
         ? `<img id="welcomeAvatar" src="${userAvatar}" style="width: 60px; height: 60px; border-radius: 50%; margin-bottom: 1rem; object-fit: cover;" alt="User Avatar" onerror="this.style.display='none'; document.getElementById('welcomeAvatarFallback').style.display='flex';">
            <div id="welcomeAvatarFallback" style="display: none; width: 60px; height: 60px; border-radius: 50%; margin: 0 auto 1rem auto; background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); color: white; font-size: 1.5rem; font-weight: 700; align-items: center; justify-content: center;">${firstInitial}</div>`
         : `<div style="display: flex; width: 60px; height: 60px; border-radius: 50%; margin: 0 auto 1rem auto; background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); color: white; font-size: 1.5rem; font-weight: 700; align-items: center; justify-content: center;">${firstInitial}</div>`;

@@ -259,6 +259,147 @@
       text-decoration: none;
     }
 
+    /* Authentication Status Banner */
+    .auth-status-banner {
+      padding: 2rem;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .auth-status-container {
+      position: relative;
+    }
+
+    .auth-status-card {
+      display: flex;
+      align-items: center;
+      gap: 2rem;
+      padding: 2rem 2.5rem;
+      border-radius: 20px;
+      backdrop-filter: blur(20px);
+      border: 2px solid;
+      transition: var(--transition);
+      animation: slideDown 0.5s ease-out;
+    }
+
+    @keyframes slideDown {
+      from {
+        opacity: 0;
+        transform: translateY(-20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .auth-not-connected {
+      background: linear-gradient(135deg, rgba(239, 68, 68, 0.05) 0%, rgba(220, 38, 38, 0.05) 100%);
+      border-color: rgba(239, 68, 68, 0.3);
+      box-shadow: 0 8px 32px rgba(239, 68, 68, 0.15);
+    }
+
+    .auth-connected {
+      background: linear-gradient(135deg, rgba(16, 185, 129, 0.05) 0%, rgba(5, 150, 105, 0.05) 100%);
+      border-color: rgba(16, 185, 129, 0.3);
+      box-shadow: 0 8px 32px rgba(16, 185, 129, 0.15);
+    }
+
+    .auth-loading {
+      background: linear-gradient(135deg, rgba(99, 102, 241, 0.05) 0%, rgba(79, 70, 229, 0.05) 100%);
+      border-color: rgba(99, 102, 241, 0.3);
+      box-shadow: 0 8px 32px rgba(99, 102, 241, 0.15);
+    }
+
+    .auth-status-icon {
+      width: 64px;
+      height: 64px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2rem;
+      flex-shrink: 0;
+      background: rgba(239, 68, 68, 0.1);
+      color: #ef4444;
+      border: 2px solid rgba(239, 68, 68, 0.3);
+    }
+
+    .auth-status-icon.auth-success {
+      background: rgba(16, 185, 129, 0.1);
+      color: #10b981;
+      border-color: rgba(16, 185, 129, 0.3);
+    }
+
+    .auth-loading .auth-status-icon {
+      background: rgba(99, 102, 241, 0.1);
+      color: #6366f1;
+      border-color: rgba(99, 102, 241, 0.3);
+    }
+
+    .auth-status-content {
+      flex: 1;
+    }
+
+    .auth-status-title {
+      font-size: 1.5rem;
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+      color: var(--text-dark);
+    }
+
+    .auth-status-message {
+      font-size: 1rem;
+      color: var(--text-light);
+      margin: 0;
+    }
+
+    .auth-status-btn {
+      padding: 1rem 2rem;
+      border-radius: 12px;
+      border: none;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.75rem;
+      transition: var(--transition);
+      background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+      color: white;
+      box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+      flex-shrink: 0;
+    }
+
+    .auth-status-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 20px rgba(239, 68, 68, 0.4);
+    }
+
+    .auth-status-btn.auth-secondary {
+      background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+      box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+    }
+
+    .auth-status-btn.auth-secondary:hover {
+      box-shadow: 0 8px 20px rgba(99, 102, 241, 0.4);
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .auth-status-card {
+        flex-direction: column;
+        text-align: center;
+        padding: 1.5rem;
+        gap: 1.5rem;
+      }
+
+      .auth-status-btn {
+        width: 100%;
+        justify-content: center;
+      }
+    }
+
     /* Features Section */
     .features {
       padding: 4rem 2rem;
@@ -809,7 +950,7 @@
   
   <div class="bg-animation"></div>
   
-  <div class="main-content">
+  <div class="main-content" style="padding: 0; padding-top: 0;">
     <!-- Hero Section -->
     <section class="hero">
       <div class="hero-logo">
@@ -852,6 +993,52 @@
         <i class="fas fa-rocket"></i>
         Explore Features
       </a>
+    </section>
+    
+    <!-- Authentication Status Banner -->
+    <section class="auth-status-banner" id="authStatusBanner">
+      <div class="auth-status-container">
+        <!-- Not Authenticated State -->
+        <div class="auth-status-card auth-not-connected" id="authNotConnected" style="display: none;">
+          <div class="auth-status-icon">
+            <i class="fas fa-shield-alt"></i>
+          </div>
+          <div class="auth-status-content">
+            <h3 class="auth-status-title">Authentication Required</h3>
+            <p class="auth-status-message">Connect to Jira to unlock all features and start testing</p>
+          </div>
+          <button class="auth-status-btn" onclick="connectToJira()">
+            <i class="fas fa-plug"></i>
+            Connect to Jira
+          </button>
+        </div>
+        
+        <!-- Authenticated State -->
+        <div class="auth-status-card auth-connected" id="authConnected" style="display: none;">
+          <div class="auth-status-icon auth-success">
+            <i class="fas fa-check-circle"></i>
+          </div>
+          <div class="auth-status-content">
+            <h3 class="auth-status-title">Connected</h3>
+            <p class="auth-status-message">Welcome back, <span id="authUserName">User</span>! You're all set to use Co-Tester</p>
+          </div>
+          <button class="auth-status-btn auth-secondary" onclick="window.location.href='/my-details'">
+            <i class="fas fa-user-circle"></i>
+            View Profile
+          </button>
+        </div>
+        
+        <!-- Loading State -->
+        <div class="auth-status-card auth-loading" id="authLoading">
+          <div class="auth-status-icon">
+            <i class="fas fa-spinner fa-spin"></i>
+          </div>
+          <div class="auth-status-content">
+            <h3 class="auth-status-title">Checking Authentication...</h3>
+            <p class="auth-status-message">Please wait while we verify your connection</p>
+          </div>
+        </div>
+      </div>
     </section>
     
     <!-- Features Section -->
@@ -1097,57 +1284,106 @@
   {% include 'footer.html' %}
   
   <script>
-    // Jira status management for home page
+    // Connect to Jira function
+    function connectToJira() {
+      window.location.href = '/api/jira/oauth/login';
+    }
+
+    // Authentication Banner Management
     document.addEventListener('DOMContentLoaded', function() {
+      const authLoading = document.getElementById('authLoading');
+      const authNotConnected = document.getElementById('authNotConnected');
+      const authConnected = document.getElementById('authConnected');
+      const authUserName = document.getElementById('authUserName');
+      
+      // Old status elements (keep for backward compatibility)
       const statusIndicator = document.getElementById('homeStatusIndicator');
       const statusText = document.getElementById('homeStatusText');
       const connectBtn = document.getElementById('homeConnectBtn');
       const disconnectBtn = document.getElementById('homeDisconnectBtn');
 
       function checkJiraStatus() {
+        // Show loading state
+        authLoading.style.display = 'flex';
+        authNotConnected.style.display = 'none';
+        authConnected.style.display = 'none';
+
         fetch('/api/jira/status')
           .then(response => response.json())
           .then(data => {
+            authLoading.style.display = 'none';
+            
             if (data.connected) {
-              statusIndicator.classList.add('connected');
-              statusText.textContent = 'Authenticated';
-              connectBtn.style.display = 'none';
-              disconnectBtn.style.display = 'inline-flex';
+              // Show connected state
+              authConnected.style.display = 'flex';
+              authNotConnected.style.display = 'none';
+              
+              // Fetch user info
+              fetch('/api/jira/user-info')
+                .then(response => response.json())
+                .then(userData => {
+                  if (userData.authenticated && userData.user_name) {
+                    authUserName.textContent = userData.user_name;
+                  }
+                })
+                .catch(error => {
+                  console.error('Error fetching user info:', error);
+                });
+              
+              // Update old status elements
+              if (statusIndicator) statusIndicator.classList.add('connected');
+              if (statusText) statusText.textContent = 'Authenticated';
+              if (connectBtn) connectBtn.style.display = 'none';
+              if (disconnectBtn) disconnectBtn.style.display = 'inline-flex';
             } else {
-              statusIndicator.classList.remove('connected');
-              statusText.textContent = 'Not authenticated';
-              connectBtn.style.display = 'inline-flex';
-              disconnectBtn.style.display = 'none';
+              // Show not connected state
+              authNotConnected.style.display = 'flex';
+              authConnected.style.display = 'none';
+              
+              // Update old status elements
+              if (statusIndicator) statusIndicator.classList.remove('connected');
+              if (statusText) statusText.textContent = 'Not authenticated';
+              if (connectBtn) connectBtn.style.display = 'inline-flex';
+              if (disconnectBtn) disconnectBtn.style.display = 'none';
             }
           })
           .catch(error => {
             console.error('Error checking authentication status:', error);
-            statusIndicator.classList.remove('connected');
-            statusText.textContent = 'Authentication error';
-            connectBtn.style.display = 'inline-flex';
-            disconnectBtn.style.display = 'none';
+            authLoading.style.display = 'none';
+            authNotConnected.style.display = 'flex';
+            authConnected.style.display = 'none';
+            
+            // Update old status elements
+            if (statusIndicator) statusIndicator.classList.remove('connected');
+            if (statusText) statusText.textContent = 'Authentication error';
+            if (connectBtn) connectBtn.style.display = 'inline-flex';
+            if (disconnectBtn) disconnectBtn.style.display = 'none';
           });
       }
 
-      connectBtn.addEventListener('click', function() {
-        window.location.href = '/api/jira/oauth/login';
-      });
+      if (connectBtn) {
+        connectBtn.addEventListener('click', function() {
+          window.location.href = '/api/jira/oauth/login';
+        });
+      }
       
-      disconnectBtn.addEventListener('click', function() {
-        fetch('/api/jira/logout', { method: 'POST' })
-          .then(response => response.json())
-          .then(data => {
-            if (data.success) {
-              checkJiraStatus();
-            } else {
-              alert('Failed to disconnect: ' + data.message);
-            }
-          })
-          .catch(error => {
-            console.error('Error disconnecting:', error);
-            alert('Error disconnecting from Jira');
-          });
-      });
+      if (disconnectBtn) {
+        disconnectBtn.addEventListener('click', function() {
+          fetch('/api/jira/logout', { method: 'POST' })
+            .then(response => response.json())
+            .then(data => {
+              if (data.success) {
+                checkJiraStatus();
+              } else {
+                alert('Failed to disconnect: ' + data.message);
+              }
+            })
+            .catch(error => {
+              console.error('Error disconnecting:', error);
+              alert('Error disconnecting from Jira');
+            });
+        });
+      }
       
       // Initial status check
       checkJiraStatus();

@@ -539,11 +539,10 @@
   </style>
 </head>
 <body>
-  {% include 'quotes-header.html' %}
   {% set active_tab = 'jira' %}
   {% include 'left-sidebar.html' %}
   
-  <div class="main-content">
+  <div class="main-content" style="padding: 0; padding-top: 0;">
     <!-- Standard Page Header -->
     {% set page_title = '<i class="fas fa-user-circle"></i> My Details' %}
     {% set page_subtitle = 'View your profile information, Jira issues, and worklog activity' %}

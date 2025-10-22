@@ -37,6 +37,12 @@
         position: relative;
     }
 
+    .main-content {
+        padding: 0;
+        margin-left: 280px;
+        min-height: 100vh;
+    }
+
     body::before {
         content: '';
         position: fixed;
@@ -305,10 +311,9 @@
   </style>
 </head>
 <body>
-  {% include 'quotes-header.html' %}
   {% set active_tab = 'data' %}
   {% include 'left-sidebar.html' %}
-  <div class="main-content">
+  <div class="main-content" style="padding: 0; padding-top: 0;">
     {% set page_title = 'Data Generator' %}
     {% set page_subtitle = 'Generate realistic test data with customizable columns and formats' %}
     {% include 'page-header.html' %}

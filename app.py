@@ -2831,10 +2831,10 @@ def execute_curl():
     """Execute a curl command and return the results"""
     try:
         data = request.get_json()
-        if not data or 'command' not in data:
+        # Accept both 'command' and 'curl_command' for backwards compatibility
+        curl_command = data.get('command') or data.get('curl_command')
+        if not curl_command:
             return jsonify({'error': 'No curl command provided'}), 400
-            
-        curl_command = data['command']
         
         # Basic security check - only allow curl commands
         if not curl_command.strip().startswith('curl '):
@@ -3527,6 +3527,956 @@ def send_request():
             "error": f"An unexpected error occurred: {str(e)}",
             "timestamp": datetime.utcnow().isoformat()
         }), 500
+
+@app.route('/test-google-ai', methods=['GET'])
+def test_google_ai():
+    """Test Google AI configuration"""
+    try:
+        api_key = os.getenv('GOOGLE_API_KEY')
+        model_name = os.getenv('GOOGLE_API_MODEL', 'gemini-2.0-flash-exp')
+        
+        if not api_key:
+            return jsonify({'success': False, 'error': 'GOOGLE_API_KEY not configured'})
+        
+        genai.configure(api_key=api_key)
+        model = genai.GenerativeModel(model_name)
+        
+        response = model.generate_content("Say 'Hello, AI is working!' in JSON format: {\"message\": \"...\"}")
+        
+        return jsonify({
+            'success': True,
+            'model': model_name,
+            'response': response.text,
+            'message': 'Google AI is configured correctly'
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e),
+            'traceback': traceback.format_exc()
+        })
+
+@app.route('/generate-api-tests', methods=['POST'])
+def generate_api_tests():
+    """Generate AI-powered test scenarios for API requests"""
+    try:
+        data = request.get_json()
+        request_type = data.get('type', 'REST')
+        
+        # Build context for AI
+        if request_type == 'REST':
+            method = data.get('method', 'GET')
+            url = data.get('url', '')
+            body = data.get('body', '')
+            headers = data.get('headers', [])
+            
+            context = f"""Analyze this REST API request and generate comprehensive test scenarios:
+
+Method: {method}
+URL: {url}
+Headers: {json.dumps(headers, indent=2)}
+Body: {body}
+
+Generate test scenarios covering:
+1. Happy path (successful request)
+2. Edge cases (boundary values, empty data)
+3. Validation tests (invalid data, missing required fields)
+4. Error handling (4xx, 5xx responses)
+5. Security tests (authentication, authorization)
+"""
+        else:  # GraphQL
+            url = data.get('url', '')
+            query = data.get('query', '')
+            variables = data.get('variables', '')
+            headers = data.get('headers', [])
+            
+            context = f"""Analyze this GraphQL request and generate comprehensive test scenarios:
+
+Endpoint: {url}
+Query: {query}
+Variables: {variables}
+Headers: {json.dumps(headers, indent=2)}
+
+Generate test scenarios covering:
+1. Happy path (successful query)
+2. Edge cases (null values, empty arrays)
+3. Validation tests (invalid field names, wrong types)
+4. Error handling (query errors, resolver errors)
+5. Performance tests (nested queries, large datasets)
+"""
+        
+        # Generate AI-powered tests using Azure OpenAI
+        result = generate_ai_tests(request_type, data)
+        
+        return jsonify(result)
+        
+    except Exception as e:
+        logger.error(f"Error generating AI tests: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+def generate_ai_tests(request_type, data):
+    """Generate truly AI-powered test scenarios using Google Gemini AI"""
+    try:
+        # Configure Google AI
+        genai.configure(api_key=os.getenv('GOOGLE_API_KEY'))
+        model = genai.GenerativeModel(os.getenv('GOOGLE_API_MODEL', 'gemini-2.0-flash-exp'))
+        
+        # Build the prompt for AI
+        if request_type == 'REST':
+            method = data.get('method', 'GET')
+            url = data.get('url', '')
+            body = data.get('body', '')
+            headers = data.get('headers', [])
+            
+            # Infer functionality from URL and method
+            url_parts = url.split('/')
+            resource = next((part for part in reversed(url_parts) if part and not part.startswith('v')), 'resource')
+            
+            if method == 'POST':
+                functionality = f"Creates a new {resource}"
+            elif method == 'GET':
+                functionality = f"Fetches {resource} details"
+            elif method == 'PUT':
+                functionality = f"Updates an existing {resource}"
+            elif method == 'DELETE':
+                functionality = f"Deletes a {resource}"
+            elif method == 'PATCH':
+                functionality = f"Partially updates a {resource}"
+            else:
+                functionality = f"{method} operation on {resource}"
+            
+            # Convert headers list to dict
+            headers_dict = {h['key']: h['value'] for h in headers} if headers else {}
+            
+            prompt = f"""You are a meticulous Senior QA Automation Engineer specializing in API testing. Your task is to analyze the API endpoint details provided below and create a comprehensive, executable test suite.
+
+Generate 12-15 specific, executable test cases based on the provided API details. Your test suite must provide broad coverage by testing the contract, functionality, and resilience of the endpoint. This includes positive scenarios (happy path), negative scenarios (e.g., invalid data, malformed requests), specific validation rules for all input fields, edge cases, and basic security checks (e.g., authorization, basic injection).
+
+API Endpoint Details:
+Functionality: {functionality}
+Method: {method}
+URL: {url}
+Headers: {json.dumps(headers_dict, indent=2)}
+Request Body (for a successful call): {body if body else 'None'}
+
+Instructions for Test Case Generation:
+1. Comprehensive Coverage: Create a test suite with 12-15 distinct test cases covering these categories: Positive, Negative, Validation, Security, and Edge Case.
+2. Dynamic Data: Where appropriate, use common test automation placeholders like {{{{$randomString}}}}, {{{{$randomEmail}}}}, {{{{$randomInt}}}}, and {{{{$isoTimestamp}}}} to represent unique data that would be generated at runtime.
+3. Strict Output Format: The output must be a valid JSON array only. Do not include any markdown, code blocks, or explanatory text. The response must be pure, raw JSON that can be directly consumed by a test runner or automation framework.
+
+Required JSON Structure for Each Test Case:
+Each object in the JSON array must conform to the following structure:
+{{
+   "testCaseId": "string (e.g., TC001, TC002)",
+   "name": "string (concise test name)",
+   "description": "string (what this test validates)",
+   "category": "string (Positive/Negative/Validation/Security/EdgeCase)",
+   "method": "string (HTTP method)",
+   "url": "string (full URL)",
+   "headers": {{}},
+   "requestBody": {{}},
+   "expectedStatusCode": integer,
+   "expectedResponseContains": {{}} (key fields expected in response)
+}}
+
+Return ONLY the JSON array. No markdown, no code blocks, no explanations."""
+
+        else:  # GraphQL
+            url = data.get('url', '')
+            query = data.get('query', '')
+            variables = data.get('variables', '')
+            headers = data.get('headers', [])
+            
+            # Determine operation type and name
+            query_lower = query.lower().strip()
+            if query_lower.startswith('mutation'):
+                operation_type = 'mutation'
+                functionality = "Executes a GraphQL mutation to modify data"
+            elif query_lower.startswith('subscription'):
+                operation_type = 'subscription'
+                functionality = "Establishes a GraphQL subscription for real-time updates"
+            else:
+                operation_type = 'query'
+                functionality = "Executes a GraphQL query to fetch data"
+            
+            # Convert headers list to dict
+            headers_dict = {h['key']: h['value'] for h in headers} if headers else {}
+            
+            prompt = f"""You are a meticulous Senior QA Automation Engineer specializing in GraphQL API testing. Your task is to analyze the GraphQL endpoint details provided below and create a comprehensive, executable test suite.
+
+Generate 12-15 specific, executable test cases based on the provided GraphQL API details. Your test suite must provide broad coverage by testing the contract, functionality, and resilience of the endpoint. This includes positive scenarios (happy path), negative scenarios (e.g., invalid fields, malformed queries), specific validation rules for all input variables, edge cases, and basic security checks (e.g., authorization, query depth limits, introspection).
+
+GraphQL API Endpoint Details:
+Functionality: {functionality}
+Operation Type: {operation_type}
+Endpoint URL: {url}
+Query/Mutation: {query}
+Variables: {variables if variables else 'None'}
+Headers: {json.dumps(headers_dict, indent=2)}
+
+Instructions for Test Case Generation:
+1. Comprehensive Coverage: Create a test suite with 12-15 distinct test cases covering these categories: Positive, Negative, Validation, Security, and Edge Case.
+2. Dynamic Data: Where appropriate, use common test automation placeholders like {{{{$randomString}}}}, {{{{$randomEmail}}}}, {{{{$randomInt}}}}, and {{{{$isoTimestamp}}}} to represent unique data that would be generated at runtime.
+3. GraphQL-Specific Tests: Include tests for invalid field names, wrong argument types, missing required arguments, query depth limits, and error handling.
+4. Strict Output Format: The output must be a valid JSON array only. Do not include any markdown, code blocks, or explanatory text. The response must be pure, raw JSON that can be directly consumed by a test runner or automation framework.
+
+Required JSON Structure for Each Test Case:
+Each object in the JSON array must conform to the following structure:
+{{
+   "testCaseId": "string (e.g., TC001, TC002)",
+   "name": "string (concise test name)",
+   "description": "string (what this test validates)",
+   "category": "string (Positive/Negative/Validation/Security/EdgeCase)",
+   "method": "POST",
+   "url": "string (GraphQL endpoint URL)",
+   "headers": {{}},
+   "requestBody": {{
+      "query": "string (GraphQL query/mutation)",
+      "variables": {{}} or null
+   }},
+   "expectedStatusCode": integer,
+   "expectedResponseContains": {{}} (key fields expected in response, e.g., {{"data": {{}}, "errors": null}})
+}}
+
+Return ONLY the JSON array. No markdown, no code blocks, no explanations."""
+
+        # Call Google Gemini AI
+        api_key = os.getenv('GOOGLE_API_KEY')
+        if not api_key:
+            logger.error("GOOGLE_API_KEY not configured, using fallback tests")
+            return generate_fallback_tests(request_type, data)
+        
+        logger.info("Calling Google Gemini AI for test generation...")
+        logger.info(f"Using model: {os.getenv('GOOGLE_API_MODEL', 'gemini-2.0-flash-exp')}")
+        
+        full_prompt = f"""You are an expert API testing engineer. Generate executable test cases as valid JSON arrays only. No markdown, no code blocks, just pure JSON.
+
+{prompt}"""
+        
+        logger.info(f"Prompt length: {len(full_prompt)} characters")
+        
+        response = model.generate_content(full_prompt)
+        
+        ai_response = response.text.strip()
+        logger.info(f"AI Response received, length: {len(ai_response)} characters")
+        logger.info(f"AI Response preview: {ai_response[:500]}...")
+        
+        # Extract JSON from response (matching working pattern from line 5460)
+        json_match = re.search(r'```json\n(.+?)\n```', ai_response, re.DOTALL)
+        if json_match:
+            json_str = json_match.group(1)
+            logger.info("Found JSON in code block")
+        else:
+            # Try to find JSON array directly
+            json_match = re.search(r'(\[.+\])', ai_response, re.DOTALL)
+            if json_match:
+                json_str = json_match.group(1)
+                logger.info("Found JSON array in response")
+            else:
+                # Use the whole response
+                json_str = ai_response
+                logger.info("Using full response as JSON")
+        
+        logger.info(f"JSON string to parse: {json_str[:300]}...")
+        
+        # Parse JSON response
+        test_cases = json.loads(json_str)
+        
+        if not isinstance(test_cases, list):
+            logger.error(f"AI returned non-list response: {type(test_cases)}")
+            return generate_fallback_tests(request_type, data)
+        
+        if len(test_cases) == 0:
+            logger.error("AI returned empty test cases array")
+            return generate_fallback_tests(request_type, data)
+        
+        # Return properly structured response
+        result = {
+            'success': True,
+            'tests': test_cases,
+            'type': request_type,
+            'generated_at': datetime.now().isoformat(),
+            'ai_powered': True
+        }
+        logger.info(f"Successfully generated {len(test_cases)} test cases")
+        return result
+        
+    except json.JSONDecodeError as e:
+        logger.error(f"JSON parse error: {str(e)}")
+        logger.error(f"AI Response was: {ai_response if 'ai_response' in locals() else 'N/A'}")
+        # Fallback to rule-based tests
+        return generate_fallback_tests(request_type, data)
+    except Exception as e:
+        logger.error(f"Error generating AI tests: {str(e)}")
+        import traceback
+        logger.error(traceback.format_exc())
+        # Fallback to rule-based tests
+        return generate_fallback_tests(request_type, data)
+
+def generate_fallback_tests(request_type, data):
+    """Generate fallback test cases when AI fails"""
+    if request_type == 'REST':
+        method = data.get('method', 'GET')
+        url = data.get('url', '')
+        body = data.get('body', '')
+        headers = data.get('headers', [])
+        
+        tests = [
+            {
+                "name": "Valid Request",
+                "description": "Test successful request with valid data",
+                "method": method,
+                "url": url,
+                "headers": {h['key']: h['value'] for h in headers} if headers else {},
+                "body": body,
+                "expectedStatus": 200 if method == 'GET' else 201,
+                "validations": ["Response is successful", "Data structure is valid"]
+            },
+            {
+                "name": "Missing Authentication",
+                "description": "Test request without authentication",
+                "method": method,
+                "url": url,
+                "headers": {},
+                "body": body,
+                "expectedStatus": 401,
+                "validations": ["Returns 401 Unauthorized", "Error message present"]
+            },
+            {
+                "name": "Invalid Data",
+                "description": "Test request with invalid data",
+                "method": method,
+                "url": url,
+                "headers": {h['key']: h['value'] for h in headers} if headers else {},
+                "body": "{}",
+                "expectedStatus": 400,
+                "validations": ["Returns 400 Bad Request", "Validation errors present"]
+            }
+        ]
+    else:  # GraphQL
+        url = data.get('url', '')
+        query = data.get('query', '')
+        
+        tests = [
+            {
+                "name": "Valid Query",
+                "description": "Test successful query execution",
+                "url": url,
+                "query": query,
+                "variables": None,
+                "headers": {},
+                "expectedStatus": 200,
+                "validations": ["No errors in response", "Data is defined"]
+            },
+            {
+                "name": "Invalid Field",
+                "description": "Test query with invalid field",
+                "url": url,
+                "query": "{ invalidField }",
+                "variables": None,
+                "headers": {},
+                "expectedStatus": 200,
+                "validations": ["Errors array present", "Error mentions invalid field"]
+            }
+        ]
+    
+    return {
+        'success': True,
+        'tests': tests,
+        'type': request_type,
+        'generated_at': datetime.now().isoformat(),
+        'fallback': True
+    }
+
+def generate_mock_tests(request_type, data):
+    """Generate intelligent test scenarios based on actual request data"""
+    import re
+    
+    if request_type == 'REST':
+        method = data.get('method', 'GET')
+        url = data.get('url', '')
+        body = data.get('body', '')
+        headers = data.get('headers', [])
+        
+        # Analyze URL for patterns
+        url_parts = url.split('/')
+        has_id = any(re.match(r'^\d+$|^[a-f0-9-]{36}$', part) for part in url_parts)
+        resource_name = next((part for part in reversed(url_parts) if part and not re.match(r'^\d+$|^[a-f0-9-]{36}$', part)), 'resource')
+        
+        # Parse body if JSON
+        body_fields = []
+        body_obj = None
+        if body:
+            try:
+                body_obj = json.loads(body)
+                if isinstance(body_obj, dict):
+                    body_fields = list(body_obj.keys())
+            except:
+                pass
+        
+        # Check for auth headers
+        has_auth = any(h.get('key', '').lower() in ['authorization', 'x-api-key', 'api-key'] for h in headers)
+        
+        tests = f"""# 🤖 AI-Generated Test Scenarios
+# Endpoint: {method} {url}
+# Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+
+{'='*70}
+## 📋 ENDPOINT ANALYSIS
+{'='*70}
+
+Resource: {resource_name}
+Method: {method}
+Authentication: {'✓ Detected' if has_auth else '✗ Not detected'}
+Request Body: {'✓ Present' if body else '✗ None'}
+"""
+        
+        if body_fields:
+            tests += f"Body Fields: {', '.join(body_fields)}\n"
+        
+        tests += f"\n{'='*70}\n## 1️⃣ HAPPY PATH TESTS\n{'='*70}\n\n"
+        
+        if method == 'GET':
+            if has_id:
+                tests += f"""✓ Test: Get specific {resource_name} by ID
+  Request: GET {url}
+  Expected: 200 OK
+  Validation:
+    - Response contains {resource_name} data
+    - ID matches requested ID
+    - All required fields present
+
+✓ Test: Get {resource_name} with valid filters
+  Request: GET {url}?limit=10&offset=0
+  Expected: 200 OK
+  Validation:
+    - Returns array of {resource_name}s
+    - Respects pagination parameters
+"""
+            else:
+                tests += f"""✓ Test: List all {resource_name}s
+  Request: GET {url}
+  Expected: 200 OK
+  Validation:
+    - Returns array of {resource_name}s
+    - Response time < 2s
+    - Proper pagination metadata
+
+✓ Test: List with filters
+  Request: GET {url}?limit=10&sort=created_at
+  Expected: 200 OK
+  Validation:
+    - Results are filtered correctly
+    - Sort order is applied
+"""
+        
+        elif method == 'POST':
+            tests += f"""✓ Test: Create new {resource_name} with valid data
+  Request: POST {url}
+  Body: {body if body else 'Valid JSON payload'}
+  Expected: 201 Created
+  Validation:
+    - Response contains created {resource_name}
+    - ID is generated
+    - Location header present
+    - All fields saved correctly
+"""
+            
+            if body_fields:
+                tests += f"\n✓ Test: Create {resource_name} with all optional fields\n"
+                tests += f"  Body: Include all fields: {', '.join(body_fields)}\n"
+                tests += f"  Expected: 201 Created\n\n"
+        
+        elif method == 'PUT':
+            tests += f"""✓ Test: Update existing {resource_name}
+  Request: PUT {url}
+  Body: {body if body else 'Updated data'}
+  Expected: 200 OK
+  Validation:
+    - Response contains updated {resource_name}
+    - Changes are persisted
+    - Timestamp updated
+"""
+        
+        elif method == 'DELETE':
+            tests += f"""✓ Test: Delete existing {resource_name}
+  Request: DELETE {url}
+  Expected: 204 No Content or 200 OK
+  Validation:
+    - Resource is deleted
+    - Subsequent GET returns 404
+"""
+        
+        tests += f"\n{'='*70}\n## 2️⃣ AUTHENTICATION & AUTHORIZATION TESTS\n{'='*70}\n\n"
+        
+        if has_auth:
+            tests += f"""✓ Test: Request without authentication
+  Request: {method} {url} (no auth header)
+  Expected: 401 Unauthorized
+  Validation:
+    - Error message: "Authentication required"
+    - WWW-Authenticate header present
+
+✓ Test: Request with invalid token
+  Request: {method} {url}
+  Headers: Authorization: Bearer invalid_token_xyz
+  Expected: 401 Unauthorized
+  Validation:
+    - Error message: "Invalid token"
+
+✓ Test: Request with expired token
+  Expected: 401 Unauthorized
+  Validation:
+    - Error message: "Token expired"
+
+✓ Test: Request with insufficient permissions
+  Expected: 403 Forbidden
+  Validation:
+    - Error message: "Insufficient permissions"
+"""
+        else:
+            tests += f"""⚠️  No authentication detected in request
+  Recommended tests:
+  - Verify if endpoint should be public
+  - Test rate limiting
+  - Test CORS headers
+"""
+        
+        tests += f"\n{'='*70}\n## 3️⃣ VALIDATION TESTS\n{'='*70}\n\n"
+        
+        if method in ['POST', 'PUT', 'PATCH']:
+            if body_fields:
+                for field in body_fields:
+                    tests += f"""✓ Test: Missing required field '{field}'
+  Body: {{{', '.join(f'"{f}": "value"' for f in body_fields if f != field)}}}
+  Expected: 400 Bad Request
+  Validation:
+    - Error message mentions '{field}'
+    - Error code for missing field
+
+"""
+                
+                tests += f"""✓ Test: Invalid data types
+  Body: {{"""
+                for i, field in enumerate(body_fields[:3]):
+                    tests += f'"{field}": null' if i == 0 else f', "{field}": null'
+                tests += f"""}}
+  Expected: 400 Bad Request
+  Validation:
+    - Field-specific error messages
+    - Validation error codes
+
+✓ Test: Empty strings in required fields
+  Body: {{"""
+                for i, field in enumerate(body_fields[:3]):
+                    tests += f'"{field}": ""' if i == 0 else f', "{field}": ""'
+                tests += f"""}}
+  Expected: 400 Bad Request
+
+✓ Test: Extremely long strings (boundary test)
+  Body: {{"{body_fields[0] if body_fields else 'field'}": "{'x' * 1000}..."}}
+  Expected: 400 Bad Request or 413 Payload Too Large
+
+✓ Test: Special characters and SQL injection
+  Body: {{"{body_fields[0] if body_fields else 'field'}": "'; DROP TABLE users; --"}}
+  Expected: 400 Bad Request
+  Validation:
+    - Input is sanitized
+    - No SQL injection vulnerability
+"""
+            else:
+                tests += f"""✓ Test: Malformed JSON
+  Body: {{invalid json}}
+  Expected: 400 Bad Request
+
+✓ Test: Empty body
+  Body: {{}}
+  Expected: 400 Bad Request
+"""
+        
+        tests += f"\n{'='*70}\n## 4️⃣ ERROR HANDLING TESTS\n{'='*70}\n\n"
+        
+        if has_id:
+            tests += f"""✓ Test: Non-existent resource ID
+  Request: {method} {url.rsplit('/', 1)[0]}/99999999
+  Expected: 404 Not Found
+  Validation:
+    - Error message: "{resource_name} not found"
+    - Proper error structure
+
+✓ Test: Invalid ID format
+  Request: {method} {url.rsplit('/', 1)[0]}/invalid-id-format
+  Expected: 400 Bad Request
+  Validation:
+    - Error message: "Invalid ID format"
+"""
+        
+        tests += f"""✓ Test: Duplicate resource (if applicable)
+  Request: POST {url.rsplit('/', 1)[0] if has_id else url}
+  Body: Duplicate unique field
+  Expected: 409 Conflict
+  Validation:
+    - Error message indicates duplicate
+
+✓ Test: Rate limiting
+  Request: Multiple rapid requests
+  Expected: 429 Too Many Requests
+  Validation:
+    - Retry-After header present
+    - Rate limit info in response
+
+✓ Test: Server error simulation
+  Expected: 500 Internal Server Error
+  Validation:
+    - Graceful error message
+    - No sensitive data leaked
+"""
+        
+        tests += f"\n{'='*70}\n## 5️⃣ PERFORMANCE & LOAD TESTS\n{'='*70}\n\n"
+        
+        tests += f"""✓ Test: Response time under normal load
+  Expected: < 500ms for simple queries
+  Expected: < 2s for complex queries
+
+✓ Test: Concurrent requests
+  Scenario: 100 concurrent {method} requests
+  Expected: All succeed without errors
+  Validation:
+    - No race conditions
+    - Data consistency maintained
+
+✓ Test: Large payload handling
+  Body: Large JSON (1MB+)
+  Expected: Handles gracefully or returns 413
+"""
+        
+        tests += f"\n{'='*70}\n## 6️⃣ SECURITY TESTS\n{'='*70}\n\n"
+        
+        tests += f"""✓ Test: XSS prevention
+  Body: {{"field": "<script>alert('xss')</script>"}}
+  Expected: Input sanitized or rejected
+
+✓ Test: HTTPS enforcement
+  Request: HTTP instead of HTTPS
+  Expected: Redirect to HTTPS or reject
+
+✓ Test: CORS headers
+  Origin: https://malicious-site.com
+  Expected: Proper CORS policy enforced
+
+✓ Test: Content-Type validation
+  Headers: Content-Type: text/plain
+  Expected: 415 Unsupported Media Type
+"""
+        
+        tests += f"\n{'='*70}\n## 📝 SAMPLE TEST CODE (JavaScript/Jest)\n{'='*70}\n\n"
+        
+        tests += f"""describe('{method} {url}', () => {{
+  const baseURL = '{url}';
+  const validPayload = {body if body else '{}'};
+  
+  describe('Happy Path', () => {{
+    test('should return success with valid request', async () => {{
+      const response = await fetch(baseURL, {{
+        method: '{method}',
+        headers: {{
+          'Content-Type': 'application/json',"""
+        
+        if has_auth:
+            tests += """
+          'Authorization': 'Bearer valid_token_here'"""
+        
+        tests += f"""
+        }},"""
+        
+        if method in ['POST', 'PUT', 'PATCH']:
+            tests += """
+        body: JSON.stringify(validPayload)"""
+        
+        tests += f"""
+      }});
+      
+      expect(response.status).toBe({200 if method != 'POST' else 201});
+      const data = await response.json();
+      expect(data).toBeDefined();
+"""
+        
+        if body_fields:
+            for field in body_fields[:3]:
+                tests += f"      expect(data.{field}).toBeDefined();\n"
+        
+        tests += """    });
+  });
+  
+  describe('Validation', () => {{"""
+        
+        if method in ['POST', 'PUT', 'PATCH'] and body_fields:
+            tests += f"""
+    test('should reject missing required fields', async () => {{
+      const invalidPayload = {{}};
+      const response = await fetch(baseURL, {{
+        method: '{method}',
+        headers: {{ 'Content-Type': 'application/json' }},
+        body: JSON.stringify(invalidPayload)
+      }});
+      
+      expect(response.status).toBe(400);
+      const error = await response.json();
+      expect(error.message).toBeDefined();
+    }});
+"""
+        
+        tests += """  });
+  
+  describe('Authentication', () => {{"""
+        
+        if has_auth:
+            tests += f"""
+    test('should reject request without auth', async () => {{
+      const response = await fetch(baseURL, {{
+        method: '{method}'
+      }});
+      
+      expect(response.status).toBe(401);
+    }});
+"""
+        
+        tests += """  });
+  
+  describe('Error Handling', () => {{"""
+        
+        if has_id:
+            tests += f"""
+    test('should return 404 for non-existent resource', async () => {{
+      const response = await fetch(baseURL.replace(/\\/\\d+$/, '/99999999'), {{
+        method: '{method}'
+      }});
+      
+      expect(response.status).toBe(404);
+    }});
+"""
+        
+        tests += """  });
+});
+"""
+        
+        return tests
+    
+    else:  # GraphQL
+        url = data.get('url', '')
+        query = data.get('query', '')
+        variables = data.get('variables', '')
+        
+        # Parse GraphQL query
+        query_type = 'query'
+        if query.strip().startswith('mutation'):
+            query_type = 'mutation'
+        elif query.strip().startswith('subscription'):
+            query_type = 'subscription'
+        
+        # Extract field names
+        fields = re.findall(r'\b([a-zA-Z_][a-zA-Z0-9_]*)\s*(?:\(|{)', query)
+        operation_name = fields[0] if fields else 'operation'
+        
+        tests = f"""# 🤖 AI-Generated GraphQL Test Scenarios
+# Endpoint: {url}
+# Operation: {query_type} - {operation_name}
+# Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+
+{'='*70}
+## 📋 QUERY ANALYSIS
+{'='*70}
+
+Type: {query_type.upper()}
+Operation: {operation_name}
+Fields: {', '.join(fields[1:5]) if len(fields) > 1 else 'N/A'}
+Variables: {'✓ Present' if variables else '✗ None'}
+
+{'='*70}
+## 1️⃣ HAPPY PATH TESTS
+{'='*70}
+
+✓ Test: Execute {query_type} successfully
+  Query: {query[:100]}...
+  Variables: {variables if variables else 'None'}
+  Expected: 200 OK with data
+  Validation:
+    - data.{operation_name} is defined
+    - No errors in response
+    - All requested fields present
+
+✓ Test: Query with all optional parameters
+  Expected: 200 OK
+  Validation:
+    - Optional fields handled correctly
+    - Null values handled gracefully
+
+{'='*70}
+## 2️⃣ VALIDATION TESTS
+{'='*70}
+
+✓ Test: Invalid field name
+  Query: {{ invalidField }}
+  Expected: GraphQL validation error
+  Validation:
+    - errors array present
+    - Error message: "Cannot query field 'invalidField'"
+
+✓ Test: Wrong argument type
+  Variables: {{ "id": "not-a-number" }}
+  Expected: Variable type mismatch error
+
+✓ Test: Missing required arguments
+  Query: Remove required arguments
+  Expected: Validation error
+  Validation:
+    - Error indicates missing argument
+
+✓ Test: Malformed query syntax
+  Query: {{ {operation_name} {{ }}
+  Expected: Syntax error
+  Validation:
+    - Clear syntax error message
+
+{'='*70}
+## 3️⃣ EDGE CASES
+{'='*70}
+
+✓ Test: Null values in variables
+  Variables: {{ "input": null }}
+  Expected: Handled gracefully or validation error
+
+✓ Test: Empty arrays
+  Variables: {{ "ids": [] }}
+  Expected: Returns empty result set
+
+✓ Test: Very large result set
+  Arguments: {{ limit: 10000 }}
+  Expected: Pagination enforced or limit applied
+
+✓ Test: Deeply nested query (10+ levels)
+  Expected: Query depth limit enforced
+
+{'='*70}
+## 4️⃣ ERROR HANDLING
+{'='*70}
+
+✓ Test: Non-existent resource
+  Variables: {{ "id": "99999999" }}
+  Expected: null data or error
+  Validation:
+    - Graceful error message
+    - Partial data if applicable
+
+✓ Test: Resolver error
+  Expected: errors array with resolver error
+  Validation:
+    - Error path indicates field
+    - Partial data returned if possible
+
+✓ Test: Network timeout
+  Expected: Timeout error after 30s
+
+{'='*70}
+## 5️⃣ PERFORMANCE TESTS
+{'='*70}
+
+✓ Test: Query complexity
+  Expected: < 1s for simple queries
+  Expected: < 5s for complex queries
+
+✓ Test: N+1 query detection
+  Query: List with nested relations
+  Validation:
+    - DataLoader or batching used
+    - Reasonable number of DB queries
+
+✓ Test: Concurrent queries
+  Scenario: 50 concurrent identical queries
+  Expected: All succeed
+  Validation:
+    - Caching works correctly
+
+{'='*70}
+## 6️⃣ SECURITY TESTS
+{'='*70}
+
+✓ Test: Query depth limit
+  Query: 20 levels deep
+  Expected: Rejected with depth limit error
+
+✓ Test: Query complexity limit
+  Query: Extremely complex with many fields
+  Expected: Rejected with complexity error
+
+✓ Test: Introspection in production
+  Query: __schema {{ types {{ name }} }}
+  Expected: Disabled in production
+
+{'='*70}
+## 📝 SAMPLE TEST CODE (JavaScript/Jest)
+{'='*70}
+
+describe('GraphQL {query_type}: {operation_name}', () => {{
+  const endpoint = '{url}';
+  const query = `{query}`;
+  
+  describe('Happy Path', () => {{
+    test('should execute {query_type} successfully', async () => {{
+      const response = await fetch(endpoint, {{
+        method: 'POST',
+        headers: {{ 'Content-Type': 'application/json' }},
+        body: JSON.stringify({{
+          query,
+          variables: {variables if variables else '{}'}
+        }})
+      }});
+      
+      const {{ data, errors }} = await response.json();
+      
+      expect(errors).toBeUndefined();
+      expect(data).toBeDefined();
+      expect(data.{operation_name}).toBeDefined();
+    }});
+  }});
+  
+  describe('Validation', () => {{
+    test('should reject invalid field', async () => {{
+      const invalidQuery = `{{ invalidField }}`;
+      const response = await fetch(endpoint, {{
+        method: 'POST',
+        headers: {{ 'Content-Type': 'application/json' }},
+        body: JSON.stringify({{ query: invalidQuery }})
+      }});
+      
+      const {{ errors }} = await response.json();
+      expect(errors).toBeDefined();
+      expect(errors[0].message).toContain('Cannot query field');
+    }});
+  }});
+  
+  describe('Error Handling', () => {{
+    test('should handle non-existent resource', async () => {{
+      const variables = {{ id: '99999999' }};
+      const response = await fetch(endpoint, {{
+        method: 'POST',
+        headers: {{ 'Content-Type': 'application/json' }},
+        body: JSON.stringify({{ query, variables }})
+      }});
+      
+      const {{ data, errors }} = await response.json();
+      expect(data.{operation_name}).toBeNull();
+    }});
+  }});
+}});
+"""
+        
+        return tests
+    
+    return tests
 
 @app.route('/convert_collection', methods=['POST'])
 def convert_collection():

@@ -28,7 +28,7 @@
 
         .main-content {
             margin-left: 280px;
-            padding: 2rem;
+            padding: 0;
             min-height: 100vh;
         }
 
@@ -644,7 +644,7 @@
         @media (max-width: 768px) {
             .main-content {
                 margin-left: 0;
-                padding: 1rem;
+                padding: 0;
             }
 
             .jql-input-group {
@@ -664,10 +664,9 @@
     </style>
 </head>
 <body>
-    {% include 'quotes-header.html' %}
     {% include 'left-sidebar.html' %}
 
-    <div class="main-content">
+    <div class="main-content" style="padding: 0; padding-top: 0;">
         <div class="page-container">
             <div class="page-header">
                 <h1 class="page-title">Manual Test Generator</h1>

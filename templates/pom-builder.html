@@ -457,11 +457,10 @@
 </head>
 
 <body>
-  {% include 'quotes-header.html' %}
   {% set active_tab = 'pom-builder' %}
   {% include 'left-sidebar.html' %}
   
-  <div class="main-content">
+  <div class="main-content" style="padding: 0; padding-top: 0;">
     <!-- Standard Page Header -->
     {% set page_title = '<i class="fas fa-cubes"></i> POM Builder <span class="ai-badge">AI</span> <span class="preview-badge">Preview</span>' %}
     {% set page_subtitle = 'Preview of integrated element extraction and POM generation - based on AutomationStudio components' %}

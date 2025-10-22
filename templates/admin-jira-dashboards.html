@@ -29,7 +29,8 @@
     
     .page {
       margin-left: var(--sidebar-width, 280px);
-      padding: 2rem;
+      padding: 0;
+      padding-top: 0;
       transition: margin-left 0.3s ease;
     }
     
@@ -284,15 +285,20 @@
   {% include 'left-sidebar.html' %}
   
   <div class="page">
-    <div class="container-fluid">
+    {% set page_title = '<i class="fas fa-chart-line"></i> Admin Dashboard' %}
+    {% set page_subtitle = 'Comprehensive analytics and insights for team performance and project metrics' %}
+    {% set allow_html = true %}
+    {% include 'page-header.html' %}
+    
+    <div class="container-fluid" style="padding: 2rem;">
       
-      <!-- Header -->
+      <!-- Query Section -->
       <div class="card">
         <div class="card-header">
-          <h1 class="card-title">
-            <i class="fas fa-chart-line"></i>
-            Admin Dashboard
-          </h1>
+          <h3 class="card-title">
+            <i class="fas fa-search"></i>
+            JQL Query
+          </h3>
         </div>
         <div class="card-body">
           <div class="row g-3">

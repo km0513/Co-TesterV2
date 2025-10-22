@@ -27,7 +27,7 @@
             font-family: 'Inter', system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
         }
 
-        .main-content {
+        .main-content {`n            padding: 0;
             margin-left: 280px;
             min-height: 100vh;
             background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 50%, #cbd5e1 100%);
@@ -68,7 +68,7 @@
         }
 
         /* When sidebar is collapsed */
-        body.sidebar-collapsed .main-content {
+        body.sidebar-collapsed .main-content {`n            padding: 0;
             margin-left: 60px;
         }
         
@@ -245,11 +245,10 @@
 </head>
 
 <body>
-    {% include 'quotes-header.html' %}
     {% set active_tab = 'dashboards' %}
     {% include 'left-sidebar.html' %}
 
-    <div class="main-content">
+    <div class="main-content" style="padding: 0; padding-top: 0;">
         {% set page_title = '<i class="fas fa-chart-pie"></i> Release Dashboard' %}
         {% set allow_html = true %}
         {% set page_subtitle = 'Release progress & Issue tracking' %}

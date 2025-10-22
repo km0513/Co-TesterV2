@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,8 +8,10 @@
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
     <title>AI UI Analyzer - Co-Tester</title>
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='0.9em' font-size='90'>🚀</text></svg>">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="icon"
+        href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='0.9em' font-size='90'>🚀</text></svg>">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="/static/styles.css">
     <style>
@@ -19,8 +22,8 @@
             --success: #10b981;
             --error: #ef4444;
             --warning: #f59e0b;
-            --text-dark: #1f2937;
-            --text-light: #6b7280;
+            --text-dark: #e5e7eb;
+            --text-light: #9ca3af;
             --bg-light: #f8fafc;
             --border: #e2e8f0;
             --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
@@ -28,11 +31,11 @@
             --transition: all 0.3s ease;
         }
 
-        .ai-badge { 
-            font-size: 0.8rem; 
-            color: white; 
+        .ai-badge {
+            font-size: 0.8rem;
+            color: white;
             background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 50%, #ffa726 100%);
-            border-radius: 12px; 
+            border-radius: 12px;
             padding: 4px 12px;
             font-weight: 700;
             text-transform: uppercase;
@@ -41,12 +44,17 @@
         }
 
         @keyframes glow {
-            0% { box-shadow: 0 2px 8px rgba(255, 107, 107, 0.4); }
-            100% { box-shadow: 0 4px 16px rgba(255, 107, 107, 0.6); }
+            0% {
+                box-shadow: 0 2px 8px rgba(255, 107, 107, 0.4);
+            }
+
+            100% {
+                box-shadow: 0 4px 16px rgba(255, 107, 107, 0.6);
+            }
         }
 
         .main-content {
-            background: var(--bg-light);
+            background: transparent;
             min-height: 100vh;
             padding: 0;
             padding-top: 0;
@@ -67,17 +75,18 @@
         }
 
         .upload-card {
-            background: white;
+            background: rgba(30, 35, 50, 0.6);
+            backdrop-filter: blur(20px);
             border-radius: 20px;
             padding: 2rem;
-            box-shadow: var(--shadow-lg);
-            border: 1px solid var(--border);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(99, 102, 241, 0.1);
         }
 
         .card-title {
             font-size: 1.5rem;
             font-weight: 700;
-            color: var(--text-dark);
+            color: #e5e7eb;
             margin-bottom: 1.5rem;
             display: flex;
             align-items: center;
@@ -369,11 +378,12 @@
         }
 
         .analysis-options {
-            background: white;
+            background: rgba(30, 35, 50, 0.6);
+            backdrop-filter: blur(20px);
             border-radius: 20px;
             padding: 2rem;
-            box-shadow: var(--shadow-lg);
-            border: 1px solid var(--border);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(99, 102, 241, 0.1);
             margin-bottom: 2rem;
         }
 
@@ -413,7 +423,7 @@
             cursor: pointer;
             margin-right: 0.75rem;
         }
-        
+
         .option-checkbox:disabled {
             cursor: not-allowed;
             opacity: 0.5;
@@ -487,6 +497,7 @@
                 opacity: 0;
                 transform: translateY(30px);
             }
+
             to {
                 opacity: 1;
                 transform: translateY(0);
@@ -513,7 +524,8 @@
             width: 100%;
             height: 100%;
             background-color: rgba(0, 0, 0, 0.7);
-            display: none; /* Changed from flex to none to hide by default */
+            display: none;
+            /* Changed from flex to none to hide by default */
             flex-direction: column;
             justify-content: center;
             align-items: center;
@@ -521,7 +533,7 @@
             color: white;
             backdrop-filter: blur(5px);
         }
-        
+
         /* Class to show the loading overlay when needed */
         .loading-overlay.show {
             display: flex;
@@ -574,8 +586,13 @@
         }
 
         @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
         }
 
         .loading-text {
@@ -602,24 +619,25 @@
             .analyzer-container {
                 grid-template-columns: 1fr;
             }
-            
+
             .container {
                 padding: 0 1rem;
             }
         }
     </style>
 </head>
+
 <body>
-    {% include 'quotes-header.html' %}
     {% set active_tab = 'screen-analysis' %}
     {% include 'left-sidebar.html' %}
 
     <div class="main-content">
         {% set page_title = 'UI Analyzer <span class="ai-badge">AI</span>' %}
-        {% set page_subtitle = 'Upload screenshots for intelligent analysis, element detection, and comprehensive UI health scoring using advanced AI technology.' %}
+        {% set page_subtitle = 'Upload screenshots for intelligent analysis, element detection, and comprehensive UI
+        health scoring using advanced AI technology.' %}
         {% set allow_html = true %}
         {% include 'page-header.html' %}
-        
+
         <div class="container" style="padding-left: 0; margin-left: 0;">
 
             <!-- Upload Section -->
@@ -663,7 +681,8 @@
                             <div class="url-icon">
                                 <i class="fas fa-link"></i>
                             </div>
-                            <input type="url" class="url-input" id="urlInput" placeholder="Enter website URL (e.g., google.com or https://example.com)">
+                            <input type="url" class="url-input" id="urlInput"
+                                placeholder="Enter website URL (e.g., google.com or https://example.com)">
                             <button class="capture-btn" type="button" id="captureBtn">
                                 <i class="fas fa-camera"></i>
                                 Capture
@@ -671,7 +690,8 @@
                         </div>
                         <div class="url-help">
                             <i class="fas fa-info-circle"></i>
-                            <span>Takes a screenshot of the live website for analysis. Just enter the domain name - no need for https://</span>
+                            <span>Takes a screenshot of the live website for analysis. Just enter the domain name - no
+                                need for https://</span>
                         </div>
                     </div>
                     <div class="url-preview" id="urlPreview" style="display: none;">
@@ -694,17 +714,20 @@
                             <i class="fab fa-figma"></i>
                         </div>
                         Figma Design
-                        <div style="background: linear-gradient(135deg, var(--warning), #f59e0b); color: white; padding: 0.25rem 0.75rem; border-radius: 20px; font-size: 0.75rem; font-weight: 600; margin-left: auto;">
+                        <div
+                            style="background: linear-gradient(135deg, var(--warning), #f59e0b); color: white; padding: 0.25rem 0.75rem; border-radius: 20px; font-size: 0.75rem; font-weight: 600; margin-left: auto;">
                             Coming Soon
                         </div>
                     </div>
-                    <div class="upload-area" id="figmaUpload" style="pointer-events: none; background: #f8fafc; border-color: #e2e8f0;">
+                    <div class="upload-area" id="figmaUpload"
+                        style="pointer-events: none; background: #f8fafc; border-color: #e2e8f0;">
                         <div class="upload-icon" style="color: #9ca3af;">
                             <i class="fab fa-figma"></i>
                         </div>
                         <div class="upload-text" style="color: #9ca3af;">Figma comparison coming soon</div>
                         <div class="upload-subtext" style="color: #9ca3af;">Feature in development</div>
-                        <button class="browse-btn" type="button" style="background: #e5e7eb; color: #9ca3af; cursor: not-allowed;" disabled>
+                        <button class="browse-btn" type="button"
+                            style="background: #e5e7eb; color: #9ca3af; cursor: not-allowed;" disabled>
                             <i class="fas fa-clock"></i>
                             Coming Soon
                         </button>
@@ -730,7 +753,8 @@
                         <input type="checkbox" class="option-checkbox" checked>
                         <div class="option-info">
                             <div class="option-name">UI Elements Detection</div>
-                            <div class="option-description">Identify buttons, inputs, links, and interactive components</div>
+                            <div class="option-description">Identify buttons, inputs, links, and interactive components
+                            </div>
                         </div>
                     </div>
                     <div class="option-card selected" data-option="layout">
@@ -754,13 +778,16 @@
                             <div class="option-description">Generate testing recommendations and scenarios</div>
                         </div>
                     </div>
-                    <div class="option-card" data-option="figma" style="opacity: 0.6; pointer-events: none; position: relative;">
+                    <div class="option-card" data-option="figma"
+                        style="opacity: 0.6; pointer-events: none; position: relative;">
                         <input type="checkbox" class="option-checkbox" disabled>
                         <div class="option-info">
                             <div class="option-name" style="color: #9ca3af;">Figma Comparison</div>
-                            <div class="option-description" style="color: #9ca3af;">Compare implementation with Figma design accuracy</div>
+                            <div class="option-description" style="color: #9ca3af;">Compare implementation with Figma
+                                design accuracy</div>
                         </div>
-                        <div style="position: absolute; top: 0.75rem; right: 0.75rem; background: linear-gradient(135deg, var(--warning), #f59e0b); color: white; padding: 0.25rem 0.5rem; border-radius: 12px; font-size: 0.75rem; font-weight: 600;">
+                        <div
+                            style="position: absolute; top: 0.75rem; right: 0.75rem; background: linear-gradient(135deg, var(--warning), #f59e0b); color: white; padding: 0.25rem 0.5rem; border-radius: 12px; font-size: 0.75rem; font-weight: 600;">
                             Coming Soon
                         </div>
                     </div>
@@ -817,7 +844,7 @@
                 this.urlScreenshot = null;
                 this.isAnalyzing = false;
                 this.isCapturingUrl = false;
-                
+
                 this.init();
             }
 
@@ -835,7 +862,7 @@
                 const browseBtn = screenshotUpload.querySelector('.browse-btn');
 
                 browseBtn.addEventListener('click', () => screenshotInput.click());
-                
+
                 screenshotUpload.addEventListener('dragover', (e) => {
                     e.preventDefault();
                     screenshotUpload.classList.add('dragover');
@@ -863,7 +890,7 @@
                 // Only set up event listeners if figma is not disabled
                 if (!figmaInput.disabled) {
                     figmaBrowseBtn.addEventListener('click', () => figmaInput.click());
-                    
+
                     figmaUpload.addEventListener('dragover', (e) => {
                         e.preventDefault();
                         figmaUpload.classList.add('dragover');
@@ -887,7 +914,7 @@
 
             handleScreenshotFiles(files) {
                 const validFiles = Array.from(files).filter(file => file.type.startsWith('image/'));
-                
+
                 if (validFiles.length === 0) {
                     this.showError('Please select valid image files.');
                     return;
@@ -904,7 +931,7 @@
 
                 const file = files[0];
                 const validTypes = ['image/', '.json', '.svg'];
-                const isValid = validTypes.some(type => 
+                const isValid = validTypes.some(type =>
                     file.type.startsWith(type) || file.name.toLowerCase().endsWith(type.replace('.', ''))
                 );
 
@@ -921,45 +948,45 @@
             displayScreenshots() {
                 const preview = document.getElementById('screenshotPreview');
                 const grid = document.getElementById('screenshotGrid');
-                
+
                 grid.innerHTML = '';
-                
+
                 this.screenshots.forEach((file, index) => {
                     const item = document.createElement('div');
                     item.className = 'preview-item';
-                    
+
                     const img = document.createElement('img');
                     img.className = 'preview-image';
                     img.src = URL.createObjectURL(file);
                     img.alt = file.name;
-                    
+
                     const overlay = document.createElement('div');
                     overlay.className = 'preview-overlay';
                     overlay.textContent = file.name;
-                    
+
                     const removeBtn = document.createElement('button');
                     removeBtn.className = 'remove-btn';
                     removeBtn.innerHTML = '<i class="fas fa-times"></i>';
                     removeBtn.addEventListener('click', () => this.removeScreenshot(index));
-                    
+
                     item.appendChild(img);
                     item.appendChild(overlay);
                     item.appendChild(removeBtn);
                     grid.appendChild(item);
                 });
-                
+
                 preview.classList.add('show');
             }
 
             displayFigmaFile() {
                 const preview = document.getElementById('figmaPreview');
                 const grid = document.getElementById('figmaGrid');
-                
+
                 grid.innerHTML = '';
-                
+
                 const item = document.createElement('div');
                 item.className = 'preview-item';
-                
+
                 if (this.figmaFile.type.startsWith('image/')) {
                     const img = document.createElement('img');
                     img.className = 'preview-image';
@@ -972,39 +999,39 @@
                     icon.innerHTML = '<i class="fab fa-figma"></i>';
                     item.appendChild(icon);
                 }
-                
+
                 const overlay = document.createElement('div');
                 overlay.className = 'preview-overlay';
                 overlay.textContent = this.figmaFile.name;
-                
+
                 const removeBtn = document.createElement('button');
                 removeBtn.className = 'remove-btn';
                 removeBtn.innerHTML = '<i class="fas fa-times"></i>';
                 removeBtn.addEventListener('click', () => this.removeFigmaFile());
-                
+
                 item.appendChild(overlay);
                 item.appendChild(removeBtn);
                 grid.appendChild(item);
-                
+
                 preview.classList.add('show');
             }
 
             removeScreenshot(index) {
                 this.screenshots.splice(index, 1);
-                
+
                 if (this.screenshots.length === 0) {
                     document.getElementById('screenshotPreview').classList.remove('show');
                 } else {
                     this.displayScreenshots();
                 }
-                
+
                 this.updateAnalyzeButton();
             }
 
             removeFigmaFile() {
                 this.figmaFile = null;
                 document.getElementById('figmaPreview').classList.remove('show');
-                
+
                 // Uncheck figma comparison option
                 const figmaOption = document.querySelector('[data-option="figma"]');
                 const checkbox = figmaOption.querySelector('.option-checkbox');
@@ -1045,10 +1072,10 @@
                 if (!string || string.trim() === '') {
                     return false;
                 }
-                
+
                 // Remove whitespace
                 string = string.trim();
-                
+
                 // If it already has a protocol, validate it
                 if (string.includes('://')) {
                     try {
@@ -1058,29 +1085,29 @@
                         return false;
                     }
                 }
-                
+
                 // If no protocol, check if it looks like a valid domain
                 // Basic domain validation (allows subdomains, TLDs, etc.)
                 const domainRegex = /^[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
-                
+
                 // Handle ports (like localhost:3000)
                 const domainWithPortRegex = /^[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*:\d+$/;
-                
+
                 return domainRegex.test(string) || domainWithPortRegex.test(string) || string === 'localhost';
             }
-            
+
             resolveUrl(input) {
                 if (!input || input.trim() === '') {
                     return input;
                 }
-                
+
                 input = input.trim();
-                
+
                 // If it already has a protocol, return as is
                 if (input.includes('://')) {
                     return input;
                 }
-                
+
                 // Add https:// by default
                 return 'https://' + input;
             }
@@ -1115,7 +1142,7 @@
                     }
 
                     const data = await response.json();
-                    
+
                     if (data.success) {
                         this.urlScreenshot = {
                             url: resolvedUrl,
@@ -1146,16 +1173,16 @@
                     const imgElement = document.createElement('img');
                     imgElement.src = `data:image/png;base64,${this.urlScreenshot.image}`;
                     imgElement.style.cssText = 'max-width: 200px; max-height: 150px; border-radius: 8px; border: 2px solid var(--border);';
-                    
+
                     urlGrid.innerHTML = '';
                     urlGrid.appendChild(imgElement);
-                    
+
                     capturedUrl.textContent = this.urlScreenshot.url;
                     urlPreview.style.display = 'block';
                 } else {
                     urlPreview.style.display = 'none';
                 }
-                
+
                 this.updateAnalyzeButton();
             }
 
@@ -1169,38 +1196,38 @@
 
             setupOptions() {
                 const optionCards = document.querySelectorAll('.option-card');
-                
+
                 optionCards.forEach(card => {
                     const checkbox = card.querySelector('.option-checkbox');
-                    
+
                     // Handle card clicks (but not when clicking directly on checkbox)
                     card.addEventListener('click', (e) => {
                         // Skip if checkbox is disabled (like figma option)
                         if (checkbox.disabled) {
                             return;
                         }
-                        
+
                         // If click target is the checkbox itself, let checkbox handle it
                         if (e.target === checkbox) {
                             return;
                         }
-                        
+
                         checkbox.checked = !checkbox.checked;
                         this.updateCardSelection(card, checkbox);
                     });
-                    
+
                     // Handle direct checkbox clicks
                     checkbox.addEventListener('change', (e) => {
                         // Skip if checkbox is disabled
                         if (checkbox.disabled) {
                             return;
                         }
-                        
+
                         this.updateCardSelection(card, checkbox);
                     });
                 });
             }
-            
+
             updateCardSelection(card, checkbox) {
                 if (checkbox.checked) {
                     card.classList.add('selected');
@@ -1227,7 +1254,7 @@
                     loadingOverlay.classList.add('show');
                 }
             }
-            
+
             // Hide loading overlay
             hideLoading() {
                 const loadingOverlay = document.getElementById('loadingOverlay');
@@ -1235,7 +1262,7 @@
                     loadingOverlay.classList.remove('show');
                 }
             }
-            
+
             async analyzeScreenshots() {
                 const hasImages = this.screenshots.length > 0 || this.urlScreenshot !== null;
                 if (!hasImages) {
@@ -1247,13 +1274,13 @@
                 this.isAnalyzing = true;
                 this.showLoading();
                 this.updateAnalyzeButton();
-                
+
                 // Small delay to ensure the loading overlay is visible before any heavy processing begins
                 await new Promise(resolve => setTimeout(resolve, 50));
 
                 try {
                     const formData = new FormData();
-                    
+
                     // Add screenshots
                     this.screenshots.forEach((file, index) => {
                         formData.append(`screenshot_${index}`, file);
@@ -1270,7 +1297,7 @@
                         }
                         const byteArray = new Uint8Array(byteNumbers);
                         const blob = new Blob([byteArray], { type: 'image/png' });
-                        
+
                         formData.append(`url_screenshot`, blob, `url_capture_${Date.now()}.png`);
                         formData.append('url_source', this.urlScreenshot.url);
                     }
@@ -1300,7 +1327,7 @@
 
                     const results = await response.json();
                     this.displayResults(results);
-                    
+
                 } catch (error) {
                     console.error('Analysis error:', error);
                     this.showError(error.message || 'Analysis failed. Please try again.');
@@ -1315,22 +1342,22 @@
                 console.log('Displaying results:', results);
                 const container = document.getElementById('resultsContainer');
                 const content = document.getElementById('resultsContent');
-                
+
                 if (!container || !content) {
                     console.error('Results container or content not found');
                     this.showError('Error displaying results. Please try again.');
                     return;
                 }
-                
+
                 // Ensure results has the expected structure
                 if (!results || typeof results !== 'object') {
                     console.error('Invalid results structure:', results);
                     this.showError('Invalid results received from analysis.');
                     return;
                 }
-                
+
                 // Format issues with enhanced display
-                const issuesHtml = results.issues && results.issues.length > 0 ? 
+                const issuesHtml = results.issues && results.issues.length > 0 ?
                     results.issues.map(issue => `
                         <div style="background: white; border-radius: 12px; padding: 1.5rem; margin-bottom: 1rem; border-left: 4px solid ${this.getSeverityColor(issue.severity)}; box-shadow: var(--shadow);">
                             <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem;">
@@ -1362,11 +1389,11 @@
                                 </div>
                             ` : ''}
                         </div>
-                    `).join('') : 
+                    `).join('') :
                     '<div style="text-align: center; color: var(--text-light); padding: 2rem;">No issues found in the analysis.</div>';
-                
+
                 // Format recommendations with enhanced display
-                const recommendationsHtml = results.recommendations && results.recommendations.length > 0 ? 
+                const recommendationsHtml = results.recommendations && results.recommendations.length > 0 ?
                     results.recommendations.map((rec, index) => {
                         const isObject = typeof rec === 'object';
                         const title = isObject ? rec.title : `Recommendation ${index + 1}`;
@@ -1374,7 +1401,7 @@
                         const priority = isObject ? rec.priority : 'Medium';
                         const improvement = isObject ? rec.expectedImprovement : null;
                         const effort = isObject ? rec.effort : null;
-                        
+
                         return `
                             <div style="background: white; border-radius: 12px; padding: 1.5rem; margin-bottom: 1rem; box-shadow: var(--shadow);">
                                 <div style="display: flex; align-items: flex-start; margin-bottom: 1rem;">
@@ -1397,13 +1424,13 @@
                                 </div>
                             </div>
                         `;
-                    }).join('') : 
+                    }).join('') :
                     '<div style="text-align: center; color: var(--text-light); padding: 2rem;">No recommendations available.</div>';
-                
+
                 // Create results HTML with scoring
                 const isComparison = this.figmaFile && results.comparisonMetrics;
                 const scoreColor = this.getScoreColor(results.overallScore || 0);
-                
+
                 content.innerHTML = `
                     <div style="padding: 2rem; background: linear-gradient(135deg, ${scoreColor}, #059669); border-radius: 16px; margin-bottom: 2rem; color: white;">
                         <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem;">
@@ -1446,14 +1473,14 @@
                         </div>
                     </div>
                 `;
-                
+
                 container.classList.add('show');
                 container.scrollIntoView({ behavior: 'smooth' });
             }
-            
+
             renderScoreCards(results) {
                 const isComparison = this.figmaFile && results.comparisonMetrics;
-                
+
                 if (isComparison) {
                     // Render comparison metrics
                     const metrics = results.comparisonMetrics;
@@ -1477,7 +1504,7 @@
                     // Render factor scores for health analysis
                     const factors = results.factorScores;
                     if (!factors) return '';
-                    
+
                     return `
                         <div style="margin-bottom: 2rem;">
                             <h4 style="color: var(--text-dark); margin-bottom: 1.5rem; display: flex; align-items: center;">
@@ -1495,11 +1522,11 @@
                     `;
                 }
             }
-            
+
             renderScoreCard(title, score, icon) {
                 const scoreColor = this.getScoreColor(score);
                 const percentage = Math.round(score);
-                
+
                 return `
                     <div style="background: white; border-radius: 12px; padding: 1.5rem; box-shadow: var(--shadow); text-align: center;">
                         <div style="color: ${scoreColor}; font-size: 2rem; margin-bottom: 0.5rem;">
@@ -1517,7 +1544,7 @@
                     </div>
                 `;
             }
-            
+
             getScoreColor(score) {
                 if (score >= 90) return '#10b981'; // Excellent - Green
                 if (score >= 80) return '#059669'; // Good - Dark Green  
@@ -1527,8 +1554,8 @@
             }
 
             getSeverityColor(severity) {
-                switch(severity?.toLowerCase()) {
-                    case 'high': 
+                switch (severity?.toLowerCase()) {
+                    case 'high':
                     case 'critical': return '#ef4444';
                     case 'medium':
                     case 'major': return '#f59e0b';
@@ -1537,9 +1564,9 @@
                     default: return '#6b7280';
                 }
             }
-            
+
             getPriorityColor(priority) {
-                switch(priority?.toLowerCase()) {
+                switch (priority?.toLowerCase()) {
                     case 'high': return '#ef4444';
                     case 'medium': return '#f59e0b';
                     case 'low': return '#10b981';
@@ -1572,4 +1599,5 @@
         });
     </script>
 </body>
+
 </html>

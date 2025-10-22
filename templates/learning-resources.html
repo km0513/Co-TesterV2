@@ -1,11 +1,14 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>QA Learning Resources - Co-Tester</title>
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none'><defs><linearGradient id='favGradient' x1='0%' y1='0%' x2='100%' y2='100%'><stop offset='0%' style='stop-color:%23f59e0b;stop-opacity:1' /><stop offset='100%' style='stop-color:%23d97706;stop-opacity:1' /></linearGradient></defs><path d='M12 2L13.09 8.26L20 9L13.09 9.74L12 16L10.91 9.74L4 9L10.91 8.26L12 2Z' fill='url(%23favGradient)'/><circle cx='12' cy='12' r='3' fill='none' stroke='url(%23favGradient)' stroke-width='1.8'/></svg>">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="icon"
+    href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none'><defs><linearGradient id='favGradient' x1='0%' y1='0%' x2='100%' y2='100%'><stop offset='0%' style='stop-color:%23f59e0b;stop-opacity:1' /><stop offset='100%' style='stop-color:%23d97706;stop-opacity:1' /></linearGradient></defs><path d='M12 2L13.09 8.26L20 9L13.09 9.74L12 16L10.91 9.74L4 9L10.91 8.26L12 2Z' fill='url(%23favGradient)'/><circle cx='12' cy='12' r='3' fill='none' stroke='url(%23favGradient)' stroke-width='1.8'/></svg>">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+    rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link rel="stylesheet" href="/static/styles.css">
   <link rel="stylesheet" href="/static/left-sidebar.css">
@@ -41,9 +44,11 @@
     }
 
     .main-content {
+      padding: 0;
+      padding-top: 0;
       margin-left: 280px;
       min-height: 100vh;
-      background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 50%, #cbd5e1 100%);
+      background: transparent;
       position: relative;
       transition: var(--transition);
     }
@@ -56,7 +61,7 @@
       right: 0;
       bottom: 0;
       background: radial-gradient(circle at 20% 80%, rgba(99, 102, 241, 0.05) 0%, transparent 50%),
-                  radial-gradient(circle at 80% 20%, rgba(139, 92, 246, 0.05) 0%, transparent 50%);
+        radial-gradient(circle at 80% 20%, rgba(139, 92, 246, 0.05) 0%, transparent 50%);
       pointer-events: none;
       z-index: 0;
     }
@@ -77,11 +82,12 @@
     }
 
     .learning-section {
-      background: white;
+      background: rgba(30, 35, 50, 0.6);
+      backdrop-filter: blur(20px);
       border-radius: 16px;
       padding: 2rem;
-      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-      border: 1px solid var(--border);
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+      border: 1px solid rgba(99, 102, 241, 0.1);
       transition: var(--transition);
       position: relative;
       overflow: hidden;
@@ -200,11 +206,12 @@
     }
 
     .quick-tips {
-      background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
-      border: 1px solid #f59e0b;
+      background: linear-gradient(135deg, rgba(245, 158, 11, 0.15) 0%, rgba(251, 191, 36, 0.15) 100%);
+      border: 1px solid rgba(245, 158, 11, 0.3);
       border-radius: 12px;
       padding: 1.5rem;
       margin: 2rem 0;
+      backdrop-filter: blur(10px);
     }
 
     .quick-tips-title {
@@ -261,36 +268,39 @@
 
     @media (max-width: 768px) {
       .main-content {
+        padding: 0;
+        padding-top: 0;
         margin-left: 0;
       }
-      
+
       .learning-container {
         padding: 1rem;
       }
-      
+
       .learning-grid {
         grid-template-columns: 1fr;
         gap: 1rem;
       }
-      
+
       .learning-section {
         padding: 1.5rem;
       }
     }
   </style>
 </head>
+
 <body>
-  {% include 'quotes-header.html' %}
   {% set active_tab = 'learning' %}
   {% include 'left-sidebar.html' %}
-  
+
   <div class="main-content">
     {% set page_title = 'QA Learning Resources' %}
-    {% set page_subtitle = 'Comprehensive guides, tutorials, and references to master quality assurance and testing methodologies.' %}
+    {% set page_subtitle = 'Comprehensive guides, tutorials, and references to master quality assurance and testing
+    methodologies.' %}
     {% include 'page-header.html' %}
-    
+
     <div class="learning-container">
-      
+
       <div class="quick-tips">
         <div class="quick-tips-title">
           <i class="fas fa-lightbulb"></i>
@@ -313,7 +323,7 @@
       </div>
 
       <div class="learning-grid">
-        
+
         <!-- QA Fundamentals -->
         <div class="learning-section">
           <div class="section-header">
@@ -324,7 +334,7 @@
           </div>
           <div class="section-content">
             <p>Master the core principles and methodologies of software quality assurance.</p>
-            
+
             <ul class="resource-list">
               <li class="resource-item">
                 <div class="resource-icon" style="background: #10b981;">
@@ -338,39 +348,42 @@
                   <div class="resource-description">Complete guide to software testing concepts</div>
                 </div>
               </li>
-              
+
               <li class="resource-item">
                 <div class="resource-icon" style="background: #3b82f6;">
                   <i class="fas fa-cycle"></i>
                 </div>
                 <div>
-                  <a href="https://www.geeksforgeeks.org/software-testing/agile-software-testing/" target="_blank" class="resource-link">
+                  <a href="https://www.geeksforgeeks.org/software-testing/agile-software-testing/" target="_blank"
+                    class="resource-link">
                     STLC - Testing Life Cycle
                     <i class="fas fa-external-link-alt external-link-icon"></i>
                   </a>
                   <div class="resource-description">Complete guide to software testing lifecycle phases</div>
                 </div>
               </li>
-              
+
               <li class="resource-item">
                 <div class="resource-icon" style="background: #f59e0b;">
                   <i class="fas fa-layer-group"></i>
                 </div>
                 <div>
-                  <a href="https://www.geeksforgeeks.org/software-testing/levels-of-software-testing/" target="_blank" class="resource-link">
+                  <a href="https://www.geeksforgeeks.org/software-testing/levels-of-software-testing/" target="_blank"
+                    class="resource-link">
                     Testing Levels & Types
                     <i class="fas fa-external-link-alt external-link-icon"></i>
                   </a>
                   <div class="resource-description">Unit, Integration, System, and Acceptance testing</div>
                 </div>
               </li>
-              
+
               <li class="resource-item">
                 <div class="resource-icon" style="background: #8b5cf6;">
                   <i class="fas fa-bug"></i>
                 </div>
                 <div>
-                  <a href="https://www.atlassian.com/continuous-delivery/software-testing/types-of-software-testing" target="_blank" class="resource-link">
+                  <a href="https://www.atlassian.com/continuous-delivery/software-testing/types-of-software-testing"
+                    target="_blank" class="resource-link">
                     Testing Types Guide
                     <i class="fas fa-external-link-alt external-link-icon"></i>
                   </a>
@@ -391,7 +404,7 @@
           </div>
           <div class="section-content">
             <p>Learn about popular testing tools and advanced techniques.</p>
-            
+
             <ul class="resource-list">
               <li class="resource-item">
                 <div class="resource-icon" style="background: #059669;">
@@ -405,7 +418,7 @@
                   <div class="resource-description">Web automation testing framework</div>
                 </div>
               </li>
-              
+
               <li class="resource-item">
                 <div class="resource-icon" style="background: #dc2626;">
                   <i class="fas fa-vial"></i>
@@ -418,20 +431,21 @@
                   <div class="resource-description">Python testing framework guide</div>
                 </div>
               </li>
-              
+
               <li class="resource-item">
                 <div class="resource-icon" style="background: #ea580c;">
                   <i class="fas fa-rocket"></i>
                 </div>
                 <div>
-                  <a href="https://learning.postman.com/docs/getting-started/introduction/" target="_blank" class="resource-link">
+                  <a href="https://learning.postman.com/docs/getting-started/introduction/" target="_blank"
+                    class="resource-link">
                     Postman API Testing
                     <i class="fas fa-external-link-alt external-link-icon"></i>
                   </a>
                   <div class="resource-description">API testing and documentation tool</div>
                 </div>
               </li>
-              
+
               <li class="resource-item">
                 <div class="resource-icon" style="background: #7c3aed;">
                   <i class="fas fa-desktop"></i>
@@ -444,7 +458,7 @@
                   <div class="resource-description">Modern web testing framework</div>
                 </div>
               </li>
-              
+
               <li class="resource-item">
                 <div class="resource-icon" style="background: #dc2626;">
                   <i class="fas fa-tachometer-alt"></i>
@@ -457,7 +471,7 @@
                   <div class="resource-description">Load and performance testing tool</div>
                 </div>
               </li>
-              
+
               <li class="resource-item">
                 <div class="resource-icon" style="background: #059669;">
                   <i class="fas fa-bolt"></i>
@@ -470,7 +484,7 @@
                   <div class="resource-description">Modern load testing for developers</div>
                 </div>
               </li>
-              
+
               <li class="resource-item">
                 <div class="resource-icon" style="background: #1d4ed8;">
                   <i class="fas fa-chart-line"></i>
@@ -483,7 +497,7 @@
                   <div class="resource-description">High-performance load testing framework</div>
                 </div>
               </li>
-              
+
               <li class="resource-item">
                 <div class="resource-icon" style="background: #dc2626;">
                   <i class="fas fa-shield-alt"></i>
@@ -496,7 +510,7 @@
                   <div class="resource-description">Free security testing proxy tool</div>
                 </div>
               </li>
-              
+
               <li class="resource-item">
                 <div class="resource-icon" style="background: #ea580c;">
                   <i class="fas fa-bug"></i>
@@ -509,7 +523,7 @@
                   <div class="resource-description">Professional web security testing</div>
                 </div>
               </li>
-              
+
               <li class="resource-item">
                 <div class="resource-icon" style="background: #7c3aed;">
                   <i class="fas fa-lock"></i>
@@ -536,7 +550,7 @@
           </div>
           <div class="section-content">
             <p>Stay updated with industry standards and best practices.</p>
-            
+
             <ul class="resource-list">
               <li class="resource-item">
                 <div class="resource-icon" style="background: #1d4ed8;">
@@ -550,7 +564,7 @@
                   <div class="resource-description">International Software Testing Qualifications Board</div>
                 </div>
               </li>
-              
+
               <li class="resource-item">
                 <div class="resource-icon" style="background: #0891b2;">
                   <i class="fas fa-sync-alt"></i>
@@ -563,26 +577,28 @@
                   <div class="resource-description">Agile methodology and testing principles</div>
                 </div>
               </li>
-              
+
               <li class="resource-item">
                 <div class="resource-icon" style="background: #be185d;">
                   <i class="fas fa-infinity"></i>
                 </div>
                 <div>
-                  <a href="https://docs.microsoft.com/en-us/devops/deliver/what-is-continuous-testing" target="_blank" class="resource-link">
+                  <a href="https://docs.microsoft.com/en-us/devops/deliver/what-is-continuous-testing" target="_blank"
+                    class="resource-link">
                     CI/CD Testing
                     <i class="fas fa-external-link-alt external-link-icon"></i>
                   </a>
                   <div class="resource-description">Continuous Integration and Deployment testing</div>
                 </div>
               </li>
-              
+
               <li class="resource-item">
                 <div class="resource-icon" style="background: #059669;">
                   <i class="fas fa-shield-alt"></i>
                 </div>
                 <div>
-                  <a href="https://owasp.org/www-project-web-security-testing-guide/" target="_blank" class="resource-link">
+                  <a href="https://owasp.org/www-project-web-security-testing-guide/" target="_blank"
+                    class="resource-link">
                     Security Testing Guide
                     <i class="fas fa-external-link-alt external-link-icon"></i>
                   </a>
@@ -603,53 +619,57 @@
           </div>
           <div class="section-content">
             <p>Essential reading for QA professionals and testers.</p>
-            
+
             <ul class="resource-list">
               <li class="resource-item">
                 <div class="resource-icon" style="background: #dc2626;">
                   <i class="fas fa-book"></i>
                 </div>
                 <div>
-                  <a href="https://www.amazon.com/Art-Software-Testing-Glenford-Myers/dp/1118031962" target="_blank" class="resource-link">
+                  <a href="https://www.amazon.com/Art-Software-Testing-Glenford-Myers/dp/1118031962" target="_blank"
+                    class="resource-link">
                     The Art of Software Testing
                     <i class="fas fa-external-link-alt external-link-icon"></i>
                   </a>
                   <div class="resource-description">By Glenford J. Myers - Classic testing fundamentals</div>
                 </div>
               </li>
-              
+
               <li class="resource-item">
                 <div class="resource-icon" style="background: #7c3aed;">
                   <i class="fas fa-book"></i>
                 </div>
                 <div>
-                  <a href="https://www.amazon.com/Agile-Testing-Practical-Guide-Testers/dp/0321534468" target="_blank" class="resource-link">
+                  <a href="https://www.amazon.com/Agile-Testing-Practical-Guide-Testers/dp/0321534468" target="_blank"
+                    class="resource-link">
                     Agile Testing
                     <i class="fas fa-external-link-alt external-link-icon"></i>
                   </a>
                   <div class="resource-description">By Lisa Crispin & Janet Gregory</div>
                 </div>
               </li>
-              
+
               <li class="resource-item">
                 <div class="resource-icon" style="background: #0891b2;">
                   <i class="fas fa-book"></i>
                 </div>
                 <div>
-                  <a href="https://www.amazon.com/Lessons-Learned-Software-Testing-Approach/dp/0471081124" target="_blank" class="resource-link">
+                  <a href="https://www.amazon.com/Lessons-Learned-Software-Testing-Approach/dp/0471081124"
+                    target="_blank" class="resource-link">
                     Lessons Learned in Software Testing
                     <i class="fas fa-external-link-alt external-link-icon"></i>
                   </a>
                   <div class="resource-description">By Cem Kaner, James Bach, Bret Pettichord</div>
                 </div>
               </li>
-              
+
               <li class="resource-item">
                 <div class="resource-icon" style="background: #059669;">
                   <i class="fas fa-book"></i>
                 </div>
                 <div>
-                  <a href="https://www.amazon.com/Google-Tests-Software-James-Whittaker/dp/0321803027" target="_blank" class="resource-link">
+                  <a href="https://www.amazon.com/Google-Tests-Software-James-Whittaker/dp/0321803027" target="_blank"
+                    class="resource-link">
                     How Google Tests Software
                     <i class="fas fa-external-link-alt external-link-icon"></i>
                   </a>
@@ -670,21 +690,22 @@
           </div>
           <div class="section-content">
             <p>Structured learning paths and professional certifications.</p>
-            
+
             <ul class="resource-list">
               <li class="resource-item">
                 <div class="resource-icon" style="background: #1d4ed8;">
                   <i class="fas fa-university"></i>
                 </div>
                 <div>
-                  <a href="https://www.coursera.org/learn/introduction-software-testing" target="_blank" class="resource-link">
+                  <a href="https://www.coursera.org/learn/introduction-software-testing" target="_blank"
+                    class="resource-link">
                     Introduction to Software Testing
                     <i class="fas fa-external-link-alt external-link-icon"></i>
                   </a>
                   <div class="resource-description">University of Minnesota - Coursera</div>
                 </div>
               </li>
-              
+
               <li class="resource-item">
                 <div class="resource-icon" style="background: #059669;">
                   <i class="fas fa-certificate"></i>
@@ -697,7 +718,7 @@
                   <div class="resource-description">Udemy comprehensive testing courses</div>
                 </div>
               </li>
-              
+
               <li class="resource-item">
                 <div class="resource-icon" style="background: #ea580c;">
                   <i class="fas fa-trophy"></i>
@@ -710,7 +731,7 @@
                   <div class="resource-description">Foundation, Advanced, Expert levels</div>
                 </div>
               </li>
-              
+
               <li class="resource-item">
                 <div class="resource-icon" style="background: #7c3aed;">
                   <i class="fas fa-code"></i>
@@ -737,7 +758,7 @@
           </div>
           <div class="section-content">
             <p>Learn how to maximize your productivity with Co-Tester features.</p>
-            
+
             <ul class="resource-list">
               <li class="resource-item">
                 <div class="resource-icon" style="background: #10b981;">
@@ -751,7 +772,7 @@
                   <div class="resource-description">Generate comprehensive test cases with AI</div>
                 </div>
               </li>
-              
+
               <li class="resource-item">
                 <div class="resource-icon" style="background: #3b82f6;">
                   <i class="fas fa-search-plus"></i>
@@ -764,7 +785,7 @@
                   <div class="resource-description">Analyze UI components and generate tests</div>
                 </div>
               </li>
-              
+
               <li class="resource-item">
                 <div class="resource-icon" style="background: #f59e0b;">
                   <i class="fas fa-code"></i>
@@ -777,7 +798,7 @@
                   <div class="resource-description">Master API testing with cURL runner</div>
                 </div>
               </li>
-              
+
               <li class="resource-item">
                 <div class="resource-icon" style="background: #8b5cf6;">
                   <i class="fas fa-cubes"></i>
@@ -804,7 +825,7 @@
           </div>
           <div class="section-content">
             <p>Connect with the testing community and stay updated.</p>
-            
+
             <ul class="resource-list">
               <li class="resource-item">
                 <div class="resource-icon" style="background: #dc2626;">
@@ -818,7 +839,7 @@
                   <div class="resource-description">Reddit community for QA professionals</div>
                 </div>
               </li>
-              
+
               <li class="resource-item">
                 <div class="resource-icon" style="background: #0891b2;">
                   <i class="fab fa-linkedin"></i>
@@ -831,7 +852,7 @@
                   <div class="resource-description">LinkedIn professional testing group</div>
                 </div>
               </li>
-              
+
               <li class="resource-item">
                 <div class="resource-icon" style="background: #7c3aed;">
                   <i class="fas fa-comments"></i>
@@ -844,7 +865,7 @@
                   <div class="resource-description">Global testing community and resources</div>
                 </div>
               </li>
-              
+
               <li class="resource-item">
                 <div class="resource-icon" style="background: #059669;">
                   <i class="fab fa-slack"></i>
@@ -868,10 +889,10 @@
   <script src="/static/auth-utils.js"></script>
   <script>
     // Handle internal navigation links
-    document.addEventListener('DOMContentLoaded', function() {
+    document.addEventListener('DOMContentLoaded', function () {
       const internalLinks = document.querySelectorAll('a[data-href]');
       internalLinks.forEach(link => {
-        link.addEventListener('click', function(e) {
+        link.addEventListener('click', function (e) {
           e.preventDefault();
           const targetUrl = this.getAttribute('data-href');
           if (targetUrl && targetUrl !== '#') {
@@ -882,4 +903,5 @@
     });
   </script>
 </body>
+
 </html>
