@@ -1,11 +1,14 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>API Co-Test - Professional API Testing Suite</title>
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text x=%2250%22 y=%2250%22 font-size=%2280%22 font-family=%22Arial%22 text-anchor=%22middle%22>🚀</text></svg>">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="icon"
+    href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text x=%2250%22 y=%2250%22 font-size=%2280%22 font-family=%22Arial%22 text-anchor=%22middle%22>🚀</text></svg>">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+    rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link rel="stylesheet" href="/static/styles.css">
   <link rel="stylesheet" href="/static/left-sidebar.css">
@@ -58,7 +61,7 @@
       right: 0;
       bottom: 0;
       background: radial-gradient(circle at 20% 80%, rgba(99, 102, 241, 0.05) 0%, transparent 50%),
-                  radial-gradient(circle at 80% 20%, rgba(139, 92, 246, 0.05) 0%, transparent 50%);
+        radial-gradient(circle at 80% 20%, rgba(139, 92, 246, 0.05) 0%, transparent 50%);
       pointer-events: none;
       z-index: 0;
     }
@@ -86,7 +89,7 @@
       border: 1px solid var(--border);
       gap: 0.25rem;
     }
-    
+
     .api-tab {
       flex: 1;
       padding: 1rem 1.5rem;
@@ -105,46 +108,46 @@
       gap: 0.5rem;
       position: relative;
     }
-    
+
     .api-tab i {
       font-size: 16px;
     }
-    
+
     .api-tab:hover {
       color: var(--primary);
       background: rgba(99, 102, 241, 0.08);
       transform: translateY(-1px);
     }
-    
+
     .api-tab.active {
       color: white;
       background: linear-gradient(135deg, var(--primary) 0%, var(--primary-hover) 100%);
       box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
     }
-    
+
     .api-tab.active:hover {
       transform: translateY(-1px);
       box-shadow: 0 6px 16px rgba(99, 102, 241, 0.4);
     }
-    
+
     .tab-content {
       display: none;
     }
-    
+
     .tab-content.active {
       display: block;
     }
-    
+
     .request-builder {
       background: white;
       border-radius: 12px;
       padding: 2rem;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
       margin-bottom: 1.5rem;
       border: 1px solid var(--border);
       width: 100%;
     }
-    
+
     .request-builder h4 {
       margin: 0 0 1.5rem 0;
       color: var(--text-dark);
@@ -154,16 +157,16 @@
       align-items: center;
       gap: 0.5rem;
     }
-    
+
     .request-builder h4 i {
       color: var(--primary);
     }
-    
+
     /* Make tab content use full width */
     .tab-content {
       width: 100%;
     }
-    
+
     .url-row {
       display: flex;
       gap: 12px;
@@ -171,7 +174,7 @@
       align-items: stretch;
       width: 100%;
     }
-    
+
     .method-select {
       padding: 0 16px;
       border: 2px solid var(--border);
@@ -186,18 +189,18 @@
       cursor: pointer;
       transition: all 0.2s ease;
     }
-    
+
     .method-select:hover {
       border-color: var(--primary);
       box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
     }
-    
+
     .method-select:focus {
       outline: none;
       border-color: var(--primary);
       box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
     }
-    
+
     .url-input {
       flex: 1;
       padding: 0 16px;
@@ -210,17 +213,17 @@
       transition: all 0.2s ease;
       min-width: 300px;
     }
-    
+
     .url-input:hover {
       border-color: var(--primary-light);
     }
-    
+
     .url-input:focus {
       outline: none;
       border-color: var(--primary);
       box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
     }
-    
+
     .send-btn {
       padding: 0 32px;
       background: linear-gradient(135deg, var(--primary) 0%, var(--primary-hover) 100%);
@@ -237,27 +240,27 @@
       align-items: center;
       gap: 8px;
     }
-    
+
     .send-btn:hover {
       transform: translateY(-2px);
       box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
     }
-    
+
     .send-btn:active {
       transform: translateY(0);
     }
-    
+
     .send-btn:disabled {
       background: #9ca3af;
       cursor: not-allowed;
       transform: none;
       box-shadow: none;
     }
-    
+
     .headers-section {
       margin-bottom: 1.5rem;
     }
-    
+
     .headers-list {
       border: 2px solid var(--border);
       border-radius: 8px;
@@ -265,29 +268,29 @@
       overflow-y: auto;
       padding: 0.5rem;
     }
-    
+
     .header-row {
       display: flex;
       border-bottom: 1px solid #eee;
       align-items: center;
       padding: 8px;
     }
-    
+
     .header-row:last-child {
       border-bottom: none;
     }
-    
+
     .header-input {
       flex: 1;
       padding: 6px;
       border: none;
       margin-right: 8px;
     }
-    
+
     .header-input:focus {
       outline: 1px solid #007bff;
     }
-    
+
     .remove-header {
       background: #dc3545;
       color: white;
@@ -297,7 +300,7 @@
       cursor: pointer;
       font-size: 12px;
     }
-    
+
     .add-header {
       background: #28a745;
       color: white;
@@ -307,11 +310,11 @@
       cursor: pointer;
       margin-top: 10px;
     }
-    
+
     .body-section {
       margin-bottom: 15px;
     }
-    
+
     .body-textarea {
       width: 100%;
       min-height: 300px;
@@ -326,29 +329,29 @@
       background: white;
       transition: all 0.2s ease;
     }
-    
+
     .body-textarea:hover {
       border-color: var(--primary-light);
     }
-    
+
     .body-textarea:focus {
       outline: none;
       border-color: var(--primary);
       box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
     }
-    
+
     .response-section {
       background: white;
       border-radius: 12px;
       border: 1px solid var(--border);
-      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
       padding: 2rem;
       width: 100%;
       margin-bottom: 2rem;
       padding: 20px;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     }
-    
+
     .response-meta {
       display: flex;
       gap: 20px;
@@ -358,7 +361,7 @@
       border-radius: 4px;
       flex-wrap: wrap;
     }
-    
+
     .status-badge {
       padding: 6px 12px;
       border-radius: 6px;
@@ -368,28 +371,31 @@
       font-weight: bold;
       font-size: 12px;
     }
-    
-    .status-2xx { 
+
+    .status-2xx {
       background: linear-gradient(135deg, #10b981 0%, #059669 100%);
       color: white;
       box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
     }
-    .status-3xx { 
+
+    .status-3xx {
       background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
       color: white;
       box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
     }
-    .status-4xx { 
+
+    .status-4xx {
       background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
       color: white;
       box-shadow: 0 2px 8px rgba(245, 158, 11, 0.3);
     }
-    .status-5xx { 
+
+    .status-5xx {
       background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
       color: white;
       box-shadow: 0 2px 8px rgba(239, 68, 68, 0.3);
     }
-    
+
     .response-body {
       background: #f8fafc;
       border: 2px solid var(--border);
@@ -412,11 +418,11 @@
       font-size: 13px;
       white-space: pre-wrap;
     }
-    
+
     .curl-section {
       margin-bottom: 15px;
     }
-    
+
     .curl-input {
       width: 100%;
       min-height: 120px;
@@ -427,14 +433,14 @@
       font-size: 13px;
       resize: vertical;
     }
-    
+
     .collections-list {
       border: 1px solid #ddd;
       border-radius: 4px;
       max-height: 300px;
       overflow-y: auto;
     }
-    
+
     .collection-item {
       padding: 12px;
       border-bottom: 1px solid #eee;
@@ -443,15 +449,15 @@
       justify-content: space-between;
       align-items: center;
     }
-    
+
     .collection-item:hover {
       background: #f8f9fa;
     }
-    
+
     .collection-item:last-child {
       border-bottom: none;
     }
-    
+
     .run-collection {
       background: #007bff;
       color: white;
@@ -461,7 +467,7 @@
       cursor: pointer;
       font-size: 12px;
     }
-    
+
     .postman-connect {
       display: flex;
       gap: 10px;
@@ -469,11 +475,11 @@
       align-items: center;
       flex-wrap: wrap;
     }
-    
+
     .file-input {
       display: none;
     }
-    
+
     .file-label {
       background: #6c757d;
       color: white;
@@ -482,27 +488,27 @@
       cursor: pointer;
       font-size: 14px;
     }
-    
+
     .file-label:hover {
       background: #5a6268;
     }
-    
+
     .graphql-section {
       display: flex;
       flex-direction: column;
       gap: 15px;
     }
-    
+
     .graphql-query {
       min-height: 150px;
       font-family: 'Monaco', 'Menlo', monospace;
     }
-    
+
     .graphql-variables {
       min-height: 100px;
       font-family: 'Monaco', 'Menlo', monospace;
     }
-    
+
     .loading {
       display: inline-block;
       width: 16px;
@@ -513,30 +519,35 @@
       animation: spin 1s linear infinite;
       margin-right: 8px;
     }
-    
+
     @keyframes spin {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
+      0% {
+        transform: rotate(0deg);
+      }
+
+      100% {
+        transform: rotate(360deg);
+      }
     }
-    
+
     .message {
       padding: 10px;
       border-radius: 4px;
       margin: 10px 0;
     }
-    
+
     .error-message {
       color: #721c24;
       background: #f8d7da;
       border: 1px solid #f5c6cb;
     }
-    
+
     .success-message {
       color: #155724;
       background: #d4edda;
       border: 1px solid #c3e6cb;
     }
-    
+
     .format-btn {
       background: #17a2b8;
       color: white;
@@ -547,7 +558,7 @@
       font-size: 12px;
       margin-left: 10px;
     }
-    
+
     .copy-btn {
       background: var(--secondary-light);
       color: white;
@@ -563,24 +574,26 @@
       align-items: center;
       gap: 8px;
     }
-    
+
     .copy-btn:hover {
       background: var(--secondary);
       transform: translateY(-1px);
       box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
     }
-    
+
     .copy-btn:active {
       transform: translateY(0);
     }
-    
+
     /* Request and Response Tabs */
-    .request-tabs, .response-tabs {
+    .request-tabs,
+    .response-tabs {
       display: flex;
       gap: 2px;
     }
-    
-    .request-tab, .response-tab {
+
+    .request-tab,
+    .response-tab {
       padding: 10px 20px;
       border: none;
       background: transparent;
@@ -591,28 +604,33 @@
       font-weight: 600;
       transition: all 0.2s ease;
     }
-    
-    .request-tab:hover, .response-tab:hover {
+
+    .request-tab:hover,
+    .response-tab:hover {
       color: var(--primary);
       background: rgba(99, 102, 241, 0.05);
     }
-    
-    .request-tab.active, .response-tab.active {
+
+    .request-tab.active,
+    .response-tab.active {
       background: transparent;
       color: var(--primary);
       border-bottom-color: var(--primary);
     }
-    
-    .request-tab-content, .response-tab-content {
+
+    .request-tab-content,
+    .response-tab-content {
       display: none;
       padding: 20px 0;
     }
-    
-    .request-tab-content.active, .response-tab-content.active {
+
+    .request-tab-content.active,
+    .response-tab-content.active {
       display: block;
     }
-    
-    .param-row, .header-row {
+
+    .param-row,
+    .header-row {
       display: flex;
       align-items: center;
       gap: 12px;
@@ -623,23 +641,28 @@
       background: white;
       transition: all 0.2s ease;
     }
-    
-    .param-row:hover, .header-row:hover {
+
+    .param-row:hover,
+    .header-row:hover {
       border-color: var(--primary-light);
       box-shadow: 0 2px 8px rgba(99, 102, 241, 0.1);
     }
-    
-    .param-input, .header-input {
+
+    .param-input,
+    .header-input {
       flex: 1;
       padding: 8px;
       border: 1px solid #ddd;
       border-radius: 3px;
       font-size: 14px;
-      min-width: 200px; /* Ensure minimum width for input fields */
-      height: 36px; /* Increase height for better usability */
+      min-width: 200px;
+      /* Ensure minimum width for input fields */
+      height: 36px;
+      /* Increase height for better usability */
     }
-    
-    .remove-param, .remove-header {
+
+    .remove-param,
+    .remove-header {
       background: #dc3545;
       color: white;
       border: none;
@@ -648,8 +671,9 @@
       cursor: pointer;
       font-size: 12px;
     }
-    
-    .add-param, .add-header {
+
+    .add-param,
+    .add-header {
       background: #28a745;
       color: white;
       border: none;
@@ -659,19 +683,20 @@
       font-size: 13px;
       margin-top: 10px;
     }
-    
+
     .auth-field {
       margin-bottom: 15px;
     }
-    
+
     .auth-field label {
       display: block;
       margin-bottom: 5px;
       font-weight: bold;
       font-size: 13px;
     }
-    
-    .auth-field input, .auth-field select {
+
+    .auth-field input,
+    .auth-field select {
       width: 100%;
       padding: 8px;
       border: 1px solid #ddd;
@@ -683,27 +708,28 @@
       .api-container {
         padding: 10px;
       }
-      
+
       .url-row {
         flex-direction: column;
         align-items: stretch;
       }
-      
+
       .method-select {
         min-width: auto;
       }
-      
+
       .postman-connect {
         flex-direction: column;
         align-items: stretch;
       }
-      
+
       .response-meta {
         flex-direction: column;
         gap: 10px;
       }
-      
-      .request-tabs, .response-tabs {
+
+      .request-tabs,
+      .response-tabs {
         flex-wrap: wrap;
       }
     }
@@ -760,386 +786,606 @@
     }
   </style>
 </head>
+
 <body>
   {% include 'quotes-header.html' %}
   {% set active_tab = 'api' %}
   {% include 'left-sidebar.html' %}
-  
+
   <div class="main-content">
     {% set allow_html = true %}
-    {% set page_title = 'API Co-Test <span style="background: linear-gradient(45deg, #3b82f6, #1d4ed8); color: white; padding: 0.25rem 0.75rem; border-radius: 8px; font-size: 0.8rem; font-weight: 600; margin-left: 0.75rem; vertical-align: middle; box-shadow: 0 2px 6px rgba(59, 130, 246, 0.3);">Partially Complete</span>' %}
-    {% set page_subtitle = 'Professional API testing suite with cURL runner, collection management, Postman integration, and comprehensive REST & GraphQL support. <strong>Note:</strong> This feature is currently under active development with more tools and enhancements coming soon!' %}
+    {% set page_title = 'API Co-Test <span
+      style="background: linear-gradient(45deg, #3b82f6, #1d4ed8); color: white; padding: 0.25rem 0.75rem; border-radius: 8px; font-size: 0.8rem; font-weight: 600; margin-left: 0.75rem; vertical-align: middle; box-shadow: 0 2px 6px rgba(59, 130, 246, 0.3);">Partially
+      Complete</span>' %}
+    {% set page_subtitle = 'Professional API testing suite with cURL runner, collection management, Postman integration,
+    and comprehensive REST & GraphQL support. <strong>Note:</strong> This feature is currently under active development
+    with more tools and enhancements coming soon!' %}
     {% include 'page-header.html' %}
-    
+
     <!-- New V2 Toolbar -->
-    
-      <!-- Main Content Area -->
-      <div class="api-main">
-    
-    <div class="api-container">
-      
-      <!-- Main Tabs -->
-      <div class="api-tabs">
-              <button class="api-tab" data-tab="rest">
-        <i class="fas fa-globe"></i>
-        REST API
-      </button>
-      <button class="api-tab" data-tab="graphql">
-        <i class="fas fa-layer-group"></i>
-        GraphQL
-      </button>
-      <button class="api-tab active" data-tab="curl">
-        <i class="fas fa-terminal"></i>
-        cURL Runner
-      </button>
-        <button class="api-tab" data-tab="collections">
-          <i class="fas fa-folder-open"></i>
-          Collections
-        </button>
-      </div>
 
-      <!-- REST API Tab -->
-      <div class="tab-content" id="rest-tab">
-        <div class="request-builder">
-          <h4><i class="fas fa-paper-plane"></i> REST API Request</h4>
-          
-          <div class="url-row">
-            <select class="method-select" id="rest-method">
-              <option value="GET">GET</option>
-              <option value="POST">POST</option>
-              <option value="PUT">PUT</option>
-              <option value="DELETE">DELETE</option>
-              <option value="PATCH">PATCH</option>
-              <option value="HEAD">HEAD</option>
-              <option value="OPTIONS">OPTIONS</option>
-            </select>
-            <input type="url" class="url-input" id="rest-url" placeholder="https://{{baseUrl}}/api/endpoint">
-            <button class="send-btn" id="rest-send">
-              <i class="fas fa-paper-plane"></i> Send
-            </button>
-          </div>
-          
-          <!-- Request Tabs -->
-          <div class="request-tabs" style="margin: 20px 0; border-bottom: 1px solid #ddd;">
-            <button class="request-tab active" data-tab="params">Params</button>
-            <button class="request-tab" data-tab="auth">Auth</button>
-            <button class="request-tab" data-tab="headers">Headers</button>
-            <button class="request-tab" data-tab="body">Body</button>
-          </div>
-          
-          <!-- Params Tab -->
-          <div class="request-tab-content active" id="params-content">
-            <h5><i class="fas fa-tags"></i> Query Parameters</h5>
-            <div class="params-list" id="rest-params">
-              <div class="param-row">
-                <input type="checkbox" checked style="width: 20px; height: 20px; cursor: pointer;">
-                <input type="text" class="param-input" placeholder="Parameter name" value="limit">
-                <input type="text" class="param-input" placeholder="Parameter value" value="10">
-                <button class="remove-param" onclick="this.parentElement.remove()">×</button>
-              </div>
-            </div>
-            <button class="add-param" id="add-rest-param">
-              <i class="fas fa-plus"></i> Add Parameter
-            </button>
-          </div>
-          
-          <!-- Auth Tab -->
-          <div class="request-tab-content" id="auth-content">
-            <h5><i class="fas fa-lock"></i> Authentication</h5>
-            <select id="rest-auth-type" style="margin-bottom: 15px; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
-              <option value="none">No Auth</option>
-              <option value="basic">Basic Auth</option>
-              <option value="bearer">Bearer Token</option>
-              <option value="api_key">API Key</option>
-            </select>
-            
-            <div id="rest-auth-fields"></div>
-          </div>
-          
-          <!-- Headers Tab -->
-          <div class="request-tab-content" id="headers-content">
-            <h5><i class="fas fa-list"></i> Headers</h5>
-            <div class="headers-list" id="rest-headers">
-              <div class="header-row">
-                <input type="checkbox" checked style="width: 20px; height: 20px; cursor: pointer;">
-                <input type="text" class="header-input" placeholder="Header name" value="Content-Type">
-                <input type="text" class="header-input" placeholder="Header value" value="application/json">
-                <button class="remove-header" onclick="this.parentElement.remove()">×</button>
-              </div>
-            </div>
-            <button class="add-header" id="add-rest-header">
-              <i class="fas fa-plus"></i> Add Header
-            </button>
-          </div>
-          
-          <!-- Body Tab -->
-          <div class="request-tab-content" id="body-content">
-            <h5><i class="fas fa-code"></i> Request Body</h5>
-            <div style="margin-bottom: 15px;">
-              <label><input type="radio" name="rest-body-type" value="none" checked> None</label>
-              <label><input type="radio" name="rest-body-type" value="json"> JSON</label>
-              <label><input type="radio" name="rest-body-type" value="text"> Text</label>
-              <label><input type="radio" name="rest-body-type" value="form"> Form Data</label>
-              <label><input type="radio" name="rest-body-type" value="xml"> XML</label>
-            </div>
-            <textarea class="body-textarea" id="rest-body" placeholder='{"key": "{{variableName}}"}'></textarea>
-            <button class="format-btn" onclick="formatJSON('rest-body')">
-              <i class="fas fa-magic"></i> Format JSON
-            </button>
-          </div>
-        </div>
+    <!-- Main Content Area -->
+    <div class="api-main">
 
-        <div class="response-section">
-          <h4><i class="fas fa-eye"></i> Response</h4>
-          
-          <!-- Response Tabs -->
-          <div class="response-tabs" style="margin: 15px 0; border-bottom: 1px solid #ddd;">
-            <button class="response-tab active" data-tab="body">Body</button>
-            <button class="response-tab" data-tab="headers">Headers</button>
-            <button class="response-tab" data-tab="cookies">Cookies</button>
-          </div>
-          
-          <div class="response-meta" id="rest-response-meta">
-            <span><i class="fas fa-info-circle"></i> Ready to send request...</span>
-          </div>
-          
-          <!-- Response Body Tab -->
-          <div class="response-tab-content active" id="response-body-content">
-            <div class="response-body" id="rest-response-body">
-              Response will appear here...
-            </div>
-          </div>
-          
-          <!-- Response Headers Tab -->
-          <div class="response-tab-content" id="response-headers-content">
-            <div class="response-body" id="rest-response-headers">
-              Response headers will appear here...
-            </div>
-          </div>
-          
-          <!-- Response Cookies Tab -->
-          <div class="response-tab-content" id="response-cookies-content">
-            <div class="response-body" id="rest-response-cookies">
-              Response cookies will appear here...
-            </div>
-          </div>
-          
-          <button class="copy-btn" onclick="copyResponse('rest-response-body')" style="margin-top: 10px;">
-            <i class="fas fa-copy"></i> Copy Response
+      <div class="api-container">
+
+        <!-- Main Tabs -->
+        <div class="api-tabs">
+          <button class="api-tab active" data-tab="unified">
+            <i class="fas fa-rocket"></i>
+            API Tester
+          </button>
+          <button class="api-tab" data-tab="collections">
+            <i class="fas fa-folder-open"></i>
+            Collections
           </button>
         </div>
-      </div>
 
-      <!-- GraphQL Tab -->
-      <div class="tab-content" id="graphql-tab">
-        <div class="request-builder">
-          <h4><i class="fas fa-layer-group"></i> GraphQL Request</h4>
-          
-          <div class="url-row">
-            <input type="url" class="url-input" id="graphql-url" placeholder="https://api.example.com/graphql">
-            <button class="send-btn" id="graphql-send">
-              <i class="fas fa-paper-plane"></i> Send Query
-            </button>
-          </div>
-          
-          <div class="graphql-section">
-            <div>
-              <h5><i class="fas fa-search"></i> Query/Mutation</h5>
-              <textarea class="body-textarea graphql-query" id="graphql-query" placeholder="query {
+        <!-- Unified API Tester Tab -->
+        <div class="tab-content active" id="unified-tab">
+          <div class="request-builder">
+            <h4><i class="fas fa-rocket"></i> API Request Builder</h4>
+            
+            <!-- Request Type Selector -->
+            <div style="margin-bottom: 1.5rem;">
+              <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: var(--text-dark);">
+                <i class="fas fa-layer-group"></i> Request Type
+              </label>
+              <div style="display: flex; gap: 1rem;">
+                <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                  <input type="radio" name="request-type" value="rest" checked onchange="switchRequestType('rest')">
+                  <span><i class="fas fa-globe"></i> REST API</span>
+                </label>
+                <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                  <input type="radio" name="request-type" value="graphql" onchange="switchRequestType('graphql')">
+                  <span><i class="fas fa-layer-group"></i> GraphQL</span>
+                </label>
+                <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                  <input type="radio" name="request-type" value="curl" onchange="switchRequestType('curl')">
+                  <span><i class="fas fa-terminal"></i> cURL Import</span>
+                </label>
+              </div>
+            </div>
+
+            <!-- REST/GraphQL Mode -->
+            <div id="rest-graphql-mode">
+              <div class="url-row">
+                <select class="method-select" id="unified-method">
+                  <option value="GET">GET</option>
+                  <option value="POST">POST</option>
+                  <option value="PUT">PUT</option>
+                  <option value="DELETE">DELETE</option>
+                  <option value="PATCH">PATCH</option>
+                  <option value="HEAD">HEAD</option>
+                  <option value="OPTIONS">OPTIONS</option>
+                </select>
+                <input type="url" class="url-input" id="unified-url" placeholder="https://api.example.com/endpoint">
+                <button class="send-btn" id="unified-send">
+                  <i class="fas fa-paper-plane"></i> Send Request
+                </button>
+              </div>
+
+              <!-- Request Tabs -->
+              <div class="request-tabs" style="margin: 20px 0; border-bottom: 1px solid #ddd;">
+                <button class="request-tab active" data-tab="params">Params</button>
+                <button class="request-tab" data-tab="auth">Auth</button>
+                <button class="request-tab" data-tab="headers">Headers</button>
+                <button class="request-tab" data-tab="body">Body</button>
+              </div>
+
+              <!-- Params Tab -->
+              <div class="request-tab-content active" id="params-content">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                  <h5><i class="fas fa-list"></i> Query Parameters</h5>
+                  <button class="add-param" onclick="addParam()">
+                    <i class="fas fa-plus"></i> Add Parameter
+                  </button>
+                </div>
+                <div id="params-list"></div>
+              </div>
+
+              <!-- Auth Tab -->
+              <div class="request-tab-content" id="auth-content">
+                <h5><i class="fas fa-lock"></i> Authorization</h5>
+                <div style="margin-bottom: 15px;">
+                  <label style="display: block; margin-bottom: 5px; font-weight: 600;">Auth Type</label>
+                  <select id="auth-type" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px;">
+                    <option value="none">No Auth</option>
+                    <option value="bearer">Bearer Token</option>
+                    <option value="basic">Basic Auth</option>
+                    <option value="api-key">API Key</option>
+                  </select>
+                </div>
+                <div id="auth-fields"></div>
+              </div>
+
+              <!-- Headers Tab -->
+              <div class="request-tab-content" id="headers-content">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                  <h5><i class="fas fa-file-alt"></i> Headers</h5>
+                  <button class="add-header" onclick="addHeader()">
+                    <i class="fas fa-plus"></i> Add Header
+                  </button>
+                </div>
+                <div id="headers-list"></div>
+              </div>
+
+              <!-- Body Tab -->
+              <div class="request-tab-content" id="body-content">
+                <h5><i class="fas fa-code"></i> Request Body</h5>
+                
+                <!-- Body Type Selector (shown for REST) -->
+                <div id="rest-body-options" style="margin-bottom: 15px;">
+                  <label style="display: block; margin-bottom: 5px; font-weight: 600;">Body Type</label>
+                  <select id="body-type" style="width: 200px; padding: 8px; border: 1px solid #ddd; border-radius: 4px;" onchange="switchBodyType()">
+                    <option value="json">JSON</option>
+                    <option value="raw">Raw Text</option>
+                    <option value="form">Form Data</option>
+                  </select>
+                </div>
+                
+                <!-- GraphQL Query Editor (hidden by default) -->
+                <div id="graphql-body-options" style="display: none;">
+                  <div style="margin-bottom: 20px;">
+                    <label style="display: block; margin-bottom: 5px; font-weight: 600;">
+                      <i class="fas fa-search"></i> GraphQL Query/Mutation
+                    </label>
+                    <textarea class="body-textarea" id="unified-graphql-query" placeholder="query {
   users {
     id
     name
     email
   }
 }"></textarea>
-              <button class="format-btn" onclick="formatGraphQL()">
-                <i class="fas fa-magic"></i> Format Query
+                    <button class="format-btn" onclick="formatGraphQL()" style="margin-top: 10px;">
+                      <i class="fas fa-magic"></i> Format Query
+                    </button>
+                  </div>
+                  
+                  <div>
+                    <label style="display: block; margin-bottom: 5px; font-weight: 600;">
+                      <i class="fas fa-cog"></i> Variables (JSON)
+                    </label>
+                    <textarea class="body-textarea" id="unified-graphql-variables" style="min-height: 150px;" placeholder='{"limit": 10}'></textarea>
+                    <button class="format-btn" onclick="formatJSON('unified-graphql-variables')" style="margin-top: 10px;">
+                      <i class="fas fa-magic"></i> Format JSON
+                    </button>
+                  </div>
+                </div>
+                
+                <!-- REST Body Editor -->
+                <div id="rest-body-editor">
+                  <textarea class="body-textarea" id="unified-body" placeholder='{"key": "value"}'></textarea>
+                  <button class="format-btn" onclick="formatJSON('unified-body')" style="margin-top: 10px;">
+                    <i class="fas fa-magic"></i> Format JSON
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- cURL Import Mode -->
+            <div id="curl-mode" style="display: none;">
+              <div style="margin-bottom: 20px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                  <h5><i class="fas fa-terminal"></i> Paste cURL Command</h5>
+                  <div style="display: flex; gap: 10px;">
+                    <button class="example-btn" onclick="loadRestExample()">
+                      <i class="fas fa-globe"></i> REST Example
+                    </button>
+                    <button class="example-btn" onclick="loadGraphQLExample()">
+                      <i class="fas fa-layer-group"></i> GraphQL Example
+                    </button>
+                  </div>
+                </div>
+                <textarea class="body-textarea" id="unified-curl" style="min-height: 200px;" placeholder="curl -X GET 'https://api.example.com/users' -H 'Authorization: Bearer token'"></textarea>
+                <div style="display: flex; gap: 10px; margin-top: 10px;">
+                  <button class="format-btn" onclick="formatCurlCommand()">
+                    <i class="fas fa-magic"></i> Format
+                  </button>
+                  <button class="send-btn" onclick="executeCurlCommand()">
+                    <i class="fas fa-play"></i> Execute cURL
+                  </button>
+                  <button class="copy-btn" onclick="clearCurlCommand()">
+                    <i class="fas fa-trash"></i> Clear
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Response Section -->
+          <div class="response-section">
+            <h4><i class="fas fa-eye"></i> Response</h4>
+            <div class="response-meta" id="unified-response-meta">
+              <span><i class="fas fa-info-circle"></i> Ready to send request...</span>
+            </div>
+
+            <!-- Response Tabs -->
+            <div class="response-tabs" style="margin: 15px 0; border-bottom: 1px solid #ddd;">
+              <button class="response-tab active" data-tab="body">Body</button>
+              <button class="response-tab" data-tab="headers">Headers</button>
+              <button class="response-tab" data-tab="cookies">Cookies</button>
+            </div>
+
+            <!-- Response Body Tab -->
+            <div class="response-tab-content active" id="response-body-content">
+              <div class="response-body" id="unified-response-body">
+                Response will appear here...
+              </div>
+            </div>
+
+            <!-- Response Headers Tab -->
+            <div class="response-tab-content" id="response-headers-content">
+              <div class="response-body" id="unified-response-headers">
+                Response headers will appear here...
+              </div>
+            </div>
+
+            <!-- Response Cookies Tab -->
+            <div class="response-tab-content" id="response-cookies-content">
+              <div class="response-body" id="unified-response-cookies">
+                Response cookies will appear here...
+              </div>
+            </div>
+
+            <button class="copy-btn" onclick="copyResponse('unified-response-body')">
+              <i class="fas fa-copy"></i> Copy Response
+            </button>
+          </div>
+        </div>
+
+        <!-- OLD REST API Tab (Hidden) -->
+        <div class="tab-content" id="rest-tab" style="display: none;">
+          <div class="request-builder">
+            <h4><i class="fas fa-paper-plane"></i> REST API Request</h4>
+
+            <div class="url-row">
+              <select class="method-select" id="rest-method">
+                <option value="GET">GET</option>
+                <option value="POST">POST</option>
+                <option value="PUT">PUT</option>
+                <option value="DELETE">DELETE</option>
+                <option value="PATCH">PATCH</option>
+                <option value="HEAD">HEAD</option>
+                <option value="OPTIONS">OPTIONS</option>
+              </select>
+              <input type="url" class="url-input" id="rest-url" placeholder="https://{{baseUrl}}/api/endpoint">
+              <button class="send-btn" id="rest-send">
+                <i class="fas fa-paper-plane"></i> Send
               </button>
             </div>
-            
-            <div>
-              <h5><i class="fas fa-cog"></i> Variables (JSON)</h5>
-              <textarea class="body-textarea graphql-variables" id="graphql-variables" placeholder='{"limit": 10}'></textarea>
-              <button class="format-btn" onclick="formatJSON('graphql-variables')">
+
+            <!-- Request Tabs -->
+            <div class="request-tabs" style="margin: 20px 0; border-bottom: 1px solid #ddd;">
+              <button class="request-tab active" data-tab="params">Params</button>
+              <button class="request-tab" data-tab="auth">Auth</button>
+              <button class="request-tab" data-tab="headers">Headers</button>
+              <button class="request-tab" data-tab="body">Body</button>
+            </div>
+
+            <!-- Params Tab -->
+            <div class="request-tab-content active" id="params-content">
+              <h5><i class="fas fa-tags"></i> Query Parameters</h5>
+              <div class="params-list" id="rest-params">
+                <div class="param-row">
+                  <input type="checkbox" checked style="width: 20px; height: 20px; cursor: pointer;">
+                  <input type="text" class="param-input" placeholder="Parameter name" value="limit">
+                  <input type="text" class="param-input" placeholder="Parameter value" value="10">
+                  <button class="remove-param" onclick="this.parentElement.remove()">×</button>
+                </div>
+              </div>
+              <button class="add-param" id="add-rest-param">
+                <i class="fas fa-plus"></i> Add Parameter
+              </button>
+            </div>
+
+            <!-- Auth Tab -->
+            <div class="request-tab-content" id="auth-content">
+              <h5><i class="fas fa-lock"></i> Authentication</h5>
+              <select id="rest-auth-type"
+                style="margin-bottom: 15px; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                <option value="none">No Auth</option>
+                <option value="basic">Basic Auth</option>
+                <option value="bearer">Bearer Token</option>
+                <option value="api_key">API Key</option>
+              </select>
+
+              <div id="rest-auth-fields"></div>
+            </div>
+
+            <!-- Headers Tab -->
+            <div class="request-tab-content" id="headers-content">
+              <h5><i class="fas fa-list"></i> Headers</h5>
+              <div class="headers-list" id="rest-headers">
+                <div class="header-row">
+                  <input type="checkbox" checked style="width: 20px; height: 20px; cursor: pointer;">
+                  <input type="text" class="header-input" placeholder="Header name" value="Content-Type">
+                  <input type="text" class="header-input" placeholder="Header value" value="application/json">
+                  <button class="remove-header" onclick="this.parentElement.remove()">×</button>
+                </div>
+              </div>
+              <button class="add-header" id="add-rest-header">
+                <i class="fas fa-plus"></i> Add Header
+              </button>
+            </div>
+
+            <!-- Body Tab -->
+            <div class="request-tab-content" id="body-content">
+              <h5><i class="fas fa-code"></i> Request Body</h5>
+              <div style="margin-bottom: 15px;">
+                <label><input type="radio" name="rest-body-type" value="none" checked> None</label>
+                <label><input type="radio" name="rest-body-type" value="json"> JSON</label>
+                <label><input type="radio" name="rest-body-type" value="text"> Text</label>
+                <label><input type="radio" name="rest-body-type" value="form"> Form Data</label>
+                <label><input type="radio" name="rest-body-type" value="xml"> XML</label>
+              </div>
+              <textarea class="body-textarea" id="rest-body" placeholder='{"key": "{{variableName}}"}'></textarea>
+              <button class="format-btn" onclick="formatJSON('rest-body')">
                 <i class="fas fa-magic"></i> Format JSON
               </button>
             </div>
           </div>
-        </div>
 
-        <div class="response-section">
-          <h4><i class="fas fa-eye"></i> Response</h4>
-          <div class="response-meta" id="graphql-response-meta">
-            <span><i class="fas fa-info-circle"></i> Ready to send GraphQL request...</span>
-          </div>
-          <div class="response-body" id="graphql-response-body">
-            Response will appear here...
-          </div>
-          <button class="copy-btn" onclick="copyResponse('graphql-response-body')" style="margin-top: 10px;">
-            <i class="fas fa-copy"></i> Copy Response
-          </button>
-        </div>
-      </div>
+          <div class="response-section">
+            <h4><i class="fas fa-eye"></i> Response</h4>
 
-      <!-- cURL Runner Tab -->
-      <div class="tab-content active" id="curl-tab">
-        <div class="request-builder">
-          <h4><i class="fas fa-terminal"></i> cURL Command Runner</h4>
-          <p style="color: var(--text-light); margin-bottom: 20px;">
-            <i class="fas fa-info-circle"></i> 
-            Supports both REST and GraphQL requests. Auto-detects GraphQL patterns.
-          </p>
-          
-          <div class="curl-section">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-              <h5><i class="fas fa-paste"></i> Paste your cURL command</h5>
-              <div class="curl-examples">
-                <button class="example-btn" onclick="loadRestExample()">
-                  <i class="fas fa-globe"></i> REST Example
-                </button>
-                <button class="example-btn" onclick="loadGraphQLExample()">
-                  <i class="fas fa-layer-group"></i> GraphQL Example
-                </button>
+            <!-- Response Tabs -->
+            <div class="response-tabs" style="margin: 15px 0; border-bottom: 1px solid #ddd;">
+              <button class="response-tab active" data-tab="body">Body</button>
+              <button class="response-tab" data-tab="headers">Headers</button>
+              <button class="response-tab" data-tab="cookies">Cookies</button>
+            </div>
+
+            <div class="response-meta" id="rest-response-meta">
+              <span><i class="fas fa-info-circle"></i> Ready to send request...</span>
+            </div>
+
+            <!-- Response Body Tab -->
+            <div class="response-tab-content active" id="response-body-content">
+              <div class="response-body" id="rest-response-body">
+                Response will appear here...
               </div>
             </div>
-            <textarea class="curl-input" id="curl-command" placeholder="curl -X GET https://api.example.com/users \
-  -H 'Authorization: Bearer token' \
-  -H 'Content-Type: application/json' \
-  -d '{\"key\": \"value\"}'"></textarea>
-          </div>
-          
-          <div class="curl-controls">
-            <button class="send-btn" id="curl-send">
-              <i class="fas fa-play"></i> Execute cURL
-            </button>
-            <button class="format-btn" onclick="formatCurlCommand()">
-              <i class="fas fa-magic"></i> Format
-            </button>
-            <button class="clear-btn" onclick="clearCurlCommand()">
-              <i class="fas fa-eraser"></i> Clear
-            </button>
-          </div>
-        </div>
 
-        <div class="response-section">
-          <h4><i class="fas fa-eye"></i> Response</h4>
-          <div class="response-meta" id="curl-response-meta">
-            <span><i class="fas fa-info-circle"></i> Ready to execute cURL command...</span>
-          </div>
-          <div class="response-body" id="curl-response-body">
-            Response will appear here...
-          </div>
-          <button class="copy-btn" onclick="copyResponse('curl-response-body')" style="margin-top: 10px;">
-            <i class="fas fa-copy"></i> Copy Response
-          </button>
-        </div>
-      </div>
-
-      <!-- Collections Tab -->
-      <div class="tab-content" id="collections-tab">
-        <div class="request-builder">
-          <h4><i class="fas fa-folder-open"></i> Postman Collections</h4>
-          
-          <div class="postman-connect">
-            <input type="file" class="file-input" id="collection-file" accept=".json">
-            <label for="collection-file" class="file-label">
-              <i class="fas fa-file-import"></i> Import Postman Collection
-            </label>
-            <input type="file" class="file-input" id="environment-file" accept=".json">
-            <label for="environment-file" class="file-label" style="background: #17a2b8;">
-              <i class="fas fa-cog"></i> Import Environment
-            </label>
-            <button class="send-btn" id="connect-postman" style="background: #ff6c37;">
-              <i class="fas fa-link"></i> Connect to Postman API
-            </button>
-          </div>
-          
-          <div class="collections-list" id="collections-list">
-            <div class="collection-item sample-collection">
-              <div>
-                <strong><i class="fas fa-folder"></i> Sample Collection</strong>
-                <div style="font-size: 12px; color: #6c757d; margin-top: 4px;">
-                  <i class="fas fa-file-alt"></i> 3 requests ready to run
-                </div>
-              </div>
-              <div style="display: flex; gap: 5px;">
-                <button class="run-collection" onclick="runCollection('sample')">
-                  <i class="fas fa-play"></i> Run
-                </button>
-                <button class="run-collection" onclick="editCollection('sample')" style="background: #6c757d;">
-                  <i class="fas fa-edit"></i> Edit
-                </button>
+            <!-- Response Headers Tab -->
+            <div class="response-tab-content" id="response-headers-content">
+              <div class="response-body" id="rest-response-headers">
+                Response headers will appear here...
               </div>
             </div>
+
+            <!-- Response Cookies Tab -->
+            <div class="response-tab-content" id="response-cookies-content">
+              <div class="response-body" id="rest-response-cookies">
+                Response cookies will appear here...
+              </div>
+            </div>
+
+            <button class="copy-btn" onclick="copyResponse('rest-response-body')" style="margin-top: 10px;">
+              <i class="fas fa-copy"></i> Copy Response
+            </button>
           </div>
         </div>
 
-        <div class="response-section">
-          <h4><i class="fas fa-chart-bar"></i> Collection Results</h4>
-          <div class="response-meta" id="collection-response-meta">
-            <span><i class="fas fa-info-circle"></i> Import a collection to get started...</span>
-          </div>
-          <div class="response-body" id="collection-response-body">
-            Collection run results will appear here...
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
+        <!-- GraphQL Tab -->
+        <div class="tab-content" id="graphql-tab">
+          <div class="request-builder">
+            <h4><i class="fas fa-layer-group"></i> GraphQL Request</h4>
 
-  <!-- Collection Editor Modal -->
-  <div id="collection-editor-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000;">
-    <div style="background: white; margin: 50px auto; padding: 0; border-radius: 8px; width: 90%; max-width: 1000px; max-height: 80%; overflow: hidden; display: flex; flex-direction: column;">
-      <!-- Modal Header -->
-      <div style="padding: 20px; border-bottom: 1px solid #ddd; display: flex; justify-content: space-between; align-items: center;">
-        <h3 style="margin: 0;"><i class="fas fa-edit"></i> Edit Collection</h3>
-        <button onclick="closeCollectionEditor()" style="background: none; border: none; font-size: 24px; cursor: pointer;">&times;</button>
-      </div>
-      
-      <!-- Modal Body -->
-      <div style="flex: 1; overflow: auto; display: flex;">
-        <!-- Left Panel - Collection Structure -->
-        <div style="width: 30%; border-right: 1px solid #ddd; padding: 20px; overflow-y: auto;">
-          <h4><i class="fas fa-folder-tree"></i> Collection Structure</h4>
-          <div id="collection-tree"></div>
-          
-          <h4 style="margin-top: 30px;"><i class="fas fa-cog"></i> Environment Variables</h4>
-          <div id="environment-variables">
-            <div style="margin-bottom: 15px;">
-              <button onclick="addEnvironmentVariable()" style="background: #28a745; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer;">
-                <i class="fas fa-plus"></i> Add Variable
+            <div class="url-row">
+              <input type="url" class="url-input" id="graphql-url" placeholder="https://api.example.com/graphql">
+              <button class="send-btn" id="graphql-send">
+                <i class="fas fa-paper-plane"></i> Send Query
               </button>
             </div>
-            <div id="env-vars-list"></div>
+
+            <div class="graphql-section">
+              <div>
+                <h5><i class="fas fa-search"></i> Query/Mutation</h5>
+                <textarea class="body-textarea graphql-query" id="graphql-query" placeholder="query {
+  users {
+    id
+    name
+    email
+  }
+}"></textarea>
+                <button class="format-btn" onclick="formatGraphQL()">
+                  <i class="fas fa-magic"></i> Format Query
+                </button>
+              </div>
+
+              <div>
+                <h5><i class="fas fa-cog"></i> Variables (JSON)</h5>
+                <textarea class="body-textarea graphql-variables" id="graphql-variables"
+                  placeholder='{"limit": 10}'></textarea>
+                <button class="format-btn" onclick="formatJSON('graphql-variables')">
+                  <i class="fas fa-magic"></i> Format JSON
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div class="response-section">
+            <h4><i class="fas fa-eye"></i> Response</h4>
+            <div class="response-meta" id="graphql-response-meta">
+              <span><i class="fas fa-info-circle"></i> Ready to send GraphQL request...</span>
+            </div>
+            <div class="response-body" id="graphql-response-body">
+              Response will appear here...
+            </div>
+            <button class="copy-btn" onclick="copyResponse('graphql-response-body')" style="margin-top: 10px;">
+              <i class="fas fa-copy"></i> Copy Response
+            </button>
           </div>
         </div>
-        
-        <!-- Right Panel - Request Editor -->
-        <div style="flex: 1; padding: 20px; overflow-y: auto;">
-          <div id="request-editor">
-            <h4><i class="fas fa-file-alt"></i> Select a request to edit</h4>
-            <p style="color: #6c757d;">Click on a request from the collection structure to edit it.</p>
+
+        <!-- cURL Runner Tab -->
+        <div class="tab-content active" id="curl-tab">
+          <div class="request-builder">
+            <h4><i class="fas fa-terminal"></i> cURL Command Runner</h4>
+            <p style="color: var(--text-light); margin-bottom: 20px;">
+              <i class="fas fa-info-circle"></i>
+              Supports both REST and GraphQL requests. Auto-detects GraphQL patterns.
+            </p>
+
+            <div class="curl-section">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                <h5><i class="fas fa-paste"></i> Paste your cURL command</h5>
+                <div class="curl-examples">
+                  <button class="example-btn" onclick="loadRestExample()">
+                    <i class="fas fa-globe"></i> REST Example
+                  </button>
+                  <button class="example-btn" onclick="loadGraphQLExample()">
+                    <i class="fas fa-layer-group"></i> GraphQL Example
+                  </button>
+                </div>
+              </div>
+              <textarea class="curl-input" id="curl-command" placeholder="curl -X GET https://api.example.com/users \
+  -H 'Authorization: Bearer token' \
+  -H 'Content-Type: application/json' \
+  -d '{\" key\": \"value\"}'"></textarea>
+            </div>
+
+            <div class="curl-controls">
+              <button class="send-btn" id="curl-send">
+                <i class="fas fa-play"></i> Execute cURL
+              </button>
+              <button class="format-btn" onclick="formatCurlCommand()">
+                <i class="fas fa-magic"></i> Format
+              </button>
+              <button class="clear-btn" onclick="clearCurlCommand()">
+                <i class="fas fa-eraser"></i> Clear
+              </button>
+            </div>
+          </div>
+
+          <div class="response-section">
+            <h4><i class="fas fa-eye"></i> Response</h4>
+            <div class="response-meta" id="curl-response-meta">
+              <span><i class="fas fa-info-circle"></i> Ready to execute cURL command...</span>
+            </div>
+            <div class="response-body" id="curl-response-body">
+              Response will appear here...
+            </div>
+            <button class="copy-btn" onclick="copyResponse('curl-response-body')" style="margin-top: 10px;">
+              <i class="fas fa-copy"></i> Copy Response
+            </button>
           </div>
         </div>
-      </div>
-      
-      <!-- Modal Footer -->
-      <div style="padding: 20px; border-top: 1px solid #ddd; display: flex; justify-content: space-between;">
-        <div>
-          <button onclick="saveCollection()" style="background: #007bff; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; margin-right: 10px;">
-            <i class="fas fa-save"></i> Save Changes
-          </button>
-          <button onclick="exportCollection()" style="background: #17a2b8; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer;">
-            <i class="fas fa-download"></i> Export Collection
-          </button>
+
+        <!-- Collections Tab -->
+        <div class="tab-content" id="collections-tab">
+          <div class="request-builder">
+            <h4><i class="fas fa-folder-open"></i> Postman Collections</h4>
+
+            <div class="postman-connect">
+              <input type="file" class="file-input" id="collection-file" accept=".json">
+              <label for="collection-file" class="file-label">
+                <i class="fas fa-file-import"></i> Import Postman Collection
+              </label>
+              <input type="file" class="file-input" id="environment-file" accept=".json">
+              <label for="environment-file" class="file-label" style="background: #17a2b8;">
+                <i class="fas fa-cog"></i> Import Environment
+              </label>
+              <button class="send-btn" id="connect-postman" style="background: #ff6c37;">
+                <i class="fas fa-link"></i> Connect to Postman API
+              </button>
+            </div>
+
+            <div class="collections-list" id="collections-list">
+              <div class="collection-item sample-collection">
+                <div>
+                  <strong><i class="fas fa-folder"></i> Sample Collection</strong>
+                  <div style="font-size: 12px; color: #6c757d; margin-top: 4px;">
+                    <i class="fas fa-file-alt"></i> 3 requests ready to run
+                  </div>
+                </div>
+                <div style="display: flex; gap: 5px;">
+                  <button class="run-collection" onclick="runCollection('sample')">
+                    <i class="fas fa-play"></i> Run
+                  </button>
+                  <button class="run-collection" onclick="editCollection('sample')" style="background: #6c757d;">
+                    <i class="fas fa-edit"></i> Edit
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="response-section">
+            <h4><i class="fas fa-chart-bar"></i> Collection Results</h4>
+            <div class="response-meta" id="collection-response-meta">
+              <span><i class="fas fa-info-circle"></i> Import a collection to get started...</span>
+            </div>
+            <div class="response-body" id="collection-response-body">
+              Collection run results will appear here...
+            </div>
+          </div>
         </div>
-        <button onclick="closeCollectionEditor()" style="background: #6c757d; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer;">
-          <i class="fas fa-times"></i> Cancel
-        </button>
       </div>
     </div>
-  </div>
-  
+
+    <!-- Collection Editor Modal -->
+    <div id="collection-editor-modal"
+      style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000;">
+      <div
+        style="background: white; margin: 50px auto; padding: 0; border-radius: 8px; width: 90%; max-width: 1000px; max-height: 80%; overflow: hidden; display: flex; flex-direction: column;">
+        <!-- Modal Header -->
+        <div
+          style="padding: 20px; border-bottom: 1px solid #ddd; display: flex; justify-content: space-between; align-items: center;">
+          <h3 style="margin: 0;"><i class="fas fa-edit"></i> Edit Collection</h3>
+          <button onclick="closeCollectionEditor()"
+            style="background: none; border: none; font-size: 24px; cursor: pointer;">&times;</button>
+        </div>
+
+        <!-- Modal Body -->
+        <div style="flex: 1; overflow: auto; display: flex;">
+          <!-- Left Panel - Collection Structure -->
+          <div style="width: 30%; border-right: 1px solid #ddd; padding: 20px; overflow-y: auto;">
+            <h4><i class="fas fa-folder-tree"></i> Collection Structure</h4>
+            <div id="collection-tree"></div>
+
+            <h4 style="margin-top: 30px;"><i class="fas fa-cog"></i> Environment Variables</h4>
+            <div id="environment-variables">
+              <div style="margin-bottom: 15px;">
+                <button onclick="addEnvironmentVariable()"
+                  style="background: #28a745; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer;">
+                  <i class="fas fa-plus"></i> Add Variable
+                </button>
+              </div>
+              <div id="env-vars-list"></div>
+            </div>
+          </div>
+
+          <!-- Right Panel - Request Editor -->
+          <div style="flex: 1; padding: 20px; overflow-y: auto;">
+            <div id="request-editor">
+              <h4><i class="fas fa-file-alt"></i> Select a request to edit</h4>
+              <p style="color: #6c757d;">Click on a request from the collection structure to edit it.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Modal Footer -->
+        <div style="padding: 20px; border-top: 1px solid #ddd; display: flex; justify-content: space-between;">
+          <div>
+            <button onclick="saveCollection()"
+              style="background: #007bff; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; margin-right: 10px;">
+              <i class="fas fa-save"></i> Save Changes
+            </button>
+            <button onclick="exportCollection()"
+              style="background: #17a2b8; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer;">
+              <i class="fas fa-download"></i> Export Collection
+            </button>
+          </div>
+          <button onclick="closeCollectionEditor()"
+            style="background: #6c757d; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer;">
+            <i class="fas fa-times"></i> Cancel
+          </button>
+        </div>
+      </div>
+    </div>
+
   </div> <!-- Close api-container -->
 
   {% include 'footer.html' %}
@@ -1150,14 +1396,14 @@
     let environments = [];
     let currentEditingCollection = null;
     let currentEditingRequest = null;
-    
+
     // Tab switching
     document.querySelectorAll('.api-tab').forEach(tab => {
-      tab.addEventListener('click', function() {
+      tab.addEventListener('click', function () {
         // Remove active class from all tabs and contents
         document.querySelectorAll('.api-tab').forEach(t => t.classList.remove('active'));
         document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-        
+
         // Add active class to clicked tab and corresponding content
         this.classList.add('active');
         document.getElementById(this.dataset.tab + '-tab').classList.add('active');
@@ -1165,7 +1411,7 @@
     });
 
     // Add header functionality
-    document.getElementById('add-rest-header').addEventListener('click', function() {
+    document.getElementById('add-rest-header').addEventListener('click', function () {
       const headersContainer = document.getElementById('rest-headers');
       const headerRow = document.createElement('div');
       headerRow.className = 'header-row';
@@ -1179,10 +1425,10 @@
     });
 
     // REST API Send
-    document.getElementById('rest-send').addEventListener('click', async function() {
+    document.getElementById('rest-send').addEventListener('click', async function () {
       const method = document.getElementById('rest-method').value;
       const url = document.getElementById('rest-url').value;
-      
+
       if (!url) {
         showMessage('rest-response-meta', 'Please enter a URL', 'error');
         return;
@@ -1219,7 +1465,7 @@
       // Collect auth
       const authType = document.getElementById('rest-auth-type').value;
       const auth = { type: authType };
-      
+
       if (authType === 'basic') {
         auth.username = document.getElementById('basic-username')?.value || '';
         auth.password = document.getElementById('basic-password')?.value || '';
@@ -1244,11 +1490,11 @@
     });
 
     // GraphQL Send
-    document.getElementById('graphql-send').addEventListener('click', async function() {
+    document.getElementById('graphql-send').addEventListener('click', async function () {
       const url = document.getElementById('graphql-url').value;
       const query = document.getElementById('graphql-query').value;
       const variables = document.getElementById('graphql-variables').value;
-      
+
       if (!url || !query) {
         showMessage('graphql-response-meta', 'Please enter URL and query', 'error');
         return;
@@ -1256,7 +1502,7 @@
 
       const headers = { 'Content-Type': 'application/json' };
       let body;
-      
+
       try {
         body = JSON.stringify({
           query: query,
@@ -1271,9 +1517,9 @@
     });
 
     // cURL Send
-    document.getElementById('curl-send').addEventListener('click', async function() {
+    document.getElementById('curl-send').addEventListener('click', async function () {
       const curlCommand = document.getElementById('curl-command').value;
-      
+
       if (!curlCommand) {
         showMessage('curl-response-meta', 'Please enter a cURL command', 'error');
         return;
@@ -1292,7 +1538,7 @@
         });
 
         const data = await response.json();
-        
+
         if (data.success) {
           showResponse('curl', data);
         } else {
@@ -1309,22 +1555,22 @@
     });
 
     // Collection file import
-    document.getElementById('collection-file').addEventListener('change', function(e) {
+    document.getElementById('collection-file').addEventListener('change', function (e) {
       const file = e.target.files[0];
       if (!file) return;
 
       const reader = new FileReader();
-      reader.onload = function(e) {
+      reader.onload = function (e) {
         try {
           const collection = JSON.parse(e.target.result);
           collections.push(collection);
           updateCollectionsList();
-          
+
           // Check for environment variables in the collection
           const envVars = extractEnvironmentVariables(collection);
           if (envVars.length > 0) {
-            showMessage('collection-response-meta', 
-              `Collection "${collection.info.name}" imported with ${envVars.length} environment variables found. Click Edit to configure them.`, 
+            showMessage('collection-response-meta',
+              `Collection "${collection.info.name}" imported with ${envVars.length} environment variables found. Click Edit to configure them.`,
               'success');
           } else {
             showMessage('collection-response-meta', `Collection "${collection.info.name}" imported successfully`, 'success');
@@ -1337,17 +1583,17 @@
     });
 
     // Environment file import
-    document.getElementById('environment-file').addEventListener('change', function(e) {
+    document.getElementById('environment-file').addEventListener('change', function (e) {
       const file = e.target.files[0];
       if (!file) return;
 
       const reader = new FileReader();
-      reader.onload = function(e) {
+      reader.onload = function (e) {
         try {
           const environment = JSON.parse(e.target.result);
           environments.push(environment);
-          showMessage('collection-response-meta', 
-            `Environment "${environment.name}" imported with ${environment.values.length} variables`, 
+          showMessage('collection-response-meta',
+            `Environment "${environment.name}" imported with ${environment.values.length} variables`,
             'success');
         } catch (error) {
           showMessage('collection-response-meta', 'Invalid environment file: ' + error.message, 'error');
@@ -1357,31 +1603,31 @@
     });
 
     // Postman Connect (placeholder)
-    document.getElementById('connect-postman').addEventListener('click', function() {
+    document.getElementById('connect-postman').addEventListener('click', function () {
       showMessage('collection-response-meta', 'Postman API integration coming soon! Use import for now.', 'success');
     });
 
     // Add tab switching functionality for request and response tabs
-    document.addEventListener('click', function(e) {
+    document.addEventListener('click', function (e) {
       if (e.target.classList.contains('request-tab')) {
         const tabName = e.target.dataset.tab;
-        
+
         // Remove active from all request tabs
         document.querySelectorAll('.request-tab').forEach(tab => tab.classList.remove('active'));
         document.querySelectorAll('.request-tab-content').forEach(content => content.classList.remove('active'));
-        
+
         // Add active to clicked tab
         e.target.classList.add('active');
         document.getElementById(tabName + '-content').classList.add('active');
       }
-      
+
       if (e.target.classList.contains('response-tab')) {
         const tabName = e.target.dataset.tab;
-        
+
         // Remove active from all response tabs
         document.querySelectorAll('.response-tab').forEach(tab => tab.classList.remove('active'));
         document.querySelectorAll('.response-tab-content').forEach(content => content.classList.remove('active'));
-        
+
         // Add active to clicked tab
         e.target.classList.add('active');
         document.getElementById('response-' + tabName + '-content').classList.add('active');
@@ -1389,12 +1635,12 @@
     });
 
     // Auth type change handler
-    document.getElementById('rest-auth-type').addEventListener('change', function() {
+    document.getElementById('rest-auth-type').addEventListener('change', function () {
       const authType = this.value;
       const authFields = document.getElementById('rest-auth-fields');
-      
+
       authFields.innerHTML = '';
-      
+
       if (authType === 'basic') {
         authFields.innerHTML = `
           <div class="auth-field">
@@ -1435,7 +1681,7 @@
     });
 
     // Add parameter button
-    document.getElementById('add-rest-param').addEventListener('click', function() {
+    document.getElementById('add-rest-param').addEventListener('click', function () {
       const paramsContainer = document.getElementById('rest-params');
       const paramRow = document.createElement('div');
       paramRow.className = 'param-row';
@@ -1455,7 +1701,7 @@
       const headersElement = document.getElementById(type + '-response-headers');
       const cookiesElement = document.getElementById(type + '-response-cookies');
       const sendBtn = document.getElementById(type + '-send');
-      
+
       const originalText = sendBtn.innerHTML;
       sendBtn.innerHTML = '<span class="loading"></span> Sending...';
       sendBtn.disabled = true;
@@ -1475,35 +1721,35 @@
         if (data.success) {
           // Display successful response - body is already formatted from backend
           bodyElement.textContent = data.body;
-          
-          metaElement.innerHTML = 
+
+          metaElement.innerHTML =
             `<span style="color: #28a745;">✅ ${data.status || data.status_code} ${data.statusText || data.status_text || ''}</span> • 
              <span>Time: ${data.time || data.responseTime || 0}ms</span> • 
              <span>Size: ${data.size || (data.body ? data.body.length : 0)} bytes</span>
              ${data.redirects > 0 ? ` • <span>Redirects: ${data.redirects}</span>` : ''}`;
-          
+
           // Update response headers
           if (headersElement) {
             let headersContent = '';
             if (data.headers) {
               if (Array.isArray(data.headers)) {
                 // Headers as array of objects
-                headersContent = data.headers.map(h => 
+                headersContent = data.headers.map(h =>
                   `<div style="padding: 4px 0; border-bottom: 1px solid #eee;"><strong>${h.key}:</strong> ${h.value}</div>`
                 ).join('');
               } else {
                 // Headers as object
-                headersContent = Object.entries(data.headers).map(([key, value]) => 
+                headersContent = Object.entries(data.headers).map(([key, value]) =>
                   `<div style="padding: 4px 0; border-bottom: 1px solid #eee;"><strong>${key}:</strong> ${value}</div>`
                 ).join('');
               }
             }
             headersElement.innerHTML = headersContent || '<em style="color: #6c757d;">No headers</em>';
           }
-          
+
           // Update response cookies
           if (cookiesElement && data.cookies && data.cookies.length > 0) {
-            const cookiesContent = data.cookies.map(c => 
+            const cookiesContent = data.cookies.map(c =>
               `<div style="padding: 4px 0; border-bottom: 1px solid #eee;">
                 <strong>${c.name}:</strong> ${c.value}
                 ${c.domain ? `<br><small style="color: #6c757d;">Domain: ${c.domain}</small>` : ''}
@@ -1513,23 +1759,23 @@
           } else if (cookiesElement) {
             cookiesElement.innerHTML = '<em style="color: #6c757d;">No cookies</em>';
           }
-          
+
         } else {
           // Display error response
           bodyElement.textContent = 'Error: ' + data.error;
-          metaElement.innerHTML = 
+          metaElement.innerHTML =
             `<span style="color: #dc3545;">❌ Error</span> • <span>Time: ${data.time || data.responseTime || requestTime}ms</span>`;
-          
+
           if (headersElement) headersElement.innerHTML = '<em style="color: #6c757d;">No headers</em>';
           if (cookiesElement) cookiesElement.innerHTML = '<em style="color: #6c757d;">No cookies</em>';
         }
-        
+
       } catch (error) {
         const requestTime = Date.now() - startTime;
         bodyElement.textContent = 'Network Error: ' + error.message;
-        metaElement.innerHTML = 
+        metaElement.innerHTML =
           `<span style="color: #dc3545;">❌ Network Error</span> • <span>Time: ${requestTime}ms</span>`;
-        
+
         if (headersElement) headersElement.innerHTML = '<em style="color: #6c757d;">No headers</em>';
         if (cookiesElement) cookiesElement.innerHTML = '<em style="color: #6c757d;">No cookies</em>';
       } finally {
@@ -1543,7 +1789,7 @@
       const metaElement = document.getElementById(type + '-response-meta');
       const bodyElement = document.getElementById(type + '-response-body');
       const sendBtn = document.getElementById(type + '-send');
-      
+
       const originalText = sendBtn.innerHTML;
       sendBtn.innerHTML = '<span class="loading"></span> Sending...';
       sendBtn.disabled = true;
@@ -1562,10 +1808,10 @@
 
         const response = await fetch(url, options);
         const responseTime = Date.now() - startTime;
-        
+
         let responseData;
         const contentType = response.headers.get('content-type') || '';
-        
+
         if (contentType.includes('application/json')) {
           responseData = await response.json();
         } else {
@@ -1581,7 +1827,7 @@
         };
 
         showResponse(type, result);
-        
+
       } catch (error) {
         showMessage(metaElement.id, 'Request failed: ' + error.message, 'error');
         bodyElement.textContent = error.message;
@@ -1595,13 +1841,13 @@
     function showResponse(type, data) {
       const metaElement = document.getElementById(type + '-response-meta');
       const bodyElement = document.getElementById(type + '-response-body');
-      
+
       // Handle both old and new response formats
       const status = data.status || data.status_code;
       const statusText = data.statusText || data.status_text || '';
       const responseTime = data.time || data.responseTime || 0;
       const size = data.size || (data.body ? data.body.length : 0);
-      
+
       let statusClass = 'status-2xx';
       if (status >= 300 && status < 400) statusClass = 'status-3xx';
       else if (status >= 400 && status < 500) statusClass = 'status-4xx';
@@ -1622,8 +1868,8 @@
     // Show message
     function showMessage(elementId, message, type = 'info') {
       const element = document.getElementById(elementId);
-      const icon = type === 'error' ? 'fa-exclamation-triangle' : 
-                   type === 'success' ? 'fa-check-circle' : 'fa-info-circle';
+      const icon = type === 'error' ? 'fa-exclamation-triangle' :
+        type === 'success' ? 'fa-check-circle' : 'fa-info-circle';
       element.innerHTML = `<span style="color: ${type === 'error' ? '#dc3545' : type === 'success' ? '#28a745' : '#007bff'};">
         <i class="fas ${icon}"></i> ${message}
       </span>`;
@@ -1632,12 +1878,12 @@
     // Update collections list
     function updateCollectionsList() {
       const container = document.getElementById('collections-list');
-      
+
       // Remove existing imported collections (keep sample)
       const existingItems = container.querySelectorAll('.collection-item:not(.sample-collection)');
       existingItems.forEach(item => item.remove());
-      
-              collections.forEach((collection, index) => {
+
+      collections.forEach((collection, index) => {
         const item = document.createElement('div');
         item.className = 'collection-item';
         const requestCount = collection.item ? collection.item.length : 0;
@@ -1709,10 +1955,10 @@
       }
 
       showMessage('collection-response-meta', `Running collection: ${collection.info.name}...`, 'success');
-      
+
       const results = [];
       const startTime = Date.now();
-      
+
       for (let i = 0; i < collection.item.length; i++) {
         const item = collection.item[i];
         if (item.request) {
@@ -1720,8 +1966,8 @@
             const result = await runCollectionRequest(item, i + 1, collection.item.length);
             results.push(result);
           } catch (error) {
-            results.push({ 
-              name: item.name, 
+            results.push({
+              name: item.name,
               error: error.message,
               status: 'FAILED',
               method: item.request?.method || 'GET',
@@ -1738,22 +1984,22 @@
     // Run individual collection request
     async function runCollectionRequest(item, current, total) {
       showMessage('collection-response-meta', `Running ${current}/${total}: ${item.name}...`, 'success');
-      
+
       const request = item.request;
       let url = request.url;
-      
+
       // Handle different URL formats
       if (typeof url === 'object') {
         url = url.raw || url.protocol + '://' + url.host.join('.') + url.path.join('/');
       }
-      
+
       // Apply environment variable substitution
       if (environments.length > 0) {
         url = substituteVariables(url, environments[0]);
       }
-      
+
       const method = request.method;
-      
+
       const headers = {};
       if (request.header) {
         request.header.forEach(h => {
@@ -1800,7 +2046,7 @@
       // Parse response body
       let responseBody;
       const contentType = response.headers.get('content-type') || '';
-      
+
       try {
         if (contentType.includes('application/json')) {
           responseBody = await response.json();
@@ -1865,11 +2111,11 @@
     function displayCollectionResults(results, collectionName, totalTime) {
       const passed = results.filter(r => !r.error && r.status < 400).length;
       const failed = results.filter(r => r.error || r.status >= 400).length;
-      
+
       const container = document.getElementById('collection-response-body');
       container.innerHTML = '';
       container.style.fontFamily = 'inherit';
-      
+
       // Summary header
       const summary = document.createElement('div');
       summary.style.cssText = 'background: #f8f9fa; padding: 15px; border-radius: 6px; margin-bottom: 20px; border-left: 4px solid #007bff;';
@@ -1883,16 +2129,16 @@
         </div>
       `;
       container.appendChild(summary);
-      
+
       // Individual request results
       results.forEach((result, index) => {
         const requestDiv = document.createElement('div');
         const isSuccess = !result.error && result.status < 400;
         const statusColor = isSuccess ? '#28a745' : '#dc3545';
         const statusIcon = isSuccess ? '✅' : '❌';
-        
+
         requestDiv.style.cssText = 'border: 1px solid #ddd; border-radius: 6px; margin-bottom: 15px; overflow: hidden;';
-        
+
         // Request header (collapsible)
         const header = document.createElement('div');
         header.style.cssText = `background: ${isSuccess ? '#d4edda' : '#f8d7da'}; padding: 12px 15px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #ddd;`;
@@ -1905,11 +2151,11 @@
           </div>
           <i class="fas fa-chevron-down" style="transition: transform 0.2s;"></i>
         `;
-        
+
         // Request details (initially hidden)
         const details = document.createElement('div');
         details.style.cssText = 'display: none; padding: 15px; background: white;';
-        
+
         if (result.error) {
           details.innerHTML = `
             <div style="color: #dc3545; margin-bottom: 15px;">
@@ -1939,12 +2185,12 @@ ${typeof result.body === 'object' ? JSON.stringify(result.body, null, 2) : (resu
             <!-- Headers Tab -->
             <div id="headers-${index}" class="result-tab-content" style="display: none;">
               <div style="font-size: 12px;">
-                ${Object.keys(result.headers || {}).length === 0 ? 
-                  '<em style="color: #6c757d;">No response headers</em>' :
-                  Object.entries(result.headers).map(([key, value]) => 
-                    `<div style="padding: 4px 0; border-bottom: 1px solid #eee;"><strong>${key}:</strong> ${value}</div>`
-                  ).join('')
-                }
+                ${Object.keys(result.headers || {}).length === 0 ?
+              '<em style="color: #6c757d;">No response headers</em>' :
+              Object.entries(result.headers).map(([key, value]) =>
+                `<div style="padding: 4px 0; border-bottom: 1px solid #eee;"><strong>${key}:</strong> ${value}</div>`
+              ).join('')
+            }
               </div>
             </div>
             
@@ -1959,19 +2205,19 @@ ${typeof result.body === 'object' ? JSON.stringify(result.body, null, 2) : (resu
               </div>
             </div>
           `;
-          
+
           details.appendChild(tabsContainer);
-          
+
           // Add tab switching functionality
           tabsContainer.querySelectorAll('.result-tab').forEach(tab => {
-            tab.addEventListener('click', function() {
+            tab.addEventListener('click', function () {
               // Remove active from all tabs
               tabsContainer.querySelectorAll('.result-tab').forEach(t => {
                 t.style.background = '#f8f9fa';
                 t.style.color = '#495057';
               });
               tabsContainer.querySelectorAll('.result-tab-content').forEach(c => c.style.display = 'none');
-              
+
               // Activate clicked tab
               this.style.background = '#007bff';
               this.style.color = 'white';
@@ -1979,9 +2225,9 @@ ${typeof result.body === 'object' ? JSON.stringify(result.body, null, 2) : (resu
             });
           });
         }
-        
+
         // Toggle functionality
-        header.addEventListener('click', function() {
+        header.addEventListener('click', function () {
           const icon = header.querySelector('.fas');
           if (details.style.display === 'none') {
             details.style.display = 'block';
@@ -1991,22 +2237,22 @@ ${typeof result.body === 'object' ? JSON.stringify(result.body, null, 2) : (resu
             icon.style.transform = 'rotate(0deg)';
           }
         });
-        
+
         requestDiv.appendChild(header);
         requestDiv.appendChild(details);
         container.appendChild(requestDiv);
       });
-      
+
       // Overall status message
-      const statusMsg = failed === 0 ? 
-        `🎉 All ${passed} requests completed successfully!` : 
+      const statusMsg = failed === 0 ?
+        `🎉 All ${passed} requests completed successfully!` :
         `⚠️ ${failed} request(s) failed, ${passed} passed`;
-      
+
       showMessage('collection-response-meta', statusMsg, failed === 0 ? 'success' : 'error');
     }
 
     // Mark the sample collection
-    document.addEventListener('DOMContentLoaded', function() {
+    document.addEventListener('DOMContentLoaded', function () {
       const sampleItem = document.querySelector('.collection-item');
       if (sampleItem) {
         sampleItem.classList.add('sample-collection');
@@ -2025,7 +2271,7 @@ ${typeof result.body === 'object' ? JSON.stringify(result.body, null, 2) : (resu
             { name: 'Delete User', request: { method: 'DELETE', url: '{{baseUrl}}/users/{{userId}}' } }
           ]
         };
-        
+
         // Add sample environment variables
         if (environments.length === 0) {
           environments.push({
@@ -2040,7 +2286,7 @@ ${typeof result.body === 'object' ? JSON.stringify(result.body, null, 2) : (resu
       } else {
         currentEditingCollection = collections[index];
       }
-      
+
       document.getElementById('collection-editor-modal').style.display = 'block';
       renderCollectionEditor();
     }
@@ -2053,15 +2299,15 @@ ${typeof result.body === 'object' ? JSON.stringify(result.body, null, 2) : (resu
 
     function renderCollectionEditor() {
       if (!currentEditingCollection) return;
-      
+
       // Render collection tree
       const tree = document.getElementById('collection-tree');
       tree.innerHTML = '';
-      
+
       const collectionDiv = document.createElement('div');
       collectionDiv.innerHTML = `<strong style="margin-bottom: 10px; display: block;"><i class="fas fa-folder"></i> ${currentEditingCollection.info.name}</strong>`;
       tree.appendChild(collectionDiv);
-      
+
       if (currentEditingCollection.item) {
         currentEditingCollection.item.forEach((item, index) => {
           const requestDiv = document.createElement('div');
@@ -2074,7 +2320,7 @@ ${typeof result.body === 'object' ? JSON.stringify(result.body, null, 2) : (resu
           tree.appendChild(requestDiv);
         });
       }
-      
+
       // Render environment variables
       renderEnvironmentVariables();
     }
@@ -2082,13 +2328,13 @@ ${typeof result.body === 'object' ? JSON.stringify(result.body, null, 2) : (resu
     function editRequest(index) {
       currentEditingRequest = currentEditingCollection.item[index];
       const editor = document.getElementById('request-editor');
-      
+
       const request = currentEditingRequest.request || {};
       const method = request.method || 'GET';
       const url = request.url || '';
       const headers = request.header || [];
       const body = request.body?.raw || '';
-      
+
       editor.innerHTML = `
         <h4><i class="fas fa-edit"></i> Edit Request: ${currentEditingRequest.name}</h4>
         
@@ -2157,17 +2403,17 @@ ${typeof result.body === 'object' ? JSON.stringify(result.body, null, 2) : (resu
 
     function saveRequestChanges() {
       if (!currentEditingRequest) return;
-      
+
       // Update request data
       currentEditingRequest.name = document.getElementById('edit-request-name').value;
-      
+
       if (!currentEditingRequest.request) {
         currentEditingRequest.request = {};
       }
-      
+
       currentEditingRequest.request.method = document.getElementById('edit-request-method').value;
       currentEditingRequest.request.url = document.getElementById('edit-request-url').value;
-      
+
       // Update headers
       const headers = [];
       document.querySelectorAll('#edit-headers-list > div').forEach(headerDiv => {
@@ -2177,13 +2423,13 @@ ${typeof result.body === 'object' ? JSON.stringify(result.body, null, 2) : (resu
         }
       });
       currentEditingRequest.request.header = headers;
-      
+
       // Update body
       const bodyText = document.getElementById('edit-request-body').value;
       if (bodyText) {
         currentEditingRequest.request.body = { mode: 'raw', raw: bodyText };
       }
-      
+
       showMessage('collection-response-meta', 'Request updated successfully', 'success');
       renderCollectionEditor(); // Refresh the tree view
     }
@@ -2191,17 +2437,17 @@ ${typeof result.body === 'object' ? JSON.stringify(result.body, null, 2) : (resu
     function renderEnvironmentVariables() {
       const container = document.getElementById('env-vars-list');
       container.innerHTML = '';
-      
+
       if (environments.length === 0) {
         container.innerHTML = '<p style="color: #6c757d; font-size: 12px;">No environment variables. Import an environment file or add manually.</p>';
         return;
       }
-      
+
       environments.forEach((env, envIndex) => {
         const envDiv = document.createElement('div');
         envDiv.style.cssText = 'margin-bottom: 20px; border: 1px solid #ddd; border-radius: 4px; padding: 10px;';
         envDiv.innerHTML = `<strong>${env.name}</strong>`;
-        
+
         if (env.values) {
           env.values.forEach((variable, varIndex) => {
             const varDiv = document.createElement('div');
@@ -2215,7 +2461,7 @@ ${typeof result.body === 'object' ? JSON.stringify(result.body, null, 2) : (resu
             envDiv.appendChild(varDiv);
           });
         }
-        
+
         container.appendChild(envDiv);
       });
     }
@@ -2227,13 +2473,13 @@ ${typeof result.body === 'object' ? JSON.stringify(result.body, null, 2) : (resu
           values: []
         });
       }
-      
+
       environments[0].values.push({
         key: '',
         value: '',
         enabled: true
       });
-      
+
       renderEnvironmentVariables();
     }
 
@@ -2253,7 +2499,7 @@ ${typeof result.body === 'object' ? JSON.stringify(result.body, null, 2) : (resu
     function extractEnvironmentVariables(collection) {
       const variables = new Set();
       const regex = /\{\{([^}]+)\}\}/g;
-      
+
       function extractFromString(str) {
         if (typeof str === 'string') {
           let match;
@@ -2262,7 +2508,7 @@ ${typeof result.body === 'object' ? JSON.stringify(result.body, null, 2) : (resu
           }
         }
       }
-      
+
       function processItem(item) {
         if (item.request) {
           extractFromString(item.request.url);
@@ -2275,22 +2521,22 @@ ${typeof result.body === 'object' ? JSON.stringify(result.body, null, 2) : (resu
             extractFromString(item.request.body.raw);
           }
         }
-        
+
         if (item.item) {
           item.item.forEach(processItem);
         }
       }
-      
+
       if (collection.item) {
         collection.item.forEach(processItem);
       }
-      
+
       return Array.from(variables);
     }
 
     function substituteVariables(text, environment) {
       if (!text || !environment) return text;
-      
+
       let result = text;
       environment.values.forEach(variable => {
         if (variable.enabled) {
@@ -2298,30 +2544,30 @@ ${typeof result.body === 'object' ? JSON.stringify(result.body, null, 2) : (resu
           result = result.replace(regex, variable.value);
         }
       });
-      
+
       return result;
     }
 
     function saveCollection() {
       if (!currentEditingCollection) return;
-      
+
       showMessage('collection-response-meta', 'Collection saved successfully', 'success');
       updateCollectionsList();
     }
 
     function exportCollection() {
       if (!currentEditingCollection) return;
-      
+
       const dataStr = JSON.stringify(currentEditingCollection, null, 2);
-      const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
-      
+      const dataUri = 'data:application/json;charset=utf-8,' + encodeURIComponent(dataStr);
+
       const exportFileDefaultName = `${currentEditingCollection.info.name}.postman_collection.json`;
-      
+
       const linkElement = document.createElement('a');
       linkElement.setAttribute('href', dataUri);
       linkElement.setAttribute('download', exportFileDefaultName);
       linkElement.click();
-      
+
       showMessage('collection-response-meta', 'Collection exported successfully', 'success');
     }
 
@@ -2330,7 +2576,7 @@ ${typeof result.body === 'object' ? JSON.stringify(result.body, null, 2) : (resu
       const restExample = `curl -X GET 'https://jsonplaceholder.typicode.com/users' \\
   -H 'Accept: application/json' \\
   -H 'Authorization: Bearer your-token-here'`;
-      
+
       document.getElementById('curl-command').value = restExample;
       showMessage('curl-response-meta', 'REST example loaded', 'success');
     }
@@ -2343,7 +2589,7 @@ ${typeof result.body === 'object' ? JSON.stringify(result.body, null, 2) : (resu
     "query": "query GetUsers($limit: Int) { users(limit: $limit) { id name email } }",
     "variables": { "limit": 5 }
   }'`;
-      
+
       document.getElementById('curl-command').value = graphqlExample;
       showMessage('curl-response-meta', 'GraphQL example loaded', 'success');
     }
@@ -2351,7 +2597,7 @@ ${typeof result.body === 'object' ? JSON.stringify(result.body, null, 2) : (resu
     function formatCurlCommand() {
       const curlInput = document.getElementById('curl-command');
       let command = curlInput.value.trim();
-      
+
       if (!command) {
         showMessage('curl-response-meta', 'No command to format', 'error');
         return;
@@ -2360,7 +2606,7 @@ ${typeof result.body === 'object' ? JSON.stringify(result.body, null, 2) : (resu
       // Basic formatting: add line breaks for better readability
       command = command.replace(/\s+-/g, ' \\\n  -');
       command = command.replace(/\s+--/g, ' \\\n  --');
-      
+
       // Format JSON in data if present
       const jsonMatch = command.match(/-d\s+['"](.*?)['"](\s|$)/s);
       if (jsonMatch) {
@@ -2372,7 +2618,7 @@ ${typeof result.body === 'object' ? JSON.stringify(result.body, null, 2) : (resu
           // If JSON parsing fails, leave as is
         }
       }
-      
+
       curlInput.value = command;
       showMessage('curl-response-meta', 'Command formatted', 'success');
     }
@@ -2398,12 +2644,12 @@ ${typeof result.body === 'object' ? JSON.stringify(result.body, null, 2) : (resu
     async function handleCreateWorkspace() {
       const name = document.getElementById('new-workspace-name').value;
       const description = document.getElementById('new-workspace-description').value;
-      
+
       if (!name) {
         showNotification('Please enter a workspace name', 'warning');
         return;
       }
-      
+
       await window.apiCoTest.createWorkspace(name, description);
       closeModal('create-workspace-modal');
       document.getElementById('new-workspace-name').value = '';
@@ -2412,12 +2658,12 @@ ${typeof result.body === 'object' ? JSON.stringify(result.body, null, 2) : (resu
 
     async function handleCreateEnvironment() {
       const name = document.getElementById('new-environment-name').value;
-      
+
       if (!name) {
         showNotification('Please enter an environment name', 'warning');
         return;
       }
-      
+
       await window.apiCoTest.createEnvironment(name);
       closeModal('create-environment-modal');
       document.getElementById('new-environment-name').value = '';
@@ -2429,11 +2675,12 @@ ${typeof result.body === 'object' ? JSON.stringify(result.body, null, 2) : (resu
         btn.classList.remove('active');
       });
       event.target.closest('.sidebar-tab').classList.add('active');
-      
+
       // Show/hide panels
       document.getElementById('history-panel').style.display = tab === 'history' ? 'block' : 'none';
       document.getElementById('favorites-panel').style.display = tab === 'favorites' ? 'block' : 'none';
     }
   </script>
 </body>
+
 </html>
