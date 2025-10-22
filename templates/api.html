@@ -1,45 +1,30 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>API Co-Test - Professional API Testing Suite</title>
-  <link rel="icon"
-    href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text x=%2250%22 y=%2250%22 font-size=%2280%22 font-family=%22Arial%22 text-anchor=%22middle%22>🚀</text></svg>">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
-    rel="stylesheet">
+  <title>API Co-Test - Professional API Testing</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text x=%2250%22 y=%2250%22 font-size=%2280%22 font-family=%22Arial%22 text-anchor=%22middle%22>🚀</text></svg>">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link rel="stylesheet" href="/static/styles.css">
   <link rel="stylesheet" href="/static/left-sidebar.css">
-  <link rel="stylesheet" href="/static/api-cotest-v2.css">
   <style>
     :root {
       --primary: #6366f1;
       --primary-hover: #4f46e5;
-      --primary-light: #a5b4fc;
-      --secondary: #1f2937;
-      --secondary-light: #374151;
-      --bg-light: #f8fafc;
-      --bg-dark: #0f172a;
-      --text-light: #64748b;
-      --text-dark: #0f172a;
-      --text-white: #ffffff;
-      --border: #e2e8f0;
       --success: #10b981;
       --error: #ef4444;
       --warning: #f59e0b;
-      --info: #3b82f6;
-      --glass-bg: rgba(255, 255, 255, 0.7);
-      --glass-border: rgba(255, 255, 255, 0.2);
-      --shadow-xl: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
-      --transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+      --bg-light: #f8fafc;
+      --text-dark: #0f172a;
+      --text-light: #64748b;
+      --border: #e2e8f0;
     }
 
     body {
       font-family: 'Inter', sans-serif;
       background: var(--bg-light);
-      color: var(--text-dark);
       margin: 0;
       padding: 0;
     }
@@ -47,47 +32,24 @@
     .main-content {
       margin-left: 280px;
       min-height: 100vh;
-      background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 50%, #cbd5e1 100%);
-      position: relative;
-      transition: var(--transition);
+      background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
       width: calc(100% - 280px);
-    }
-
-    .main-content::before {
-      content: '';
-      position: fixed;
-      top: 0;
-      left: 280px;
-      right: 0;
-      bottom: 0;
-      background: radial-gradient(circle at 20% 80%, rgba(99, 102, 241, 0.05) 0%, transparent 50%),
-        radial-gradient(circle at 80% 20%, rgba(139, 92, 246, 0.05) 0%, transparent 50%);
-      pointer-events: none;
-      z-index: 0;
     }
 
     .api-container {
       padding: 2rem;
       max-width: 100%;
-      width: 100%;
-      margin: 0;
-      position: relative;
-      z-index: 1;
-      min-height: calc(100vh - 120px);
     }
 
-
-
-    /* Modern Tab Design - Enhanced */
+    /* Tabs */
     .api-tabs {
       display: flex;
       background: white;
-      border-radius: 16px;
+      border-radius: 12px;
       padding: 0.5rem;
       margin-bottom: 2rem;
-      box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
-      border: 1px solid var(--border);
-      gap: 0.25rem;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+      gap: 0.5rem;
     }
 
     .api-tab {
@@ -95,39 +57,27 @@
       padding: 1rem 1.5rem;
       background: none;
       border: none;
-      border-radius: 12px;
+      border-radius: 8px;
       cursor: pointer;
       font-weight: 600;
       font-size: 14px;
       color: var(--text-light);
-      transition: all 0.2s ease;
-      text-align: center;
+      transition: all 0.2s;
       display: flex;
       align-items: center;
       justify-content: center;
       gap: 0.5rem;
-      position: relative;
-    }
-
-    .api-tab i {
-      font-size: 16px;
     }
 
     .api-tab:hover {
-      color: var(--primary);
       background: rgba(99, 102, 241, 0.08);
-      transform: translateY(-1px);
+      color: var(--primary);
     }
 
     .api-tab.active {
-      color: white;
       background: linear-gradient(135deg, var(--primary) 0%, var(--primary-hover) 100%);
+      color: white;
       box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
-    }
-
-    .api-tab.active:hover {
-      transform: translateY(-1px);
-      box-shadow: 0 6px 16px rgba(99, 102, 241, 0.4);
     }
 
     .tab-content {
@@ -138,14 +88,14 @@
       display: block;
     }
 
+    /* Request Builder */
     .request-builder {
       background: white;
       border-radius: 12px;
       padding: 2rem;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
       margin-bottom: 1.5rem;
       border: 1px solid var(--border);
-      width: 100%;
     }
 
     .request-builder h4 {
@@ -158,21 +108,11 @@
       gap: 0.5rem;
     }
 
-    .request-builder h4 i {
-      color: var(--primary);
-    }
-
-    /* Make tab content use full width */
-    .tab-content {
-      width: 100%;
-    }
-
+    /* URL Row */
     .url-row {
       display: flex;
       gap: 12px;
       margin-bottom: 1.5rem;
-      align-items: stretch;
-      width: 100%;
     }
 
     .method-select {
@@ -180,19 +120,12 @@
       border: 2px solid var(--border);
       border-radius: 8px;
       width: 120px;
-      flex: 0 0 120px;
       font-weight: 700;
       font-size: 14px;
       height: 48px;
       background: white;
-      color: var(--text-dark);
       cursor: pointer;
-      transition: all 0.2s ease;
-    }
-
-    .method-select:hover {
-      border-color: var(--primary);
-      box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+      transition: all 0.2s;
     }
 
     .method-select:focus {
@@ -209,13 +142,7 @@
       font-size: 14px;
       height: 48px;
       font-family: 'Monaco', 'Courier New', monospace;
-      background: white;
-      transition: all 0.2s ease;
-      min-width: 300px;
-    }
-
-    .url-input:hover {
-      border-color: var(--primary-light);
+      transition: all 0.2s;
     }
 
     .url-input:focus {
@@ -234,7 +161,7 @@
       font-weight: 700;
       font-size: 14px;
       height: 48px;
-      transition: all 0.2s ease;
+      transition: all 0.2s;
       box-shadow: 0 2px 8px rgba(99, 102, 241, 0.3);
       display: flex;
       align-items: center;
@@ -246,79 +173,86 @@
       box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
     }
 
-    .send-btn:active {
-      transform: translateY(0);
-    }
-
     .send-btn:disabled {
       background: #9ca3af;
       cursor: not-allowed;
       transform: none;
-      box-shadow: none;
     }
 
-    .headers-section {
-      margin-bottom: 1.5rem;
+    /* Headers & Params */
+    .section-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin: 1.5rem 0 1rem 0;
     }
 
-    .headers-list {
+    .section-header h5 {
+      margin: 0;
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--text-dark);
+    }
+
+    .add-btn {
+      padding: 8px 16px;
+      background: var(--success);
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 600;
+      transition: all 0.2s;
+    }
+
+    .add-btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
+    }
+
+    .param-row, .header-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr auto;
+      gap: 12px;
+      margin-bottom: 12px;
+      padding: 12px;
+      background: white;
       border: 2px solid var(--border);
       border-radius: 8px;
-      max-height: 300px;
-      overflow-y: auto;
-      padding: 0.5rem;
+      transition: all 0.2s;
     }
 
-    .header-row {
-      display: flex;
-      border-bottom: 1px solid #eee;
-      align-items: center;
-      padding: 8px;
+    .param-row:hover, .header-row:hover {
+      border-color: var(--primary);
+      box-shadow: 0 2px 8px rgba(99, 102, 241, 0.1);
     }
 
-    .header-row:last-child {
-      border-bottom: none;
+    .param-row input, .header-row input {
+      padding: 10px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-size: 14px;
     }
 
-    .header-input {
-      flex: 1;
-      padding: 6px;
-      border: none;
-      margin-right: 8px;
+    .param-row input:focus, .header-row input:focus {
+      outline: none;
+      border-color: var(--primary);
     }
 
-    .header-input:focus {
-      outline: 1px solid #007bff;
-    }
-
-    .remove-header {
-      background: #dc3545;
+    .remove-btn {
+      padding: 8px 12px;
+      background: var(--error);
       color: white;
       border: none;
-      border-radius: 3px;
-      padding: 4px 8px;
+      border-radius: 6px;
       cursor: pointer;
-      font-size: 12px;
-    }
-
-    .add-header {
-      background: #28a745;
-      color: white;
-      border: none;
-      border-radius: 4px;
-      padding: 8px 16px;
-      cursor: pointer;
-      margin-top: 10px;
-    }
-
-    .body-section {
-      margin-bottom: 15px;
+      font-size: 13px;
     }
 
     .body-textarea {
       width: 100%;
       min-height: 300px;
-      max-height: 500px;
       padding: 16px;
       border: 2px solid var(--border);
       border-radius: 8px;
@@ -326,12 +260,7 @@
       font-size: 13px;
       line-height: 1.6;
       resize: vertical;
-      background: white;
-      transition: all 0.2s ease;
-    }
-
-    .body-textarea:hover {
-      border-color: var(--primary-light);
+      transition: all 0.2s;
     }
 
     .body-textarea:focus {
@@ -340,26 +269,39 @@
       box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
     }
 
+    /* Response Section */
     .response-section {
       background: white;
       border-radius: 12px;
-      border: 1px solid var(--border);
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
       padding: 2rem;
-      width: 100%;
-      margin-bottom: 2rem;
-      padding: 20px;
-      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+      border: 1px solid var(--border);
     }
 
     .response-meta {
+      padding: 12px 16px;
+      background: var(--bg-light);
+      border-radius: 8px;
+      margin-bottom: 1rem;
+      font-size: 14px;
       display: flex;
-      gap: 20px;
-      margin-bottom: 15px;
-      padding: 10px;
-      background: #f8f9fa;
-      border-radius: 4px;
-      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .response-body {
+      background: #f8fafc;
+      border: 2px solid var(--border);
+      border-radius: 8px;
+      padding: 1.5rem;
+      font-family: 'Monaco', 'Courier New', monospace;
+      font-size: 13px;
+      line-height: 1.6;
+      min-height: 400px;
+      max-height: 600px;
+      overflow: auto;
+      white-space: pre-wrap;
+      word-wrap: break-word;
     }
 
     .status-badge {
@@ -367,1130 +309,335 @@
       border-radius: 6px;
       font-weight: 700;
       font-size: 13px;
-      color: white;
-      font-weight: bold;
-      font-size: 12px;
+      display: inline-block;
     }
 
     .status-2xx {
       background: linear-gradient(135deg, #10b981 0%, #059669 100%);
       color: white;
-      box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
-    }
-
-    .status-3xx {
-      background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-      color: white;
-      box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
     }
 
     .status-4xx {
       background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
       color: white;
-      box-shadow: 0 2px 8px rgba(245, 158, 11, 0.3);
     }
 
     .status-5xx {
       background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
       color: white;
-      box-shadow: 0 2px 8px rgba(239, 68, 68, 0.3);
-    }
-
-    .response-body {
-      background: #f8fafc;
-      border: 2px solid var(--border);
-      border-radius: 8px;
-      font-family: 'Monaco', 'Courier New', monospace;
-      font-size: 13px;
-      line-height: 1.6;
-      min-height: 400px;
-      max-height: 600px;
-      overflow: auto;
-      padding: 1.5rem;
-      white-space: pre-wrap;
-      word-wrap: break-word;
-      border-radius: 4px;
-      padding: 15px;
-      min-height: 200px;
-      max-height: 400px;
-      overflow: auto;
-      font-family: 'Monaco', 'Menlo', monospace;
-      font-size: 13px;
-      white-space: pre-wrap;
-    }
-
-    .curl-section {
-      margin-bottom: 15px;
-    }
-
-    .curl-input {
-      width: 100%;
-      min-height: 120px;
-      padding: 10px;
-      border: 1px solid #ddd;
-      border-radius: 4px;
-      font-family: 'Monaco', 'Menlo', monospace;
-      font-size: 13px;
-      resize: vertical;
-    }
-
-    .collections-list {
-      border: 1px solid #ddd;
-      border-radius: 4px;
-      max-height: 300px;
-      overflow-y: auto;
-    }
-
-    .collection-item {
-      padding: 12px;
-      border-bottom: 1px solid #eee;
-      cursor: pointer;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-
-    .collection-item:hover {
-      background: #f8f9fa;
-    }
-
-    .collection-item:last-child {
-      border-bottom: none;
-    }
-
-    .run-collection {
-      background: #007bff;
-      color: white;
-      border: none;
-      border-radius: 3px;
-      padding: 6px 12px;
-      cursor: pointer;
-      font-size: 12px;
-    }
-
-    .postman-connect {
-      display: flex;
-      gap: 10px;
-      margin-bottom: 20px;
-      align-items: center;
-      flex-wrap: wrap;
-    }
-
-    .file-input {
-      display: none;
-    }
-
-    .file-label {
-      background: #6c757d;
-      color: white;
-      padding: 8px 16px;
-      border-radius: 4px;
-      cursor: pointer;
-      font-size: 14px;
-    }
-
-    .file-label:hover {
-      background: #5a6268;
-    }
-
-    .graphql-section {
-      display: flex;
-      flex-direction: column;
-      gap: 15px;
-    }
-
-    .graphql-query {
-      min-height: 150px;
-      font-family: 'Monaco', 'Menlo', monospace;
-    }
-
-    .graphql-variables {
-      min-height: 100px;
-      font-family: 'Monaco', 'Menlo', monospace;
-    }
-
-    .loading {
-      display: inline-block;
-      width: 16px;
-      height: 16px;
-      border: 2px solid #f3f3f3;
-      border-top: 2px solid #007bff;
-      border-radius: 50%;
-      animation: spin 1s linear infinite;
-      margin-right: 8px;
-    }
-
-    @keyframes spin {
-      0% {
-        transform: rotate(0deg);
-      }
-
-      100% {
-        transform: rotate(360deg);
-      }
-    }
-
-    .message {
-      padding: 10px;
-      border-radius: 4px;
-      margin: 10px 0;
-    }
-
-    .error-message {
-      color: #721c24;
-      background: #f8d7da;
-      border: 1px solid #f5c6cb;
-    }
-
-    .success-message {
-      color: #155724;
-      background: #d4edda;
-      border: 1px solid #c3e6cb;
-    }
-
-    .format-btn {
-      background: #17a2b8;
-      color: white;
-      border: none;
-      border-radius: 4px;
-      padding: 6px 12px;
-      cursor: pointer;
-      font-size: 12px;
-      margin-left: 10px;
     }
 
     .copy-btn {
-      background: var(--secondary-light);
+      margin-top: 12px;
+      padding: 10px 20px;
+      background: #6c757d;
       color: white;
       border: none;
       border-radius: 8px;
-      padding: 10px 20px;
       cursor: pointer;
       font-size: 13px;
       font-weight: 600;
-      margin-top: 12px;
-      transition: all 0.2s ease;
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
+      transition: all 0.2s;
     }
 
     .copy-btn:hover {
-      background: var(--secondary);
+      background: #5a6268;
       transform: translateY(-1px);
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-    }
-
-    .copy-btn:active {
-      transform: translateY(0);
-    }
-
-    /* Request and Response Tabs */
-    .request-tabs,
-    .response-tabs {
-      display: flex;
-      gap: 2px;
-    }
-
-    .request-tab,
-    .response-tab {
-      padding: 10px 20px;
-      border: none;
-      background: transparent;
-      color: var(--text-light);
-      cursor: pointer;
-      border-bottom: 3px solid transparent;
-      font-size: 14px;
-      font-weight: 600;
-      transition: all 0.2s ease;
-    }
-
-    .request-tab:hover,
-    .response-tab:hover {
-      color: var(--primary);
-      background: rgba(99, 102, 241, 0.05);
-    }
-
-    .request-tab.active,
-    .response-tab.active {
-      background: transparent;
-      color: var(--primary);
-      border-bottom-color: var(--primary);
-    }
-
-    .request-tab-content,
-    .response-tab-content {
-      display: none;
-      padding: 20px 0;
-    }
-
-    .request-tab-content.active,
-    .response-tab-content.active {
-      display: block;
-    }
-
-    .param-row,
-    .header-row {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      margin-bottom: 12px;
-      padding: 12px;
-      border: 2px solid var(--border);
-      border-radius: 8px;
-      background: white;
-      transition: all 0.2s ease;
-    }
-
-    .param-row:hover,
-    .header-row:hover {
-      border-color: var(--primary-light);
-      box-shadow: 0 2px 8px rgba(99, 102, 241, 0.1);
-    }
-
-    .param-input,
-    .header-input {
-      flex: 1;
-      padding: 8px;
-      border: 1px solid #ddd;
-      border-radius: 3px;
-      font-size: 14px;
-      min-width: 200px;
-      /* Ensure minimum width for input fields */
-      height: 36px;
-      /* Increase height for better usability */
-    }
-
-    .remove-param,
-    .remove-header {
-      background: #dc3545;
-      color: white;
-      border: none;
-      border-radius: 3px;
-      padding: 4px 8px;
-      cursor: pointer;
-      font-size: 12px;
-    }
-
-    .add-param,
-    .add-header {
-      background: #28a745;
-      color: white;
-      border: none;
-      border-radius: 4px;
-      padding: 8px 16px;
-      cursor: pointer;
-      font-size: 13px;
-      margin-top: 10px;
-    }
-
-    .auth-field {
-      margin-bottom: 15px;
-    }
-
-    .auth-field label {
-      display: block;
-      margin-bottom: 5px;
-      font-weight: bold;
-      font-size: 13px;
-    }
-
-    .auth-field input,
-    .auth-field select {
-      width: 100%;
-      padding: 8px;
-      border: 1px solid #ddd;
-      border-radius: 4px;
-      font-size: 13px;
-    }
-
-    @media (max-width: 768px) {
-      .api-container {
-        padding: 10px;
-      }
-
-      .url-row {
-        flex-direction: column;
-        align-items: stretch;
-      }
-
-      .method-select {
-        min-width: auto;
-      }
-
-      .postman-connect {
-        flex-direction: column;
-        align-items: stretch;
-      }
-
-      .response-meta {
-        flex-direction: column;
-        gap: 10px;
-      }
-
-      .request-tabs,
-      .response-tabs {
-        flex-wrap: wrap;
-      }
-    }
-
-    .curl-examples {
-      display: flex;
-      gap: 10px;
-    }
-
-    .example-btn {
-      padding: 6px 12px;
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      background: white;
-      color: var(--text-dark);
-      font-size: 12px;
-      cursor: pointer;
-      transition: var(--transition);
-      display: flex;
-      align-items: center;
-      gap: 5px;
-    }
-
-    .example-btn:hover {
-      background: var(--primary-light);
-      color: white;
-      border-color: var(--primary);
-    }
-
-    .curl-controls {
-      display: flex;
-      gap: 10px;
-      margin-top: 15px;
-      align-items: center;
-    }
-
-    .clear-btn {
-      padding: 10px 20px;
-      border: 1px solid #dc3545;
-      border-radius: 8px;
-      background: white;
-      color: #dc3545;
-      font-size: 14px;
-      cursor: pointer;
-      transition: var(--transition);
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .clear-btn:hover {
-      background: #dc3545;
-      color: white;
     }
   </style>
 </head>
-
 <body>
   {% include 'quotes-header.html' %}
   {% set active_tab = 'api' %}
   {% include 'left-sidebar.html' %}
-
+  
   <div class="main-content">
-    {% set allow_html = true %}
-    {% set page_title = 'API Co-Test <span
-      style="background: linear-gradient(45deg, #3b82f6, #1d4ed8); color: white; padding: 0.25rem 0.75rem; border-radius: 8px; font-size: 0.8rem; font-weight: 600; margin-left: 0.75rem; vertical-align: middle; box-shadow: 0 2px 6px rgba(59, 130, 246, 0.3);">Partially
-      Complete</span>' %}
-    {% set page_subtitle = 'Professional API testing suite with cURL runner, collection management, Postman integration,
-    and comprehensive REST & GraphQL support. <strong>Note:</strong> This feature is currently under active development
-    with more tools and enhancements coming soon!' %}
+    {% set page_title = 'API Co-Test' %}
+    {% set page_subtitle = 'Professional API testing suite - REST, GraphQL, cURL, and Postman Collections' %}
     {% include 'page-header.html' %}
 
-    <!-- New V2 Toolbar -->
+    
+    <div class="api-container">
+      <!-- Main Tabs -->
+      <div class="api-tabs">
+        <button class="api-tab active" data-tab="rest">
+          <i class="fas fa-globe"></i> REST API
+        </button>
+        <button class="api-tab" data-tab="graphql">
+          <i class="fas fa-layer-group"></i> GraphQL
+        </button>
+        <button class="api-tab" data-tab="curl">
+          <i class="fas fa-terminal"></i> cURL
+        </button>
+        <button class="api-tab" data-tab="collections">
+          <i class="fas fa-folder-open"></i> Collections
+        </button>
+      </div>
 
-    <!-- Main Content Area -->
-    <div class="api-main">
+      <!-- REST API Tab -->
+      <div class="tab-content active" id="rest-tab">
+        <div class="request-builder">
+          <h4><i class="fas fa-globe"></i> REST API Request</h4>
+          
+          <div class="url-row">
+            <select class="method-select" id="rest-method">
+              <option value="GET">GET</option>
+              <option value="POST">POST</option>
+              <option value="PUT">PUT</option>
+              <option value="DELETE">DELETE</option>
+              <option value="PATCH">PATCH</option>
+            </select>
+            <input type="url" class="url-input" id="rest-url" placeholder="https://api.example.com/endpoint">
+            <button class="send-btn" id="rest-send">
+              <i class="fas fa-paper-plane"></i> Send
+            </button>
+          </div>
 
-      <div class="api-container">
+          <div class="section-header">
+            <h5><i class="fas fa-list"></i> Query Parameters</h5>
+            <button class="add-btn" onclick="addRestParam()">
+              <i class="fas fa-plus"></i> Add
+            </button>
+          </div>
+          <div id="rest-params"></div>
 
-        <!-- Main Tabs -->
-        <div class="api-tabs">
-          <button class="api-tab active" data-tab="unified">
-            <i class="fas fa-rocket"></i>
-            API Tester
-          </button>
-          <button class="api-tab" data-tab="collections">
-            <i class="fas fa-folder-open"></i>
-            Collections
-          </button>
+          <div class="section-header">
+            <h5><i class="fas fa-file-alt"></i> Headers</h5>
+            <button class="add-btn" onclick="addRestHeader()">
+              <i class="fas fa-plus"></i> Add
+            </button>
+          </div>
+          <div id="rest-headers"></div>
+
+          <div class="section-header">
+            <h5><i class="fas fa-code"></i> Request Body</h5>
+          </div>
+          <textarea class="body-textarea" id="rest-body" placeholder='{"key": "value"}'></textarea>
         </div>
 
-        <!-- Unified API Tester Tab -->
-        <div class="tab-content active" id="unified-tab">
-          <div class="request-builder">
-            <h4><i class="fas fa-rocket"></i> API Request Builder</h4>
-            
-            <!-- Request Type Selector -->
-            <div style="margin-bottom: 1.5rem;">
-              <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: var(--text-dark);">
-                <i class="fas fa-layer-group"></i> Request Type
-              </label>
-              <div style="display: flex; gap: 1rem;">
-                <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
-                  <input type="radio" name="request-type" value="rest" checked onchange="switchRequestType('rest')">
-                  <span><i class="fas fa-globe"></i> REST API</span>
-                </label>
-                <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
-                  <input type="radio" name="request-type" value="graphql" onchange="switchRequestType('graphql')">
-                  <span><i class="fas fa-layer-group"></i> GraphQL</span>
-                </label>
-                <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
-                  <input type="radio" name="request-type" value="curl" onchange="switchRequestType('curl')">
-                  <span><i class="fas fa-terminal"></i> cURL Import</span>
-                </label>
-              </div>
-            </div>
+        <div class="response-section">
+          <h4><i class="fas fa-eye"></i> Response</h4>
+          <div class="response-meta" id="rest-response-meta">
+            <i class="fas fa-info-circle"></i> Ready to send request...
+          </div>
+          <div class="response-body" id="rest-response-body">Response will appear here...</div>
+          <button class="copy-btn" onclick="copyResponse('rest-response-body')">
+            <i class="fas fa-copy"></i> Copy Response
+          </button>
+        </div>
+      </div>
+div>button>h5></h5></div>div></div>
 
-            <!-- REST/GraphQL Mode -->
-            <div id="rest-graphql-mode">
-              <div class="url-row">
-                <select class="method-select" id="unified-method">
-                  <option value="GET">GET</option>
-                  <option value="POST">POST</option>
-                  <option value="PUT">PUT</option>
-                  <option value="DELETE">DELETE</option>
-                  <option value="PATCH">PATCH</option>
-                  <option value="HEAD">HEAD</option>
-                  <option value="OPTIONS">OPTIONS</option>
-                </select>
-                <input type="url" class="url-input" id="unified-url" placeholder="https://api.example.com/endpoint">
-                <button class="send-btn" id="unified-send">
-                  <i class="fas fa-paper-plane"></i> Send Request
-                </button>
-              </div>
 
-              <!-- Request Tabs -->
-              <div class="request-tabs" style="margin: 20px 0; border-bottom: 1px solid #ddd;">
-                <button class="request-tab active" data-tab="params">Params</button>
-                <button class="request-tab" data-tab="auth">Auth</button>
-                <button class="request-tab" data-tab="headers">Headers</button>
-                <button class="request-tab" data-tab="body">Body</button>
-              </div>
+      <!-- GraphQL Tab -->
+      <div class="tab-content" id="graphql-tab">
+        <div class="request-builder">
+          <h4><i class="fas fa-layer-group"></i> GraphQL Request</h4>
+          
+          <div class="url-row">
+            <input type="url" class="url-input" id="graphql-url" placeholder="https://api.example.com/graphql" style="flex: 1;">
+            <button class="send-btn" id="graphql-send">
+              <i class="fas fa-paper-plane"></i> Send Query
+            </button>
+          </div>
 
-              <!-- Params Tab -->
-              <div class="request-tab-content active" id="params-content">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-                  <h5><i class="fas fa-list"></i> Query Parameters</h5>
-                  <button class="add-param" onclick="addParam()">
-                    <i class="fas fa-plus"></i> Add Parameter
-                  </button>
-                </div>
-                <div id="params-list"></div>
-              </div>
-
-              <!-- Auth Tab -->
-              <div class="request-tab-content" id="auth-content">
-                <h5><i class="fas fa-lock"></i> Authorization</h5>
-                <div style="margin-bottom: 15px;">
-                  <label style="display: block; margin-bottom: 5px; font-weight: 600;">Auth Type</label>
-                  <select id="auth-type" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px;">
-                    <option value="none">No Auth</option>
-                    <option value="bearer">Bearer Token</option>
-                    <option value="basic">Basic Auth</option>
-                    <option value="api-key">API Key</option>
-                  </select>
-                </div>
-                <div id="auth-fields"></div>
-              </div>
-
-              <!-- Headers Tab -->
-              <div class="request-tab-content" id="headers-content">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-                  <h5><i class="fas fa-file-alt"></i> Headers</h5>
-                  <button class="add-header" onclick="addHeader()">
-                    <i class="fas fa-plus"></i> Add Header
-                  </button>
-                </div>
-                <div id="headers-list"></div>
-              </div>
-
-              <!-- Body Tab -->
-              <div class="request-tab-content" id="body-content">
-                <h5><i class="fas fa-code"></i> Request Body</h5>
-                
-                <!-- Body Type Selector (shown for REST) -->
-                <div id="rest-body-options" style="margin-bottom: 15px;">
-                  <label style="display: block; margin-bottom: 5px; font-weight: 600;">Body Type</label>
-                  <select id="body-type" style="width: 200px; padding: 8px; border: 1px solid #ddd; border-radius: 4px;" onchange="switchBodyType()">
-                    <option value="json">JSON</option>
-                    <option value="raw">Raw Text</option>
-                    <option value="form">Form Data</option>
-                  </select>
-                </div>
-                
-                <!-- GraphQL Query Editor (hidden by default) -->
-                <div id="graphql-body-options" style="display: none;">
-                  <div style="margin-bottom: 20px;">
-                    <label style="display: block; margin-bottom: 5px; font-weight: 600;">
-                      <i class="fas fa-search"></i> GraphQL Query/Mutation
-                    </label>
-                    <textarea class="body-textarea" id="unified-graphql-query" placeholder="query {
+          <div class="section-header">
+            <h5><i class="fas fa-search"></i> Query/Mutation</h5>
+          </div>
+          <textarea class="body-textarea" id="graphql-query" placeholder="query {
   users {
     id
     name
     email
   }
 }"></textarea>
-                    <button class="format-btn" onclick="formatGraphQL()" style="margin-top: 10px;">
-                      <i class="fas fa-magic"></i> Format Query
-                    </button>
-                  </div>
-                  
-                  <div>
-                    <label style="display: block; margin-bottom: 5px; font-weight: 600;">
-                      <i class="fas fa-cog"></i> Variables (JSON)
-                    </label>
-                    <textarea class="body-textarea" id="unified-graphql-variables" style="min-height: 150px;" placeholder='{"limit": 10}'></textarea>
-                    <button class="format-btn" onclick="formatJSON('unified-graphql-variables')" style="margin-top: 10px;">
-                      <i class="fas fa-magic"></i> Format JSON
-                    </button>
-                  </div>
-                </div>
-                
-                <!-- REST Body Editor -->
-                <div id="rest-body-editor">
-                  <textarea class="body-textarea" id="unified-body" placeholder='{"key": "value"}'></textarea>
-                  <button class="format-btn" onclick="formatJSON('unified-body')" style="margin-top: 10px;">
-                    <i class="fas fa-magic"></i> Format JSON
-                  </button>
-                </div>
-              </div>
-            </div>
 
-            <!-- cURL Import Mode -->
-            <div id="curl-mode" style="display: none;">
-              <div style="margin-bottom: 20px;">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-                  <h5><i class="fas fa-terminal"></i> Paste cURL Command</h5>
-                  <div style="display: flex; gap: 10px;">
-                    <button class="example-btn" onclick="loadRestExample()">
-                      <i class="fas fa-globe"></i> REST Example
-                    </button>
-                    <button class="example-btn" onclick="loadGraphQLExample()">
-                      <i class="fas fa-layer-group"></i> GraphQL Example
-                    </button>
-                  </div>
-                </div>
-                <textarea class="body-textarea" id="unified-curl" style="min-height: 200px;" placeholder="curl -X GET 'https://api.example.com/users' -H 'Authorization: Bearer token'"></textarea>
-                <div style="display: flex; gap: 10px; margin-top: 10px;">
-                  <button class="format-btn" onclick="formatCurlCommand()">
-                    <i class="fas fa-magic"></i> Format
-                  </button>
-                  <button class="send-btn" onclick="executeCurlCommand()">
-                    <i class="fas fa-play"></i> Execute cURL
-                  </button>
-                  <button class="copy-btn" onclick="clearCurlCommand()">
-                    <i class="fas fa-trash"></i> Clear
-                  </button>
-                </div>
-              </div>
-            </div>
+          <div class="section-header">
+            <h5><i class="fas fa-cog"></i> Variables (JSON)</h5>
           </div>
+          <textarea class="body-textarea" id="graphql-variables" style="min-height: 150px;" placeholder='{"limit": 10}'></textarea>
 
-          <!-- Response Section -->
-          <div class="response-section">
-            <h4><i class="fas fa-eye"></i> Response</h4>
-            <div class="response-meta" id="unified-response-meta">
-              <span><i class="fas fa-info-circle"></i> Ready to send request...</span>
-            </div>
-
-            <!-- Response Tabs -->
-            <div class="response-tabs" style="margin: 15px 0; border-bottom: 1px solid #ddd;">
-              <button class="response-tab active" data-tab="body">Body</button>
-              <button class="response-tab" data-tab="headers">Headers</button>
-              <button class="response-tab" data-tab="cookies">Cookies</button>
-            </div>
-
-            <!-- Response Body Tab -->
-            <div class="response-tab-content active" id="response-body-content">
-              <div class="response-body" id="unified-response-body">
-                Response will appear here...
-              </div>
-            </div>
-
-            <!-- Response Headers Tab -->
-            <div class="response-tab-content" id="response-headers-content">
-              <div class="response-body" id="unified-response-headers">
-                Response headers will appear here...
-              </div>
-            </div>
-
-            <!-- Response Cookies Tab -->
-            <div class="response-tab-content" id="response-cookies-content">
-              <div class="response-body" id="unified-response-cookies">
-                Response cookies will appear here...
-              </div>
-            </div>
-
-            <button class="copy-btn" onclick="copyResponse('unified-response-body')">
-              <i class="fas fa-copy"></i> Copy Response
+          <div class="section-header">
+            <h5><i class="fas fa-file-alt"></i> Headers</h5>
+            <button class="add-btn" onclick="addGraphQLHeader()">
+              <i class="fas fa-plus"></i> Add
             </button>
           </div>
+          <div id="graphql-headers"></div>
         </div>
 
-        <!-- OLD REST API Tab (Hidden) -->
-        <div class="tab-content" id="rest-tab" style="display: none;">
-          <div class="request-builder">
-            <h4><i class="fas fa-paper-plane"></i> REST API Request</h4>
-
-            <div class="url-row">
-              <select class="method-select" id="rest-method">
-                <option value="GET">GET</option>
-                <option value="POST">POST</option>
-                <option value="PUT">PUT</option>
-                <option value="DELETE">DELETE</option>
-                <option value="PATCH">PATCH</option>
-                <option value="HEAD">HEAD</option>
-                <option value="OPTIONS">OPTIONS</option>
-              </select>
-              <input type="url" class="url-input" id="rest-url" placeholder="https://{{baseUrl}}/api/endpoint">
-              <button class="send-btn" id="rest-send">
-                <i class="fas fa-paper-plane"></i> Send
-              </button>
-            </div>
-
-            <!-- Request Tabs -->
-            <div class="request-tabs" style="margin: 20px 0; border-bottom: 1px solid #ddd;">
-              <button class="request-tab active" data-tab="params">Params</button>
-              <button class="request-tab" data-tab="auth">Auth</button>
-              <button class="request-tab" data-tab="headers">Headers</button>
-              <button class="request-tab" data-tab="body">Body</button>
-            </div>
-
-            <!-- Params Tab -->
-            <div class="request-tab-content active" id="params-content">
-              <h5><i class="fas fa-tags"></i> Query Parameters</h5>
-              <div class="params-list" id="rest-params">
-                <div class="param-row">
-                  <input type="checkbox" checked style="width: 20px; height: 20px; cursor: pointer;">
-                  <input type="text" class="param-input" placeholder="Parameter name" value="limit">
-                  <input type="text" class="param-input" placeholder="Parameter value" value="10">
-                  <button class="remove-param" onclick="this.parentElement.remove()">×</button>
-                </div>
-              </div>
-              <button class="add-param" id="add-rest-param">
-                <i class="fas fa-plus"></i> Add Parameter
-              </button>
-            </div>
-
-            <!-- Auth Tab -->
-            <div class="request-tab-content" id="auth-content">
-              <h5><i class="fas fa-lock"></i> Authentication</h5>
-              <select id="rest-auth-type"
-                style="margin-bottom: 15px; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
-                <option value="none">No Auth</option>
-                <option value="basic">Basic Auth</option>
-                <option value="bearer">Bearer Token</option>
-                <option value="api_key">API Key</option>
-              </select>
-
-              <div id="rest-auth-fields"></div>
-            </div>
-
-            <!-- Headers Tab -->
-            <div class="request-tab-content" id="headers-content">
-              <h5><i class="fas fa-list"></i> Headers</h5>
-              <div class="headers-list" id="rest-headers">
-                <div class="header-row">
-                  <input type="checkbox" checked style="width: 20px; height: 20px; cursor: pointer;">
-                  <input type="text" class="header-input" placeholder="Header name" value="Content-Type">
-                  <input type="text" class="header-input" placeholder="Header value" value="application/json">
-                  <button class="remove-header" onclick="this.parentElement.remove()">×</button>
-                </div>
-              </div>
-              <button class="add-header" id="add-rest-header">
-                <i class="fas fa-plus"></i> Add Header
-              </button>
-            </div>
-
-            <!-- Body Tab -->
-            <div class="request-tab-content" id="body-content">
-              <h5><i class="fas fa-code"></i> Request Body</h5>
-              <div style="margin-bottom: 15px;">
-                <label><input type="radio" name="rest-body-type" value="none" checked> None</label>
-                <label><input type="radio" name="rest-body-type" value="json"> JSON</label>
-                <label><input type="radio" name="rest-body-type" value="text"> Text</label>
-                <label><input type="radio" name="rest-body-type" value="form"> Form Data</label>
-                <label><input type="radio" name="rest-body-type" value="xml"> XML</label>
-              </div>
-              <textarea class="body-textarea" id="rest-body" placeholder='{"key": "{{variableName}}"}'></textarea>
-              <button class="format-btn" onclick="formatJSON('rest-body')">
-                <i class="fas fa-magic"></i> Format JSON
-              </button>
-            </div>
+        <div class="response-section">
+          <h4><i class="fas fa-eye"></i> Response</h4>
+          <div class="response-meta" id="graphql-response-meta">
+            <i class="fas fa-info-circle"></i> Ready to send GraphQL query...
           </div>
-
-          <div class="response-section">
-            <h4><i class="fas fa-eye"></i> Response</h4>
-
-            <!-- Response Tabs -->
-            <div class="response-tabs" style="margin: 15px 0; border-bottom: 1px solid #ddd;">
-              <button class="response-tab active" data-tab="body">Body</button>
-              <button class="response-tab" data-tab="headers">Headers</button>
-              <button class="response-tab" data-tab="cookies">Cookies</button>
-            </div>
-
-            <div class="response-meta" id="rest-response-meta">
-              <span><i class="fas fa-info-circle"></i> Ready to send request...</span>
-            </div>
-
-            <!-- Response Body Tab -->
-            <div class="response-tab-content active" id="response-body-content">
-              <div class="response-body" id="rest-response-body">
-                Response will appear here...
-              </div>
-            </div>
-
-            <!-- Response Headers Tab -->
-            <div class="response-tab-content" id="response-headers-content">
-              <div class="response-body" id="rest-response-headers">
-                Response headers will appear here...
-              </div>
-            </div>
-
-            <!-- Response Cookies Tab -->
-            <div class="response-tab-content" id="response-cookies-content">
-              <div class="response-body" id="rest-response-cookies">
-                Response cookies will appear here...
-              </div>
-            </div>
-
-            <button class="copy-btn" onclick="copyResponse('rest-response-body')" style="margin-top: 10px;">
-              <i class="fas fa-copy"></i> Copy Response
-            </button>
-          </div>
-        </div>
-
-        <!-- GraphQL Tab -->
-        <div class="tab-content" id="graphql-tab">
-          <div class="request-builder">
-            <h4><i class="fas fa-layer-group"></i> GraphQL Request</h4>
-
-            <div class="url-row">
-              <input type="url" class="url-input" id="graphql-url" placeholder="https://api.example.com/graphql">
-              <button class="send-btn" id="graphql-send">
-                <i class="fas fa-paper-plane"></i> Send Query
-              </button>
-            </div>
-
-            <div class="graphql-section">
-              <div>
-                <h5><i class="fas fa-search"></i> Query/Mutation</h5>
-                <textarea class="body-textarea graphql-query" id="graphql-query" placeholder="query {
-  users {
-    id
-    name
-    email
-  }
-}"></textarea>
-                <button class="format-btn" onclick="formatGraphQL()">
-                  <i class="fas fa-magic"></i> Format Query
-                </button>
-              </div>
-
-              <div>
-                <h5><i class="fas fa-cog"></i> Variables (JSON)</h5>
-                <textarea class="body-textarea graphql-variables" id="graphql-variables"
-                  placeholder='{"limit": 10}'></textarea>
-                <button class="format-btn" onclick="formatJSON('graphql-variables')">
-                  <i class="fas fa-magic"></i> Format JSON
-                </button>
-              </div>
-            </div>
-          </div>
-
-          <div class="response-section">
-            <h4><i class="fas fa-eye"></i> Response</h4>
-            <div class="response-meta" id="graphql-response-meta">
-              <span><i class="fas fa-info-circle"></i> Ready to send GraphQL request...</span>
-            </div>
-            <div class="response-body" id="graphql-response-body">
-              Response will appear here...
-            </div>
-            <button class="copy-btn" onclick="copyResponse('graphql-response-body')" style="margin-top: 10px;">
-              <i class="fas fa-copy"></i> Copy Response
-            </button>
-          </div>
-        </div>
-
-        <!-- cURL Runner Tab -->
-        <div class="tab-content active" id="curl-tab">
-          <div class="request-builder">
-            <h4><i class="fas fa-terminal"></i> cURL Command Runner</h4>
-            <p style="color: var(--text-light); margin-bottom: 20px;">
-              <i class="fas fa-info-circle"></i>
-              Supports both REST and GraphQL requests. Auto-detects GraphQL patterns.
-            </p>
-
-            <div class="curl-section">
-              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                <h5><i class="fas fa-paste"></i> Paste your cURL command</h5>
-                <div class="curl-examples">
-                  <button class="example-btn" onclick="loadRestExample()">
-                    <i class="fas fa-globe"></i> REST Example
-                  </button>
-                  <button class="example-btn" onclick="loadGraphQLExample()">
-                    <i class="fas fa-layer-group"></i> GraphQL Example
-                  </button>
-                </div>
-              </div>
-              <textarea class="curl-input" id="curl-command" placeholder="curl -X GET https://api.example.com/users \
-  -H 'Authorization: Bearer token' \
-  -H 'Content-Type: application/json' \
-  -d '{\" key\": \"value\"}'"></textarea>
-            </div>
-
-            <div class="curl-controls">
-              <button class="send-btn" id="curl-send">
-                <i class="fas fa-play"></i> Execute cURL
-              </button>
-              <button class="format-btn" onclick="formatCurlCommand()">
-                <i class="fas fa-magic"></i> Format
-              </button>
-              <button class="clear-btn" onclick="clearCurlCommand()">
-                <i class="fas fa-eraser"></i> Clear
-              </button>
-            </div>
-          </div>
-
-          <div class="response-section">
-            <h4><i class="fas fa-eye"></i> Response</h4>
-            <div class="response-meta" id="curl-response-meta">
-              <span><i class="fas fa-info-circle"></i> Ready to execute cURL command...</span>
-            </div>
-            <div class="response-body" id="curl-response-body">
-              Response will appear here...
-            </div>
-            <button class="copy-btn" onclick="copyResponse('curl-response-body')" style="margin-top: 10px;">
-              <i class="fas fa-copy"></i> Copy Response
-            </button>
-          </div>
-        </div>
-
-        <!-- Collections Tab -->
-        <div class="tab-content" id="collections-tab">
-          <div class="request-builder">
-            <h4><i class="fas fa-folder-open"></i> Postman Collections</h4>
-
-            <div class="postman-connect">
-              <input type="file" class="file-input" id="collection-file" accept=".json">
-              <label for="collection-file" class="file-label">
-                <i class="fas fa-file-import"></i> Import Postman Collection
-              </label>
-              <input type="file" class="file-input" id="environment-file" accept=".json">
-              <label for="environment-file" class="file-label" style="background: #17a2b8;">
-                <i class="fas fa-cog"></i> Import Environment
-              </label>
-              <button class="send-btn" id="connect-postman" style="background: #ff6c37;">
-                <i class="fas fa-link"></i> Connect to Postman API
-              </button>
-            </div>
-
-            <div class="collections-list" id="collections-list">
-              <div class="collection-item sample-collection">
-                <div>
-                  <strong><i class="fas fa-folder"></i> Sample Collection</strong>
-                  <div style="font-size: 12px; color: #6c757d; margin-top: 4px;">
-                    <i class="fas fa-file-alt"></i> 3 requests ready to run
-                  </div>
-                </div>
-                <div style="display: flex; gap: 5px;">
-                  <button class="run-collection" onclick="runCollection('sample')">
-                    <i class="fas fa-play"></i> Run
-                  </button>
-                  <button class="run-collection" onclick="editCollection('sample')" style="background: #6c757d;">
-                    <i class="fas fa-edit"></i> Edit
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div class="response-section">
-            <h4><i class="fas fa-chart-bar"></i> Collection Results</h4>
-            <div class="response-meta" id="collection-response-meta">
-              <span><i class="fas fa-info-circle"></i> Import a collection to get started...</span>
-            </div>
-            <div class="response-body" id="collection-response-body">
-              Collection run results will appear here...
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Collection Editor Modal -->
-    <div id="collection-editor-modal"
-      style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000;">
-      <div
-        style="background: white; margin: 50px auto; padding: 0; border-radius: 8px; width: 90%; max-width: 1000px; max-height: 80%; overflow: hidden; display: flex; flex-direction: column;">
-        <!-- Modal Header -->
-        <div
-          style="padding: 20px; border-bottom: 1px solid #ddd; display: flex; justify-content: space-between; align-items: center;">
-          <h3 style="margin: 0;"><i class="fas fa-edit"></i> Edit Collection</h3>
-          <button onclick="closeCollectionEditor()"
-            style="background: none; border: none; font-size: 24px; cursor: pointer;">&times;</button>
-        </div>
-
-        <!-- Modal Body -->
-        <div style="flex: 1; overflow: auto; display: flex;">
-          <!-- Left Panel - Collection Structure -->
-          <div style="width: 30%; border-right: 1px solid #ddd; padding: 20px; overflow-y: auto;">
-            <h4><i class="fas fa-folder-tree"></i> Collection Structure</h4>
-            <div id="collection-tree"></div>
-
-            <h4 style="margin-top: 30px;"><i class="fas fa-cog"></i> Environment Variables</h4>
-            <div id="environment-variables">
-              <div style="margin-bottom: 15px;">
-                <button onclick="addEnvironmentVariable()"
-                  style="background: #28a745; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer;">
-                  <i class="fas fa-plus"></i> Add Variable
-                </button>
-              </div>
-              <div id="env-vars-list"></div>
-            </div>
-          </div>
-
-          <!-- Right Panel - Request Editor -->
-          <div style="flex: 1; padding: 20px; overflow-y: auto;">
-            <div id="request-editor">
-              <h4><i class="fas fa-file-alt"></i> Select a request to edit</h4>
-              <p style="color: #6c757d;">Click on a request from the collection structure to edit it.</p>
-            </div>
-          </div>
-        </div>
-
-        <!-- Modal Footer -->
-        <div style="padding: 20px; border-top: 1px solid #ddd; display: flex; justify-content: space-between;">
-          <div>
-            <button onclick="saveCollection()"
-              style="background: #007bff; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; margin-right: 10px;">
-              <i class="fas fa-save"></i> Save Changes
-            </button>
-            <button onclick="exportCollection()"
-              style="background: #17a2b8; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer;">
-              <i class="fas fa-download"></i> Export Collection
-            </button>
-          </div>
-          <button onclick="closeCollectionEditor()"
-            style="background: #6c757d; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer;">
-            <i class="fas fa-times"></i> Cancel
+          <div class="response-body" id="graphql-response-body">Response will appear here...</div>
+          <button class="copy-btn" onclick="copyResponse('graphql-response-body')">
+            <i class="fas fa-copy"></i> Copy Response
           </button>
         </div>
       </div>
-    </div>
 
-  </div> <!-- Close api-container -->
+
+      <!-- cURL Tab -->
+      <div class="tab-content" id="curl-tab">
+        <div class="request-builder">
+          <h4><i class="fas fa-terminal"></i> cURL Command Runner</h4>
+          
+          <div class="section-header">
+            <h5><i class="fas fa-paste"></i> Paste cURL Command</h5>
+          </div>
+          <textarea class="body-textarea" id="curl-command" placeholder="curl -X GET 'https://api.example.com/users' -H 'Authorization: Bearer token'"></textarea>
+          
+          <div style="display: flex; gap: 12px; margin-top: 12px;">
+            <button class="send-btn" id="curl-send">
+              <i class="fas fa-play"></i> Execute
+            </button>
+            <button class="copy-btn" onclick="clearCurl()" style="margin-top: 0;">
+              <i class="fas fa-trash"></i> Clear
+            </button>
+          </div>
+        </div>
+
+        <div class="response-section">
+          <h4><i class="fas fa-eye"></i> Response</h4>
+          <div class="response-meta" id="curl-response-meta">
+            <i class="fas fa-info-circle"></i> Ready to execute cURL command...
+          </div>
+          <div class="response-body" id="curl-response-body">Response will appear here...</div>
+          <button class="copy-btn" onclick="copyResponse('curl-response-body')">
+            <i class="fas fa-copy"></i> Copy Response
+          </button>
+        </div>
+      </div>
+
+
+      <!-- Collections Tab -->
+      <div class="tab-content" id="collections-tab">
+        <div class="request-builder">
+          <h4><i class="fas fa-folder-open"></i> Postman Collections</h4>
+          
+          <div style="margin-bottom: 1.5rem;">
+            <input type="file" id="collection-file" accept=".json" style="display: none;" onchange="handleCollectionUpload(event)">
+            <button class="send-btn" onclick="document.getElementById('collection-file').click()">
+              <i class="fas fa-file-import"></i> Import Collection
+            </button>
+          </div>
+
+          <div id="collections-list"></div>
+        </div>
+
+        <div class="response-section">
+          <h4><i class="fas fa-chart-bar"></i> Collection Results</h4>
+          <div class="response-meta" id="collection-response-meta">
+            <i class="fas fa-info-circle"></i> Import a collection to get started...
+          </div>
+          <div class="response-body" id="collection-response-body">Results will appear here...</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
 
   {% include 'footer.html' %}
 
   <script src="/static/shared-utils.js"></script>
   <script>
-    let collections = [];
-    let environments = [];
-    let currentEditingCollection = null;
-    let currentEditingRequest = null;
-
-    // Tab switching
+    // Tab Switching
     document.querySelectorAll('.api-tab').forEach(tab => {
-      tab.addEventListener('click', function () {
-        // Remove active class from all tabs and contents
+      tab.addEventListener('click', function() {
         document.querySelectorAll('.api-tab').forEach(t => t.classList.remove('active'));
         document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-
-        // Add active class to clicked tab and corresponding content
+        
         this.classList.add('active');
-        document.getElementById(this.dataset.tab + '-tab').classList.add('active');
+        const tabId = this.getAttribute('data-tab') + '-tab';
+        document.getElementById(tabId).classList.add('active');
       });
     });
 
-    // Add header functionality
-    document.getElementById('add-rest-header').addEventListener('click', function () {
-      const headersContainer = document.getElementById('rest-headers');
-      const headerRow = document.createElement('div');
-      headerRow.className = 'header-row';
-      headerRow.innerHTML = `
-        <input type="checkbox" checked style="width: 20px; height: 20px; cursor: pointer;">
-        <input type="text" class="header-input" placeholder="Header name">
-        <input type="text" class="header-input" placeholder="Header value">
-        <button class="remove-header" onclick="this.parentElement.remove()">×</button>
-      `;
-      headersContainer.appendChild(headerRow);
-    });
 
-    // REST API Send
-    document.getElementById('rest-send').addEventListener('click', async function () {
+    // REST API Functions
+    function addRestParam() {
+      const container = document.getElementById('rest-params');
+      const row = document.createElement('div');
+      row.className = 'param-row';
+      row.innerHTML = `
+        <input type="text" placeholder="Key" class="param-key">
+        <input type="text" placeholder="Value" class="param-value">
+        <button class="remove-btn" onclick="this.parentElement.remove()">
+          <i class="fas fa-trash"></i>
+        </button>
+      `;
+      container.appendChild(row);
+    }
+
+    function addRestHeader() {
+      const container = document.getElementById('rest-headers');
+      const row = document.createElement('div');
+      row.className = 'header-row';
+      row.innerHTML = `
+        <input type="text" placeholder="Header Name" class="header-key">
+        <input type="text" placeholder="Header Value" class="header-value">
+        <button class="remove-btn" onclick="this.parentElement.remove()">
+          <i class="fas fa-trash"></i>
+        </button>
+      `;
+      container.appendChild(row);
+    }
+
+    // REST Send
+    document.getElementById('rest-send').addEventListener('click', async function() {
       const method = document.getElementById('rest-method').value;
       const url = document.getElementById('rest-url').value;
+      const body = document.getElementById('rest-body').value;
 
       if (!url) {
         showMessage('rest-response-meta', 'Please enter a URL', 'error');
         return;
       }
 
+      // Collect params
+      const params = [];
+      document.querySelectorAll('#rest-params .param-row').forEach(row => {
+        const key = row.querySelector('.param-key').value;
+        const value = row.querySelector('.param-value').value;
+        if (key) params.push(`${encodeURIComponent(key)}=${encodeURIComponent(value)}`);
+      });
+
+      let finalUrl = url;
+      if (params.length > 0) {
+        finalUrl += (url.includes('?') ? '&' : '?') + params.join('&');
+      }
+
       // Collect headers
       const headers = {};
       document.querySelectorAll('#rest-headers .header-row').forEach(row => {
-        const checkbox = row.querySelector('input[type="checkbox"]');
-        if (checkbox && checkbox.checked) {
-          const inputs = row.querySelectorAll('.header-input');
-          if (inputs[0].value && inputs[1].value) {
-            headers[inputs[0].value] = inputs[1].value;
-          }
-        }
+        const key = row.querySelector('.header-key').value;
+        const value = row.querySelector('.header-value').value;
+        if (key) headers[key] = value;
       });
 
-      // Collect parameters
-      const params = {};
-      document.querySelectorAll('#rest-params .param-row').forEach(row => {
-        const checkbox = row.querySelector('input[type="checkbox"]');
-        if (checkbox && checkbox.checked) {
-          const inputs = row.querySelectorAll('.param-input');
-          if (inputs[0].value && inputs[1].value) {
-            params[inputs[0].value] = inputs[1].value;
-          }
-        }
-      });
-
-      // Collect body
-      const bodyType = document.querySelector('input[name="rest-body-type"]:checked').value;
-      const body = bodyType !== 'none' ? document.getElementById('rest-body').value : '';
-
-      // Collect auth
-      const authType = document.getElementById('rest-auth-type').value;
-      const auth = { type: authType };
-
-      if (authType === 'basic') {
-        auth.username = document.getElementById('basic-username')?.value || '';
-        auth.password = document.getElementById('basic-password')?.value || '';
-      } else if (authType === 'bearer') {
-        auth.token = document.getElementById('bearer-token')?.value || '';
-      } else if (authType === 'api_key') {
-        auth.key = document.getElementById('api-key-name')?.value || 'X-API-Key';
-        auth.value = document.getElementById('api-key-value')?.value || '';
-        auth.in = document.getElementById('api-key-location')?.value || 'header';
-      }
-
-      await sendComprehensiveRequest('rest', {
-        method: method,
-        url: url,
-        headers: headers,
-        params: params,
-        body: body,
-        bodyType: bodyType,
-        auth: auth,
-        environment: {} // Could be populated from environment variables
-      });
+      await sendRequest('rest', method, finalUrl, headers, body);
     });
 
+
+    // GraphQL Functions
+    function addGraphQLHeader() {
+      const container = document.getElementById('graphql-headers');
+      const row = document.createElement('div');
+      row.className = 'header-row';
+      row.innerHTML = `
+        <input type="text" placeholder="Header Name" class="header-key">
+        <input type="text" placeholder="Header Value" class="header-value">
+        <button class="remove-btn" onclick="this.parentElement.remove()">
+          <i class="fas fa-trash"></i>
+        </button>
+      `;
+      container.appendChild(row);
+    }
+
     // GraphQL Send
-    document.getElementById('graphql-send').addEventListener('click', async function () {
+    document.getElementById('graphql-send').addEventListener('click', async function() {
       const url = document.getElementById('graphql-url').value;
       const query = document.getElementById('graphql-query').value;
       const variables = document.getElementById('graphql-variables').value;
@@ -1500,9 +647,14 @@
         return;
       }
 
-      const headers = { 'Content-Type': 'application/json' };
-      let body;
+      const headers = {'Content-Type': 'application/json'};
+      document.querySelectorAll('#graphql-headers .header-row').forEach(row => {
+        const key = row.querySelector('.header-key').value;
+        const value = row.querySelector('.header-value').value;
+        if (key) headers[key] = value;
+      });
 
+      let body;
       try {
         body = JSON.stringify({
           query: query,
@@ -1516,8 +668,9 @@
       await sendRequest('graphql', 'POST', url, headers, body);
     });
 
-    // cURL Send
-    document.getElementById('curl-send').addEventListener('click', async function () {
+
+    // cURL Functions
+    document.getElementById('curl-send').addEventListener('click', async function() {
       const curlCommand = document.getElementById('curl-command').value;
 
       if (!curlCommand) {
@@ -1527,20 +680,21 @@
 
       const btn = this;
       const originalText = btn.innerHTML;
-      btn.innerHTML = '<span class="loading"></span> Executing...';
+      btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Executing...';
       btn.disabled = true;
 
       try {
         const response = await fetch('/execute_curl', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ command: curlCommand })
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({curl_command: curlCommand})
         });
 
         const data = await response.json();
 
         if (data.success) {
-          showResponse('curl', data);
+          showMessage('curl-response-meta', `Success: ${data.status} ${data.status_text} | Time: ${data.time}ms`, 'success');
+          document.getElementById('curl-response-body').textContent = JSON.stringify(data.body, null, 2);
         } else {
           showMessage('curl-response-meta', 'Error: ' + data.error, 'error');
           document.getElementById('curl-response-body').textContent = data.error;
@@ -1554,1133 +708,175 @@
       }
     });
 
-    // Collection file import
-    document.getElementById('collection-file').addEventListener('change', function (e) {
-      const file = e.target.files[0];
-      if (!file) return;
-
-      const reader = new FileReader();
-      reader.onload = function (e) {
-        try {
-          const collection = JSON.parse(e.target.result);
-          collections.push(collection);
-          updateCollectionsList();
-
-          // Check for environment variables in the collection
-          const envVars = extractEnvironmentVariables(collection);
-          if (envVars.length > 0) {
-            showMessage('collection-response-meta',
-              `Collection "${collection.info.name}" imported with ${envVars.length} environment variables found. Click Edit to configure them.`,
-              'success');
-          } else {
-            showMessage('collection-response-meta', `Collection "${collection.info.name}" imported successfully`, 'success');
-          }
-        } catch (error) {
-          showMessage('collection-response-meta', 'Invalid collection file: ' + error.message, 'error');
-        }
-      };
-      reader.readAsText(file);
-    });
-
-    // Environment file import
-    document.getElementById('environment-file').addEventListener('change', function (e) {
-      const file = e.target.files[0];
-      if (!file) return;
-
-      const reader = new FileReader();
-      reader.onload = function (e) {
-        try {
-          const environment = JSON.parse(e.target.result);
-          environments.push(environment);
-          showMessage('collection-response-meta',
-            `Environment "${environment.name}" imported with ${environment.values.length} variables`,
-            'success');
-        } catch (error) {
-          showMessage('collection-response-meta', 'Invalid environment file: ' + error.message, 'error');
-        }
-      };
-      reader.readAsText(file);
-    });
-
-    // Postman Connect (placeholder)
-    document.getElementById('connect-postman').addEventListener('click', function () {
-      showMessage('collection-response-meta', 'Postman API integration coming soon! Use import for now.', 'success');
-    });
-
-    // Add tab switching functionality for request and response tabs
-    document.addEventListener('click', function (e) {
-      if (e.target.classList.contains('request-tab')) {
-        const tabName = e.target.dataset.tab;
-
-        // Remove active from all request tabs
-        document.querySelectorAll('.request-tab').forEach(tab => tab.classList.remove('active'));
-        document.querySelectorAll('.request-tab-content').forEach(content => content.classList.remove('active'));
-
-        // Add active to clicked tab
-        e.target.classList.add('active');
-        document.getElementById(tabName + '-content').classList.add('active');
-      }
-
-      if (e.target.classList.contains('response-tab')) {
-        const tabName = e.target.dataset.tab;
-
-        // Remove active from all response tabs
-        document.querySelectorAll('.response-tab').forEach(tab => tab.classList.remove('active'));
-        document.querySelectorAll('.response-tab-content').forEach(content => content.classList.remove('active'));
-
-        // Add active to clicked tab
-        e.target.classList.add('active');
-        document.getElementById('response-' + tabName + '-content').classList.add('active');
-      }
-    });
-
-    // Auth type change handler
-    document.getElementById('rest-auth-type').addEventListener('change', function () {
-      const authType = this.value;
-      const authFields = document.getElementById('rest-auth-fields');
-
-      authFields.innerHTML = '';
-
-      if (authType === 'basic') {
-        authFields.innerHTML = `
-          <div class="auth-field">
-            <label>Username:</label>
-            <input type="text" id="basic-username" placeholder="Enter username">
-          </div>
-          <div class="auth-field">
-            <label>Password:</label>
-            <input type="password" id="basic-password" placeholder="Enter password">
-          </div>
-        `;
-      } else if (authType === 'bearer') {
-        authFields.innerHTML = `
-          <div class="auth-field">
-            <label>Token:</label>
-            <input type="text" id="bearer-token" placeholder="Enter bearer token">
-          </div>
-        `;
-      } else if (authType === 'api_key') {
-        authFields.innerHTML = `
-          <div class="auth-field">
-            <label>Key Name:</label>
-            <input type="text" id="api-key-name" placeholder="X-API-Key" value="X-API-Key">
-          </div>
-          <div class="auth-field">
-            <label>Key Value:</label>
-            <input type="text" id="api-key-value" placeholder="Enter API key">
-          </div>
-          <div class="auth-field">
-            <label>Add to:</label>
-            <select id="api-key-location">
-              <option value="header">Header</option>
-              <option value="query">Query Parameter</option>
-            </select>
-          </div>
-        `;
-      }
-    });
-
-    // Add parameter button
-    document.getElementById('add-rest-param').addEventListener('click', function () {
-      const paramsContainer = document.getElementById('rest-params');
-      const paramRow = document.createElement('div');
-      paramRow.className = 'param-row';
-      paramRow.innerHTML = `
-        <input type="checkbox" checked style="width: 20px; height: 20px; cursor: pointer;">
-        <input type="text" class="param-input" placeholder="Parameter name">
-        <input type="text" class="param-input" placeholder="Parameter value">
-        <button class="remove-param" onclick="this.parentElement.remove()">×</button>
-      `;
-      paramsContainer.appendChild(paramRow);
-    });
-
-    // Comprehensive request sender
-    async function sendComprehensiveRequest(type, requestData) {
-      const metaElement = document.getElementById(type + '-response-meta');
-      const bodyElement = document.getElementById(type + '-response-body');
-      const headersElement = document.getElementById(type + '-response-headers');
-      const cookiesElement = document.getElementById(type + '-response-cookies');
-      const sendBtn = document.getElementById(type + '-send');
-
-      const originalText = sendBtn.innerHTML;
-      sendBtn.innerHTML = '<span class="loading"></span> Sending...';
-      sendBtn.disabled = true;
-
-      const startTime = Date.now();
-
-      try {
-        const response = await fetch('/api/rest/execute', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(requestData)
-        });
-
-        const data = await response.json();
-        const requestTime = Date.now() - startTime;
-
-        if (data.success) {
-          // Display successful response - body is already formatted from backend
-          bodyElement.textContent = data.body;
-
-          metaElement.innerHTML =
-            `<span style="color: #28a745;">✅ ${data.status || data.status_code} ${data.statusText || data.status_text || ''}</span> • 
-             <span>Time: ${data.time || data.responseTime || 0}ms</span> • 
-             <span>Size: ${data.size || (data.body ? data.body.length : 0)} bytes</span>
-             ${data.redirects > 0 ? ` • <span>Redirects: ${data.redirects}</span>` : ''}`;
-
-          // Update response headers
-          if (headersElement) {
-            let headersContent = '';
-            if (data.headers) {
-              if (Array.isArray(data.headers)) {
-                // Headers as array of objects
-                headersContent = data.headers.map(h =>
-                  `<div style="padding: 4px 0; border-bottom: 1px solid #eee;"><strong>${h.key}:</strong> ${h.value}</div>`
-                ).join('');
-              } else {
-                // Headers as object
-                headersContent = Object.entries(data.headers).map(([key, value]) =>
-                  `<div style="padding: 4px 0; border-bottom: 1px solid #eee;"><strong>${key}:</strong> ${value}</div>`
-                ).join('');
-              }
-            }
-            headersElement.innerHTML = headersContent || '<em style="color: #6c757d;">No headers</em>';
-          }
-
-          // Update response cookies
-          if (cookiesElement && data.cookies && data.cookies.length > 0) {
-            const cookiesContent = data.cookies.map(c =>
-              `<div style="padding: 4px 0; border-bottom: 1px solid #eee;">
-                <strong>${c.name}:</strong> ${c.value}
-                ${c.domain ? `<br><small style="color: #6c757d;">Domain: ${c.domain}</small>` : ''}
-              </div>`
-            ).join('');
-            cookiesElement.innerHTML = cookiesContent;
-          } else if (cookiesElement) {
-            cookiesElement.innerHTML = '<em style="color: #6c757d;">No cookies</em>';
-          }
-
-        } else {
-          // Display error response
-          bodyElement.textContent = 'Error: ' + data.error;
-          metaElement.innerHTML =
-            `<span style="color: #dc3545;">❌ Error</span> • <span>Time: ${data.time || data.responseTime || requestTime}ms</span>`;
-
-          if (headersElement) headersElement.innerHTML = '<em style="color: #6c757d;">No headers</em>';
-          if (cookiesElement) cookiesElement.innerHTML = '<em style="color: #6c757d;">No cookies</em>';
-        }
-
-      } catch (error) {
-        const requestTime = Date.now() - startTime;
-        bodyElement.textContent = 'Network Error: ' + error.message;
-        metaElement.innerHTML =
-          `<span style="color: #dc3545;">❌ Network Error</span> • <span>Time: ${requestTime}ms</span>`;
-
-        if (headersElement) headersElement.innerHTML = '<em style="color: #6c757d;">No headers</em>';
-        if (cookiesElement) cookiesElement.innerHTML = '<em style="color: #6c757d;">No cookies</em>';
-      } finally {
-        sendBtn.innerHTML = originalText;
-        sendBtn.disabled = false;
-      }
+    function clearCurl() {
+      document.getElementById('curl-command').value = '';
+      document.getElementById('curl-response-body').textContent = 'Response will appear here...';
+      showMessage('curl-response-meta', 'Cleared', 'success');
     }
 
-    // Generic request sender (legacy)
+
+    // Send Request Function
     async function sendRequest(type, method, url, headers, body) {
       const metaElement = document.getElementById(type + '-response-meta');
       const bodyElement = document.getElementById(type + '-response-body');
-      const sendBtn = document.getElementById(type + '-send');
 
-      const originalText = sendBtn.innerHTML;
-      sendBtn.innerHTML = '<span class="loading"></span> Sending...';
-      sendBtn.disabled = true;
-
-      const startTime = Date.now();
+      metaElement.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sending request...';
+      bodyElement.textContent = 'Loading...';
 
       try {
-        const options = {
-          method: method,
-          headers: headers
-        };
+        const response = await fetch('/send-request', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({
+            method: method,
+            url: url,
+            headers: headers,
+            body: body
+          })
+        });
 
-        if (body && method !== 'GET' && method !== 'HEAD') {
-          options.body = body;
-        }
+        const data = await response.json();
 
-        const response = await fetch(url, options);
-        const responseTime = Date.now() - startTime;
-
-        let responseData;
-        const contentType = response.headers.get('content-type') || '';
-
-        if (contentType.includes('application/json')) {
-          responseData = await response.json();
+        if (data.error) {
+          showMessage(type + '-response-meta', 'Error: ' + data.error, 'error');
+          bodyElement.textContent = data.error;
         } else {
-          responseData = await response.text();
+          const statusClass = Math.floor(data.status / 100) + 'xx';
+          const statusBadge = `<span class="status-badge status-${statusClass}">${data.status} ${data.status_text}</span>`;
+          const timeInfo = `<span>Time: ${data.time}ms | Size: ${data.size} bytes</span>`;
+          metaElement.innerHTML = `${statusBadge} ${timeInfo}`;
+          
+          try {
+            bodyElement.textContent = JSON.stringify(JSON.parse(data.body), null, 2);
+          } catch {
+            bodyElement.textContent = data.body;
+          }
         }
-
-        const result = {
-          status: response.status,
-          statusText: response.statusText,
-          headers: Object.fromEntries(response.headers.entries()),
-          body: typeof responseData === 'object' ? JSON.stringify(responseData, null, 2) : responseData,
-          responseTime: responseTime
-        };
-
-        showResponse(type, result);
-
       } catch (error) {
-        showMessage(metaElement.id, 'Request failed: ' + error.message, 'error');
+        showMessage(type + '-response-meta', 'Request failed: ' + error.message, 'error');
         bodyElement.textContent = error.message;
-      } finally {
-        sendBtn.innerHTML = originalText;
-        sendBtn.disabled = false;
       }
     }
 
-    // Show response
-    function showResponse(type, data) {
-      const metaElement = document.getElementById(type + '-response-meta');
-      const bodyElement = document.getElementById(type + '-response-body');
-
-      // Handle both old and new response formats
-      const status = data.status || data.status_code;
-      const statusText = data.statusText || data.status_text || '';
-      const responseTime = data.time || data.responseTime || 0;
-      const size = data.size || (data.body ? data.body.length : 0);
-
-      let statusClass = 'status-2xx';
-      if (status >= 300 && status < 400) statusClass = 'status-3xx';
-      else if (status >= 400 && status < 500) statusClass = 'status-4xx';
-      else if (status >= 500) statusClass = 'status-5xx';
-
-      metaElement.innerHTML = `
-        <span class="status-badge ${statusClass}">
-          <i class="fas fa-circle"></i> ${status} ${statusText}
-        </span>
-        <span><i class="fas fa-clock"></i> ${responseTime}ms</span>
-        <span><i class="fas fa-weight"></i> ${size} bytes</span>
-      `;
-
-      // Response body is already formatted from backend
-      bodyElement.textContent = data.body;
-    }
-
-    // Show message
-    function showMessage(elementId, message, type = 'info') {
+    function showMessage(elementId, message, type) {
       const element = document.getElementById(elementId);
-      const icon = type === 'error' ? 'fa-exclamation-triangle' :
-        type === 'success' ? 'fa-check-circle' : 'fa-info-circle';
-      element.innerHTML = `<span style="color: ${type === 'error' ? '#dc3545' : type === 'success' ? '#28a745' : '#007bff'};">
-        <i class="fas ${icon}"></i> ${message}
-      </span>`;
+      const icon = type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-circle' : 'info-circle';
+      element.innerHTML = `<i class="fas fa-${icon}"></i> ${message}`;
     }
 
-    // Update collections list
-    function updateCollectionsList() {
-      const container = document.getElementById('collections-list');
-
-      // Remove existing imported collections (keep sample)
-      const existingItems = container.querySelectorAll('.collection-item:not(.sample-collection)');
-      existingItems.forEach(item => item.remove());
-
-      collections.forEach((collection, index) => {
-        const item = document.createElement('div');
-        item.className = 'collection-item';
-        const requestCount = collection.item ? collection.item.length : 0;
-        const envVars = extractEnvironmentVariables(collection);
-        item.innerHTML = `
-          <div>
-            <strong><i class="fas fa-folder"></i> ${collection.info.name}</strong>
-            <div style="font-size: 12px; color: #6c757d; margin-top: 4px;">
-              <i class="fas fa-file-alt"></i> ${requestCount} requests
-              ${envVars.length > 0 ? `<br><i class="fas fa-cog"></i> ${envVars.length} env variables` : ''}
-            </div>
-          </div>
-          <div style="display: flex; gap: 5px;">
-            <button class="run-collection" onclick="runCollection(${index})">
-              <i class="fas fa-play"></i> Run
-            </button>
-            <button class="run-collection" onclick="editCollection(${index})" style="background: #6c757d;">
-              <i class="fas fa-edit"></i> Edit
-            </button>
-          </div>
-        `;
-        container.appendChild(item);
+    function copyResponse(elementId) {
+      const text = document.getElementById(elementId).textContent;
+      navigator.clipboard.writeText(text).then(() => {
+        alert('Response copied to clipboard!');
       });
     }
 
-    // Run collection
-    async function runCollection(index) {
-      if (typeof index === 'string') {
-        showMessage('collection-response-meta', 'Demo: Sample collection run started...', 'success');
-        displayCollectionResults([
-          {
-            name: 'Get Users',
-            method: 'GET',
-            url: 'https://api.example.com/users',
-            status: 200,
-            statusText: 'OK',
-            responseTime: 123,
-            headers: { 'content-type': 'application/json' },
-            body: [{ id: 1, name: 'John Doe' }, { id: 2, name: 'Jane Smith' }]
-          },
-          {
-            name: 'Create User',
-            method: 'POST',
-            url: 'https://api.example.com/users',
-            status: 201,
-            statusText: 'Created',
-            responseTime: 234,
-            headers: { 'content-type': 'application/json' },
-            body: { id: 3, name: 'New User', created: true }
-          },
-          {
-            name: 'Delete User',
-            method: 'DELETE',
-            url: 'https://api.example.com/users/123',
-            status: 204,
-            statusText: 'No Content',
-            responseTime: 89,
-            headers: {},
-            body: null
-          }
-        ], 'Sample Collection', 446);
-        return;
-      }
 
-      const collection = collections[index];
-      if (!collection || !collection.item) {
-        showMessage('collection-response-meta', 'Invalid collection', 'error');
-        return;
-      }
+    // Collections Functions
+    let currentCollection = null;
 
-      showMessage('collection-response-meta', `Running collection: ${collection.info.name}...`, 'success');
+    function handleCollectionUpload(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        try {
+          currentCollection = JSON.parse(e.target.result);
+          displayCollection(currentCollection);
+          showMessage('collection-response-meta', `Loaded: ${currentCollection.info.name}`, 'success');
+        } catch (error) {
+          showMessage('collection-response-meta', 'Invalid collection file', 'error');
+        }
+      };
+      reader.readAsText(file);
+    }
+
+    function displayCollection(collection) {
+      const container = document.getElementById('collections-list');
+      container.innerHTML = `
+        <div style="background: white; padding: 1.5rem; border-radius: 8px; border: 2px solid var(--border); margin-bottom: 1rem;">
+          <h5 style="margin: 0 0 1rem 0;"><i class="fas fa-folder"></i> ${collection.info.name}</h5>
+          <p style="color: var(--text-light); margin: 0 0 1rem 0;">${collection.info.description || 'No description'}</p>
+          <button class="send-btn" onclick="runCollection()">
+            <i class="fas fa-play"></i> Run Collection
+          </button>
+        </div>
+      `;
+    }
+
+    async function runCollection() {
+      if (!currentCollection) return;
 
       const results = [];
-      const startTime = Date.now();
+      const items = currentCollection.item || [];
+      
+      showMessage('collection-response-meta', `Running ${items.length} requests...`, 'info');
+      document.getElementById('collection-response-body').textContent = 'Running...';
 
-      for (let i = 0; i < collection.item.length; i++) {
-        const item = collection.item[i];
+      for (const item of items) {
         if (item.request) {
           try {
-            const result = await runCollectionRequest(item, i + 1, collection.item.length);
-            results.push(result);
+            const method = item.request.method;
+            const url = item.request.url.raw || item.request.url;
+            const headers = {};
+            
+            if (item.request.header) {
+              item.request.header.forEach(h => {
+                headers[h.key] = h.value;
+              });
+            }
+
+            const body = item.request.body?.raw || '';
+
+            const response = await fetch('/send-request', {
+              method: 'POST',
+              headers: {'Content-Type': 'application/json'},
+              body: JSON.stringify({method, url, headers, body})
+            });
+
+            const data = await response.json();
+            results.push({
+              name: item.name,
+              status: data.status,
+              time: data.time,
+              success: !data.error
+            });
           } catch (error) {
             results.push({
               name: item.name,
               error: error.message,
-              status: 'FAILED',
-              method: item.request?.method || 'GET',
-              url: item.request?.url || ''
+              success: false
             });
           }
         }
       }
 
-      const totalTime = Date.now() - startTime;
-      displayCollectionResults(results, collection.info.name, totalTime);
+      displayResults(results);
     }
 
-    // Run individual collection request
-    async function runCollectionRequest(item, current, total) {
-      showMessage('collection-response-meta', `Running ${current}/${total}: ${item.name}...`, 'success');
-
-      const request = item.request;
-      let url = request.url;
-
-      // Handle different URL formats
-      if (typeof url === 'object') {
-        url = url.raw || url.protocol + '://' + url.host.join('.') + url.path.join('/');
-      }
-
-      // Apply environment variable substitution
-      if (environments.length > 0) {
-        url = substituteVariables(url, environments[0]);
-      }
-
-      const method = request.method;
-
-      const headers = {};
-      if (request.header) {
-        request.header.forEach(h => {
-          if (!h.disabled) {
-            let value = h.value;
-            if (environments.length > 0) {
-              value = substituteVariables(value, environments[0]);
-            }
-            headers[h.key] = value;
-          }
-        });
-      }
-
-      let body = null;
-      if (request.body) {
-        if (request.body.mode === 'raw') {
-          body = request.body.raw;
-          if (environments.length > 0) {
-            body = substituteVariables(body, environments[0]);
-          }
-        } else if (request.body.mode === 'urlencoded') {
-          body = new URLSearchParams(request.body.urlencoded.reduce((acc, item) => {
-            if (!item.disabled) {
-              let value = item.value;
-              if (environments.length > 0) {
-                value = substituteVariables(value, environments[0]);
-              }
-              acc[item.key] = value;
-            }
-            return acc;
-          }, {})).toString();
-          headers['Content-Type'] = 'application/x-www-form-urlencoded';
-        }
-      }
-
-      const startTime = Date.now();
-      const response = await fetch(url, {
-        method: method,
-        headers: headers,
-        body: body
+    function displayResults(results) {
+      const passed = results.filter(r => r.success).length;
+      const failed = results.length - passed;
+      
+      showMessage('collection-response-meta', `Completed: ${passed} passed, ${failed} failed`, passed === results.length ? 'success' : 'error');
+      
+      let output = `Collection Run Results\n${'='.repeat(50)}\n\n`;
+      results.forEach((r, i) => {
+        output += `${i + 1}. ${r.name}\n`;
+        output += `   Status: ${r.success ? '✓ PASS' : '✗ FAIL'}\n`;
+        if (r.status) output += `   HTTP: ${r.status} | Time: ${r.time}ms\n`;
+        if (r.error) output += `   Error: ${r.error}\n`;
+        output += '\n';
       });
-      const responseTime = Date.now() - startTime;
-
-      // Parse response body
-      let responseBody;
-      const contentType = response.headers.get('content-type') || '';
-
-      try {
-        if (contentType.includes('application/json')) {
-          responseBody = await response.json();
-        } else {
-          responseBody = await response.text();
-        }
-      } catch (e) {
-        responseBody = 'Failed to parse response';
-      }
-
-      // Collect response headers
-      const responseHeaders = {};
-      response.headers.forEach((value, key) => {
-        responseHeaders[key] = value;
-      });
-
-      return {
-        name: item.name,
-        method: method,
-        url: url,
-        status: response.status,
-        statusText: response.statusText,
-        responseTime: responseTime,
-        headers: responseHeaders,
-        body: responseBody
-      };
+      
+      document.getElementById('collection-response-body').textContent = output;
     }
 
-    // Utility functions
-    function formatJSON(elementId) {
-      const element = document.getElementById(elementId);
-      try {
-        const json = JSON.parse(element.value);
-        element.value = JSON.stringify(json, null, 2);
-        showMessage(elementId.replace(/-\w+$/, '-response-meta'), 'JSON formatted successfully', 'success');
-      } catch (e) {
-        showMessage(elementId.replace(/-\w+$/, '-response-meta'), 'Invalid JSON format', 'error');
-      }
-    }
-
-    function formatGraphQL() {
-      const element = document.getElementById('graphql-query');
-      // Simple GraphQL formatting - just add proper indentation
-      let query = element.value.trim();
-      query = query.replace(/\{\s*/g, '{\n  ');
-      query = query.replace(/\s*\}/g, '\n}');
-      query = query.replace(/\n\s*\n/g, '\n');
-      element.value = query;
-      showMessage('graphql-response-meta', 'GraphQL query formatted', 'success');
-    }
-
-    function copyResponse(elementId) {
-      const element = document.getElementById(elementId);
-      navigator.clipboard.writeText(element.textContent).then(() => {
-        showMessage(elementId.replace('-body', '-meta'), 'Response copied to clipboard', 'success');
-      }).catch(() => {
-        showMessage(elementId.replace('-body', '-meta'), 'Failed to copy response', 'error');
-      });
-    }
-
-    // Display detailed collection results
-    function displayCollectionResults(results, collectionName, totalTime) {
-      const passed = results.filter(r => !r.error && r.status < 400).length;
-      const failed = results.filter(r => r.error || r.status >= 400).length;
-
-      const container = document.getElementById('collection-response-body');
-      container.innerHTML = '';
-      container.style.fontFamily = 'inherit';
-
-      // Summary header
-      const summary = document.createElement('div');
-      summary.style.cssText = 'background: #f8f9fa; padding: 15px; border-radius: 6px; margin-bottom: 20px; border-left: 4px solid #007bff;';
-      summary.innerHTML = `
-        <h4 style="margin: 0 0 10px 0; color: #007bff;"><i class="fas fa-chart-bar"></i> ${collectionName} - Results</h4>
-        <div style="display: flex; gap: 20px; font-size: 14px;">
-          <span><strong>Total Time:</strong> ${totalTime}ms</span>
-          <span style="color: #28a745;"><strong>✅ Passed:</strong> ${passed}</span>
-          <span style="color: #dc3545;"><strong>❌ Failed:</strong> ${failed}</span>
-          <span><strong>Total:</strong> ${results.length}</span>
-        </div>
-      `;
-      container.appendChild(summary);
-
-      // Individual request results
-      results.forEach((result, index) => {
-        const requestDiv = document.createElement('div');
-        const isSuccess = !result.error && result.status < 400;
-        const statusColor = isSuccess ? '#28a745' : '#dc3545';
-        const statusIcon = isSuccess ? '✅' : '❌';
-
-        requestDiv.style.cssText = 'border: 1px solid #ddd; border-radius: 6px; margin-bottom: 15px; overflow: hidden;';
-
-        // Request header (collapsible)
-        const header = document.createElement('div');
-        header.style.cssText = `background: ${isSuccess ? '#d4edda' : '#f8d7da'}; padding: 12px 15px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #ddd;`;
-        header.innerHTML = `
-          <div>
-            <strong>${statusIcon} ${result.name}</strong>
-            <span style="margin-left: 10px; color: #6c757d; font-size: 12px;">
-              ${result.method} • ${result.status} ${result.statusText || ''} • ${result.responseTime || 0}ms
-            </span>
-          </div>
-          <i class="fas fa-chevron-down" style="transition: transform 0.2s;"></i>
-        `;
-
-        // Request details (initially hidden)
-        const details = document.createElement('div');
-        details.style.cssText = 'display: none; padding: 15px; background: white;';
-
-        if (result.error) {
-          details.innerHTML = `
-            <div style="color: #dc3545; margin-bottom: 15px;">
-              <strong>Error:</strong> ${result.error}
-            </div>
-            <div><strong>URL:</strong> ${result.url || 'N/A'}</div>
-          `;
-        } else {
-          // Response tabs
-          const tabsContainer = document.createElement('div');
-          tabsContainer.innerHTML = `
-            <div style="border-bottom: 1px solid #ddd; margin-bottom: 15px;">
-              <div style="display: flex; gap: 0;">
-                <button class="result-tab active" data-tab="body-${index}" style="padding: 8px 16px; border: none; background: #007bff; color: white; cursor: pointer; border-radius: 4px 4px 0 0;">Body</button>
-                <button class="result-tab" data-tab="headers-${index}" style="padding: 8px 16px; border: none; background: #f8f9fa; color: #495057; cursor: pointer; border-radius: 4px 4px 0 0; margin-left: 2px;">Headers</button>
-                <button class="result-tab" data-tab="info-${index}" style="padding: 8px 16px; border: none; background: #f8f9fa; color: #495057; cursor: pointer; border-radius: 4px 4px 0 0; margin-left: 2px;">Info</button>
-              </div>
-            </div>
-            
-            <!-- Body Tab -->
-            <div id="body-${index}" class="result-tab-content" style="display: block;">
-              <div style="background: #f8f9fa; padding: 10px; border-radius: 4px; font-family: monospace; font-size: 12px; max-height: 300px; overflow-y: auto; white-space: pre-wrap; border: 1px solid #ddd;">
-${typeof result.body === 'object' ? JSON.stringify(result.body, null, 2) : (result.body || 'No response body')}
-              </div>
-            </div>
-            
-            <!-- Headers Tab -->
-            <div id="headers-${index}" class="result-tab-content" style="display: none;">
-              <div style="font-size: 12px;">
-                ${Object.keys(result.headers || {}).length === 0 ?
-              '<em style="color: #6c757d;">No response headers</em>' :
-              Object.entries(result.headers).map(([key, value]) =>
-                `<div style="padding: 4px 0; border-bottom: 1px solid #eee;"><strong>${key}:</strong> ${value}</div>`
-              ).join('')
-            }
-              </div>
-            </div>
-            
-            <!-- Info Tab -->
-            <div id="info-${index}" class="result-tab-content" style="display: none;">
-              <div style="font-size: 13px; line-height: 1.5;">
-                <div style="margin-bottom: 8px;"><strong>URL:</strong> ${result.url}</div>
-                <div style="margin-bottom: 8px;"><strong>Method:</strong> ${result.method}</div>
-                <div style="margin-bottom: 8px;"><strong>Status:</strong> ${result.status} ${result.statusText}</div>
-                <div style="margin-bottom: 8px;"><strong>Response Time:</strong> ${result.responseTime}ms</div>
-                <div style="margin-bottom: 8px;"><strong>Content Type:</strong> ${result.headers['content-type'] || 'N/A'}</div>
-              </div>
-            </div>
-          `;
-
-          details.appendChild(tabsContainer);
-
-          // Add tab switching functionality
-          tabsContainer.querySelectorAll('.result-tab').forEach(tab => {
-            tab.addEventListener('click', function () {
-              // Remove active from all tabs
-              tabsContainer.querySelectorAll('.result-tab').forEach(t => {
-                t.style.background = '#f8f9fa';
-                t.style.color = '#495057';
-              });
-              tabsContainer.querySelectorAll('.result-tab-content').forEach(c => c.style.display = 'none');
-
-              // Activate clicked tab
-              this.style.background = '#007bff';
-              this.style.color = 'white';
-              document.getElementById(this.dataset.tab).style.display = 'block';
-            });
-          });
-        }
-
-        // Toggle functionality
-        header.addEventListener('click', function () {
-          const icon = header.querySelector('.fas');
-          if (details.style.display === 'none') {
-            details.style.display = 'block';
-            icon.style.transform = 'rotate(180deg)';
-          } else {
-            details.style.display = 'none';
-            icon.style.transform = 'rotate(0deg)';
-          }
-        });
-
-        requestDiv.appendChild(header);
-        requestDiv.appendChild(details);
-        container.appendChild(requestDiv);
-      });
-
-      // Overall status message
-      const statusMsg = failed === 0 ?
-        `🎉 All ${passed} requests completed successfully!` :
-        `⚠️ ${failed} request(s) failed, ${passed} passed`;
-
-      showMessage('collection-response-meta', statusMsg, failed === 0 ? 'success' : 'error');
-    }
-
-    // Mark the sample collection
-    document.addEventListener('DOMContentLoaded', function () {
-      const sampleItem = document.querySelector('.collection-item');
-      if (sampleItem) {
-        sampleItem.classList.add('sample-collection');
-      }
-    });
-
-    // Collection Editor Functions
-    function editCollection(index) {
-      if (typeof index === 'string') {
-        // Sample collection
-        currentEditingCollection = {
-          info: { name: 'Sample Collection' },
-          item: [
-            { name: 'Get Users', request: { method: 'GET', url: '{{baseUrl}}/users' } },
-            { name: 'Create User', request: { method: 'POST', url: '{{baseUrl}}/users', body: { raw: '{"name": "{{userName}}"}' } } },
-            { name: 'Delete User', request: { method: 'DELETE', url: '{{baseUrl}}/users/{{userId}}' } }
-          ]
-        };
-
-        // Add sample environment variables
-        if (environments.length === 0) {
-          environments.push({
-            name: 'Sample Environment',
-            values: [
-              { key: 'baseUrl', value: 'https://api.example.com', enabled: true },
-              { key: 'userName', value: 'John Doe', enabled: true },
-              { key: 'userId', value: '123', enabled: true }
-            ]
-          });
-        }
-      } else {
-        currentEditingCollection = collections[index];
-      }
-
-      document.getElementById('collection-editor-modal').style.display = 'block';
-      renderCollectionEditor();
-    }
-
-    function closeCollectionEditor() {
-      document.getElementById('collection-editor-modal').style.display = 'none';
-      currentEditingCollection = null;
-      currentEditingRequest = null;
-    }
-
-    function renderCollectionEditor() {
-      if (!currentEditingCollection) return;
-
-      // Render collection tree
-      const tree = document.getElementById('collection-tree');
-      tree.innerHTML = '';
-
-      const collectionDiv = document.createElement('div');
-      collectionDiv.innerHTML = `<strong style="margin-bottom: 10px; display: block;"><i class="fas fa-folder"></i> ${currentEditingCollection.info.name}</strong>`;
-      tree.appendChild(collectionDiv);
-
-      if (currentEditingCollection.item) {
-        currentEditingCollection.item.forEach((item, index) => {
-          const requestDiv = document.createElement('div');
-          requestDiv.style.cssText = 'padding: 8px; margin: 4px 0; cursor: pointer; border: 1px solid #ddd; border-radius: 4px; background: #f8f9fa;';
-          requestDiv.innerHTML = `
-            <i class="fas fa-file-alt"></i> ${item.name}
-            <div style="font-size: 11px; color: #6c757d;">${item.request?.method || 'GET'} ${item.request?.url || ''}</div>
-          `;
-          requestDiv.onclick = () => editRequest(index);
-          tree.appendChild(requestDiv);
-        });
-      }
-
-      // Render environment variables
-      renderEnvironmentVariables();
-    }
-
-    function editRequest(index) {
-      currentEditingRequest = currentEditingCollection.item[index];
-      const editor = document.getElementById('request-editor');
-
-      const request = currentEditingRequest.request || {};
-      const method = request.method || 'GET';
-      const url = request.url || '';
-      const headers = request.header || [];
-      const body = request.body?.raw || '';
-
-      editor.innerHTML = `
-        <h4><i class="fas fa-edit"></i> Edit Request: ${currentEditingRequest.name}</h4>
-        
-        <div style="margin-bottom: 15px;">
-          <label style="display: block; margin-bottom: 5px; font-weight: bold;">Request Name:</label>
-          <input type="text" id="edit-request-name" value="${currentEditingRequest.name}" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
-        </div>
-        
-        <div style="margin-bottom: 15px;">
-          <label style="display: block; margin-bottom: 5px; font-weight: bold;">Method & URL:</label>
-          <div style="display: flex; gap: 10px;">
-            <select id="edit-request-method" style="padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
-              <option value="GET" ${method === 'GET' ? 'selected' : ''}>GET</option>
-              <option value="POST" ${method === 'POST' ? 'selected' : ''}>POST</option>
-              <option value="PUT" ${method === 'PUT' ? 'selected' : ''}>PUT</option>
-              <option value="DELETE" ${method === 'DELETE' ? 'selected' : ''}>DELETE</option>
-              <option value="PATCH" ${method === 'PATCH' ? 'selected' : ''}>PATCH</option>
-            </select>
-            <input type="text" id="edit-request-url" value="${url}" placeholder="{{baseUrl}}/endpoint" style="flex: 1; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
-          </div>
-        </div>
-        
-        <div style="margin-bottom: 15px;">
-          <label style="display: block; margin-bottom: 5px; font-weight: bold;">Headers:</label>
-          <div id="edit-headers-list" style="border: 1px solid #ddd; border-radius: 4px; max-height: 150px; overflow-y: auto;">
-            ${headers.map((h, i) => `
-              <div style="display: flex; padding: 8px; border-bottom: 1px solid #eee; align-items: center;">
-                <input type="text" value="${h.key}" placeholder="Header name" style="flex: 1; padding: 4px; border: none; margin-right: 8px;">
-                <input type="text" value="${h.value}" placeholder="Header value" style="flex: 1; padding: 4px; border: none; margin-right: 8px;">
-                <button onclick="this.parentElement.remove()" style="background: #dc3545; color: white; border: none; padding: 4px 8px; border-radius: 3px; cursor: pointer;">×</button>
-              </div>
-            `).join('')}
-          </div>
-          <button onclick="addRequestHeader()" style="background: #28a745; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; margin-top: 8px;">
-            <i class="fas fa-plus"></i> Add Header
-          </button>
-        </div>
-        
-        <div style="margin-bottom: 15px;">
-          <label style="display: block; margin-bottom: 5px; font-weight: bold;">Request Body:</label>
-          <textarea id="edit-request-body" style="width: 100%; min-height: 120px; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-family: monospace;" placeholder='{"key": "{{variable}}"}'>${body}</textarea>
-          <button onclick="formatJSON('edit-request-body')" style="background: #17a2b8; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; margin-top: 8px;">
-            <i class="fas fa-magic"></i> Format JSON
-          </button>
-        </div>
-        
-        <div style="margin-top: 20px;">
-          <button onclick="saveRequestChanges()" style="background: #007bff; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer;">
-            <i class="fas fa-save"></i> Save Request
-          </button>
-        </div>
-      `;
-    }
-
-    function addRequestHeader() {
-      const headersList = document.getElementById('edit-headers-list');
-      const headerDiv = document.createElement('div');
-      headerDiv.style.cssText = 'display: flex; padding: 8px; border-bottom: 1px solid #eee; align-items: center;';
-      headerDiv.innerHTML = `
-        <input type="text" placeholder="Header name" style="flex: 1; padding: 4px; border: none; margin-right: 8px;">
-        <input type="text" placeholder="Header value" style="flex: 1; padding: 4px; border: none; margin-right: 8px;">
-        <button onclick="this.parentElement.remove()" style="background: #dc3545; color: white; border: none; padding: 4px 8px; border-radius: 3px; cursor: pointer;">×</button>
-      `;
-      headersList.appendChild(headerDiv);
-    }
-
-    function saveRequestChanges() {
-      if (!currentEditingRequest) return;
-
-      // Update request data
-      currentEditingRequest.name = document.getElementById('edit-request-name').value;
-
-      if (!currentEditingRequest.request) {
-        currentEditingRequest.request = {};
-      }
-
-      currentEditingRequest.request.method = document.getElementById('edit-request-method').value;
-      currentEditingRequest.request.url = document.getElementById('edit-request-url').value;
-
-      // Update headers
-      const headers = [];
-      document.querySelectorAll('#edit-headers-list > div').forEach(headerDiv => {
-        const inputs = headerDiv.querySelectorAll('input');
-        if (inputs[0].value && inputs[1].value) {
-          headers.push({ key: inputs[0].value, value: inputs[1].value });
-        }
-      });
-      currentEditingRequest.request.header = headers;
-
-      // Update body
-      const bodyText = document.getElementById('edit-request-body').value;
-      if (bodyText) {
-        currentEditingRequest.request.body = { mode: 'raw', raw: bodyText };
-      }
-
-      showMessage('collection-response-meta', 'Request updated successfully', 'success');
-      renderCollectionEditor(); // Refresh the tree view
-    }
-
-    function renderEnvironmentVariables() {
-      const container = document.getElementById('env-vars-list');
-      container.innerHTML = '';
-
-      if (environments.length === 0) {
-        container.innerHTML = '<p style="color: #6c757d; font-size: 12px;">No environment variables. Import an environment file or add manually.</p>';
-        return;
-      }
-
-      environments.forEach((env, envIndex) => {
-        const envDiv = document.createElement('div');
-        envDiv.style.cssText = 'margin-bottom: 20px; border: 1px solid #ddd; border-radius: 4px; padding: 10px;';
-        envDiv.innerHTML = `<strong>${env.name}</strong>`;
-
-        if (env.values) {
-          env.values.forEach((variable, varIndex) => {
-            const varDiv = document.createElement('div');
-            varDiv.style.cssText = 'display: flex; margin: 8px 0; padding: 6px; background: #f8f9fa; border-radius: 3px; align-items: center;';
-            varDiv.innerHTML = `
-              <input type="text" value="${variable.key}" placeholder="Variable name" style="flex: 1; padding: 4px; border: 1px solid #ddd; border-radius: 3px; margin-right: 8px;" onchange="updateEnvironmentVariable(${envIndex}, ${varIndex}, 'key', this.value)">
-              <input type="text" value="${variable.value}" placeholder="Variable value" style="flex: 1; padding: 4px; border: 1px solid #ddd; border-radius: 3px; margin-right: 8px;" onchange="updateEnvironmentVariable(${envIndex}, ${varIndex}, 'value', this.value)">
-              <input type="checkbox" ${variable.enabled ? 'checked' : ''} onchange="updateEnvironmentVariable(${envIndex}, ${varIndex}, 'enabled', this.checked)" style="margin-right: 8px;">
-              <button onclick="removeEnvironmentVariable(${envIndex}, ${varIndex})" style="background: #dc3545; color: white; border: none; padding: 4px 8px; border-radius: 3px; cursor: pointer;">×</button>
-            `;
-            envDiv.appendChild(varDiv);
-          });
-        }
-
-        container.appendChild(envDiv);
-      });
-    }
-
-    function addEnvironmentVariable() {
-      if (environments.length === 0) {
-        environments.push({
-          name: 'Default Environment',
-          values: []
-        });
-      }
-
-      environments[0].values.push({
-        key: '',
-        value: '',
-        enabled: true
-      });
-
-      renderEnvironmentVariables();
-    }
-
-    function updateEnvironmentVariable(envIndex, varIndex, field, value) {
-      if (environments[envIndex] && environments[envIndex].values[varIndex]) {
-        environments[envIndex].values[varIndex][field] = value;
-      }
-    }
-
-    function removeEnvironmentVariable(envIndex, varIndex) {
-      if (environments[envIndex] && environments[envIndex].values) {
-        environments[envIndex].values.splice(varIndex, 1);
-        renderEnvironmentVariables();
-      }
-    }
-
-    function extractEnvironmentVariables(collection) {
-      const variables = new Set();
-      const regex = /\{\{([^}]+)\}\}/g;
-
-      function extractFromString(str) {
-        if (typeof str === 'string') {
-          let match;
-          while ((match = regex.exec(str)) !== null) {
-            variables.add(match[1]);
-          }
-        }
-      }
-
-      function processItem(item) {
-        if (item.request) {
-          extractFromString(item.request.url);
-          if (item.request.header) {
-            item.request.header.forEach(h => {
-              extractFromString(h.value);
-            });
-          }
-          if (item.request.body && item.request.body.raw) {
-            extractFromString(item.request.body.raw);
-          }
-        }
-
-        if (item.item) {
-          item.item.forEach(processItem);
-        }
-      }
-
-      if (collection.item) {
-        collection.item.forEach(processItem);
-      }
-
-      return Array.from(variables);
-    }
-
-    function substituteVariables(text, environment) {
-      if (!text || !environment) return text;
-
-      let result = text;
-      environment.values.forEach(variable => {
-        if (variable.enabled) {
-          const regex = new RegExp(`\\{\\{${variable.key}\\}\\}`, 'g');
-          result = result.replace(regex, variable.value);
-        }
-      });
-
-      return result;
-    }
-
-    function saveCollection() {
-      if (!currentEditingCollection) return;
-
-      showMessage('collection-response-meta', 'Collection saved successfully', 'success');
-      updateCollectionsList();
-    }
-
-    function exportCollection() {
-      if (!currentEditingCollection) return;
-
-      const dataStr = JSON.stringify(currentEditingCollection, null, 2);
-      const dataUri = 'data:application/json;charset=utf-8,' + encodeURIComponent(dataStr);
-
-      const exportFileDefaultName = `${currentEditingCollection.info.name}.postman_collection.json`;
-
-      const linkElement = document.createElement('a');
-      linkElement.setAttribute('href', dataUri);
-      linkElement.setAttribute('download', exportFileDefaultName);
-      linkElement.click();
-
-      showMessage('collection-response-meta', 'Collection exported successfully', 'success');
-    }
-
-    // cURL utility functions
-    function loadRestExample() {
-      const restExample = `curl -X GET 'https://jsonplaceholder.typicode.com/users' \\
-  -H 'Accept: application/json' \\
-  -H 'Authorization: Bearer your-token-here'`;
-
-      document.getElementById('curl-command').value = restExample;
-      showMessage('curl-response-meta', 'REST example loaded', 'success');
-    }
-
-    function loadGraphQLExample() {
-      const graphqlExample = `curl -X POST 'https://api.example.com/graphql' \\
-  -H 'Content-Type: application/json' \\
-  -H 'Authorization: Bearer your-token-here' \\
-  -d '{
-    "query": "query GetUsers($limit: Int) { users(limit: $limit) { id name email } }",
-    "variables": { "limit": 5 }
-  }'`;
-
-      document.getElementById('curl-command').value = graphqlExample;
-      showMessage('curl-response-meta', 'GraphQL example loaded', 'success');
-    }
-
-    function formatCurlCommand() {
-      const curlInput = document.getElementById('curl-command');
-      let command = curlInput.value.trim();
-
-      if (!command) {
-        showMessage('curl-response-meta', 'No command to format', 'error');
-        return;
-      }
-
-      // Basic formatting: add line breaks for better readability
-      command = command.replace(/\s+-/g, ' \\\n  -');
-      command = command.replace(/\s+--/g, ' \\\n  --');
-
-      // Format JSON in data if present
-      const jsonMatch = command.match(/-d\s+['"](.*?)['"](\s|$)/s);
-      if (jsonMatch) {
-        try {
-          const jsonData = JSON.parse(jsonMatch[1]);
-          const formattedJson = JSON.stringify(jsonData, null, 2).replace(/\n/g, '\\n  ');
-          command = command.replace(jsonMatch[1], formattedJson);
-        } catch (e) {
-          // If JSON parsing fails, leave as is
-        }
-      }
-
-      curlInput.value = command;
-      showMessage('curl-response-meta', 'Command formatted', 'success');
-    }
-
-    function clearCurlCommand() {
-      document.getElementById('curl-command').value = '';
-      document.getElementById('curl-response-body').textContent = 'Response will appear here...';
-      showMessage('curl-response-meta', 'Command cleared', 'success');
-    }
-  </script>
-
-  <!-- Close new V2 containers -->
-  </div> <!-- Close api-main -->
-  </div> <!-- Close api-cotest-container -->
-  </div> <!-- Close main-content -->
-
-
-
-  <!-- API Co-Test V2 JavaScript -->
-  <script src="/static/api-cotest-v2.js"></script>
-  <script>
-    // Modal handlers
-    async function handleCreateWorkspace() {
-      const name = document.getElementById('new-workspace-name').value;
-      const description = document.getElementById('new-workspace-description').value;
-
-      if (!name) {
-        showNotification('Please enter a workspace name', 'warning');
-        return;
-      }
-
-      await window.apiCoTest.createWorkspace(name, description);
-      closeModal('create-workspace-modal');
-      document.getElementById('new-workspace-name').value = '';
-      document.getElementById('new-workspace-description').value = '';
-    }
-
-    async function handleCreateEnvironment() {
-      const name = document.getElementById('new-environment-name').value;
-
-      if (!name) {
-        showNotification('Please enter an environment name', 'warning');
-        return;
-      }
-
-      await window.apiCoTest.createEnvironment(name);
-      closeModal('create-environment-modal');
-      document.getElementById('new-environment-name').value = '';
-    }
-
-    function switchSidebarTab(tab) {
-      // Update tab buttons
-      document.querySelectorAll('.sidebar-tab').forEach(btn => {
-        btn.classList.remove('active');
-      });
-      event.target.closest('.sidebar-tab').classList.add('active');
-
-      // Show/hide panels
-      document.getElementById('history-panel').style.display = tab === 'history' ? 'block' : 'none';
-      document.getElementById('favorites-panel').style.display = tab === 'favorites' ? 'block' : 'none';
-    }
+    // Initialize with one param and header row for REST
+    addRestParam();
+    addRestHeader();
+    addGraphQLHeader();
   </script>
 </body>
-
 </html>
