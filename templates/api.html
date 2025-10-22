@@ -3,348 +3,48 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>API Co-Test - Professional API Testing</title>
-  <!-- Version 2.0 - Clean Rebuild -->
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text x=%2250%22 y=%2250%22 font-size=%2280%22 font-family=%22Arial%22 text-anchor=%22middle%22>🚀</text></svg>">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <title>API Co-Test</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link rel="stylesheet" href="/static/styles.css">
   <link rel="stylesheet" href="/static/left-sidebar.css">
   <style>
-    :root {
-      --primary: #6366f1;
-      --primary-hover: #4f46e5;
-      --success: #10b981;
-      --error: #ef4444;
-      --warning: #f59e0b;
-      --bg-light: #f8fafc;
-      --text-dark: #0f172a;
-      --text-light: #64748b;
-      --border: #e2e8f0;
-    }
-
-    body {
-      font-family: 'Inter', sans-serif;
-      background: var(--bg-light);
-      margin: 0;
-      padding: 0;
-    }
-
-    .main-content {
-      margin-left: 280px;
-      min-height: 100vh;
-      background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
-      width: calc(100% - 280px);
-    }
-
-    .api-container {
-      padding: 2rem;
-      max-width: 100%;
-    }
-
+    body { font-family: 'Inter', sans-serif; margin: 0; background: #f5f5f5; }
+    .main-content { margin-left: 280px; padding: 20px; min-height: 100vh; }
+    .container { max-width: 100%; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+    
     /* Tabs */
-    .api-tabs {
-      display: flex;
-      background: white;
-      border-radius: 12px;
-      padding: 0.5rem;
-      margin-bottom: 2rem;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-      gap: 0.5rem;
-    }
-
-    .api-tab {
-      flex: 1;
-      padding: 1rem 1.5rem;
-      background: none;
-      border: none;
-      border-radius: 8px;
-      cursor: pointer;
-      font-weight: 600;
-      font-size: 14px;
-      color: var(--text-light);
-      transition: all 0.2s;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 0.5rem;
-    }
-
-    .api-tab:hover {
-      background: rgba(99, 102, 241, 0.08);
-      color: var(--primary);
-    }
-
-    .api-tab.active {
-      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-hover) 100%);
-      color: white;
-      box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
-    }
-
-    .tab-content {
-      display: none;
-    }
-
-    .tab-content.active {
-      display: block;
-    }
-
-    /* Request Builder */
-    .request-builder {
-      background: white;
-      border-radius: 12px;
-      padding: 2rem;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
-      margin-bottom: 1.5rem;
-      border: 1px solid var(--border);
-    }
-
-    .request-builder h4 {
-      margin: 0 0 1.5rem 0;
-      color: var(--text-dark);
-      font-size: 18px;
-      font-weight: 700;
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-    }
-
-    /* URL Row */
-    .url-row {
-      display: flex;
-      gap: 12px;
-      margin-bottom: 1.5rem;
-    }
-
-    .method-select {
-      padding: 0 16px;
-      border: 2px solid var(--border);
-      border-radius: 8px;
-      width: 120px;
-      font-weight: 700;
-      font-size: 14px;
-      height: 48px;
-      background: white;
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-
-    .method-select:focus {
-      outline: none;
-      border-color: var(--primary);
-      box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
-    }
-
-    .url-input {
-      flex: 1;
-      padding: 0 16px;
-      border: 2px solid var(--border);
-      border-radius: 8px;
-      font-size: 14px;
-      height: 48px;
-      font-family: 'Monaco', 'Courier New', monospace;
-      transition: all 0.2s;
-    }
-
-    .url-input:focus {
-      outline: none;
-      border-color: var(--primary);
-      box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
-    }
-
-    .send-btn {
-      padding: 0 32px;
-      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-hover) 100%);
-      color: white;
-      border: none;
-      border-radius: 8px;
-      cursor: pointer;
-      font-weight: 700;
-      font-size: 14px;
-      height: 48px;
-      transition: all 0.2s;
-      box-shadow: 0 2px 8px rgba(99, 102, 241, 0.3);
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .send-btn:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
-    }
-
-    .send-btn:disabled {
-      background: #9ca3af;
-      cursor: not-allowed;
-      transform: none;
-    }
-
-    /* Headers & Params */
-    .section-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin: 1.5rem 0 1rem 0;
-    }
-
-    .section-header h5 {
-      margin: 0;
-      font-size: 16px;
-      font-weight: 600;
-      color: var(--text-dark);
-    }
-
-    .add-btn {
-      padding: 8px 16px;
-      background: var(--success);
-      color: white;
-      border: none;
-      border-radius: 6px;
-      cursor: pointer;
-      font-size: 13px;
-      font-weight: 600;
-      transition: all 0.2s;
-    }
-
-    .add-btn:hover {
-      transform: translateY(-1px);
-      box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
-    }
-
-    .param-row, .header-row {
-      display: grid;
-      grid-template-columns: 1fr 1fr auto;
-      gap: 12px;
-      margin-bottom: 12px;
-      padding: 12px;
-      background: white;
-      border: 2px solid var(--border);
-      border-radius: 8px;
-      transition: all 0.2s;
-    }
-
-    .param-row:hover, .header-row:hover {
-      border-color: var(--primary);
-      box-shadow: 0 2px 8px rgba(99, 102, 241, 0.1);
-    }
-
-    .param-row input, .header-row input {
-      padding: 10px;
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      font-size: 14px;
-    }
-
-    .param-row input:focus, .header-row input:focus {
-      outline: none;
-      border-color: var(--primary);
-    }
-
-    .remove-btn {
-      padding: 8px 12px;
-      background: var(--error);
-      color: white;
-      border: none;
-      border-radius: 6px;
-      cursor: pointer;
-      font-size: 13px;
-    }
-
-    .body-textarea {
-      width: 100%;
-      min-height: 300px;
-      padding: 16px;
-      border: 2px solid var(--border);
-      border-radius: 8px;
-      font-family: 'Monaco', 'Courier New', monospace;
-      font-size: 13px;
-      line-height: 1.6;
-      resize: vertical;
-      transition: all 0.2s;
-    }
-
-    .body-textarea:focus {
-      outline: none;
-      border-color: var(--primary);
-      box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
-    }
-
-    /* Response Section */
-    .response-section {
-      background: white;
-      border-radius: 12px;
-      padding: 2rem;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
-      border: 1px solid var(--border);
-    }
-
-    .response-meta {
-      padding: 12px 16px;
-      background: var(--bg-light);
-      border-radius: 8px;
-      margin-bottom: 1rem;
-      font-size: 14px;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .response-body {
-      background: #f8fafc;
-      border: 2px solid var(--border);
-      border-radius: 8px;
-      padding: 1.5rem;
-      font-family: 'Monaco', 'Courier New', monospace;
-      font-size: 13px;
-      line-height: 1.6;
-      min-height: 400px;
-      max-height: 600px;
-      overflow: auto;
-      white-space: pre-wrap;
-      word-wrap: break-word;
-    }
-
-    .status-badge {
-      padding: 6px 12px;
-      border-radius: 6px;
-      font-weight: 700;
-      font-size: 13px;
-      display: inline-block;
-    }
-
-    .status-2xx {
-      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-      color: white;
-    }
-
-    .status-4xx {
-      background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
-      color: white;
-    }
-
-    .status-5xx {
-      background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
-      color: white;
-    }
-
-    .copy-btn {
-      margin-top: 12px;
-      padding: 10px 20px;
-      background: #6c757d;
-      color: white;
-      border: none;
-      border-radius: 8px;
-      cursor: pointer;
-      font-size: 13px;
-      font-weight: 600;
-      transition: all 0.2s;
-    }
-
-    .copy-btn:hover {
-      background: #5a6268;
-      transform: translateY(-1px);
-    }
+    .tabs { display: flex; gap: 10px; margin-bottom: 30px; border-bottom: 2px solid #e0e0e0; }
+    .tab { padding: 12px 24px; background: none; border: none; cursor: pointer; font-size: 15px; font-weight: 600; color: #666; border-bottom: 3px solid transparent; margin-bottom: -2px; }
+    .tab.active { color: #6366f1; border-bottom-color: #6366f1; }
+    .tab:hover { color: #6366f1; }
+    
+    /* Tab Content */
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+    
+    /* Form Elements */
+    .form-group { margin-bottom: 20px; }
+    .form-group label { display: block; margin-bottom: 8px; font-weight: 600; color: #333; }
+    .url-row { display: flex; gap: 10px; margin-bottom: 20px; }
+    .method-select { padding: 12px; border: 2px solid #ddd; border-radius: 6px; font-size: 14px; font-weight: 600; width: 120px; }
+    .url-input { flex: 1; padding: 12px; border: 2px solid #ddd; border-radius: 6px; font-size: 14px; }
+    .btn-primary { padding: 12px 24px; background: #6366f1; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 14px; }
+    .btn-primary:hover { background: #4f46e5; }
+    .btn-secondary { padding: 8px 16px; background: #10b981; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 13px; }
+    
+    /* Params/Headers */
+    .row { display: grid; grid-template-columns: 1fr 1fr auto; gap: 10px; margin-bottom: 10px; }
+    .row input { padding: 10px; border: 1px solid #ddd; border-radius: 4px; }
+    .btn-remove { padding: 8px 12px; background: #ef4444; color: white; border: none; border-radius: 4px; cursor: pointer; }
+    
+    /* Textarea */
+    textarea { width: 100%; min-height: 200px; padding: 12px; border: 2px solid #ddd; border-radius: 6px; font-family: 'Courier New', monospace; font-size: 13px; }
+    
+    /* Response */
+    .response { margin-top: 30px; padding: 20px; background: #f9f9f9; border-radius: 6px; }
+    .response-meta { padding: 12px; background: #e3f2fd; border-radius: 4px; margin-bottom: 15px; font-size: 14px; }
+    .response-body { padding: 15px; background: white; border: 1px solid #ddd; border-radius: 4px; min-height: 300px; max-height: 500px; overflow: auto; font-family: 'Courier New', monospace; font-size: 13px; white-space: pre-wrap; }
   </style>
 </head>
 <body>
@@ -354,530 +54,338 @@
   
   <div class="main-content">
     {% set page_title = 'API Co-Test' %}
-    {% set page_subtitle = 'Professional API testing suite - REST, GraphQL, cURL, and Postman Collections' %}
+    {% set page_subtitle = 'Test REST APIs, GraphQL, cURL commands, and Postman collections' %}
     {% include 'page-header.html' %}
-
     
-    <div class="api-container">
-      <!-- Main Tabs -->
-      <div class="api-tabs">
-        <button class="api-tab active" data-tab="rest">
-          <i class="fas fa-globe"></i> REST API
-        </button>
-        <button class="api-tab" data-tab="graphql">
-          <i class="fas fa-layer-group"></i> GraphQL
-        </button>
-        <button class="api-tab" data-tab="curl">
-          <i class="fas fa-terminal"></i> cURL
-        </button>
-        <button class="api-tab" data-tab="collections">
-          <i class="fas fa-folder-open"></i> Collections
-        </button>
+    <div class="container">
+      <div class="tabs">
+        <button class="tab active" onclick="switchTab('rest')">REST API</button>
+        <button class="tab" onclick="switchTab('graphql')">GraphQL</button>
+        <button class="tab" onclick="switchTab('curl')">cURL</button>
+        <button class="tab" onclick="switchTab('collections')">Collections</button>
       </div>
 
       <!-- REST API Tab -->
-      <div class="tab-content active" id="rest-tab">
-        <div class="request-builder">
-          <h4><i class="fas fa-globe"></i> REST API Request</h4>
-          
-          <div class="url-row">
-            <select class="method-select" id="rest-method">
-              <option value="GET">GET</option>
-              <option value="POST">POST</option>
-              <option value="PUT">PUT</option>
-              <option value="DELETE">DELETE</option>
-              <option value="PATCH">PATCH</option>
-            </select>
-            <input type="url" class="url-input" id="rest-url" placeholder="https://api.example.com/endpoint">
-            <button class="send-btn" id="rest-send">
-              <i class="fas fa-paper-plane"></i> Send
-            </button>
-          </div>
-
-          <div class="section-header">
-            <h5><i class="fas fa-list"></i> Query Parameters</h5>
-            <button class="add-btn" onclick="addRestParam()">
-              <i class="fas fa-plus"></i> Add
-            </button>
-          </div>
-          <div id="rest-params"></div>
-
-          <div class="section-header">
-            <h5><i class="fas fa-file-alt"></i> Headers</h5>
-            <button class="add-btn" onclick="addRestHeader()">
-              <i class="fas fa-plus"></i> Add
-            </button>
-          </div>
-          <div id="rest-headers"></div>
-
-          <div class="section-header">
-            <h5><i class="fas fa-code"></i> Request Body</h5>
-          </div>
-          <textarea class="body-textarea" id="rest-body" placeholder='{"key": "value"}'></textarea>
+      <div id="rest-tab" class="tab-content active">
+        <h3>REST API Request</h3>
+        
+        <div class="url-row">
+          <select id="rest-method" class="method-select">
+            <option>GET</option>
+            <option>POST</option>
+            <option>PUT</option>
+            <option>DELETE</option>
+            <option>PATCH</option>
+          </select>
+          <input type="text" id="rest-url" class="url-input" placeholder="https://api.example.com/endpoint">
+          <button class="btn-primary" onclick="sendRest()">Send</button>
         </div>
-
-        <div class="response-section">
-          <h4><i class="fas fa-eye"></i> Response</h4>
-          <div class="response-meta" id="rest-response-meta">
-            <i class="fas fa-info-circle"></i> Ready to send request...
-          </div>
-          <div class="response-body" id="rest-response-body">Response will appear here...</div>
-          <button class="copy-btn" onclick="copyResponse('rest-response-body')">
-            <i class="fas fa-copy"></i> Copy Response
-          </button>
+        
+        <div class="form-group">
+          <label>Query Parameters <button class="btn-secondary" onclick="addRow('rest-params')">+ Add</button></label>
+          <div id="rest-params"></div>
+        </div>
+        
+        <div class="form-group">
+          <label>Headers <button class="btn-secondary" onclick="addRow('rest-headers')">+ Add</button></label>
+          <div id="rest-headers"></div>
+        </div>
+        
+        <div class="form-group">
+          <label>Body (JSON)</label>
+          <textarea id="rest-body" placeholder='{"key": "value"}'></textarea>
+        </div>
+        
+        <div class="response">
+          <h4>Response</h4>
+          <div id="rest-meta" class="response-meta">Ready to send request...</div>
+          <div id="rest-response" class="response-body">Response will appear here...</div>
         </div>
       </div>
-div>button>h5></h5></div>div></div>
-
-
+      
       <!-- GraphQL Tab -->
-      <div class="tab-content" id="graphql-tab">
-        <div class="request-builder">
-          <h4><i class="fas fa-layer-group"></i> GraphQL Request</h4>
-          
-          <div class="url-row">
-            <input type="url" class="url-input" id="graphql-url" placeholder="https://api.example.com/graphql" style="flex: 1;">
-            <button class="send-btn" id="graphql-send">
-              <i class="fas fa-paper-plane"></i> Send Query
-            </button>
-          </div>
-
-          <div class="section-header">
-            <h5><i class="fas fa-search"></i> Query/Mutation</h5>
-          </div>
-          <textarea class="body-textarea" id="graphql-query" placeholder="query {
-  users {
-    id
-    name
-    email
-  }
-}"></textarea>
-
-          <div class="section-header">
-            <h5><i class="fas fa-cog"></i> Variables (JSON)</h5>
-          </div>
-          <textarea class="body-textarea" id="graphql-variables" style="min-height: 150px;" placeholder='{"limit": 10}'></textarea>
-
-          <div class="section-header">
-            <h5><i class="fas fa-file-alt"></i> Headers</h5>
-            <button class="add-btn" onclick="addGraphQLHeader()">
-              <i class="fas fa-plus"></i> Add
-            </button>
-          </div>
+      <div id="graphql-tab" class="tab-content">
+        <h3>GraphQL Request</h3>
+        
+        <div class="form-group">
+          <label>GraphQL Endpoint</label>
+          <input type="text" id="graphql-url" class="url-input" placeholder="https://api.example.com/graphql">
+        </div>
+        
+        <div class="form-group">
+          <label>Query</label>
+          <textarea id="graphql-query" placeholder="query { users { id name } }"></textarea>
+        </div>
+        
+        <div class="form-group">
+          <label>Variables (JSON)</label>
+          <textarea id="graphql-vars" style="min-height: 100px;" placeholder='{"limit": 10}'></textarea>
+        </div>
+        
+        <div class="form-group">
+          <label>Headers <button class="btn-secondary" onclick="addRow('graphql-headers')">+ Add</button></label>
           <div id="graphql-headers"></div>
         </div>
-
-        <div class="response-section">
-          <h4><i class="fas fa-eye"></i> Response</h4>
-          <div class="response-meta" id="graphql-response-meta">
-            <i class="fas fa-info-circle"></i> Ready to send GraphQL query...
-          </div>
-          <div class="response-body" id="graphql-response-body">Response will appear here...</div>
-          <button class="copy-btn" onclick="copyResponse('graphql-response-body')">
-            <i class="fas fa-copy"></i> Copy Response
-          </button>
+        
+        <button class="btn-primary" onclick="sendGraphQL()">Send Query</button>
+        
+        <div class="response">
+          <h4>Response</h4>
+          <div id="graphql-meta" class="response-meta">Ready to send query...</div>
+          <div id="graphql-response" class="response-body">Response will appear here...</div>
         </div>
       </div>
-
 
       <!-- cURL Tab -->
-      <div class="tab-content" id="curl-tab">
-        <div class="request-builder">
-          <h4><i class="fas fa-terminal"></i> cURL Command Runner</h4>
-          
-          <div class="section-header">
-            <h5><i class="fas fa-paste"></i> Paste cURL Command</h5>
-          </div>
-          <textarea class="body-textarea" id="curl-command" placeholder="curl -X GET 'https://api.example.com/users' -H 'Authorization: Bearer token'"></textarea>
-          
-          <div style="display: flex; gap: 12px; margin-top: 12px;">
-            <button class="send-btn" id="curl-send">
-              <i class="fas fa-play"></i> Execute
-            </button>
-            <button class="copy-btn" onclick="clearCurl()" style="margin-top: 0;">
-              <i class="fas fa-trash"></i> Clear
-            </button>
-          </div>
+      <div id="curl-tab" class="tab-content">
+        <h3>cURL Command Runner</h3>
+        
+        <div class="form-group">
+          <label>Paste cURL Command</label>
+          <textarea id="curl-command" placeholder="curl -X GET 'https://api.example.com/users' -H 'Authorization: Bearer token'"></textarea>
         </div>
-
-        <div class="response-section">
-          <h4><i class="fas fa-eye"></i> Response</h4>
-          <div class="response-meta" id="curl-response-meta">
-            <i class="fas fa-info-circle"></i> Ready to execute cURL command...
-          </div>
-          <div class="response-body" id="curl-response-body">Response will appear here...</div>
-          <button class="copy-btn" onclick="copyResponse('curl-response-body')">
-            <i class="fas fa-copy"></i> Copy Response
-          </button>
+        
+        <button class="btn-primary" onclick="sendCurl()">Execute</button>
+        
+        <div class="response">
+          <h4>Response</h4>
+          <div id="curl-meta" class="response-meta">Ready to execute...</div>
+          <div id="curl-response" class="response-body">Response will appear here...</div>
         </div>
       </div>
-
-
+      
       <!-- Collections Tab -->
-      <div class="tab-content" id="collections-tab">
-        <div class="request-builder">
-          <h4><i class="fas fa-folder-open"></i> Postman Collections</h4>
-          
-          <div style="margin-bottom: 1.5rem;">
-            <input type="file" id="collection-file" accept=".json" style="display: none;" onchange="handleCollectionUpload(event)">
-            <button class="send-btn" onclick="document.getElementById('collection-file').click()">
-              <i class="fas fa-file-import"></i> Import Collection
-            </button>
-          </div>
-
-          <div id="collections-list"></div>
+      <div id="collections-tab" class="tab-content">
+        <h3>Postman Collections</h3>
+        
+        <div class="form-group">
+          <label>Import Collection</label>
+          <input type="file" id="collection-file" accept=".json" onchange="loadCollection(event)">
         </div>
-
-        <div class="response-section">
-          <h4><i class="fas fa-chart-bar"></i> Collection Results</h4>
-          <div class="response-meta" id="collection-response-meta">
-            <i class="fas fa-info-circle"></i> Import a collection to get started...
-          </div>
-          <div class="response-body" id="collection-response-body">Results will appear here...</div>
+        
+        <div id="collection-info"></div>
+        
+        <div class="response">
+          <h4>Results</h4>
+          <div id="collection-meta" class="response-meta">Import a collection to start...</div>
+          <div id="collection-response" class="response-body">Results will appear here...</div>
         </div>
       </div>
-
+      
     </div>
   </div>
-
+  
   {% include 'footer.html' %}
-
+  
   <script src="/static/shared-utils.js"></script>
   <script>
     // Tab Switching
-    document.querySelectorAll('.api-tab').forEach(tab => {
-      tab.addEventListener('click', function() {
-        document.querySelectorAll('.api-tab').forEach(t => t.classList.remove('active'));
-        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-        
-        this.classList.add('active');
-        const tabId = this.getAttribute('data-tab') + '-tab';
-        document.getElementById(tabId).classList.add('active');
-      });
-    });
-
-
-    // REST API Functions
-    function addRestParam() {
-      const container = document.getElementById('rest-params');
+    function switchTab(tab) {
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+      event.target.classList.add('active');
+      document.getElementById(tab + '-tab').classList.add('active');
+    }
+    
+    // Add Row for Params/Headers
+    function addRow(containerId) {
+      const container = document.getElementById(containerId);
       const row = document.createElement('div');
-      row.className = 'param-row';
-      row.innerHTML = `
-        <input type="text" placeholder="Key" class="param-key">
-        <input type="text" placeholder="Value" class="param-value">
-        <button class="remove-btn" onclick="this.parentElement.remove()">
-          <i class="fas fa-trash"></i>
-        </button>
-      `;
+      row.className = 'row';
+      row.innerHTML = '<input type="text" placeholder="Key"><input type="text" placeholder="Value"><button class="btn-remove" onclick="this.parentElement.remove()">×</button>';
       container.appendChild(row);
     }
 
-    function addRestHeader() {
-      const container = document.getElementById('rest-headers');
-      const row = document.createElement('div');
-      row.className = 'header-row';
-      row.innerHTML = `
-        <input type="text" placeholder="Header Name" class="header-key">
-        <input type="text" placeholder="Header Value" class="header-value">
-        <button class="remove-btn" onclick="this.parentElement.remove()">
-          <i class="fas fa-trash"></i>
-        </button>
-      `;
-      container.appendChild(row);
-    }
-
-    // REST Send
-    document.getElementById('rest-send').addEventListener('click', async function() {
+    
+    // REST API Send
+    async function sendRest() {
       const method = document.getElementById('rest-method').value;
       const url = document.getElementById('rest-url').value;
       const body = document.getElementById('rest-body').value;
-
-      if (!url) {
-        showMessage('rest-response-meta', 'Please enter a URL', 'error');
-        return;
-      }
-
-      // Collect params
+      
+      if (!url) { alert('Please enter URL'); return; }
+      
       const params = [];
-      document.querySelectorAll('#rest-params .param-row').forEach(row => {
-        const key = row.querySelector('.param-key').value;
-        const value = row.querySelector('.param-value').value;
-        if (key) params.push(`${encodeURIComponent(key)}=${encodeURIComponent(value)}`);
+      document.querySelectorAll('#rest-params .row').forEach(row => {
+        const inputs = row.querySelectorAll('input');
+        if (inputs[0].value) params.push(inputs[0].value + '=' + encodeURIComponent(inputs[1].value));
       });
-
+      
       let finalUrl = url;
-      if (params.length > 0) {
-        finalUrl += (url.includes('?') ? '&' : '?') + params.join('&');
-      }
-
-      // Collect headers
+      if (params.length > 0) finalUrl += (url.includes('?') ? '&' : '?') + params.join('&');
+      
       const headers = {};
-      document.querySelectorAll('#rest-headers .header-row').forEach(row => {
-        const key = row.querySelector('.header-key').value;
-        const value = row.querySelector('.header-value').value;
-        if (key) headers[key] = value;
+      document.querySelectorAll('#rest-headers .row').forEach(row => {
+        const inputs = row.querySelectorAll('input');
+        if (inputs[0].value) headers[inputs[0].value] = inputs[1].value;
       });
-
-      await sendRequest('rest', method, finalUrl, headers, body);
-    });
-
-
-    // GraphQL Functions
-    function addGraphQLHeader() {
-      const container = document.getElementById('graphql-headers');
-      const row = document.createElement('div');
-      row.className = 'header-row';
-      row.innerHTML = `
-        <input type="text" placeholder="Header Name" class="header-key">
-        <input type="text" placeholder="Header Value" class="header-value">
-        <button class="remove-btn" onclick="this.parentElement.remove()">
-          <i class="fas fa-trash"></i>
-        </button>
-      `;
-      container.appendChild(row);
+      
+      document.getElementById('rest-meta').textContent = 'Sending...';
+      
+      try {
+        const res = await fetch('/send-request', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({method, url: finalUrl, headers, body})
+        });
+        const data = await res.json();
+        
+        if (data.error) {
+          document.getElementById('rest-meta').textContent = 'Error: ' + data.error;
+          document.getElementById('rest-response').textContent = data.error;
+        } else {
+          document.getElementById('rest-meta').textContent = `Status: ${data.status} | Time: ${data.time}ms`;
+          document.getElementById('rest-response').textContent = JSON.stringify(data.body, null, 2);
+        }
+      } catch (err) {
+        document.getElementById('rest-meta').textContent = 'Error: ' + err.message;
+        document.getElementById('rest-response').textContent = err.message;
+      }
     }
 
+    
     // GraphQL Send
-    document.getElementById('graphql-send').addEventListener('click', async function() {
+    async function sendGraphQL() {
       const url = document.getElementById('graphql-url').value;
       const query = document.getElementById('graphql-query').value;
-      const variables = document.getElementById('graphql-variables').value;
-
-      if (!url || !query) {
-        showMessage('graphql-response-meta', 'Please enter URL and query', 'error');
-        return;
-      }
-
+      const vars = document.getElementById('graphql-vars').value;
+      
+      if (!url || !query) { alert('Please enter URL and query'); return; }
+      
       const headers = {'Content-Type': 'application/json'};
-      document.querySelectorAll('#graphql-headers .header-row').forEach(row => {
-        const key = row.querySelector('.header-key').value;
-        const value = row.querySelector('.header-value').value;
-        if (key) headers[key] = value;
+      document.querySelectorAll('#graphql-headers .row').forEach(row => {
+        const inputs = row.querySelectorAll('input');
+        if (inputs[0].value) headers[inputs[0].value] = inputs[1].value;
       });
-
+      
       let body;
       try {
-        body = JSON.stringify({
-          query: query,
-          variables: variables ? JSON.parse(variables) : {}
-        });
+        body = JSON.stringify({query, variables: vars ? JSON.parse(vars) : {}});
       } catch (e) {
-        showMessage('graphql-response-meta', 'Invalid JSON in variables', 'error');
+        alert('Invalid JSON in variables');
         return;
       }
-
-      await sendRequest('graphql', 'POST', url, headers, body);
-    });
-
-
-    // cURL Functions
-    document.getElementById('curl-send').addEventListener('click', async function() {
-      const curlCommand = document.getElementById('curl-command').value;
-
-      if (!curlCommand) {
-        showMessage('curl-response-meta', 'Please enter a cURL command', 'error');
-        return;
-      }
-
-      const btn = this;
-      const originalText = btn.innerHTML;
-      btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Executing...';
-      btn.disabled = true;
-
+      
+      document.getElementById('graphql-meta').textContent = 'Sending...';
+      
       try {
-        const response = await fetch('/execute_curl', {
+        const res = await fetch('/send-request', {
           method: 'POST',
           headers: {'Content-Type': 'application/json'},
-          body: JSON.stringify({curl_command: curlCommand})
+          body: JSON.stringify({method: 'POST', url, headers, body})
         });
-
-        const data = await response.json();
-
-        if (data.success) {
-          showMessage('curl-response-meta', `Success: ${data.status} ${data.status_text} | Time: ${data.time}ms`, 'success');
-          document.getElementById('curl-response-body').textContent = JSON.stringify(data.body, null, 2);
-        } else {
-          showMessage('curl-response-meta', 'Error: ' + data.error, 'error');
-          document.getElementById('curl-response-body').textContent = data.error;
-        }
-      } catch (error) {
-        showMessage('curl-response-meta', 'Request failed: ' + error.message, 'error');
-        document.getElementById('curl-response-body').textContent = error.message;
-      } finally {
-        btn.innerHTML = originalText;
-        btn.disabled = false;
-      }
-    });
-
-    function clearCurl() {
-      document.getElementById('curl-command').value = '';
-      document.getElementById('curl-response-body').textContent = 'Response will appear here...';
-      showMessage('curl-response-meta', 'Cleared', 'success');
-    }
-
-
-    // Send Request Function
-    async function sendRequest(type, method, url, headers, body) {
-      const metaElement = document.getElementById(type + '-response-meta');
-      const bodyElement = document.getElementById(type + '-response-body');
-
-      metaElement.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sending request...';
-      bodyElement.textContent = 'Loading...';
-
-      try {
-        const response = await fetch('/send-request', {
-          method: 'POST',
-          headers: {'Content-Type': 'application/json'},
-          body: JSON.stringify({
-            method: method,
-            url: url,
-            headers: headers,
-            body: body
-          })
-        });
-
-        const data = await response.json();
-
+        const data = await res.json();
+        
         if (data.error) {
-          showMessage(type + '-response-meta', 'Error: ' + data.error, 'error');
-          bodyElement.textContent = data.error;
+          document.getElementById('graphql-meta').textContent = 'Error: ' + data.error;
+          document.getElementById('graphql-response').textContent = data.error;
         } else {
-          const statusClass = Math.floor(data.status / 100) + 'xx';
-          const statusBadge = `<span class="status-badge status-${statusClass}">${data.status} ${data.status_text}</span>`;
-          const timeInfo = `<span>Time: ${data.time}ms | Size: ${data.size} bytes</span>`;
-          metaElement.innerHTML = `${statusBadge} ${timeInfo}`;
-          
-          try {
-            bodyElement.textContent = JSON.stringify(JSON.parse(data.body), null, 2);
-          } catch {
-            bodyElement.textContent = data.body;
-          }
+          document.getElementById('graphql-meta').textContent = `Status: ${data.status} | Time: ${data.time}ms`;
+          document.getElementById('graphql-response').textContent = JSON.stringify(data.body, null, 2);
         }
-      } catch (error) {
-        showMessage(type + '-response-meta', 'Request failed: ' + error.message, 'error');
-        bodyElement.textContent = error.message;
+      } catch (err) {
+        document.getElementById('graphql-meta').textContent = 'Error: ' + err.message;
+        document.getElementById('graphql-response').textContent = err.message;
       }
     }
 
-    function showMessage(elementId, message, type) {
-      const element = document.getElementById(elementId);
-      const icon = type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-circle' : 'info-circle';
-      element.innerHTML = `<i class="fas fa-${icon}"></i> ${message}`;
+    
+    // cURL Send
+    async function sendCurl() {
+      const cmd = document.getElementById('curl-command').value;
+      if (!cmd) { alert('Please enter cURL command'); return; }
+      
+      document.getElementById('curl-meta').textContent = 'Executing...';
+      
+      try {
+        const res = await fetch('/execute_curl', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({curl_command: cmd})
+        });
+        const data = await res.json();
+        
+        if (data.success) {
+          document.getElementById('curl-meta').textContent = `Status: ${data.status} | Time: ${data.time}ms`;
+          document.getElementById('curl-response').textContent = JSON.stringify(data.body, null, 2);
+        } else {
+          document.getElementById('curl-meta').textContent = 'Error: ' + data.error;
+          document.getElementById('curl-response').textContent = data.error;
+        }
+      } catch (err) {
+        document.getElementById('curl-meta').textContent = 'Error: ' + err.message;
+        document.getElementById('curl-response').textContent = err.message;
+      }
     }
-
-    function copyResponse(elementId) {
-      const text = document.getElementById(elementId).textContent;
-      navigator.clipboard.writeText(text).then(() => {
-        alert('Response copied to clipboard!');
-      });
-    }
-
-
-    // Collections Functions
-    let currentCollection = null;
-
-    function handleCollectionUpload(event) {
+    
+    // Collections
+    let collection = null;
+    
+    function loadCollection(event) {
       const file = event.target.files[0];
       if (!file) return;
-
+      
       const reader = new FileReader();
       reader.onload = function(e) {
         try {
-          currentCollection = JSON.parse(e.target.result);
-          displayCollection(currentCollection);
-          showMessage('collection-response-meta', `Loaded: ${currentCollection.info.name}`, 'success');
-        } catch (error) {
-          showMessage('collection-response-meta', 'Invalid collection file', 'error');
+          collection = JSON.parse(e.target.result);
+          document.getElementById('collection-info').innerHTML = `
+            <div style="padding: 15px; background: #e8f5e9; border-radius: 6px; margin: 20px 0;">
+              <h4 style="margin: 0 0 10px 0;">${collection.info.name}</h4>
+              <p style="margin: 0; color: #666;">${collection.item?.length || 0} requests</p>
+              <button class="btn-primary" onclick="runCollection()" style="margin-top: 15px;">Run Collection</button>
+            </div>
+          `;
+        } catch (err) {
+          alert('Invalid collection file');
         }
       };
       reader.readAsText(file);
     }
-
-    function displayCollection(collection) {
-      const container = document.getElementById('collections-list');
-      container.innerHTML = `
-        <div style="background: white; padding: 1.5rem; border-radius: 8px; border: 2px solid var(--border); margin-bottom: 1rem;">
-          <h5 style="margin: 0 0 1rem 0;"><i class="fas fa-folder"></i> ${collection.info.name}</h5>
-          <p style="color: var(--text-light); margin: 0 0 1rem 0;">${collection.info.description || 'No description'}</p>
-          <button class="send-btn" onclick="runCollection()">
-            <i class="fas fa-play"></i> Run Collection
-          </button>
-        </div>
-      `;
-    }
-
+    
     async function runCollection() {
-      if (!currentCollection) return;
-
-      const results = [];
-      const items = currentCollection.item || [];
+      if (!collection) return;
       
-      showMessage('collection-response-meta', `Running ${items.length} requests...`, 'info');
-      document.getElementById('collection-response-body').textContent = 'Running...';
-
-      for (const item of items) {
-        if (item.request) {
-          try {
-            const method = item.request.method;
-            const url = item.request.url.raw || item.request.url;
-            const headers = {};
-            
-            if (item.request.header) {
-              item.request.header.forEach(h => {
-                headers[h.key] = h.value;
-              });
-            }
-
-            const body = item.request.body?.raw || '';
-
-            const response = await fetch('/send-request', {
-              method: 'POST',
-              headers: {'Content-Type': 'application/json'},
-              body: JSON.stringify({method, url, headers, body})
-            });
-
-            const data = await response.json();
-            results.push({
-              name: item.name,
-              status: data.status,
-              time: data.time,
-              success: !data.error
-            });
-          } catch (error) {
-            results.push({
-              name: item.name,
-              error: error.message,
-              success: false
-            });
+      const items = collection.item || [];
+      document.getElementById('collection-meta').textContent = `Running ${items.length} requests...`;
+      
+      let output = '';
+      for (let i = 0; i < items.length; i++) {
+        const item = items[i];
+        if (!item.request) continue;
+        
+        output += `${i+1}. ${item.name}\n`;
+        
+        try {
+          const method = item.request.method;
+          const url = item.request.url.raw || item.request.url;
+          const headers = {};
+          if (item.request.header) {
+            item.request.header.forEach(h => headers[h.key] = h.value);
           }
+          const body = item.request.body?.raw || '';
+          
+          const res = await fetch('/send-request', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({method, url, headers, body})
+          });
+          const data = await res.json();
+          
+          output += `   ✓ ${data.status} - ${data.time}ms\n\n`;
+        } catch (err) {
+          output += `   ✗ Error: ${err.message}\n\n`;
         }
       }
-
-      displayResults(results);
+      
+      document.getElementById('collection-meta').textContent = 'Completed';
+      document.getElementById('collection-response').textContent = output;
     }
-
-    function displayResults(results) {
-      const passed = results.filter(r => r.success).length;
-      const failed = results.length - passed;
-      
-      showMessage('collection-response-meta', `Completed: ${passed} passed, ${failed} failed`, passed === results.length ? 'success' : 'error');
-      
-      let output = `Collection Run Results\n${'='.repeat(50)}\n\n`;
-      results.forEach((r, i) => {
-        output += `${i + 1}. ${r.name}\n`;
-        output += `   Status: ${r.success ? '✓ PASS' : '✗ FAIL'}\n`;
-        if (r.status) output += `   HTTP: ${r.status} | Time: ${r.time}ms\n`;
-        if (r.error) output += `   Error: ${r.error}\n`;
-        output += '\n';
-      });
-      
-      document.getElementById('collection-response-body').textContent = output;
-    }
-
-    // Initialize with one param and header row for REST
-    addRestParam();
-    addRestHeader();
-    addGraphQLHeader();
+    
+    // Initialize
+    addRow('rest-params');
+    addRow('rest-headers');
+    addRow('graphql-headers');
   </script>
 </body>
 </html>
