@@ -48,12 +48,76 @@
       line-height: 1.6;
       overflow-x: hidden;
     }
+
+    /* Stats Section */
+    .stats-section {
+      padding: 3rem 2rem;
+      background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+      margin: 2rem 0;
+    }
+
+    .stats-container {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 2rem;
+    }
+
+    .stat-card {
+      text-align: center;
+      color: white;
+      padding: 1.5rem;
+    }
+
+    .stat-number {
+      font-size: 3rem;
+      font-weight: 800;
+      margin-bottom: 0.5rem;
+      text-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    }
+
+    .stat-label {
+      font-size: 1rem;
+      font-weight: 500;
+      opacity: 0.9;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
     
     .main-content {
       margin-left: 280px;
       min-height: 100vh;
       position: relative;
-      transition: var(--transition);
+      transition: margin-left 0.3s ease;
+      width: 100%;
+    }
+
+    /* Hide sidebar when not authenticated */
+    body.not-authenticated .main-content {
+      margin-left: 0 !important;
+    }
+
+    body.not-authenticated .sidebar {
+      display: none !important;
+    }
+
+    /* Initial state - hide sidebar until auth check completes */
+    body:not(.auth-checked) .main-content {
+      margin-left: 0;
+    }
+
+    body:not(.auth-checked) .sidebar {
+      display: none;
+    }
+
+    /* Show sidebar only when authenticated */
+    body.auth-checked:not(.not-authenticated) .main-content {
+      margin-left: 280px;
+    }
+
+    body.auth-checked:not(.not-authenticated) .sidebar {
+      display: block !important;
     }
 
     /* Animated Background */
@@ -106,6 +170,52 @@
       padding: 4rem 2rem;
       text-align: center;
       position: relative;
+    }
+
+    /* Quote Header */
+    .quote-header {
+      max-width: 900px;
+      margin: 0 auto 3rem;
+      padding: 2rem 2.5rem;
+      background: linear-gradient(135deg, rgba(99, 102, 241, 0.05) 0%, rgba(139, 92, 246, 0.05) 100%);
+      border-left: 4px solid #6366f1;
+      border-radius: 12px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .quote-header::before {
+      content: '"';
+      position: absolute;
+      top: -10px;
+      left: 20px;
+      font-size: 120px;
+      font-family: Georgia, serif;
+      color: rgba(99, 102, 241, 0.1);
+      line-height: 1;
+    }
+
+    .quote-text {
+      font-size: 1.4rem;
+      font-style: italic;
+      color: #374151;
+      line-height: 1.8;
+      margin-bottom: 1rem;
+      position: relative;
+      z-index: 1;
+      font-weight: 500;
+    }
+
+    .quote-author {
+      font-size: 1rem;
+      color: #6366f1;
+      font-weight: 600;
+      text-align: right;
+    }
+
+    .quote-author::before {
+      content: '— ';
     }
 
     .hero-logo {
@@ -173,15 +283,22 @@
     }
     
     .hero-title {
-      font-size: 4rem;
+      font-size: 3.5rem;
       font-weight: 800;
       margin-bottom: 1.5rem;
-      background: linear-gradient(135deg, #1f2937 0%, #374151 100%);
+      background: linear-gradient(135deg, #1f2937 0%, #374151 50%, #6366f1 100%);
       -webkit-background-clip: text;
       background-clip: text;
       -webkit-text-fill-color: transparent;
       text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
       line-height: 1.1;
+      animation: gradient-shift 3s ease infinite;
+      background-size: 200% 200%;
+    }
+
+    @keyframes gradient-shift {
+      0%, 100% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
     }
     
     .hero-subtitle {
@@ -431,7 +548,7 @@
     
     .features-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
       gap: 2rem;
       margin-top: 3rem;
     }
@@ -747,6 +864,98 @@
       background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
     }
 
+    /* Quick Start Section */
+    .quick-start-section {
+      padding: 3rem 2rem;
+      background: white;
+      margin: 2rem 0;
+    }
+
+    .quick-start-container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .quick-start-title {
+      font-size: 2.5rem;
+      font-weight: 700;
+      text-align: center;
+      margin-bottom: 1rem;
+      background: linear-gradient(135deg, #1f2937 0%, #6366f1 100%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .quick-start-subtitle {
+      text-align: center;
+      color: var(--text-light);
+      font-size: 1.1rem;
+      margin-bottom: 3rem;
+    }
+
+    .quick-start-steps {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 2rem;
+    }
+
+    .quick-start-step {
+      position: relative;
+      padding: 2rem;
+      background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+      border: 2px solid var(--border);
+      border-radius: 16px;
+      transition: var(--transition);
+    }
+
+    .quick-start-step:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 10px 30px rgba(99, 102, 241, 0.15);
+      border-color: var(--primary);
+    }
+
+    .step-number {
+      position: absolute;
+      top: -20px;
+      left: 20px;
+      width: 40px;
+      height: 40px;
+      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-hover) 100%);
+      color: white;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 1.2rem;
+      box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+    }
+
+    .step-icon {
+      font-size: 2.5rem;
+      margin-bottom: 1rem;
+      color: var(--primary);
+    }
+
+    .step-title {
+      font-size: 1.3rem;
+      font-weight: 700;
+      margin-bottom: 0.75rem;
+      color: var(--text-dark);
+    }
+
+    .step-description {
+      color: var(--text-light);
+      line-height: 1.6;
+    }
+
+    .contact-section {
+      padding: 1.5rem 2rem;
+      text-align: center;
+      background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+    }
+
     .contact-card {
       display: inline-block;
       background: white;
@@ -867,6 +1076,145 @@
       font-size: 0.9rem;
     }
 
+    /* Authentication Modal/Popup */
+    .auth-modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.6);
+      backdrop-filter: blur(4px);
+      z-index: 10000;
+      align-items: center;
+      justify-content: center;
+      animation: fadeIn 0.3s ease;
+    }
+
+    .auth-modal.show {
+      display: flex;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    .auth-modal-content {
+      background: white;
+      border-radius: 20px;
+      padding: 3rem;
+      max-width: 500px;
+      width: 90%;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      animation: slideUp 0.3s ease;
+      position: relative;
+    }
+
+    @keyframes slideUp {
+      from {
+        opacity: 0;
+        transform: translateY(50px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .auth-modal-close {
+      position: absolute;
+      top: 1.5rem;
+      right: 1.5rem;
+      background: none;
+      border: none;
+      font-size: 1.5rem;
+      color: #94a3b8;
+      cursor: pointer;
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+      transition: all 0.2s;
+    }
+
+    .auth-modal-close:hover {
+      background: #f1f5f9;
+      color: #1f2937;
+    }
+
+    .auth-modal-icon {
+      width: 80px;
+      height: 80px;
+      margin: 0 auto 1.5rem;
+      background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2.5rem;
+      color: white;
+      box-shadow: 0 8px 24px rgba(99, 102, 241, 0.3);
+    }
+
+    .auth-modal-title {
+      font-size: 1.8rem;
+      font-weight: 700;
+      color: #1f2937;
+      margin-bottom: 1rem;
+      text-align: center;
+    }
+
+    .auth-modal-message {
+      font-size: 1rem;
+      color: #64748b;
+      text-align: center;
+      margin-bottom: 2rem;
+      line-height: 1.6;
+    }
+
+    .auth-modal-actions {
+      display: flex;
+      gap: 1rem;
+      justify-content: center;
+    }
+
+    .auth-modal-btn {
+      padding: 1rem 2rem;
+      border-radius: 12px;
+      border: none;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .auth-modal-btn-primary {
+      background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+      color: white;
+      box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+    }
+
+    .auth-modal-btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 20px rgba(99, 102, 241, 0.4);
+    }
+
+    .auth-modal-btn-secondary {
+      background: #f1f5f9;
+      color: #475569;
+    }
+
+    .auth-modal-btn-secondary:hover {
+      background: #e2e8f0;
+    }
+
     @media (max-width: 768px) {
       .contact-emails {
         gap: 0.75rem;
@@ -891,7 +1239,11 @@
     /* Responsive Design */
     @media (max-width: 768px) {
       .main-content {
-        margin-left: 0;
+        margin-left: 0 !important;
+      }
+
+      .sidebar {
+        display: none !important;
       }
 
       .hero {
@@ -904,6 +1256,23 @@
 
       .hero-subtitle {
         font-size: 1.2rem;
+      }
+
+      .stats-section {
+        padding: 2rem 1rem;
+      }
+
+      .stats-container {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1rem;
+      }
+
+      .stat-number {
+        font-size: 2rem;
+      }
+
+      .stat-label {
+        font-size: 0.8rem;
       }
 
       .features {
@@ -922,15 +1291,30 @@
       .features-title {
         font-size: 2rem;
       }
+
+      .quick-start-steps {
+        grid-template-columns: 1fr;
+        gap: 2.5rem;
+      }
+
+      .quick-start-title {
+        font-size: 2rem;
+      }
     }
 
     @media (max-width: 480px) {
       .hero-logo-text {
-        font-size: 2rem;
+        font-size: 1.5rem;
       }
       
       .hero-title {
         font-size: 2rem;
+      }
+
+      .beta-badge {
+        display: block;
+        margin: 0.5rem auto 0;
+        width: fit-content;
       }
       
       .features-title {
@@ -940,19 +1324,34 @@
       .feature-card {
         padding: 1.5rem;
       }
+
+      .stats-container {
+        grid-template-columns: 1fr;
+      }
+
+      .quick-start-title {
+        font-size: 1.8rem;
+      }
     }
   </style>
 </head>
 <body>
-  {% include 'quotes-header.html' %}
   {% set active_tab = 'home' %}
   {% include 'left-sidebar.html' %}
   
   <div class="bg-animation"></div>
   
-  <div class="main-content" style="padding: 0; padding-top: 0;">
-    <!-- Hero Section -->
+  <div class="main-content">
+     <!-- Hero Section -->
     <section class="hero">
+      <!-- Quote Header -->
+      <div class="quote-header">
+        <p class="quote-text">
+          "Quality is not an act, it is a habit. Let AI amplify your testing excellence."
+        </p>
+        <p class="quote-author">Co-Tester Team</p>
+      </div>
+
       <div class="hero-logo">
         <span class="hero-logo-icon">
           <svg width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -995,48 +1394,24 @@
       </a>
     </section>
     
-    <!-- Authentication Status Banner -->
-    <section class="auth-status-banner" id="authStatusBanner">
-      <div class="auth-status-container">
-        <!-- Not Authenticated State -->
-        <div class="auth-status-card auth-not-connected" id="authNotConnected" style="display: none;">
-          <div class="auth-status-icon">
-            <i class="fas fa-shield-alt"></i>
-          </div>
-          <div class="auth-status-content">
-            <h3 class="auth-status-title">Authentication Required</h3>
-            <p class="auth-status-message">Connect to Jira to unlock all features and start testing</p>
-          </div>
-          <button class="auth-status-btn" onclick="connectToJira()">
-            <i class="fas fa-plug"></i>
-            Connect to Jira
-          </button>
+    <!-- Stats Section -->
+    <section class="stats-section">
+      <div class="stats-container">
+        <div class="stat-card">
+          <div class="stat-number">10+</div>
+          <div class="stat-label">Active Features</div>
         </div>
-        
-        <!-- Authenticated State -->
-        <div class="auth-status-card auth-connected" id="authConnected" style="display: none;">
-          <div class="auth-status-icon auth-success">
-            <i class="fas fa-check-circle"></i>
-          </div>
-          <div class="auth-status-content">
-            <h3 class="auth-status-title">Connected</h3>
-            <p class="auth-status-message">Welcome back, <span id="authUserName">User</span>! You're all set to use Co-Tester</p>
-          </div>
-          <button class="auth-status-btn auth-secondary" onclick="window.location.href='/my-details'">
-            <i class="fas fa-user-circle"></i>
-            View Profile
-          </button>
+        <div class="stat-card">
+          <div class="stat-number">7</div>
+          <div class="stat-label">AI-Powered Tools</div>
         </div>
-        
-        <!-- Loading State -->
-        <div class="auth-status-card auth-loading" id="authLoading">
-          <div class="auth-status-icon">
-            <i class="fas fa-spinner fa-spin"></i>
-          </div>
-          <div class="auth-status-content">
-            <h3 class="auth-status-title">Checking Authentication...</h3>
-            <p class="auth-status-message">Please wait while we verify your connection</p>
-          </div>
+        <div class="stat-card">
+          <div class="stat-number">24/7</div>
+          <div class="stat-label">Availability</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-number">∞</div>
+          <div class="stat-label">Test Cases</div>
         </div>
       </div>
     </section>
@@ -1044,9 +1419,9 @@
     <!-- Features Section -->
     <section class="features" id="features">
       <div class="features-header">
-        <h2 class="features-title">Powerful Testing Suite</h2>
+        <h2 class="features-title">Comprehensive Testing Toolkit</h2>
         <p class="features-subtitle">
-          Everything you need for modern quality assurance in one platform
+          Explore all available features - AI-powered automation, intelligent testing, and seamless integrations
         </p>
       </div>
       
@@ -1054,17 +1429,17 @@
         <!-- Test Generator -->
         <div class="feature-card">
           <div class="feature-icon">
-            <i class="fas fa-magic"></i>
+            <i class="fas fa-flask"></i>
           </div>
           <h3 class="feature-title">
             Test Generator
             <span class="ai-badge-feature">AI</span>
           </h3>
           <p class="feature-description">
-            Generate comprehensive test cases automatically using advanced AI. 
-            Input your requirements and get detailed test scenarios instantly.
+            Generate comprehensive test cases automatically from user stories, PRDs, or bulk Jira tickets using advanced AI.
+            Individual and bulk generation modes available.
           </p>
-          <a href="#" data-href="/manual-co-test" data-auth-required class="feature-link">
+          <a href="#" data-href="/test-generator" data-auth-required class="feature-link">
             Generate Tests <i class="fas fa-arrow-right"></i>
           </a>
         </div>
@@ -1072,7 +1447,7 @@
         <!-- UI Analyzer -->
         <div class="feature-card">
           <div class="feature-icon">
-            <i class="fas fa-search-plus"></i>
+            <i class="fas fa-desktop"></i>
           </div>
           <h3 class="feature-title">
             UI Analyzer 
@@ -1080,9 +1455,9 @@
           </h3>
           <p class="feature-description">
             Intelligent screen analysis and element detection. 
-            Upload screenshots and get detailed UI insights and testing recommendations.
+            Upload screenshots and get detailed UI insights, element identification, and testing recommendations.
           </p>
-          <a href="#" data-href="/screen-analysis" data-auth-required class="feature-link">
+          <a href="#" data-href="/ui-analyzer" data-auth-required class="feature-link">
             Analyze UI <i class="fas fa-arrow-right"></i>
           </a>
         </div>
@@ -1090,104 +1465,59 @@
         <!-- API Testing -->
         <div class="feature-card">
           <div class="feature-icon">
-            <i class="fas fa-rocket"></i>
+            <i class="fas fa-code"></i>
           </div>
           <h3 class="feature-title">
-            API Co-Test
-            <span class="progress-badge">In Progress</span>
+            API Testing
+            <span class="ai-badge-feature">AI</span>
           </h3>
           <p class="feature-description">
             Complete API testing suite with cURL runner, collection management, 
-            Postman integration, and support for REST & GraphQL.
-            <em>More features coming soon!</em>
+            Postman integration, and intelligent API analysis powered by AI.
           </p>
-          <a href="#" data-href="/code" data-auth-required class="feature-link">
+          <a href="#" data-href="/api-co-test" data-auth-required class="feature-link">
             Test APIs <i class="fas fa-arrow-right"></i>
           </a>
         </div>
         
-        <!-- Data Generator -->
+        <!-- AI Agent Driver -->
         <div class="feature-card">
           <div class="feature-icon">
-            <i class="fas fa-database"></i>
-          </div>
-          <h3 class="feature-title">Data Generator</h3>
-          <p class="feature-description">
-            Generate realistic test data for your applications. 
-            Create mock datasets, user profiles, and complex data structures.
-          </p>
-          <a href="#" data-href="/data" data-auth-required class="feature-link">
-            Generate Data <i class="fas fa-arrow-right"></i>
-          </a>
-        </div>
-        
-        <!-- POM Builder -->
-        <div class="feature-card coming-soon">
-          <div class="feature-icon disabled">
-            <i class="fas fa-cubes"></i>
+            <i class="fas fa-eye"></i>
           </div>
           <h3 class="feature-title">
-            POM Builder <span class="ai-badge-feature">AI</span>
-            <span class="coming-soon-badge">Preview</span>
-          </h3>
-          <p class="feature-description">
-            Integrated Page Object Model builder combining element extraction and code generation. 
-            Currently showcasing AutomationStudio components - full integration coming soon.
-          </p>
-          <span class="feature-link disabled">
-            Preview Only <i class="fas fa-eye"></i>
-          </span>
-          <div class="source-links">
-            <small class="text-muted">
-              <strong>AutomationStudio Components:</strong><br>
-              <a href="#" data-href="/automation-studio-element-extractor" data-auth-required target="_blank">Element Extractor HTML</a> | 
-              <a href="#" data-href="/automation-studio-pom-generator" data-auth-required target="_blank">POM Generator HTML</a>
-              <br><em>These showcase the source components that will be integrated</em>
-            </small>
-          </div>
-        </div>
-        
-        <!-- Browser Automation -->
-        <div class="feature-card coming-soon">
-          <div class="feature-icon disabled">
-            <i class="fas fa-robot"></i>
-          </div>
-          <h3 class="feature-title">
-            Browser Automation 
-            <span class="ai-badge-feature">AI</span>
-            <span class="coming-soon-badge">Coming Soon</span>
-          </h3>
-          <p class="feature-description">
-            Intelligent browser automation powered by natural language. 
-            Describe your test scenarios and watch them execute automatically.
-          </p>
-          <span class="feature-link disabled">
-            Coming Soon <i class="fas fa-clock"></i>
-          </span>
-        </div>
-        
-        <!-- Context Builder - Hidden until ready -->
-        <!--
-        <div class="feature-card">
-          <div class="feature-icon">
-            <i class="fas fa-brain"></i>
-          </div>
-          <h3 class="feature-title">
-            Context Builder
+            AI Agent Driver (Computer Use)
             <span class="ai-badge-feature">AI</span>
           </h3>
           <p class="feature-description">
-            Generate structured context from requirements. Extract user flows, validation points, 
-            dependencies, edge cases, and data requirements automatically.
+            Advanced browser automation using Google's Computer Use AI. 
+            Natural language instructions transform into automated browser workflows.
           </p>
-          <a href="#" data-href="/context-builder" data-auth-required class="feature-link">
-            Build Context <i class="fas fa-arrow-right"></i>
+          <a href="#" data-href="/browseruse-automation" data-auth-required class="feature-link">
+            Start AI Agent <i class="fas fa-arrow-right"></i>
           </a>
         </div>
-        -->
+        
+        <!-- Playwright MCP -->
+        <div class="feature-card">
+          <div class="feature-icon">
+            <i class="fas fa-terminal"></i>
+          </div>
+          <h3 class="feature-title">
+            Playwright MCP
+            <span class="ai-badge-feature">AI</span>
+          </h3>
+          <p class="feature-description">
+            AI-powered Playwright automation with Model Context Protocol. 
+            Intelligent test generation, execution, and Jira integration for seamless workflows.
+          </p>
+          <a href="#" data-href="/playwright-mcp-automation" data-auth-required class="feature-link">
+            Launch Playwright <i class="fas fa-arrow-right"></i>
+          </a>
+        </div>
         
         <!-- Bug Builder -->
-        <div class="feature-card" onclick="window.location.href='/bug-builder'">
+        <div class="feature-card">
           <div class="feature-icon">
             <i class="fas fa-bug"></i>
           </div>
@@ -1199,9 +1529,87 @@
             AI-powered bug report generator with screen recording and behavioral analysis. 
             Automatically capture user actions, annotations, and generate comprehensive bug reports.
           </p>
-          <span class="feature-link">
-            Start Bug Builder <i class="fas fa-arrow-right"></i>
-          </span>
+          <a href="#" data-href="/bug-builder" data-auth-required class="feature-link">
+            Build Bug Reports <i class="fas fa-arrow-right"></i>
+          </a>
+        </div>
+        
+        <!-- Automation Test Creator -->
+        <div class="feature-card">
+          <div class="feature-icon">
+            <i class="fas fa-robot"></i>
+          </div>
+          <h3 class="feature-title">
+            Automation Test Creator 
+            <span class="ai-badge-feature">AI</span>
+          </h3>
+          <p class="feature-description">
+            Complete test automation workflow: Record tests with Playwright, generate AI-powered test steps, 
+            export to Jira, import and execute tests, and report results. End-to-end test creation pipeline.
+          </p>
+          <a href="#" data-href="/automation-test-creator" data-auth-required class="feature-link">
+            Create Automated Tests <i class="fas fa-arrow-right"></i>
+          </a>
+        </div>
+        
+        <!-- Data Generator -->
+        <div class="feature-card">
+          <div class="feature-icon">
+            <i class="fas fa-database"></i>
+          </div>
+          <h3 class="feature-title">Data Generator 📊</h3>
+          <p class="feature-description">
+            Generate realistic test data for your applications. 
+            Create mock datasets, user profiles, addresses, financial data, and complex data structures.
+          </p>
+          <a href="#" data-href="/data-generator" data-auth-required class="feature-link">
+            Generate Data <i class="fas fa-arrow-right"></i>
+          </a>
+        </div>
+
+        <!-- Jira Dashboards -->
+        <div class="feature-card">
+          <div class="feature-icon">
+            <i class="fas fa-chart-pie"></i>
+          </div>
+          <h3 class="feature-title">Jira Dashboards</h3>
+          <p class="feature-description">
+            Comprehensive Jira release dashboard with sprint analytics, test metrics, and team performance insights.
+            Admin dashboard available for advanced analytics.
+          </p>
+          <a href="#" data-href="/dashboards" data-auth-required class="feature-link">
+            View Dashboards <i class="fas fa-arrow-right"></i>
+          </a>
+        </div>
+
+        <!-- Learning Resources -->
+        <div class="feature-card">
+          <div class="feature-icon">
+            <i class="fas fa-book"></i>
+          </div>
+          <h3 class="feature-title">Learning Resources</h3>
+          <p class="feature-description">
+            Curated learning materials, tutorials, best practices, and documentation to help you master testing.
+            Stay updated with the latest QA methodologies and tools.
+          </p>
+          <a href="#" data-href="/learning-resources" data-auth-required class="feature-link">
+            Start Learning <i class="fas fa-arrow-right"></i>
+          </a>
+        </div>
+        
+        <!-- My Details -->
+        <div class="feature-card">
+          <div class="feature-icon">
+            <i class="fas fa-user"></i>
+          </div>
+          <h3 class="feature-title">My Details</h3>
+          <p class="feature-description">
+            View and manage your profile, authentication status, Jira connection details, and platform preferences.
+            Control your Co-Tester experience.
+          </p>
+          <a href="#" data-href="/my-details" data-auth-required class="feature-link">
+            View Profile <i class="fas fa-arrow-right"></i>
+          </a>
         </div>
       </div>
     </section>
@@ -1231,6 +1639,43 @@
           <i class="fas fa-unlink"></i>
           Disconnect
         </button>
+      </div>
+    </section>
+    
+    <!-- Quick Start Guide -->
+    <section class="quick-start-section">
+      <div class="quick-start-container">
+        <h2 class="quick-start-title">Get Started in 3 Easy Steps</h2>
+        <p class="quick-start-subtitle">Start testing smarter with Co-Tester in minutes</p>
+        
+        <div class="quick-start-steps">
+          <div class="quick-start-step">
+            <div class="step-number">1</div>
+            <div class="step-icon">🔐</div>
+            <h3 class="step-title">Connect to Jira</h3>
+            <p class="step-description">
+              Authenticate with your Jira account to unlock all features and enable seamless integration with your workflow.
+            </p>
+          </div>
+          
+          <div class="quick-start-step">
+            <div class="step-number">2</div>
+            <div class="step-icon">🚀</div>
+            <h3 class="step-title">Choose Your Tool</h3>
+            <p class="step-description">
+              Select from 10+ powerful testing tools including AI-powered test generation, UI analysis, API testing, and automation.
+            </p>
+          </div>
+          
+          <div class="quick-start-step">
+            <div class="step-number">3</div>
+            <div class="step-icon">⚡</div>
+            <h3 class="step-title">Start Testing</h3>
+            <p class="step-description">
+              Input your requirements, upload screenshots, or paste API requests and let Co-Tester's AI do the heavy lifting.
+            </p>
+          </div>
+        </div>
       </div>
     </section>
     
@@ -1291,11 +1736,6 @@
 
     // Authentication Banner Management
     document.addEventListener('DOMContentLoaded', function() {
-      const authLoading = document.getElementById('authLoading');
-      const authNotConnected = document.getElementById('authNotConnected');
-      const authConnected = document.getElementById('authConnected');
-      const authUserName = document.getElementById('authUserName');
-      
       // Old status elements (keep for backward compatibility)
       const statusIndicator = document.getElementById('homeStatusIndicator');
       const statusText = document.getElementById('homeStatusText');
@@ -1303,32 +1743,15 @@
       const disconnectBtn = document.getElementById('homeDisconnectBtn');
 
       function checkJiraStatus() {
-        // Show loading state
-        authLoading.style.display = 'flex';
-        authNotConnected.style.display = 'none';
-        authConnected.style.display = 'none';
-
         fetch('/api/jira/status')
           .then(response => response.json())
           .then(data => {
-            authLoading.style.display = 'none';
+            // Mark that auth check is complete
+            document.body.classList.add('auth-checked');
             
             if (data.connected) {
-              // Show connected state
-              authConnected.style.display = 'flex';
-              authNotConnected.style.display = 'none';
-              
-              // Fetch user info
-              fetch('/api/jira/user-info')
-                .then(response => response.json())
-                .then(userData => {
-                  if (userData.authenticated && userData.user_name) {
-                    authUserName.textContent = userData.user_name;
-                  }
-                })
-                .catch(error => {
-                  console.error('Error fetching user info:', error);
-                });
+              // Show sidebar when authenticated
+              document.body.classList.remove('not-authenticated');
               
               // Update old status elements
               if (statusIndicator) statusIndicator.classList.add('connected');
@@ -1336,9 +1759,8 @@
               if (connectBtn) connectBtn.style.display = 'none';
               if (disconnectBtn) disconnectBtn.style.display = 'inline-flex';
             } else {
-              // Show not connected state
-              authNotConnected.style.display = 'flex';
-              authConnected.style.display = 'none';
+              // Hide sidebar when not authenticated
+              document.body.classList.add('not-authenticated');
               
               // Update old status elements
               if (statusIndicator) statusIndicator.classList.remove('connected');
@@ -1349,9 +1771,12 @@
           })
           .catch(error => {
             console.error('Error checking authentication status:', error);
-            authLoading.style.display = 'none';
-            authNotConnected.style.display = 'flex';
-            authConnected.style.display = 'none';
+            
+            // Mark that auth check is complete
+            document.body.classList.add('auth-checked');
+            
+            // Hide sidebar on error
+            document.body.classList.add('not-authenticated');
             
             // Update old status elements
             if (statusIndicator) statusIndicator.classList.remove('connected');
@@ -1406,6 +1831,80 @@
         });
       });
     });
+
+    // Authentication Modal Functions
+    function showAuthModal() {
+      const modal = document.getElementById('authModal');
+      modal.classList.add('show');
+    }
+
+    function hideAuthModal() {
+      const modal = document.getElementById('authModal');
+      modal.classList.remove('show');
+    }
+
+    function proceedToLogin() {
+      window.location.href = '/api/jira/oauth/login';
+    }
+
+    // Handle feature card clicks for authentication
+    document.addEventListener('DOMContentLoaded', function() {
+      // Add click handlers to feature links that require authentication
+      document.querySelectorAll('[data-auth-required]').forEach(link => {
+        link.addEventListener('click', function(e) {
+          e.preventDefault();
+          
+          // Check if user is authenticated
+          fetch('/api/jira/status')
+            .then(response => response.json())
+            .then(data => {
+              if (data.connected) {
+                // User is authenticated, proceed to the page
+                const targetUrl = this.getAttribute('data-href');
+                if (targetUrl) {
+                  window.location.href = targetUrl;
+                }
+              } else {
+                // User is not authenticated, show modal
+                showAuthModal();
+              }
+            })
+            .catch(error => {
+              console.error('Error checking auth status:', error);
+              showAuthModal();
+            });
+        });
+      });
+    });
   </script>
+
+  <!-- Authentication Modal -->
+  <div id="authModal" class="auth-modal">
+    <div class="auth-modal-content">
+      <button class="auth-modal-close" onclick="hideAuthModal()">
+        <i class="fas fa-times"></i>
+      </button>
+      
+      <div class="auth-modal-icon">
+        <i class="fas fa-shield-alt"></i>
+      </div>
+      
+      <h3 class="auth-modal-title">Authentication Required</h3>
+      <p class="auth-modal-message">
+        To access this feature, you need to connect your Jira account. 
+        This enables seamless integration and unlocks all Co-Tester capabilities.
+      </p>
+      
+      <div class="auth-modal-actions">
+        <button class="auth-modal-btn auth-modal-btn-secondary" onclick="hideAuthModal()">
+          Cancel
+        </button>
+        <button class="auth-modal-btn auth-modal-btn-primary" onclick="proceedToLogin()">
+          <i class="fas fa-plug"></i>
+          Connect to Jira
+        </button>
+      </div>
+    </div>
+  </div>
 </body>
 </html>

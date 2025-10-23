@@ -389,7 +389,7 @@ h1, h2, h3, h4, h5, h6 {
 .main-content {
   margin-left: var(--sidebar-width);
   min-height: 100vh;
-  padding-top: 1rem;
+  padding: 2rem 2rem 2rem 2rem;
   transition: margin-left 0.4s cubic-bezier(0.4, 0, 0.2, 1);
   will-change: margin-left;
   position: relative;
@@ -412,13 +412,13 @@ h1, h2, h3, h4, h5, h6 {
 @media (max-width: 768px) {
   .main-content {
     margin-left: 0;
-    padding-top: 4rem;
+    padding: 4rem 1rem 2rem 1rem;
   }
 }
 
 /* Adjust container margins for sidebar layout */
 .main-content .container {
-  margin-top: 1rem;
+  margin-top: 0;
   margin-left: 0;
   padding-left: 0;
 }

@@ -1,0 +1,676 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Automation Test Creator - Co-Tester</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none'><defs><linearGradient id='favGradient' x1='0%' y1='0%' x2='100%' y2='100%'><stop offset='0%' style='stop-color:%23f59e0b;stop-opacity:1' /><stop offset='100%' style='stop-color:%23d97706;stop-opacity:1' /></linearGradient></defs><path d='M12 2L13.09 8.26L20 9L13.09 9.74L12 16L10.91 9.74L4 9L10.91 8.26L12 2Z' fill='url(%23favGradient)'/><circle cx='12' cy='12' r='3' fill='none' stroke='url(%23favGradient)' stroke-width='1.8'/></svg>">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='left-sidebar.css') }}">
+  <style>
+    .test-creator-container {
+      max-width: 1400px;
+      margin: 2rem auto;
+      padding: 20px;
+    }
+
+    .workflow-tabs {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 30px;
+      border-bottom: 2px solid #e1e8ed;
+      padding-bottom: 5px;
+    }
+
+    .workflow-tab {
+      padding: 12px 24px;
+      background: #f5f7fa;
+      border: none;
+      border-radius: 8px 8px 0 0;
+      cursor: pointer;
+      font-weight: 600;
+      color: #666;
+      transition: all 0.3s ease;
+      position: relative;
+    }
+
+    .workflow-tab:hover {
+      background: #e1e8ed;
+      color: #333;
+    }
+
+    .workflow-tab.active {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+    }
+
+    .workflow-tab.completed::after {
+      content: "✓";
+      position: absolute;
+      top: -8px;
+      right: -8px;
+      background: #28a745;
+      color: white;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      font-weight: bold;
+    }
+
+    .workflow-content {
+      display: none;
+    }
+
+    .workflow-content.active {
+      display: block;
+      animation: fadeIn 0.3s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .section-card {
+      background: white;
+      padding: 30px;
+      border-radius: 12px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+
+    .btn {
+      padding: 12px 24px;
+      border: none;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 14px;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+    }
+
+    .btn-secondary {
+      background: #f5f7fa;
+      color: #667eea;
+      border: 2px solid #667eea;
+    }
+
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none !important;
+    }
+
+    .code-display {
+      background: #1e1e1e;
+      color: #d4d4d4;
+      padding: 20px;
+      border-radius: 8px;
+      font-family: 'Courier New', monospace;
+      font-size: 14px;
+      line-height: 1.6;
+      max-height: 500px;
+      overflow-y: auto;
+      margin-top: 20px;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    .form-group label {
+      display: block;
+      font-weight: 600;
+      margin-bottom: 8px;
+      color: #333;
+    }
+
+    .form-group input,
+    .form-group textarea {
+      width: 100%;
+      padding: 12px;
+      border: 2px solid #e1e8ed;
+      border-radius: 8px;
+      font-size: 14px;
+      font-family: inherit;
+    }
+
+    .form-group textarea {
+      min-height: 120px;
+      resize: vertical;
+    }
+
+    .notification {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      padding: 16px 24px;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      z-index: 10000;
+      display: none;
+    }
+
+    .notification.success {
+      background: #28a745;
+      color: white;
+    }
+
+    .notification.error {
+      background: #dc3545;
+      color: white;
+    }
+
+    .notification.visible {
+      display: block;
+      animation: slideInRight 0.3s ease;
+    }
+
+    @keyframes slideInRight {
+      from { transform: translateX(400px); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+
+    .loading-spinner {
+      display: inline-block;
+      width: 16px;
+      height: 16px;
+      border: 3px solid rgba(255,255,255,0.3);
+      border-radius: 50%;
+      border-top-color: white;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+  {% set active_tab = 'ui-automation' %}
+  {% include 'left-sidebar.html' %}
+  
+  <div class="main-content">
+    {% set page_title = '<i class="fas fa-vial"></i> Automation Test Creator <span class="ai-badge">AI</span>' %}
+    {% set allow_html = true %}
+    {% set page_subtitle = 'Record tests with Playwright → Generate details with AI → Export to Jira → Import & Execute' %}
+    {% include 'page-header.html' %}
+    
+    <div class="test-creator-container">
+      <!-- Workflow Tabs -->
+      <div class="workflow-tabs">
+        <button class="workflow-tab active" data-tab="record">1️⃣ Record Test</button>
+        <button class="workflow-tab" data-tab="generate">2️⃣ Generate Details</button>
+        <button class="workflow-tab" data-tab="export">3️⃣ Export to Jira</button>
+        <button class="workflow-tab" data-tab="execute">4️⃣ Import & Execute</button>
+      </div>
+
+      <!-- Step 1: Record -->
+      <div class="workflow-content active" id="record-content">
+        <div class="section-card">
+          <h2>🔴 Record Your Test</h2>
+          <p style="color: #666; margin-bottom: 20px;">Start Playwright Codegen to record automation test steps</p>
+          
+          <div style="display: flex; gap: 15px; margin-bottom: 20px; flex-wrap: wrap;">
+            <button class="btn btn-primary" id="startRecordBtn"><i class="fas fa-circle"></i> Start Recording</button>
+            <button class="btn btn-secondary" id="stopRecordBtn" disabled><i class="fas fa-stop"></i> Stop</button>
+            <input type="url" id="recordUrl" placeholder="Enter URL (optional)" style="flex: 1; min-width: 300px; padding: 12px; border: 2px solid #e1e8ed; border-radius: 8px;">
+          </div>
+
+          <div id="recordingStatus" style="display: none; padding: 15px; background: #fff3cd; border-radius: 8px; margin-bottom: 20px;">
+            <strong>⏺️ Recording in progress...</strong>
+          </div>
+
+          <div class="code-display" id="recordedCode" style="display: none;"></div>
+          
+          <div style="margin-top: 20px; display: none;" id="nextStepSection">
+            <button class="btn btn-primary" onclick="goToTab('generate')">Next: Generate Test Details →</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 2: Generate -->
+      <div class="workflow-content" id="generate-content">
+        <div class="section-card">
+          <h2>✨ Generate Test Details</h2>
+          <p style="color: #666; margin-bottom: 25px;">Use AI to generate test summary, description, and manual steps</p>
+
+          <div style="background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%); padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+            <h3 style="margin-top: 0;">🤖 AI-Powered Generation</h3>
+            <button class="btn btn-primary" id="aiGenerateBtn"><i class="fas fa-magic"></i> Generate with AI</button>
+          </div>
+
+          <div class="form-group">
+            <label for="testSummary">Test Summary</label>
+            <input type="text" id="testSummary" placeholder="e.g., Verify user login functionality" />
+          </div>
+
+          <div class="form-group">
+            <label for="testDescription">Test Description</label>
+            <textarea id="testDescription" placeholder="Describe what this test validates..."></textarea>
+          </div>
+
+          <div id="manualStepsPreview" style="display: none; background: #f8f9fa; padding: 20px; border-radius: 8px; margin-top: 15px;">
+            <h4 style="color: #667eea;">📋 Manual Test Steps</h4>
+            <div id="manualStepsContent"></div>
+          </div>
+
+          <div style="margin-top: 25px; display: flex; gap: 15px;">
+            <button class="btn btn-secondary" onclick="goToTab('record')">← Back</button>
+            <button class="btn btn-primary" onclick="goToTab('export')">Next: Export to Jira →</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 3: Export -->
+      <div class="workflow-content" id="export-content">
+        <div class="section-card">
+          <h2>📤 Export to Jira</h2>
+          <p style="color: #666; margin-bottom: 25px;">Create a Jira Task with automated code and manual steps</p>
+
+          <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+            <h4>📝 Preview</h4>
+            <div><strong>Summary:</strong> <span id="previewSummary"></span></div>
+            <div style="margin-top: 10px;"><strong>Description:</strong> <span id="previewDescription"></span></div>
+          </div>
+
+          <div class="form-group">
+            <label for="jiraProject">Jira Project</label>
+            <input type="text" id="jiraProject" placeholder="e.g., IRA" value="IRA" />
+          </div>
+
+          <div style="margin-top: 25px; display: flex; gap: 15px;">
+            <button class="btn btn-secondary" onclick="goToTab('generate')">← Back</button>
+            <button class="btn btn-primary" id="exportToJiraBtn"><i class="fas fa-cloud-upload-alt"></i> Create Jira Task</button>
+          </div>
+
+          <div id="exportSuccess" style="display: none; margin-top: 20px; padding: 20px; background: #d4edda; border-radius: 8px;">
+            <strong>✅ Successfully created!</strong>
+            <div id="createdTaskInfo" style="margin-top: 10px;"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 4: Execute -->
+      <div class="workflow-content" id="execute-content">
+        <div class="section-card">
+          <h2>🚀 Import & Execute</h2>
+          <p style="color: #666; margin-bottom: 25px;">Import test from Jira, execute it, and report results</p>
+
+          <div style="background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%); padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+            <h3 style="margin-top: 0;">📥 Import from Jira</h3>
+            <div style="display: flex; gap: 10px;">
+              <input type="text" id="importTicketId" placeholder="Enter Jira ticket ID (e.g., IRA-12345)" style="flex: 1; padding: 12px; border: 2px solid #e1e8ed; border-radius: 8px;" />
+              <button class="btn btn-primary" id="importFromJiraBtn"><i class="fas fa-download"></i> Import</button>
+            </div>
+          </div>
+
+          <div id="importedTestPreview" style="display: none; background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; border: 2px solid #e1e8ed;">
+            <h3>📋 Imported Test</h3>
+            <div id="importedTestContent"></div>
+            <button class="btn btn-primary" id="executeTestBtn" style="margin-top: 15px;"><i class="fas fa-play"></i> Execute Test</button>
+          </div>
+
+          <div id="executionResults" style="display: none; background: #f8f9fa; padding: 20px; border-radius: 8px; margin-top: 20px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+              <h3 style="margin: 0;">Test Results</h3>
+              <div id="executionStatus" style="padding: 8px 16px; border-radius: 20px; font-weight: 600;">Running...</div>
+            </div>
+            <div id="executionSteps"></div>
+            <button class="btn btn-primary" id="exportResultsBtn" style="margin-top: 20px; display: none;"><i class="fas fa-file-export"></i> Export Results to Jira</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Notification -->
+  <div class="notification" id="notification"></div>
+
+  <script src="{{ url_for('static', filename='auth-utils.js') }}"></script>
+  <script src="{{ url_for('static', filename='shared-utils.js') }}"></script>
+  <script>
+    let recordedCode = '';
+    let recordingSession = null;
+    let generatedManualSteps = [];
+    let currentTestData = {};
+
+    // Tab Navigation
+    function goToTab(tabName) {
+      document.querySelectorAll('.workflow-tab').forEach(tab => tab.classList.remove('active'));
+      document.querySelectorAll('.workflow-content').forEach(content => content.classList.remove('active'));
+      
+      document.querySelector(`[data-tab="${tabName}"]`).classList.add('active');
+      document.getElementById(`${tabName}-content`).classList.add('active');
+      
+      const tabs = ['record', 'generate', 'export', 'execute'];
+      tabs.forEach((tab, index) => {
+        if (index < tabs.indexOf(tabName)) {
+          document.querySelector(`[data-tab="${tab}"]`).classList.add('completed');
+        }
+      });
+      
+      if (tabName === 'export') updateJiraPreview();
+    }
+
+    document.querySelectorAll('.workflow-tab').forEach(tab => {
+      tab.addEventListener('click', () => goToTab(tab.getAttribute('data-tab')));
+    });
+
+    // Recording
+    document.getElementById('startRecordBtn').addEventListener('click', startRecording);
+    document.getElementById('stopRecordBtn').addEventListener('click', stopRecording);
+
+    async function startRecording() {
+      const url = document.getElementById('recordUrl').value;
+      try {
+        document.getElementById('startRecordBtn').disabled = true;
+        document.getElementById('stopRecordBtn').disabled = false;
+        document.getElementById('recordingStatus').style.display = 'block';
+        
+        const response = await fetch('/api/playwright-codegen/start', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url: url || '' })
+        });
+        const data = await response.json();
+        
+        if (data.success) {
+          recordingSession = data.session_id;
+          showNotification('Recording started!', 'success');
+          pollForCode();
+        } else {
+          throw new Error(data.error || 'Failed to start recording');
+        }
+      } catch (error) {
+        showNotification('Failed to start recording: ' + error.message, 'error');
+        resetRecordingUI();
+      }
+    }
+
+    async function stopRecording() {
+      if (!recordingSession) return;
+      try {
+        const response = await fetch('/api/playwright-codegen/stop', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ session_id: recordingSession })
+        });
+        const data = await response.json();
+        
+        if (data.success && data.code) {
+          recordedCode = data.code;
+          document.getElementById('recordedCode').textContent = recordedCode;
+          document.getElementById('recordedCode').style.display = 'block';
+          document.getElementById('nextStepSection').style.display = 'block';
+          document.querySelector('[data-tab="record"]').classList.add('completed');
+          showNotification('Recording saved!', 'success');
+        }
+      } catch (error) {
+        showNotification('Failed to stop recording', 'error');
+      } finally {
+        resetRecordingUI();
+      }
+    }
+
+    function pollForCode() {
+      const interval = setInterval(async () => {
+        if (!recordingSession) {
+          clearInterval(interval);
+          return;
+        }
+        try {
+          const response = await fetch(`/api/playwright-codegen/code/${recordingSession}`);
+          const data = await response.json();
+          if (data.code) {
+            document.getElementById('recordedCode').textContent = data.code;
+            document.getElementById('recordedCode').style.display = 'block';
+          }
+        } catch (error) {
+          clearInterval(interval);
+        }
+      }, 2000);
+    }
+
+    function resetRecordingUI() {
+      document.getElementById('startRecordBtn').disabled = false;
+      document.getElementById('stopRecordBtn').disabled = true;
+      document.getElementById('recordingStatus').style.display = 'none';
+      recordingSession = null;
+    }
+
+    // AI Generation
+    document.getElementById('aiGenerateBtn').addEventListener('click', async function() {
+      if (!recordedCode) {
+        showNotification('Please record a test first', 'error');
+        return;
+      }
+      
+      this.disabled = true;
+      this.innerHTML = '<span class="loading-spinner"></span> Generating...';
+      
+      try {
+        const response = await fetch('/api/automation-test-creator/generate-details', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ code: recordedCode })
+        });
+        const data = await response.json();
+        
+        if (data.success) {
+          document.getElementById('testSummary').value = data.summary;
+          document.getElementById('testDescription').value = data.description;
+          generatedManualSteps = data.manual_steps;
+          
+          if (data.manual_steps && data.manual_steps.length > 0) {
+            document.getElementById('manualStepsContent').innerHTML = 
+              '<ol>' + data.manual_steps.map(step => `<li>${step}</li>`).join('') + '</ol>';
+            document.getElementById('manualStepsPreview').style.display = 'block';
+          }
+          
+          showNotification('Details generated!', 'success');
+          document.querySelector('[data-tab="generate"]').classList.add('completed');
+        } else {
+          throw new Error(data.error || 'Generation failed');
+        }
+      } catch (error) {
+        showNotification('Failed to generate: ' + error.message, 'error');
+      } finally {
+        this.disabled = false;
+        this.innerHTML = '<i class="fas fa-magic"></i> Generate with AI';
+      }
+    });
+
+    // Export to Jira
+    function updateJiraPreview() {
+      document.getElementById('previewSummary').textContent = document.getElementById('testSummary').value || 'Not specified';
+      document.getElementById('previewDescription').textContent = document.getElementById('testDescription').value || 'Not specified';
+    }
+
+    document.getElementById('exportToJiraBtn').addEventListener('click', async function() {
+      const summary = document.getElementById('testSummary').value;
+      const description = document.getElementById('testDescription').value;
+      const project = document.getElementById('jiraProject').value || 'IRA';
+      
+      if (!summary || !recordedCode) {
+        showNotification('Please provide summary and code', 'error');
+        return;
+      }
+      
+      this.disabled = true;
+      this.innerHTML = '<span class="loading-spinner"></span> Creating...';
+      
+      try {
+        const response = await fetch('/api/automation-test-creator/export-jira', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            summary, description,
+            automated_code: recordedCode,
+            manual_steps: generatedManualSteps,
+            project
+          })
+        });
+        const data = await response.json();
+        
+        if (data.success) {
+          currentTestData.jira_key = data.issue_key;
+          document.getElementById('createdTaskInfo').innerHTML = `
+            <strong>Task:</strong> <a href="${data.issue_url}" target="_blank">${data.issue_key}</a>
+          `;
+          document.getElementById('exportSuccess').style.display = 'block';
+          document.getElementById('importTicketId').value = data.issue_key;
+          showNotification('Jira task created!', 'success');
+          document.querySelector('[data-tab="export"]').classList.add('completed');
+        } else {
+          throw new Error(data.error || 'Export failed');
+        }
+      } catch (error) {
+        showNotification('Failed to create task: ' + error.message, 'error');
+      } finally {
+        this.disabled = false;
+        this.innerHTML = '<i class="fas fa-cloud-upload-alt"></i> Create Jira Task';
+      }
+    });
+
+    // Import & Execute
+    document.getElementById('importFromJiraBtn').addEventListener('click', async function() {
+      const ticketId = document.getElementById('importTicketId').value.trim();
+      if (!ticketId) {
+        showNotification('Enter a ticket ID', 'error');
+        return;
+      }
+      
+      this.disabled = true;
+      this.innerHTML = '<span class="loading-spinner"></span> Importing...';
+      
+      try {
+        const response = await fetch(`/api/automation-test-creator/import-jira/${ticketId}`);
+        const data = await response.json();
+        
+        if (data.success) {
+          currentTestData = data.test_data;
+          document.getElementById('importedTestContent').innerHTML = `
+            <div><strong>Summary:</strong> ${data.test_data.summary || 'N/A'}</div>
+            <div style="margin-top: 10px;"><strong>Description:</strong> ${data.test_data.description || 'N/A'}</div>
+            <pre class="code-display" style="margin-top: 10px;">${data.test_data.code || 'No code'}</pre>
+          `;
+          document.getElementById('importedTestPreview').style.display = 'block';
+          showNotification('Test imported!', 'success');
+        } else {
+          throw new Error(data.error || 'Import failed');
+        }
+      } catch (error) {
+        showNotification('Failed to import: ' + error.message, 'error');
+      } finally {
+        this.disabled = false;
+        this.innerHTML = '<i class="fas fa-download"></i> Import';
+      }
+    });
+
+    document.getElementById('executeTestBtn').addEventListener('click', async function() {
+      if (!currentTestData.code) {
+        showNotification('No code to execute', 'error');
+        return;
+      }
+      
+      this.disabled = true;
+      this.innerHTML = '<span class="loading-spinner"></span> Executing...';
+      
+      const resultsDiv = document.getElementById('executionResults');
+      resultsDiv.style.display = 'block';
+      document.getElementById('executionStatus').textContent = 'Running...';
+      
+      try {
+        const response = await fetch('/api/automation-test-creator/execute', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            code: currentTestData.code,
+            ticket_id: currentTestData.jira_key || document.getElementById('importTicketId').value
+          })
+        });
+        const data = await response.json();
+        
+        if (data.success) {
+          currentTestData.execution_results = data.results;
+          const statusDiv = document.getElementById('executionStatus');
+          statusDiv.textContent = data.results.status;
+          statusDiv.style.background = data.results.status === 'SUCCESS' ? '#28a745' : '#dc3545';
+          statusDiv.style.color = 'white';
+          
+          showNotification('Test executed!', 'success');
+          document.getElementById('exportResultsBtn').style.display = 'block';
+        } else {
+          throw new Error(data.error || 'Execution failed');
+        }
+      } catch (error) {
+        showNotification('Execution failed: ' + error.message, 'error');
+      } finally {
+        this.disabled = false;
+        this.innerHTML = '<i class="fas fa-play"></i> Execute Test';
+      }
+    });
+
+    document.getElementById('exportResultsBtn').addEventListener('click', async function() {
+      const ticketId = currentTestData.jira_key || document.getElementById('importTicketId').value;
+      if (!ticketId || !currentTestData.execution_results) {
+        showNotification('No results to export', 'error');
+        return;
+      }
+      
+      this.disabled = true;
+      this.innerHTML = '<span class="loading-spinner"></span> Exporting...';
+      
+      try {
+        const response = await fetch(`/api/automation-test-creator/export-results/${ticketId}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ results: currentTestData.execution_results })
+        });
+        const data = await response.json();
+        
+        if (data.success) {
+          showNotification('Results exported to Jira!', 'success');
+          document.querySelector('[data-tab="execute"]').classList.add('completed');
+        } else {
+          throw new Error(data.error || 'Export failed');
+        }
+      } catch (error) {
+        showNotification('Failed to export: ' + error.message, 'error');
+      } finally {
+        this.disabled = false;
+        this.innerHTML = '<i class="fas fa-file-export"></i> Export Results to Jira';
+      }
+    });
+
+    // Utility
+    function showNotification(message, type) {
+      const notification = document.getElementById('notification');
+      notification.textContent = message;
+      notification.className = `notification ${type} visible`;
+      setTimeout(() => notification.classList.remove('visible'), 5000);
+    }
+  </script>
+</body>
+</html>

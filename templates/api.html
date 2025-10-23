@@ -34,7 +34,7 @@
 
     .main-content {
       margin-left: 280px;
-      padding: 1rem 1.5rem;
+      padding: 2rem;
       min-height: 100vh;
     }
 
@@ -346,11 +346,13 @@
   {% set active_tab = 'api' %}
   {% include 'left-sidebar.html' %}
 
-  <div class="main-content" style="padding: 0; padding-top: 0;">
+  <div class="main-content" style="padding: 2rem;">
+       
 
-    {% set page_title = 'API Co-Test' %}
-    {% set page_subtitle = 'Test REST APIs, GraphQL, cURL commands, and Postman collections' %}
-    {% include 'page-header.html' %}
+    {% set page_title = 'API <span class="ai-badge">AI</span>' %}
+        {% set page_subtitle = 'Test REST APIs, GraphQL, cURL commands, and Postman collections' %}
+        {% set allow_html = true %}
+        {% include 'page-header.html' %}
 
     <div class="container">
       <div

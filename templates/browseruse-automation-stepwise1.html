@@ -55,27 +55,6 @@
             align-items: center;
             justify-content: space-between;
             margin-bottom: 2rem;
-            /* Match sidebar gradient but with darker edges for differentiation */
-            background: linear-gradient(180deg, #f1f5f9 0%, #e2e8f0 50%, #cbd5e1 100%);
-            border-radius: var(--radius-lg);
-            padding: 1.5rem 2rem;
-            border: 2px solid #94a3b8;
-            box-shadow: 
-                0 4px 6px -1px rgba(0, 0, 0, 0.1),
-                inset 0 1px 0 rgba(255, 255, 255, 0.3);
-            position: relative;
-            overflow: hidden;
-        }
-
-        .page-header::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: linear-gradient(135deg, rgba(99, 102, 241, 0.02) 0%, rgba(139, 92, 246, 0.02) 100%);
-            pointer-events: none;
         }
 
         .page-title {
@@ -85,8 +64,6 @@
             font-size: 2rem;
             font-weight: 700;
             color: var(--text-primary);
-            position: relative;
-            z-index: 1;
         }
 
         .page-icon {
@@ -99,9 +76,6 @@
             justify-content: center;
             color: white;
             font-size: 1.5rem;
-            position: relative;
-            z-index: 1;
-            box-shadow: 0 4px 8px rgba(99, 102, 241, 0.3);
         }
 
         .ai-badge {
@@ -112,9 +86,6 @@
             border-radius: 1rem;
             padding: 0.25rem 0.75rem;
             margin-left: 0.5rem;
-            position: relative;
-            z-index: 1;
-            box-shadow: 0 2px 4px rgba(255, 107, 107, 0.3);
         }
 
         .container {
@@ -557,28 +528,29 @@
     {% set active_tab = 'browseruse' %}
     {% include 'left-sidebar.html' %}
 
-  <div class="main-content">
-     
-         {% set page_title = 'Browser Automation <span class="ai-badge">AI</span>' %}
-        {% set page_subtitle = 'AI-powered UI automation using BrowserUse Playwright Agent - Describe what you want, AI executes it!' %}
-        {% set allow_html = true %}
-        {% include 'page-header.html' %}
+    <div class="main-content">
+        <div class="page-header">
+            <div class="page-title">
+                <div class="page-icon">
+                    <i class="fas fa-robot"></i>
+                </div>
+                BrowserUse AI Automation
+                <span class="ai-badge">AI</span>
+            </div>
+        </div>
 
         <div class="instructions-card">
             <div class="instructions-title">
-                <i class="fas fa-magic"></i>
-                How AI-Powered Browser Automation Works
-            </div>
-            <div style="background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); color: white; padding: 1rem; border-radius: 8px; margin-bottom: 1rem;">
-                <strong><i class="fas fa-robot"></i> AI Agent Powered:</strong> This uses a BrowserUse Playwright AI Agent that intelligently interprets your steps and executes them in a real browser. The AI understands context, handles dynamic elements, and adapts to page changes!
+                <i class="fas fa-info-circle"></i>
+                How to Use BrowserUse Automation
             </div>
             <ol class="instructions-list">
-                <li><strong>Add Steps:</strong> Build your workflow by adding actions (navigate, click, fill, etc.)</li>
-                <li><strong>Configure Parameters:</strong> Set URLs, selectors, text values for each step</li>
-                <li><strong>AI Executes:</strong> When you run, the AI agent converts your steps into natural language prompts and intelligently executes them using Playwright</li>
-                <li><strong>Smart Adaptation:</strong> The AI handles waits, dynamic elements, and unexpected scenarios automatically</li>
-                <li><strong>Save & Reuse:</strong> Export/Import scenarios to share or reuse your automation workflows</li>
-                <li><strong>View Results:</strong> See detailed execution reports with success/failure status for each step</li>
+                <li>Build your browser automation workflow by adding steps using the action selector</li>
+                <li>Configure each step with the required parameters (URLs, selectors, text, etc.)</li>
+                <li>Preview your automation scenario in the right panel</li>
+                <li>Save your scenario to lock in your changes before execution</li>
+                <li>Run the automation to execute all steps and view results</li>
+                <li>Export/Import scenarios to share or reuse your automation workflows</li>
             </ol>
         </div>
 
@@ -610,21 +582,9 @@
                 <div class="panel-header">
                     <div class="panel-title">
                         <i class="fas fa-eye"></i>
-                        AI Execution Preview
+                        Scenario Preview
                     </div>
                 </div>
-                
-                <!-- AI Info Box -->
-                <div style="background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%); border: 1px solid rgba(99, 102, 241, 0.3); border-radius: 8px; padding: 1rem; margin: 1rem;">
-                    <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
-                        <i class="fas fa-robot" style="color: var(--primary);"></i>
-                        <strong style="color: var(--primary);">AI Agent Interpretation</strong>
-                    </div>
-                    <p style="font-size: 0.85rem; color: var(--text-secondary); margin: 0;">
-                        Your steps will be converted to natural language prompts. The AI agent intelligently executes them using Playwright, handling dynamic elements and adapting to page changes automatically.
-                    </p>
-                </div>
-                
                 <div id="scenarioPreview" class="preview-content">
                     Click "Add Step" to start building your automation scenario...
                 </div>
@@ -657,9 +617,8 @@
             
             <button id="runBtn" class="btn btn-run">
                 <span id="runBtnText">
-                    <i class="fas fa-robot"></i>
-                    Run AI Agent
-                    <span class="ai-badge" style="margin-left: 0.5rem;">AI</span>
+                    <i class="fas fa-play"></i>
+                    Run Automation
                 </span>
                 <span id="runBtnSpinner" class="spinner" style="display: none;"></span>
             </button>
@@ -672,11 +631,8 @@
     <div id="fullscreenLoader" class="fullscreen-loader">
         <div class="loader-content">
             <div class="loader-spinner"></div>
-            <h3><i class="fas fa-robot"></i> AI Agent Executing Automation</h3>
-            <p>The BrowserUse Playwright AI Agent is intelligently executing your steps...</p>
-            <p style="font-size: 0.9rem; color: var(--text-secondary); margin-top: 0.5rem;">
-                <i class="fas fa-magic"></i> AI is adapting to page elements and handling dynamic content
-            </p>
+            <h3>Running Browser Automation</h3>
+            <p>Please wait while we execute your automation steps...</p>
         </div>
     </div>
 

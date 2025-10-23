@@ -1,0 +1,856 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='0.9em' font-size='90'>🤖</text></svg>">
+    <title>AI Agent Driver Automation - Co-Tester</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="/static/styles.css">
+    <link rel="stylesheet" href="/static/left-sidebar.css">
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-hover: #4f46e5;
+            --secondary: #8b5cf6;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --error: #ef4444;
+            --info: #3b82f6;
+            --bg-light: #f8fafc;
+            --bg-card: #ffffff;
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --border: #e2e8f0;
+            --border-focus: #6366f1;
+            --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+            --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+            --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1);
+            --radius: 8px;
+            --radius-lg: 12px;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--bg-light);
+            color: var(--text-primary);
+            line-height: 1.6;
+        }
+
+        .main-content {
+            margin-left: 280px;
+            padding: 2rem;
+            min-height: 100vh;
+        }
+
+        .page-header {
+            background: linear-gradient(180deg, #f1f5f9 0%, #e2e8f0 50%, #cbd5e1 100%);
+            border-radius: var(--radius-lg);
+            padding: 1.5rem 2rem;
+            margin-bottom: 2rem;
+            border: 2px solid #94a3b8;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+        }
+
+        .page-title {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 0.5rem;
+        }
+
+        .page-icon {
+            width: 3rem;
+            height: 3rem;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            border-radius: var(--radius-lg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.5rem;
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+        }
+
+        .page-subtitle {
+            font-size: 1rem;
+            color: var(--text-secondary);
+            margin-left: 3.75rem;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .card {
+            background: var(--bg-card);
+            border-radius: var(--radius-lg);
+            padding: 2rem;
+            box-shadow: var(--shadow-md);
+            border: 1px solid var(--border);
+        }
+
+        .instructions-card {
+            margin-bottom: 2rem;
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.05) 0%, rgba(139, 92, 246, 0.05) 100%);
+            border-left: 4px solid var(--primary);
+        }
+
+        .instructions-title {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 1rem;
+        }
+
+        .instructions-list {
+            list-style: none;
+            padding-left: 0;
+        }
+
+        .instructions-list li {
+            padding: 0.5rem 0;
+            padding-left: 1.5rem;
+            position: relative;
+        }
+
+        .instructions-list li::before {
+            content: '✓';
+            position: absolute;
+            left: 0;
+            color: var(--success);
+            font-weight: bold;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-label {
+            display: block;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 0.5rem;
+            font-size: 0.95rem;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border: 2px solid var(--border);
+            border-radius: var(--radius);
+            font-family: inherit;
+            font-size: 0.95rem;
+            transition: all 0.2s;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: var(--border-focus);
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+        }
+
+        textarea.form-input {
+            min-height: 200px;
+            resize: vertical;
+            font-family: 'Inter', sans-serif;
+            line-height: 1.6;
+        }
+
+        .help-text {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            margin-top: 0.5rem;
+        }
+
+        .examples-box {
+            background: #f0f9ff;
+            border: 1px solid #bae6fd;
+            border-radius: var(--radius);
+            padding: 1rem;
+            margin-top: 1rem;
+        }
+
+        .examples-title {
+            font-weight: 600;
+            color: var(--info);
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .example-item {
+            background: white;
+            padding: 0.75rem;
+            border-radius: 6px;
+            margin: 0.5rem 0;
+            border-left: 3px solid var(--info);
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            font-style: italic;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 1rem;
+            margin-top: 2rem;
+        }
+
+        .btn {
+            padding: 0.875rem 2rem;
+            border: none;
+            border-radius: var(--radius);
+            font-weight: 600;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            justify-content: center;
+            min-width: 160px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            color: white;
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(99, 102, 241, 0.4);
+        }
+
+        .btn-primary:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-secondary {
+            background: white;
+            color: var(--text-primary);
+            border: 2px solid var(--border);
+        }
+
+        .btn-secondary:hover {
+            background: var(--bg-light);
+            border-color: var(--primary);
+        }
+
+        .ai-badge {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+            font-size: 0.7rem;
+            padding: 0.15rem 0.5rem;
+            border-radius: 12px;
+            font-weight: 600;
+            margin-left: 0.5rem;
+            box-shadow: 0 2px 4px rgba(16, 185, 129, 0.3);
+        }
+
+        .results-section {
+            display: none;
+            margin-top: 2rem;
+        }
+
+        .results-section.active {
+            display: block;
+        }
+
+        .result-card {
+            background: white;
+            border-radius: var(--radius-lg);
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            border: 1px solid var(--border);
+        }
+
+        .result-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .result-title {
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .status-badge {
+            padding: 0.25rem 0.75rem;
+            border-radius: 12px;
+            font-size: 0.875rem;
+            font-weight: 600;
+        }
+
+        .status-success {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        .status-error {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .result-content {
+            color: var(--text-secondary);
+            line-height: 1.6;
+        }
+
+        .error-message {
+            background: #fef2f2;
+            border: 1px solid #fecaca;
+            border-radius: var(--radius);
+            padding: 1rem;
+            color: #991b1b;
+            margin-top: 0.5rem;
+        }
+
+        /* Loader overlay */
+        .fullscreen-loader {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(15, 23, 42, 0.95);
+            backdrop-filter: blur(8px);
+            z-index: 10000;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+        }
+
+        .fullscreen-loader.active {
+            display: flex;
+        }
+
+        .loader-content {
+            text-align: center;
+            color: white;
+        }
+
+        .spinner {
+            width: 60px;
+            height: 60px;
+            border: 4px solid rgba(255, 255, 255, 0.1);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 1.5rem;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .loader-content h3 {
+            font-size: 1.5rem;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .loader-content p {
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 1rem;
+        }
+
+        .loader-icon {
+            margin-right: 0.5rem;
+        }
+    </style>
+</head>
+<body>
+
+
+    <div class="main-content">
+            {% include 'left-sidebar.html' %}
+     {% set page_title = 'AI Agent Driver Automation <span class="ai-badge">AI</span>' %}
+        {% set page_subtitle = 'Powered by Gemini 2.5 Computer Use - Vision-based browser automation with AI agent!' %}
+        {% set allow_html = true %}
+        {% include 'page-header.html' %}
+        
+        <div class="container">
+            <!-- Instructions Card -->
+           
+            <!-- Main Form Card -->
+            <div class="card">
+                <div class="form-group">
+                    <label class="form-label">
+                        <i class="fas fa-magic"></i> AI Automation Instructions
+                    </label>
+                    <textarea 
+                        id="aiInstructions" 
+                        class="form-input" 
+                        placeholder="Example: Go to google.com and search for 'playwright automation', then click on the first result and take a screenshot"
+                    ></textarea>
+                    <div class="help-text">
+                        <i class="fas fa-info-circle"></i> 
+                        Describe your automation task naturally. The AI will understand and execute it intelligently.
+                    </div>
+
+                    <!-- Examples Box -->
+                    <div class="examples-box">
+                        <div class="examples-title">
+                            <i class="fas fa-star"></i> Example Instructions
+                        </div>
+                        <div class="example-item">
+                            Navigate to amazon.com, search for "laptop", filter by 4+ star rating, and get the price of the top 3 results
+                        </div>
+                        <div class="example-item">
+                            Go to linkedin.com, login with my credentials, navigate to my profile, and extract my current job title
+                        </div>
+                        <div class="example-item">
+                            Open github.com, search for "playwright" repositories, sort by stars, and get the name and description of the most popular one
+                        </div>
+                        <div class="example-item">
+                            Visit booking.com, search for hotels in Paris for next month, apply filters for 4-star hotels, and get the names and prices of top 5 options
+                        </div>
+                    </div>
+                </div>
+
+                <div class="button-group">
+                    <button id="runBtn" class="btn btn-primary">
+                        <i class="fas fa-play" id="runBtnIcon"></i>
+                        <span id="runBtnText">Run AI Agent</span>
+                    </button>
+                    <button id="clearBtn" class="btn btn-secondary">
+                        <i class="fas fa-eraser"></i>
+                        Clear
+                    </button>
+                </div>
+            </div>
+
+            <!-- Results Section -->
+            <div id="resultsSection" class="results-section">
+                <div class="card">
+                    <h3 style="margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
+                        <i class="fas fa-chart-bar"></i>
+                        Execution Results
+                    </h3>
+                    <div id="resultsContainer"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Fullscreen Loader -->
+    <div id="fullscreenLoader" class="fullscreen-loader">
+        <div class="loader-content">
+            <div class="spinner"></div>
+            <h3><i class="fas fa-robot loader-icon"></i> AI Agent Executing Automation</h3>
+            <p>Google Gemini 2.5 Computer Use is intelligently executing your instructions...</p>
+            <p style="margin-top: 0.5rem; font-size: 0.9rem;">
+                <i class="fas fa-magic"></i> AI views screenshots and adapts to dynamic page content
+            </p>
+        </div>
+    </div>
+
+    <script>
+        const aiInstructions = document.getElementById('aiInstructions');
+        const runBtn = document.getElementById('runBtn');
+        const runBtnText = document.getElementById('runBtnText');
+        const runBtnIcon = document.getElementById('runBtnIcon');
+        const clearBtn = document.getElementById('clearBtn');
+        const resultsSection = document.getElementById('resultsSection');
+        const resultsContainer = document.getElementById('resultsContainer');
+        const fullscreenLoader = document.getElementById('fullscreenLoader');
+
+        // Clear functionality
+        clearBtn.addEventListener('click', () => {
+            aiInstructions.value = '';
+            resultsSection.classList.remove('active');
+            resultsContainer.innerHTML = '';
+        });
+
+        // Run AI Agent
+        runBtn.addEventListener('click', async () => {
+            const instructions = aiInstructions.value.trim();
+            
+            if (!instructions) {
+                alert('Please enter your automation instructions');
+                return;
+            }
+
+            // Show loader
+            fullscreenLoader.classList.add('active');
+            runBtn.disabled = true;
+            runBtnText.textContent = 'Running...';
+            runBtnIcon.className = 'fas fa-spinner fa-spin';
+
+            try {
+                const response = await fetch('/api/browseruse/custom-instruction', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        instruction: instructions
+                    })
+                });
+
+                const result = await response.json();
+
+                // Hide loader
+                fullscreenLoader.classList.remove('active');
+
+                // Display results
+                displayResults(result);
+
+            } catch (error) {
+                console.error('Error:', error);
+                fullscreenLoader.classList.remove('active');
+                
+                resultsSection.classList.add('active');
+                resultsContainer.innerHTML = `
+                    <div class="result-card">
+                        <div class="result-header">
+                            <div class="result-title">Execution Failed</div>
+                            <span class="status-badge status-error">ERROR</span>
+                        </div>
+                        <div class="error-message">
+                            <strong>Error:</strong> ${error.message || 'Unknown error occurred'}
+                        </div>
+                    </div>
+                `;
+            } finally {
+                runBtn.disabled = false;
+                runBtnText.textContent = 'Run AI Agent';
+                runBtnIcon.className = 'fas fa-play';
+            }
+        });
+
+        function displayResults(result) {
+            resultsSection.classList.add('active');
+            
+            if (result.success) {
+                const report = result.execution_report || {};
+                const steps = report.steps || [];
+                const screenshots = report.screenshots || [];
+                
+                resultsContainer.innerHTML = `
+                    <div class="result-card">
+                        <div class="result-header">
+                            <div class="result-title">
+                                <i class="fas fa-check-circle" style="color: #10b981; margin-right: 8px;"></i>
+                                AI Agent Execution Completed
+                            </div>
+                            <span class="status-badge status-success">SUCCESS</span>
+                        </div>
+                        
+                        <!-- Summary Section -->
+                        <div class="result-content">
+                            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 2rem; border-radius: 12px; margin-bottom: 1.5rem; box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);">
+                                <h3 style="margin: 0 0 1.5rem 0; font-size: 1.3rem; font-weight: 700; border-bottom: 2px solid rgba(255, 255, 255, 0.3); padding-bottom: 0.75rem;">
+                                    <i class="fas fa-robot"></i> Execution Summary
+                                </h3>
+                                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1.25rem;">
+                                    <div style="background: rgba(255, 255, 255, 0.15); padding: 1rem; border-radius: 8px; backdrop-filter: blur(10px);">
+                                        <div style="opacity: 0.95; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.5rem;">Result</div>
+                                        <div style="font-size: 1rem; font-weight: 600; line-height: 1.4; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical;">${(result.result || 'Completed').substring(0, 150)}${(result.result || '').length > 150 ? '...' : ''}</div>
+                                    </div>
+                                    <div style="background: rgba(255, 255, 255, 0.15); padding: 1rem; border-radius: 8px; backdrop-filter: blur(10px);">
+                                        <div style="opacity: 0.95; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.5rem;">Steps Executed</div>
+                                        <div style="font-size: 1.8rem; font-weight: 700;">${result.steps_executed || 0}</div>
+                                    </div>
+                                    <div style="background: rgba(255, 255, 255, 0.15); padding: 1rem; border-radius: 8px; backdrop-filter: blur(10px);">
+                                        <div style="opacity: 0.95; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.5rem;">Duration</div>
+                                        <div style="font-size: 1.8rem; font-weight: 700;">${result.duration_seconds || 0}s</div>
+                                    </div>
+                                    <div style="background: rgba(255, 255, 255, 0.15); padding: 1rem; border-radius: 8px; backdrop-filter: blur(10px);">
+                                        <div style="opacity: 0.95; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.5rem;">Screenshots</div>
+                                        <div style="font-size: 1.8rem; font-weight: 700;">${screenshots.length}</div>
+                                    </div>
+                                </div>
+                                ${(result.result || '').length > 150 ? `
+                                    <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid rgba(255, 255, 255, 0.2);">
+                                        <div style="font-size: 0.9rem; line-height: 1.6; opacity: 0.95;">${result.result}</div>
+                                    </div>
+                                ` : ''}
+                            </div>
+                            
+                            <!-- Final URL -->
+                            ${result.final_url ? `
+                                <div style="margin-bottom: 1.5rem; padding: 1rem; background: #f0f9ff; border-left: 4px solid #0284c7; border-radius: 8px;">
+                                    <strong><i class="fas fa-link"></i> Final URL:</strong>
+                                    <a href="${result.final_url}" target="_blank" style="color: #0284c7; word-break: break-all; display: block; margin-top: 0.5rem;">
+                                        ${result.final_url}
+                                    </a>
+                                </div>
+                            ` : ''}
+                            
+                            <!-- Steps Timeline -->
+                            ${steps.length > 0 ? `
+                                <div style="margin-bottom: 1.5rem;">
+                                    <h3 style="margin: 0 0 1rem 0; display: flex; align-items: center; gap: 8px;">
+                                        <i class="fas fa-list-ol"></i> Execution Steps
+                                    </h3>
+                                    <div class="steps-timeline">
+                                        ${steps.map((step, index) => {
+                                            // Determine step status (pass if no errors, fail if errors present)
+                                            const hasError = step.actions && step.actions.some(a => a.result && a.result.error);
+                                            const isComplete = step.action === 'task_complete';
+                                            const status = hasError ? 'fail' : 'pass';
+                                            const statusColor = hasError ? '#ef4444' : '#10b981';
+                                            const statusBg = hasError ? '#fee2e2' : '#d1fae5';
+                                            const statusIcon = hasError ? 'fa-times-circle' : 'fa-check-circle';
+                                            const borderColor = hasError ? '#fecaca' : isComplete ? '#a7f3d0' : '#e5e7eb';
+                                            
+                                            return `
+                                            <div class="step-card" style="background: white; border: 2px solid ${borderColor}; border-radius: 12px; padding: 1.25rem; margin-bottom: 1rem; position: relative; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);">
+                                                <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 1rem;">
+                                                    <div style="display: flex; align-items: center; gap: 12px; flex: 1;">
+                                                        <div style="background: linear-gradient(135deg, #667eea, #764ba2); color: white; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 1rem; box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);">
+                                                            ${step.step_number}
+                                                        </div>
+                                                        <div style="flex: 1;">
+                                                            <div style="font-weight: 700; color: #1f2937; font-size: 1rem; margin-bottom: 4px;">
+                                                                ${isComplete ? '<i class="fas fa-flag-checkered" style="color: #10b981; margin-right: 6px;"></i>Task Complete' : `Step ${step.step_number}`}
+                                                            </div>
+                                                            <div style="font-size: 0.85rem; color: #6b7280; display: flex; align-items: center; gap: 12px;">
+                                                                <span><i class="fas fa-clock" style="margin-right: 4px;"></i>${step.duration_ms}ms</span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <div style="background: ${statusBg}; color: ${statusColor}; padding: 0.5rem 1rem; border-radius: 20px; font-size: 0.85rem; font-weight: 700; display: flex; align-items: center; gap: 6px; white-space: nowrap;">
+                                                        <i class="fas ${statusIcon}"></i>
+                                                        ${hasError ? 'FAIL' : 'PASS'}
+                                                    </div>
+                                                </div>
+                                                
+                                                ${step.actions && step.actions.length > 0 ? `
+                                                    <div style="margin: 1rem 0; padding: 1rem; background: #f8fafc; border-radius: 8px; border-left: 4px solid #667eea;">
+                                                        <div style="font-size: 0.85rem; font-weight: 600; color: #4b5563; margin-bottom: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px;">
+                                                            <i class="fas fa-tasks" style="margin-right: 6px;"></i>Actions Performed
+                                                        </div>
+                                                        ${step.actions.map(action => {
+                                                            const actionHasError = action.result && action.result.error;
+                                                            const actionStatus = actionHasError ? 'error' : 'success';
+                                                            const actionColor = actionHasError ? '#dc2626' : '#059669';
+                                                            const actionBg = actionHasError ? '#fef2f2' : '#f0fdf4';
+                                                            const actionBorder = actionHasError ? '#fecaca' : '#bbf7d0';
+                                                            
+                                                            return `
+                                                            <div style="background: ${actionBg}; border: 1px solid ${actionBorder}; padding: 0.75rem; border-radius: 8px; margin-bottom: 0.5rem;">
+                                                                <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px;">
+                                                                    <div style="display: flex; align-items: center; gap: 8px; flex: 1;">
+                                                                        <i class="fas fa-bolt" style="color: #667eea; font-size: 0.9rem;"></i>
+                                                                        <span style="font-family: 'Courier New', monospace; font-size: 0.9rem; font-weight: 600; color: #1f2937;">
+                                                                            ${action.name}
+                                                                        </span>
+                                                                    </div>
+                                                                    <span style="font-size: 0.75rem; font-weight: 700; color: ${actionColor}; text-transform: uppercase; letter-spacing: 0.5px;">
+                                                                        ${actionHasError ? '✖ Error' : '✓ OK'}
+                                                                    </span>
+                                                                </div>
+                                                                ${actionHasError ? `
+                                                                    <div style="margin-top: 0.5rem; padding: 0.5rem; background: white; border-radius: 4px; font-size: 0.8rem; color: #dc2626;">
+                                                                        <i class="fas fa-exclamation-triangle" style="margin-right: 4px;"></i>
+                                                                        ${action.result.error}
+                                                                    </div>
+                                                                ` : ''}
+                                                            </div>
+                                                        `}).join('')}
+                                                    </div>
+                                                ` : ''}
+                                                
+                                                ${step.url ? `
+                                                    <div style="margin: 0.75rem 0; padding: 0.75rem; background: #f0f9ff; border-radius: 6px; border-left: 3px solid #0284c7;">
+                                                        <div style="font-size: 0.75rem; font-weight: 600; color: #0369a1; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px;">
+                                                            Current URL
+                                                        </div>
+                                                        <div style="font-size: 0.85rem; color: #0c4a6e; word-break: break-all; font-family: 'Courier New', monospace;">
+                                                            <i class="fas fa-globe" style="margin-right: 6px;"></i>${step.url}
+                                                        </div>
+                                                    </div>
+                                                ` : ''}
+                                                
+                                                ${step.result ? `
+                                                    <div style="margin: 0.75rem 0; padding: 0.75rem; background: #f0fdf4; border-radius: 6px; border-left: 3px solid #10b981;">
+                                                        <div style="font-size: 0.75rem; font-weight: 600; color: #059669; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px;">
+                                                            Result
+                                                        </div>
+                                                        <div style="font-size: 0.85rem; color: #065f46; line-height: 1.5;">
+                                                            ${step.result}
+                                                        </div>
+                                                    </div>
+                                                ` : ''}
+                                                
+                                                ${step.screenshot ? `
+                                                    <button onclick="showScreenshot(${index})" style="margin-top: 0.75rem; padding: 0.75rem 1.25rem; background: linear-gradient(135deg, #667eea, #764ba2); color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 0.9rem; font-weight: 600; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3); transition: all 0.2s;">
+                                                        <i class="fas fa-image"></i>
+                                                        View Screenshot
+                                                    </button>
+                                                ` : ''}
+                                            </div>
+                                        `}).join('')}
+                                    </div>
+                                </div>
+                            ` : ''}
+                            
+                            <!-- Final Screenshot -->
+                            ${report.final_screenshot ? `
+                                <div style="margin-top: 1.5rem;">
+                                    <h3 style="margin: 0 0 1rem 0; display: flex; align-items: center; gap: 8px;">
+                                        <i class="fas fa-camera"></i> Final Screenshot
+                                    </h3>
+                                    <div style="border: 2px solid #e5e7eb; border-radius: 8px; overflow: hidden; cursor: pointer;" onclick="showFinalScreenshot()">
+                                        <img src="data:image/png;base64,${report.final_screenshot}" alt="Final Screenshot" style="width: 100%; height: auto; display: block;">
+                                    </div>
+                                </div>
+                            ` : ''}
+                        </div>
+                    </div>
+                `;
+                
+                // Store screenshots for modal display
+                window.executionScreenshots = screenshots;
+                window.finalScreenshot = report.final_screenshot;
+                
+            } else {
+                resultsContainer.innerHTML = `
+                    <div class="result-card">
+                        <div class="result-header">
+                            <div class="result-title">Execution Failed</div>
+                            <span class="status-badge status-error">FAILED</span>
+                        </div>
+                        <div class="error-message">
+                            <strong>Error:</strong> ${result.error || result.message || 'Unknown error'}
+                        </div>
+                        ${result.details ? `
+                            <div style="margin-top: 1rem; padding: 1rem; background: #fef2f2; border-radius: 8px; border: 1px solid #fecaca;">
+                                <strong>Details:</strong>
+                                <pre style="margin-top: 0.5rem; white-space: pre-wrap; color: #991b1b;">${JSON.stringify(result.details, null, 2)}</pre>
+                            </div>
+                        ` : ''}
+                    </div>
+                `;
+            }
+
+            // Scroll to results
+            resultsSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+        
+        // Screenshot modal functions
+        function showScreenshot(index) {
+            const screenshots = window.executionScreenshots || [];
+            if (screenshots[index]) {
+                showImageModal(screenshots[index].data, `Step ${screenshots[index].step} Screenshot`);
+            }
+        }
+        
+        function showFinalScreenshot() {
+            if (window.finalScreenshot) {
+                showImageModal(window.finalScreenshot, 'Final Screenshot');
+            }
+        }
+        
+        function showImageModal(base64Data, title) {
+            // Create modal
+            const modal = document.createElement('div');
+            modal.style.cssText = `
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background: rgba(0, 0, 0, 0.9);
+                z-index: 10000;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                padding: 2rem;
+                animation: fadeIn 0.2s;
+            `;
+            
+            modal.innerHTML = `
+                <div style="max-width: 90%; max-height: 90%; background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);">
+                    <div style="padding: 1.5rem; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; display: flex; justify-content: space-between; align-items: center;">
+                        <h3 style="margin: 0; font-size: 1.2rem;">
+                            <i class="fas fa-image"></i> ${title}
+                        </h3>
+                        <button onclick="this.closest('div').parentElement.parentElement.remove()" style="background: rgba(255, 255, 255, 0.2); border: none; color: white; width: 36px; height: 36px; border-radius: 50%; cursor: pointer; font-size: 1.2rem; display: flex; align-items: center; justify-content: center;">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    <div style="padding: 1.5rem; max-height: calc(90vh - 120px); overflow: auto;">
+                        <img src="data:image/png;base64,${base64Data}" alt="${title}" style="width: 100%; height: auto; border-radius: 8px;">
+                    </div>
+                    <div style="padding: 1rem 1.5rem; background: #f9fafb; border-top: 1px solid #e5e7eb; display: flex; gap: 10px;">
+                        <button onclick="downloadScreenshot('${base64Data}', '${title}')" style="padding: 0.75rem 1.5rem; background: #667eea; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 0.95rem; display: flex; align-items: center; gap: 8px;">
+                            <i class="fas fa-download"></i>
+                            Download
+                        </button>
+                        <button onclick="this.closest('div').parentElement.parentElement.remove()" style="padding: 0.75rem 1.5rem; background: #6b7280; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 0.95rem;">
+                            Close
+                        </button>
+                    </div>
+                </div>
+            `;
+            
+            document.body.appendChild(modal);
+            
+            // Close on background click
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    modal.remove();
+                }
+            });
+            
+            // Close on Escape key
+            document.addEventListener('keydown', function escapeHandler(e) {
+                if (e.key === 'Escape') {
+                    modal.remove();
+                    document.removeEventListener('keydown', escapeHandler);
+                }
+            });
+        }
+        
+        function downloadScreenshot(base64Data, filename) {
+            const link = document.createElement('a');
+            link.href = `data:image/png;base64,${base64Data}`;
+            link.download = `${filename.replace(/\s+/g, '_')}_${Date.now()}.png`;
+            link.click();
+        }
+    </script>
+    
+    <style>
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        .step-card {
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        
+        .step-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
+        }
+    </style>
+</body>
+</html>

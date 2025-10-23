@@ -167,6 +167,18 @@ def _aggregate_time_entries(entries):
                 'comment': '',
                 'started': e.get('started', ''),  # will keep the latest for sorting
                 'author': e.get('author', 'User'),
+                # Preserve additional issue details
+                'issueType': e.get('issueType', 'Unknown'),
+                'issueTypeIcon': e.get('issueTypeIcon', ''),
+                'priority': e.get('priority', 'None'),
+                'priorityIcon': e.get('priorityIcon', ''),
+                'status': e.get('status', 'Unknown'),
+                'statusCategory': e.get('statusCategory', 'Unknown'),
+                'assignee': e.get('assignee', 'Unassigned'),
+                'project': e.get('project', 'Unknown'),
+                'projectKey': e.get('projectKey', 'Unknown'),
+                'sprint': e.get('sprint', ''),
+                'epic': e.get('epic', ''),
                 '_comments': []
             }
             groups[issue_key] = g
@@ -1643,6 +1655,7 @@ import google.generativeai as genai
 import asyncio
 from browser_use import Agent
 from langchain_openai import AzureChatOpenAI
+from langchain_google_genai import ChatGoogleGenerativeAI
 import codecs
 import socket
 
@@ -6150,7 +6163,7 @@ def jira_oauth_callback():
         session['jira_login_time'] = time.time()
         session['show_welcome_message'] = True
     
-    return redirect(url_for('index'))
+    return redirect(url_for('my_details'))
 
 def refresh_jira_token():
     """Refresh the Jira access token using the refresh token."""
@@ -6613,7 +6626,7 @@ def get_time_entries_oauth(access_token, cloud_id, date_filter):
         search_url = f'https://api.atlassian.com/ex/jira/{cloud_id}/rest/api/3/search/jql'
         search_params = {
             'jql': worklog_jql,
-            'fields': 'summary,worklog',
+            'fields': 'summary,worklog,issuetype,priority,status,assignee,project,sprint,epic',
             'expand': 'worklog',
             'maxResults': 100
         }
@@ -6631,9 +6644,44 @@ def get_time_entries_oauth(access_token, cloud_id, date_filter):
         # Process each issue and extract relevant worklogs
         for issue in search_data.get('issues', []):
             issue_key = issue.get('key', 'Unknown')
-            issue_summary = issue.get('fields', {}).get('summary', 'No summary available')
+            fields = issue.get('fields', {})
+            issue_summary = fields.get('summary', 'No summary available')
             
-            worklog_data = issue.get('fields', {}).get('worklog', {})
+            # Extract additional issue details
+            issue_type = fields.get('issuetype', {})
+            issue_type_name = issue_type.get('name', 'Unknown')
+            issue_type_icon = issue_type.get('iconUrl', '')
+            
+            priority = fields.get('priority', {})
+            priority_name = priority.get('name', 'None')
+            priority_icon = priority.get('iconUrl', '')
+            
+            status = fields.get('status', {})
+            status_name = status.get('name', 'Unknown')
+            status_category = status.get('statusCategory', {}).get('name', 'Unknown')
+            
+            assignee = fields.get('assignee', {})
+            assignee_name = assignee.get('displayName', 'Unassigned') if assignee else 'Unassigned'
+            
+            project = fields.get('project', {})
+            project_name = project.get('name', 'Unknown')
+            project_key = project.get('key', 'Unknown')
+            
+            # Handle sprint - could be an array or single object
+            sprint_info = None
+            sprint_field = fields.get('sprint')
+            if sprint_field:
+                if isinstance(sprint_field, list) and sprint_field:
+                    # Get the last (current) sprint
+                    sprint_info = sprint_field[-1].get('name', '') if sprint_field[-1] else ''
+                elif isinstance(sprint_field, dict):
+                    sprint_info = sprint_field.get('name', '')
+            
+            # Handle epic
+            epic_field = fields.get('epic')
+            epic_name = epic_field.get('name', '') if epic_field else ''
+            
+            worklog_data = fields.get('worklog', {})
             worklogs = worklog_data.get('worklogs', [])
             
             for worklog in worklogs:
@@ -6662,7 +6710,19 @@ def get_time_entries_oauth(access_token, cloud_id, date_filter):
                         'timeSpentSeconds': time_spent_seconds,
                         'comment': comment_text,
                         'started': worklog_started,
-                        'author': worklog.get('author', {}).get('displayName', session.get('jira_user_name', 'User'))
+                        'author': worklog.get('author', {}).get('displayName', session.get('jira_user_name', 'User')),
+                        # Additional issue details
+                        'issueType': issue_type_name,
+                        'issueTypeIcon': issue_type_icon,
+                        'priority': priority_name,
+                        'priorityIcon': priority_icon,
+                        'status': status_name,
+                        'statusCategory': status_category,
+                        'assignee': assignee_name,
+                        'project': project_name,
+                        'projectKey': project_key,
+                        'sprint': sprint_info,
+                        'epic': epic_name
                     })
     
     except Exception as e:
@@ -9976,6 +10036,22 @@ def step_to_description(step):
     else:
         return f"{action}: {step}" if action else str(step)
 
+# Create a wrapper class to add compatibility attributes for browser_use
+# This needs to be at module level so both BrowserUse endpoints can use it
+class BrowserUseCompatibleLLM:
+    def __init__(self, llm):
+        self._llm = llm
+        self.provider = 'google'
+        self.model_name = os.getenv("GOOGLE_API_MODEL", "gemini-2.0-flash-exp")
+    
+    def __getattr__(self, name):
+        # Delegate all other attributes to the wrapped LLM
+        return getattr(self._llm, name)
+    
+    def __call__(self, *args, **kwargs):
+        # Delegate calls to the wrapped LLM
+        return self._llm(*args, **kwargs)
+
 @app.route('/api/browseruse/navigation', methods=['POST'])
 @llm_rate_limit
 def browseruse_navigation():
@@ -9985,16 +10061,18 @@ def browseruse_navigation():
     data = request.get_json() or {}
     steps = data.get('steps')
     task_prompt = data.get('prompt')
-    # Initialize AzureChatOpenAI without proxies parameter which is causing the error
-    llm = AzureChatOpenAI(
-        azure_deployment=os.getenv("AZURE_OPENAI_DEPLOYMENT"),
-        openai_api_version=os.getenv("AZURE_OPENAI_API_VERSION", "2024-02-15-preview"),
-        azure_endpoint=os.getenv("AZURE_OPENAI_ENDPOINT"),
-        api_key=os.getenv("AZURE_OPENAI_KEY"),
+    # Initialize Google Generative AI using environment variables
+    from langchain_google_genai import ChatGoogleGenerativeAI
+    
+    base_llm = ChatGoogleGenerativeAI(
+        model=os.getenv("GOOGLE_API_MODEL", "gemini-2.0-flash-exp"),
+        google_api_key=os.getenv("GOOGLE_API_KEY"),
         temperature=0.0,
-        max_tokens=300,
-        http_client=None  # Explicitly set to None to avoid proxies issue
+        max_tokens=300
     )
+    
+    # Wrap the LLM with compatibility attributes
+    llm = BrowserUseCompatibleLLM(base_llm)
     
     # Define a function to analyze screenshots for issues
     def analyze_screenshot(screenshot_data):
@@ -10054,24 +10132,68 @@ def browseruse_navigation():
         agent = Agent(task=prompt, llm=llm)
         try:
             result = asyncio.run(agent.run())
-            error_val = getattr(result, 'error', None)
-            status = "pass" if not error_val else "fail"
-            actual = getattr(result, 'extracted_content', None) or str(result)
+            
+            # Enhanced result parsing for better reporting
+            error_val = None
+            status = "pass"
+            actual = ""
+            
+            # Check if result has success/error indicators
+            if hasattr(result, 'success') and not result.success:
+                status = "fail"
+                error_val = getattr(result, 'error', 'Task failed without specific error')
+            elif hasattr(result, 'error') and result.error:
+                status = "fail"
+                error_val = str(result.error)
+            
+            # Extract meaningful content
+            if hasattr(result, 'extracted_content') and result.extracted_content:
+                actual = str(result.extracted_content)
+            elif hasattr(result, 'result') and result.result:
+                actual = str(result.result)
+            elif hasattr(result, 'output') and result.output:
+                actual = str(result.output)
+            else:
+                # Parse the string representation for key information
+                result_str = str(result)
+                if 'success=True' in result_str:
+                    actual = "Task completed successfully"
+                elif 'success=False' in result_str:
+                    status = "fail"
+                    actual = "Task failed"
+                    # Try to extract error details
+                    import re
+                    error_match = re.search(r'error=([^,\)]+)', result_str)
+                    if error_match:
+                        error_val = error_match.group(1).strip("'\"")
+                else:
+                    actual = "Task executed"
+            
+            # Extract additional details for comprehensive reporting
+            navigation_info = []
+            if hasattr(result, 'actions_taken'):
+                for action in result.actions_taken:
+                    if hasattr(action, 'action_type'):
+                        navigation_info.append(f"{action.action_type}: {getattr(action, 'details', '')}")
             
             # Check if a screenshot was captured and analyze it
             screenshot_data = getattr(result, 'screenshot', None)
+            screenshot_analysis = None
             if screenshot_data:
                 # Analyze the screenshot for issues
-                screenshot_analysis = analyze_screenshot(screenshot_data)
-                if screenshot_analysis and screenshot_analysis.get('has_issues'):
+                analysis_result = analyze_screenshot(screenshot_data)
+                if analysis_result and analysis_result.get('has_issues'):
                     # If issues were found, update the status and error
                     status = "fail"
-                    error_val = f"Screenshot analysis found issues: {screenshot_analysis.get('analysis')}"
-                    # Store the analysis in the result
-                    setattr(result, 'screenshot_analysis', screenshot_analysis.get('analysis'))
+                    if not error_val:
+                        error_val = f"Screenshot analysis found issues: {analysis_result.get('analysis')}"
+                    screenshot_analysis = analysis_result.get('analysis')
+                else:
+                    screenshot_analysis = analysis_result.get('analysis') if analysis_result else None
+                    
         except Exception as e:
             status = "fail"
-            error_val = str(e)
+            error_val = f"Agent execution failed: {str(e)}"
             actual = ""
         # Return a single step report for the whole flow
         def safe_serialize(val):
@@ -10113,55 +10235,68 @@ def browseruse_navigation():
     # Fallback: single prompt mode (legacy)
     if not task_prompt or not task_prompt.strip():
         return jsonify({"error": "Prompt is required."}), 400
+        
     agent = Agent(task=task_prompt, llm=llm)
-    result = asyncio.run(agent.run())
-    print("DEBUG: type(result) =", type(result))
-    print("DEBUG: result repr =", repr(result))
-    nav_data = None
-    screenshot_url = None
-    table_data = None
-    error_count = 0
-    # Build step-by-step report from agent history (robust: supports string or object)
-    step_reports = []
-    print("DEBUG: type(result) =", type(result))
-    print("DEBUG: result repr =", repr(result))
-    print("DEBUG: dir(result) =", dir(result))
     try:
-        print("DEBUG: hasattr(result, 'all_results') =", hasattr(result, 'all_results'))
-        print("DEBUG: type(result.all_results) =", type(result.all_results))
-        print("DEBUG: result.all_results =", repr(result.all_results))
-        print("DEBUG: bool(result.all_results) =", bool(result.all_results))
-        print("DEBUG: len(result.all_results) =", len(result.all_results))
-    except Exception as e:
-        print("DEBUG: Exception accessing result.all_results:", e)
-    # Try to get steps array from request
-    steps = data.get('steps') if 'data' in locals() else None
-    if hasattr(result, 'all_results'):
-        all_results = result.all_results
-        if all_results and hasattr(all_results, '__iter__'):
-            for idx, action in enumerate(all_results):
+        result = asyncio.run(agent.run())
+        print("DEBUG: type(result) =", type(result))
+        print("DEBUG: result repr =", repr(result))
+        
+        # Enhanced result processing for better error reporting
+        nav_data = None
+        screenshot_url = None
+        table_data = None
+        error_count = 0
+        step_reports = []
+        
+        # Extract meaningful information from the result
+        overall_status = "pass"
+        overall_error = None
+        
+        # Check overall success/failure
+        if hasattr(result, 'success') and not result.success:
+            overall_status = "fail"
+            overall_error = getattr(result, 'error', 'Task failed')
+            error_count = 1
+        elif hasattr(result, 'error') and result.error:
+            overall_status = "fail"
+            overall_error = str(result.error)
+            error_count = 1
+            
+        # Try to extract individual action results for detailed reporting
+        if hasattr(result, 'all_results') and result.all_results:
+            print(f"DEBUG: Processing {len(result.all_results)} action results")
+            for idx, action in enumerate(result.all_results):
+                # Extract action details
                 error_val = getattr(action, 'error', None)
                 status = "pass" if not error_val else "fail"
-                if steps and idx < len(steps):
-                    description = step_to_description(steps[idx])
-                else:
-                    description = getattr(action, 'description', getattr(action, 'tool_input', ''))
-                actual = getattr(action, 'extracted_content', None) or str(action)
                 
-                # Check if this action has a screenshot and analyze it
+                # Get action description
+                action_type = getattr(action, 'action_type', 'unknown')
+                action_input = getattr(action, 'action_input', '')
+                if hasattr(action, 'tool_name'):
+                    description = f"{action.tool_name}: {action_input}"
+                elif action_type and action_type != 'unknown':
+                    description = f"{action_type}: {action_input}"
+                else:
+                    description = str(action_input) or f"Action {idx + 1}"
+                
+                # Get action result
+                actual = getattr(action, 'result', '') or getattr(action, 'extracted_content', '') or str(action)
+                
+                # Screenshot analysis for this action
                 screenshot_data = getattr(action, 'screenshot', None)
                 screenshot_analysis = None
                 if screenshot_data:
-                    # Analyze the screenshot for issues
                     analysis_result = analyze_screenshot(screenshot_data)
                     if analysis_result and analysis_result.get('has_issues'):
-                        # If issues were found, update the status and error
                         status = "fail"
-                        error_val = f"Screenshot analysis found issues: {analysis_result.get('analysis')}"
-                        # Store the analysis
+                        if not error_val:
+                            error_val = f"Screenshot analysis found issues: {analysis_result.get('analysis')}"
                         screenshot_analysis = analysis_result.get('analysis')
                     else:
                         screenshot_analysis = analysis_result.get('analysis') if analysis_result else None
+                
                 step_reports.append({
                     "step": idx + 1,
                     "description": description,
@@ -10172,86 +10307,1561 @@ def browseruse_navigation():
                     "screenshot_analysis": screenshot_analysis,
                     "raw": str(action)
                 })
-    else:
-        # Fallback: parse ActionResult blocks from repr(result)
-        print("DEBUG: Fallback to parsing ActionResult blocks from repr(result)")
-        result_str = repr(result)
-        import re
-        def extract_action_results(raw):
-            results = []
-            start = 0
-            while True:
-                idx = raw.find('ActionResult(', start)
-                if idx == -1:
-                    break
-                depth = 0
-                for i in range(idx + len('ActionResult('), len(raw)):
-                    if raw[i] == '(': depth += 1
-                    elif raw[i] == ')':
-                        if depth == 0:
-                            results.append(raw[idx + len('ActionResult('):i])
-                            start = i + 1
-                            break
-                        else:
-                            depth -= 1
-                else:
-                    break
-            return results
-        matches = extract_action_results(result_str)
-        print(f"DEBUG: Found {len(matches)} ActionResult blocks.")
-        for idx, match in enumerate(matches):
-            is_done = 'is_done=True' in match
-            success = 'success=True' in match
-            error_match = re.search(r"error=([^,)]*)", match)
-            error_val = error_match.group(1) if error_match else None
-            extracted_content_match = re.search(r"extracted_content='(.*?)'", match, re.DOTALL)
-            extracted_content_val = extracted_content_match.group(1) if extracted_content_match else None
-            status = "pass" if not error_val or error_val == 'None' else "fail"
-            if steps and idx < len(steps):
-                description = step_to_description(steps[idx])
-            elif 'task_prompt' in locals() and task_prompt:
-                description = task_prompt
-            elif 'desc' in locals() and desc:
-                description = desc
+                
+                if status == "fail":
+                    error_count += 1
+        else:
+            # Fallback: create a single step report for the overall result
+            result_str = str(result)
+            description = task_prompt
+            
+            # Try to parse meaningful information from result string
+            if 'NavigationResult' in result_str:
+                actual = "Navigation completed"
+            elif 'success=True' in result_str:
+                actual = "Task completed successfully"
+            elif 'success=False' in result_str:
+                actual = "Task failed"
+                overall_status = "fail"
+                error_count = 1
             else:
-                description = ''
-            actual = extracted_content_val or match
+                actual = "Task executed"
+            
             step_reports.append({
-                "step": idx + 1,
+                "step": 1,
                 "description": description,
                 "actual": actual,
-                "status": status,
-                "error": None if error_val == 'None' else error_val,
-                "extracted_content": extracted_content_val,
-                "raw": match
+                "status": overall_status,
+                "error": overall_error,
+                "extracted_content": None,
+                "screenshot_analysis": None,
+                "raw": result_str
             })
+    
+    except Exception as e:
+        print(f"DEBUG: Exception during agent execution: {e}")
+        overall_status = "fail"
+        overall_error = f"Agent execution failed: {str(e)}"
+        error_count = 1
+        step_reports = [{
+            "step": 1,
+            "description": task_prompt,
+            "actual": "",
+            "status": "fail",
+            "error": overall_error,
+            "extracted_content": None,
+            "screenshot_analysis": None,
+            "raw": str(e)
+        }]
+    # Build combined steps for response
     combined_steps = []
     for idx, step_report in enumerate(step_reports):
         combined_steps.append({
             "intent": {"description": step_report.get("description", "")},
             "result": step_report
         })
-    if 'report' not in locals():
-        report = {
-            "summary": f"Processed {len(step_reports)} steps." if step_reports else "No steps found.",
-            "details": str(result)[:1000] if 'result' in locals() else ""
-        }
+    
+    # Build comprehensive report
+    total_steps = len(step_reports)
+    failed_steps = len([s for s in step_reports if s.get("status") == "fail"])
+    passed_steps = total_steps - failed_steps
+    
+    # Create detailed summary
+    if total_steps == 0:
+        summary = "No steps were executed"
+        details = "The browser automation agent did not generate any actionable steps"
+    elif failed_steps == 0:
+        summary = f"✅ All {total_steps} step(s) completed successfully"
+        details = f"Browser automation executed {total_steps} step(s) without errors"
+    else:
+        summary = f"⚠️ {failed_steps} of {total_steps} step(s) failed"
+        details = f"Browser automation completed with {passed_steps} successful and {failed_steps} failed step(s)"
+        
+        # Add error details to summary
+        error_details = []
+        for step in step_reports:
+            if step.get("status") == "fail" and step.get("error"):
+                error_details.append(f"Step {step.get('step', '?')}: {step.get('error', 'Unknown error')}")
+        
+        if error_details:
+            details += "\n\nErrors encountered:\n" + "\n".join(error_details[:3])  # Limit to first 3 errors
+            if len(error_details) > 3:
+                details += f"\n... and {len(error_details) - 3} more error(s)"
+    
+    report = {
+        "summary": summary,
+        "error_count": failed_steps,
+        "total_steps": total_steps,
+        "details": details
+    }
+    
     return jsonify({
         "navigation": nav_data or [],
         "screenshot_url": screenshot_url,
         "table_data": table_data,
-        "raw": str(result),
+        "raw": str(result) if 'result' in locals() else "",
         "report": report,
         "steps": combined_steps
     })
 
 @app.route('/browseruse-automation')
 def browseruse_automation():
-    return render_template('browseruse-automation-stepwise.html', active_tab='browseruse')
+    """BrowserUse automation page with redesigned UI"""
+    return render_template('browseruse-automation-simple.html', active_tab='browseruse')
+
+@app.route('/api/browseruse/custom-instruction', methods=['POST'])
+def browseruse_custom_instruction():
+    """Execute custom AI instruction using Google Gemini Computer Use"""
+    try:
+        from google import genai
+        from google.genai import types
+        from playwright.sync_api import sync_playwright
+        import time
+        
+        data = request.json
+        instruction = data.get('instruction', '').strip()
+        
+        if not instruction:
+            return jsonify({
+                "success": False,
+                "error": "No instruction provided"
+            }), 400
+        
+        # Initialize Google Gemini Client
+        client = genai.Client(api_key=os.getenv("GOOGLE_API_KEY"))
+        
+        # Screen dimensions
+        SCREEN_WIDTH = 1440
+        SCREEN_HEIGHT = 900
+        
+        # Initialize execution report data
+        execution_report = {
+            "instruction": instruction,
+            "start_time": time.time(),
+            "steps": [],
+            "screenshots": [],
+            "errors": [],
+            "success": False
+        }
+        
+        # Helper functions for coordinate conversion
+        def denormalize_x(x: int, screen_width: int) -> int:
+            return int(x / 1000 * screen_width)
+        
+        def denormalize_y(y: int, screen_height: int) -> int:
+            return int(y / 1000 * screen_height)
+        
+        def execute_function_calls(candidate, page, screen_width, screen_height):
+            """Execute function calls from Gemini Computer Use"""
+            results = []
+            function_calls = []
+            
+            for part in candidate.content.parts:
+                if part.function_call:
+                    function_calls.append(part.function_call)
+            
+            for function_call in function_calls:
+                action_result = {}
+                fname = function_call.name
+                args = function_call.args
+                
+                print(f"  🎬 Action: {fname} | Args: {args}")
+                
+                try:
+                    if fname == "open_web_browser":
+                        print("  ✅ Browser already open")
+                    elif fname == "navigate":
+                        print(f"  🌐 Navigating to: {args['url']}")
+                        page.goto(args["url"], timeout=30000)
+                        time.sleep(1)  # Let page settle
+                        print(f"  ✅ Navigated to: {page.url}")
+                    elif fname == "click_at":
+                        actual_x = denormalize_x(args["x"], screen_width)
+                        actual_y = denormalize_y(args["y"], screen_height)
+                        print(f"  🖱️ Clicking at ({actual_x}, {actual_y})")
+                        page.mouse.click(actual_x, actual_y)
+                        time.sleep(0.5)  # Let action complete
+                        print("  ✅ Click completed")
+                    elif fname == "type_text_at":
+                        actual_x = denormalize_x(args["x"], screen_width)
+                        actual_y = denormalize_y(args["y"], screen_height)
+                        text = args["text"]
+                        press_enter = args.get("press_enter", False)
+                        clear_before = args.get("clear_before_typing", True)
+                        
+                        page.mouse.click(actual_x, actual_y)
+                        time.sleep(0.3)
+                        if clear_before:
+                            page.keyboard.press("Control+A")
+                            page.keyboard.press("Backspace")
+                            time.sleep(0.2)
+                        page.keyboard.type(text, delay=50)  # 50ms between keystrokes
+                        if press_enter:
+                            page.keyboard.press("Enter")
+                            time.sleep(0.5)
+                    elif fname == "scroll_document":
+                        direction = args["direction"]
+                        if direction == "down":
+                            page.keyboard.press("PageDown")
+                        elif direction == "up":
+                            page.keyboard.press("PageUp")
+                    elif fname == "go_back":
+                        page.go_back()
+                    elif fname == "go_forward":
+                        page.go_forward()
+                    elif fname == "search":
+                        page.goto("https://www.google.com")
+                    elif fname == "wait_5_seconds":
+                        time.sleep(5)
+                    elif fname == "hover_at":
+                        actual_x = denormalize_x(args["x"], screen_width)
+                        actual_y = denormalize_y(args["y"], screen_height)
+                        page.mouse.move(actual_x, actual_y)
+                    elif fname == "key_combination":
+                        page.keyboard.press(args["keys"])
+                    else:
+                        action_result = {"warning": f"Unimplemented function {fname}"}
+                    
+                    # Wait for page to settle (increased timeout, make it optional)
+                    try:
+                        page.wait_for_load_state("domcontentloaded", timeout=10000)
+                    except Exception as wait_error:
+                        # Continue even if wait times out - page might be functional
+                        print(f"Wait timeout (non-critical): {wait_error}")
+                    
+                except Exception as e:
+                    print(f"Error executing {fname}: {e}")
+                    action_result = {"error": str(e)}
+                
+                results.append((fname, action_result))
+            
+            return results
+        
+        def get_function_responses(page, results):
+            """Get function responses with screenshot"""
+            screenshot_bytes = page.screenshot(type="png")
+            current_url = page.url
+            function_responses = []
+            
+            for name, result in results:
+                response_data = {"url": current_url}
+                response_data.update(result)
+                function_responses.append(
+                    types.FunctionResponse(
+                        name=name,
+                        response=response_data,
+                        parts=[types.FunctionResponsePart(
+                            inline_data=types.FunctionResponseBlob(
+                                mime_type="image/png",
+                                data=screenshot_bytes
+                            )
+                        )]
+                    )
+                )
+            return function_responses
+        
+        # Initialize Playwright browser
+        print(f"🚀 Starting Computer Use automation for: {instruction}")
+        playwright = sync_playwright().start()
+        
+        # Launch browser in visible mode so you can see what's happening
+        browser = playwright.chromium.launch(
+            headless=False,  # Changed to False - browser will be visible!
+            args=['--start-maximized']
+        )
+        context = browser.new_context(
+            viewport={"width": SCREEN_WIDTH, "height": SCREEN_HEIGHT},
+            no_viewport=False
+        )
+        page = context.new_page()
+        print("✅ Browser launched successfully")
+        
+        # Set default navigation timeout
+        page.set_default_navigation_timeout(30000)  # 30 seconds
+        page.set_default_timeout(30000)  # 30 seconds for all operations
+        
+        try:
+            # Go to initial page (with generous timeout)
+            print("🌐 Navigating to initial page...")
+            try:
+                page.goto("https://www.google.com", wait_until="domcontentloaded", timeout=30000)
+                print(f"✅ Loaded: {page.url}")
+            except Exception as goto_error:
+                print(f"⚠️ Initial navigation warning: {goto_error}")
+                # Continue anyway - page might be loaded enough
+            
+            # Configure Computer Use
+            print("🤖 Configuring Gemini 2.5 Computer Use...")
+            config = types.GenerateContentConfig(
+                tools=[types.Tool(
+                    computer_use=types.ComputerUse(
+                        environment=types.Environment.ENVIRONMENT_BROWSER
+                    )
+                )],
+            )
+            
+            # Initialize history with screenshot
+            print("📸 Capturing initial screenshot...")
+            initial_screenshot = page.screenshot(type="png")
+            print(f"✅ Screenshot captured ({len(initial_screenshot)} bytes)")
+            
+            contents = [
+                types.Content(role="user", parts=[
+                    types.Part(text=instruction),
+                    types.Part.from_bytes(data=initial_screenshot, mime_type='image/png')
+                ])
+            ]
+            
+            # Agent loop
+            turn_limit = 10
+            steps_executed = 0
+            final_result = None
+            
+            print(f"🔄 Starting agent loop (max {turn_limit} turns)...")
+            for i in range(turn_limit):
+                steps_executed = i + 1
+                step_start_time = time.time()
+                print(f"\n--- Turn {steps_executed}/{turn_limit} ---")
+                
+                # Generate response
+                print("🧠 Asking Gemini 2.5 Computer Use for next action...")
+                response = client.models.generate_content(
+                    model='gemini-2.5-computer-use-preview-10-2025',
+                    contents=contents,
+                    config=config,
+                )
+                print("✅ Got response from Gemini")
+                
+                candidate = response.candidates[0]
+                contents.append(candidate.content)
+                
+                # Check if task is complete
+                has_function_calls = any(part.function_call for part in candidate.content.parts)
+                print(f"📋 Function calls to execute: {sum(1 for part in candidate.content.parts if part.function_call)}")
+                
+                if not has_function_calls:
+                    # Extract text response as final result
+                    final_result = " ".join([part.text for part in candidate.content.parts if part.text])
+                    print(f"✅ Task complete! Result: {final_result[:100]}...")
+                    
+                    # Record final step
+                    execution_report["steps"].append({
+                        "step_number": steps_executed,
+                        "action": "task_complete",
+                        "result": final_result,
+                        "url": page.url,
+                        "duration_ms": int((time.time() - step_start_time) * 1000)
+                    })
+                    break
+                
+                # Execute actions
+                print("⚡ Executing actions...")
+                results = execute_function_calls(candidate, page, SCREEN_WIDTH, SCREEN_HEIGHT)
+                print(f"✅ Executed {len(results)} actions")
+                
+                # Capture screenshot after actions
+                screenshot = page.screenshot(type="png")
+                import base64
+                screenshot_base64 = base64.b64encode(screenshot).decode('utf-8')
+                
+                # Record step details
+                step_data = {
+                    "step_number": steps_executed,
+                    "actions": [],
+                    "url": page.url,
+                    "screenshot": screenshot_base64,
+                    "duration_ms": int((time.time() - step_start_time) * 1000)
+                }
+                
+                # Record each action
+                for action_name, action_result in results:
+                    step_data["actions"].append({
+                        "name": action_name,
+                        "result": action_result
+                    })
+                
+                execution_report["steps"].append(step_data)
+                execution_report["screenshots"].append({
+                    "step": steps_executed,
+                    "url": page.url,
+                    "data": screenshot_base64
+                })
+                
+                # Get function responses
+                print("📸 Capturing feedback screenshot...")
+                function_responses = get_function_responses(page, results)
+                print(f"✅ Got {len(function_responses)} function responses")
+                
+                # Add to conversation
+                contents.append(
+                    types.Content(role="user", parts=[
+                        types.Part(function_response=fr) for fr in function_responses
+                    ])
+                )
+            
+            # Complete execution report
+            execution_report["success"] = True
+            execution_report["end_time"] = time.time()
+            execution_report["duration_seconds"] = round(execution_report["end_time"] - execution_report["start_time"], 2)
+            execution_report["final_url"] = page.url
+            execution_report["final_result"] = final_result or f"Task completed in {steps_executed} steps"
+            execution_report["steps_executed"] = steps_executed
+            
+            # Capture final screenshot
+            final_screenshot = page.screenshot(type="png")
+            final_screenshot_base64 = base64.b64encode(final_screenshot).decode('utf-8')
+            execution_report["final_screenshot"] = final_screenshot_base64
+            
+            # Return success
+            print(f"\n🎉 Task completed successfully!")
+            print(f"📊 Steps executed: {steps_executed}")
+            print(f"🌐 Final URL: {page.url}")
+            print(f"💬 Result: {final_result or 'Task completed'}")
+            print(f"⏱️  Duration: {execution_report['duration_seconds']}s")
+            print(f"📸 Screenshots captured: {len(execution_report['screenshots'])}")
+            
+            result = {
+                "success": True,
+                "result": final_result or f"Task completed in {steps_executed} steps",
+                "steps_executed": steps_executed,
+                "final_url": page.url,
+                "duration_seconds": execution_report["duration_seconds"],
+                "execution_report": execution_report
+            }
+            
+            return jsonify(result)
+            
+        finally:
+            # Cleanup
+            print("🧹 Cleaning up browser...")
+            try:
+                browser.close()
+                playwright.stop()
+                print("✅ Cleanup complete")
+            except Exception as cleanup_error:
+                print(f"⚠️ Cleanup warning: {cleanup_error}")
+            
+    except Exception as e:
+        print(f"\n❌ ERROR in custom instruction execution: {str(e)}")
+        print(traceback.format_exc())
+        return jsonify({
+            "success": False,
+            "error": str(e),
+            "details": traceback.format_exc()
+        }), 500
+
+@app.route('/playwright-mcp-automation')
+def playwright_mcp_automation():
+    """Playwright MCP automation with plain text instructions"""
+    return render_template('playwright-mcp-automation.html', active_tab='playwright-mcp')
+
+@app.route('/api/playwright-mcp/execute', methods=['POST'])
+def playwright_mcp_execute():
+    """Execute Playwright automation from plain text instructions using AI interpretation"""
+    try:
+        from google import genai
+        from google.genai import types
+        from playwright.sync_api import sync_playwright
+        import time
+        
+        data = request.json
+        instruction = data.get('instruction', '').strip()
+        
+        if not instruction:
+            return jsonify({
+                "success": False,
+                "error": "No instruction provided"
+            }), 400
+        
+        print(f"\n🎭 Starting Playwright MCP Automation")
+        print(f"📝 Instruction: {instruction}")
+        
+        # Initialize Google Gemini Client for instruction interpretation
+        client = genai.Client(api_key=os.getenv("GOOGLE_API_KEY"))
+        
+        # Initialize execution report
+        execution_report = {
+            "instruction": instruction,
+            "start_time": time.time(),
+            "steps": [],
+            "screenshots": [],
+            "errors": [],
+            "success": False
+        }
+        
+        # Launch Playwright browser
+        print("🌐 Launching browser...")
+        playwright = sync_playwright().start()
+        browser = playwright.chromium.launch(
+            headless=False,
+            args=['--start-maximized']
+        )
+        context = browser.new_context(viewport={'width': 1440, 'height': 900})
+        page = context.new_page()
+        
+        try:
+            # Use AI to interpret instructions and generate Playwright actions
+            print("🤖 Interpreting instructions with AI...")
+            
+            interpretation_prompt = f"""You are a Playwright automation expert. Convert the following plain text instruction into a structured list of Playwright actions.
+
+Instruction: {instruction}
+
+Provide a JSON array of action objects. Each action should have:
+- action: The Playwright method (navigate, click, fill, select, press, wait, screenshot, etc.)
+- selector: CSS selector (if applicable)
+- value: Text value or option (if applicable)
+- url: URL (if navigate)
+- description: Human-readable description
+
+Available actions:
+- navigate: Go to URL
+- click: Click element
+- fill: Fill input field
+- select: Select dropdown option
+- press: Press keyboard key
+- wait: Wait for milliseconds
+- waitForSelector: Wait for element to appear
+- screenshot: Take screenshot
+- getText: Get text content
+- getAttribute: Get element attribute
+
+Example output:
+[
+  {{"action": "navigate", "url": "https://google.com", "description": "Navigate to Google"}},
+  {{"action": "fill", "selector": "input[name='q']", "value": "playwright", "description": "Search for playwright"}},
+  {{"action": "press", "selector": "input[name='q']", "value": "Enter", "description": "Submit search"}},
+  {{"action": "screenshot", "description": "Capture search results"}}
+]
+
+Return ONLY the JSON array, no other text."""
+
+            response = client.models.generate_content(
+                model='gemini-2.0-flash-exp',
+                contents=interpretation_prompt
+            )
+            
+            # Parse AI response to get actions
+            response_text = response.text.strip()
+            if response_text.startswith('```json'):
+                response_text = response_text[7:]
+            if response_text.endswith('```'):
+                response_text = response_text[:-3]
+            response_text = response_text.strip()
+            
+            actions = json.loads(response_text)
+            print(f"✅ Generated {len(actions)} actions")
+            
+            # Execute each action
+            for i, action_spec in enumerate(actions, 1):
+                step_start = time.time()
+                action_type = action_spec.get('action', '')
+                description = action_spec.get('description', f'Step {i}')
+                
+                print(f"\n📍 Step {i}: {description}")
+                
+                try:
+                    result = None
+                    
+                    if action_type == 'navigate':
+                        url = action_spec.get('url', '')
+                        print(f"   → Navigating to {url}")
+                        page.goto(url, wait_until='domcontentloaded', timeout=30000)
+                        result = f"Navigated to {url}"
+                        
+                    elif action_type == 'click':
+                        selector = action_spec.get('selector', '')
+                        print(f"   → Clicking {selector}")
+                        page.click(selector, timeout=10000)
+                        result = f"Clicked {selector}"
+                        
+                    elif action_type == 'fill':
+                        selector = action_spec.get('selector', '')
+                        value = action_spec.get('value', '')
+                        print(f"   → Filling {selector} with '{value}'")
+                        page.fill(selector, value, timeout=10000)
+                        result = f"Filled {selector} with '{value}'"
+                        
+                    elif action_type == 'select':
+                        selector = action_spec.get('selector', '')
+                        value = action_spec.get('value', '')
+                        print(f"   → Selecting '{value}' in {selector}")
+                        page.select_option(selector, value, timeout=10000)
+                        result = f"Selected '{value}' in {selector}"
+                        
+                    elif action_type == 'press':
+                        selector = action_spec.get('selector', '')
+                        key = action_spec.get('value', '')
+                        print(f"   → Pressing '{key}' on {selector}")
+                        if selector:
+                            page.press(selector, key, timeout=10000)
+                        else:
+                            page.keyboard.press(key)
+                        result = f"Pressed '{key}'"
+                        
+                    elif action_type == 'wait':
+                        ms = int(action_spec.get('value', 1000))
+                        print(f"   → Waiting {ms}ms")
+                        time.sleep(ms / 1000)
+                        result = f"Waited {ms}ms"
+                        
+                    elif action_type == 'waitForSelector':
+                        selector = action_spec.get('selector', '')
+                        print(f"   → Waiting for {selector}")
+                        page.wait_for_selector(selector, timeout=10000)
+                        result = f"Element {selector} appeared"
+                        
+                    elif action_type == 'screenshot':
+                        print(f"   → Taking screenshot")
+                        screenshot = page.screenshot(type="png")
+                        screenshot_base64 = base64.b64encode(screenshot).decode('utf-8')
+                        execution_report["screenshots"].append({
+                            "step": i,
+                            "description": description,
+                            "data": screenshot_base64
+                        })
+                        result = "Screenshot captured"
+                        
+                    elif action_type == 'getText':
+                        selector = action_spec.get('selector', '')
+                        print(f"   → Getting text from {selector}")
+                        text = page.locator(selector).inner_text(timeout=10000)
+                        result = f"Text: {text[:100]}"
+                        
+                    elif action_type == 'getAttribute':
+                        selector = action_spec.get('selector', '')
+                        attr = action_spec.get('attribute', 'value')
+                        print(f"   → Getting {attr} from {selector}")
+                        value = page.locator(selector).get_attribute(attr, timeout=10000)
+                        result = f"{attr}: {value}"
+                    
+                    else:
+                        result = f"Unknown action: {action_type}"
+                        print(f"   ⚠️ {result}")
+                    
+                    # Capture screenshot after each step
+                    step_screenshot = page.screenshot(type="png")
+                    step_screenshot_base64 = base64.b64encode(step_screenshot).decode('utf-8')
+                    
+                    # Record step
+                    step_duration = int((time.time() - step_start) * 1000)
+                    execution_report["steps"].append({
+                        "step_number": i,
+                        "action": action_type,
+                        "description": description,
+                        "selector": action_spec.get('selector', ''),
+                        "value": action_spec.get('value', ''),
+                        "url": page.url,
+                        "result": result,
+                        "screenshot": step_screenshot_base64,
+                        "duration_ms": step_duration,
+                        "success": True
+                    })
+                    
+                    print(f"   ✅ Success: {result}")
+                    
+                except Exception as step_error:
+                    error_msg = str(step_error)
+                    print(f"   ❌ Error: {error_msg}")
+                    
+                    # Record failed step
+                    step_duration = int((time.time() - step_start) * 1000)
+                    execution_report["steps"].append({
+                        "step_number": i,
+                        "action": action_type,
+                        "description": description,
+                        "error": error_msg,
+                        "url": page.url,
+                        "duration_ms": step_duration,
+                        "success": False
+                    })
+                    execution_report["errors"].append({
+                        "step": i,
+                        "error": error_msg
+                    })
+                    
+                    # Continue with next step
+                    continue
+            
+            # Finalize report
+            execution_report["end_time"] = time.time()
+            execution_report["duration_seconds"] = round(execution_report["end_time"] - execution_report["start_time"], 2)
+            execution_report["success"] = len(execution_report["errors"]) == 0
+            execution_report["final_url"] = page.url
+            
+            # Final screenshot
+            final_screenshot = page.screenshot(type="png")
+            execution_report["final_screenshot"] = base64.b64encode(final_screenshot).decode('utf-8')
+            
+            print(f"\n🎉 Automation completed!")
+            print(f"📊 Steps: {len(execution_report['steps'])}")
+            print(f"✅ Success: {execution_report['success']}")
+            print(f"❌ Errors: {len(execution_report['errors'])}")
+            print(f"⏱️  Duration: {execution_report['duration_seconds']}s")
+            
+            return jsonify({
+                "success": True,
+                "execution_report": execution_report
+            })
+            
+        finally:
+            # Cleanup
+            print("🧹 Cleaning up browser...")
+            try:
+                browser.close()
+                playwright.stop()
+                print("✅ Cleanup complete")
+            except Exception as cleanup_error:
+                print(f"⚠️ Cleanup warning: {cleanup_error}")
+            
+    except Exception as e:
+        print(f"\n❌ ERROR: {str(e)}")
+        print(traceback.format_exc())
+        return jsonify({
+            "success": False,
+            "error": str(e),
+            "details": traceback.format_exc()
+        }), 500
+
+@app.route('/api/playwright-mcp/import-jira/<ticket_id>', methods=['GET'])
+def playwright_mcp_import_jira(ticket_id):
+    """Import Jira ticket description as automation instruction"""
+    try:
+        # Check if user is authenticated with Jira
+        access_token = session.get('jira_access_token')
+        cloud_id = session.get('jira_cloud_id')
+        
+        if not access_token or not cloud_id:
+            return jsonify({
+                'success': False,
+                'error': 'Not authenticated with Jira. Please connect to Jira first.'
+            }), 401
+        
+        # Check if token needs refresh
+        token_expires = session.get('jira_token_expires', 0)
+        if time.time() >= token_expires:
+            if not refresh_jira_token():
+                return jsonify({
+                    'success': False,
+                    'error': 'Jira token expired. Please reconnect to Jira.'
+                }), 401
+            access_token = session['jira_access_token']
+        
+        # Fetch issue from Jira API
+        headers = {
+            'Authorization': f'Bearer {access_token}',
+            'Accept': 'application/json',
+            'Content-Type': 'application/json'
+        }
+        
+        jira_url = f'https://api.atlassian.com/ex/jira/{cloud_id}/rest/api/3/issue/{ticket_id}'
+        response = requests.get(jira_url, headers=headers, timeout=30)
+        
+        if response.status_code == 404:
+            return jsonify({
+                'success': False,
+                'error': f'Jira ticket {ticket_id} not found'
+            }), 404
+        elif response.status_code != 200:
+            return jsonify({
+                'success': False,
+                'error': f'Failed to fetch Jira ticket: {response.status_code}'
+            }), response.status_code
+        
+        issue_data = response.json()
+        
+        # Extract description
+        description = issue_data.get('fields', {}).get('description', '')
+        
+        # Handle different description formats (ADF or plain text)
+        if isinstance(description, dict):
+            # Atlassian Document Format (ADF)
+            description_text = extract_text_from_adf(description)
+        else:
+            description_text = description or ''
+        
+        if not description_text:
+            return jsonify({
+                'success': False,
+                'error': f'Jira ticket {ticket_id} has no description'
+            }), 400
+        
+        return jsonify({
+            'success': True,
+            'description': description_text,
+            'ticket_id': ticket_id,
+            'summary': issue_data.get('fields', {}).get('summary', '')
+        })
+        
+    except Exception as e:
+        logger.error(f"Error importing from Jira: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+def extract_text_from_adf(adf_content):
+    """Extract plain text from Atlassian Document Format (ADF)"""
+    if not isinstance(adf_content, dict):
+        return str(adf_content)
+    
+    text_parts = []
+    
+    def traverse(node):
+        if isinstance(node, dict):
+            # Extract text from text nodes
+            if node.get('type') == 'text':
+                text_parts.append(node.get('text', ''))
+            
+            # Traverse content array
+            if 'content' in node:
+                for child in node['content']:
+                    traverse(child)
+        elif isinstance(node, list):
+            for item in node:
+                traverse(item)
+    
+    traverse(adf_content)
+    return ' '.join(text_parts).strip()
+
+@app.route('/api/playwright-mcp/export-jira/<ticket_id>', methods=['POST'])
+def playwright_mcp_export_jira(ticket_id):
+    """Export Playwright MCP execution results to Jira as a comment"""
+    try:
+        # Check if user is authenticated with Jira
+        access_token = session.get('jira_access_token')
+        cloud_id = session.get('jira_cloud_id')
+        
+        if not access_token or not cloud_id:
+            return jsonify({
+                'success': False,
+                'error': 'Not authenticated with Jira. Please connect to Jira first.'
+            }), 401
+        
+        # Check if token needs refresh
+        token_expires = session.get('jira_token_expires', 0)
+        if time.time() >= token_expires:
+            if not refresh_jira_token():
+                return jsonify({
+                    'success': False,
+                    'error': 'Jira token expired. Please reconnect to Jira.'
+                }), 401
+            access_token = session['jira_access_token']
+        
+        # Get results from request
+        data = request.json
+        results = data.get('results', '')
+        screenshots_data = data.get('screenshots', {})
+        
+        if not results:
+            return jsonify({
+                'success': False,
+                'error': 'No results to export'
+            }), 400
+        
+        # Upload test report and screenshots as attachments
+        uploaded_attachments = []
+        attachment_ids = []
+        
+        # Get full report data
+        report_data = data.get('report', {})
+        
+        # 1. Upload comprehensive test report as HTML file
+        try:
+            html_report = generate_html_test_report(report_data, results)
+            report_attachment_result = upload_html_report_to_jira(
+                access_token, cloud_id, ticket_id, html_report, 
+                f'playwright_test_report_{ticket_id}.html'
+            )
+            if report_attachment_result and len(report_attachment_result) > 0:
+                uploaded_attachments.append({
+                    'filename': f'playwright_test_report_{ticket_id}.html',
+                    'id': report_attachment_result[0].get('id'),
+                    'description': 'Comprehensive Test Report'
+                })
+                attachment_ids.append(report_attachment_result[0].get('id'))
+        except Exception as report_error:
+            logger.warning(f"Failed to upload test report: {report_error}")
+        
+        # 2. Upload final screenshot if available
+        if screenshots_data:
+            try:
+                final_screenshot = screenshots_data.get('final_screenshot')
+                if final_screenshot:
+                    attachment_result = upload_screenshot_to_jira(
+                        access_token, cloud_id, ticket_id, 
+                        final_screenshot, 'automation_result.png'
+                    )
+                    if attachment_result and len(attachment_result) > 0:
+                        uploaded_attachments.append({
+                            'filename': 'automation_result.png',
+                            'id': attachment_result[0].get('id'),
+                            'description': 'Final Automation Screenshot'
+                        })
+                        attachment_ids.append(attachment_result[0].get('id'))
+            except Exception as attach_error:
+                logger.warning(f"Failed to upload screenshot: {attach_error}")
+        
+        # Convert markdown to ADF format for Jira (with embedded images)
+        try:
+            adf_comment = convert_markdown_to_adf(results, uploaded_attachments)
+            
+            # Validate ADF structure
+            if not validate_adf_structure(adf_comment):
+                logger.warning("Generated ADF structure is invalid, using fallback")
+                # Fallback to simple text format
+                adf_comment = create_simple_adf_comment(results, uploaded_attachments)
+        except Exception as adf_error:
+            logger.error(f"ADF conversion failed: {adf_error}, using simple format")
+            # Fallback to simple text format
+            adf_comment = create_simple_adf_comment(results, uploaded_attachments)
+        
+        # Post comment to Jira
+        headers = {
+            'Authorization': f'Bearer {access_token}',
+            'Accept': 'application/json',
+            'Content-Type': 'application/json'
+        }
+        
+        jira_url = f'https://api.atlassian.com/ex/jira/{cloud_id}/rest/api/3/issue/{ticket_id}/comment'
+        comment_payload = {
+            'body': adf_comment
+        }
+        
+        response = requests.post(jira_url, headers=headers, json=comment_payload, timeout=30)
+        
+        if response.status_code == 404:
+            return jsonify({
+                'success': False,
+                'error': f'Jira ticket {ticket_id} not found'
+            }), 404
+        elif response.status_code not in [200, 201]:
+            # Log the error details for debugging
+            error_detail = response.text
+            logger.error(f"Jira API error: {response.status_code} - {error_detail}")
+            
+            # For ADF validation errors, provide more specific guidance
+            if "ATTACHMENT_VALIDATION_ERROR" in error_detail:
+                logger.error("ADF validation error - likely due to media reference issues")
+                return jsonify({
+                    'success': False,
+                    'error': 'ADF format validation failed - screenshot was uploaded but could not be embedded in comment',
+                    'details': 'Screenshot attached successfully, but comment formatting had validation issues'
+                }), 400
+            else:
+                # Only log ADF payload for other errors to avoid sensitive data exposure
+                logger.debug(f"ADF payload structure: {len(adf_comment.get('content', []))} content blocks")
+                
+            return jsonify({
+                'success': False,
+                'error': f'Failed to post comment to Jira: {response.status_code}',
+                'details': error_detail
+            }), response.status_code
+        
+        comment_id = response.json().get('id')
+        
+        return jsonify({
+            'success': True,
+            'ticket_id': ticket_id,
+            'comment_id': comment_id,
+            'attachments_uploaded': len(uploaded_attachments),
+            'attachment_names': [a['filename'] for a in uploaded_attachments]
+        })
+        
+    except Exception as e:
+        logger.error(f"Error exporting to Jira: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+def generate_html_test_report(report_data, markdown_results):
+    """Generate a comprehensive HTML test report"""
+    import html
+    
+    try:
+        # Extract key information from report
+        instruction = html.escape(report_data.get('instruction', 'No instruction provided'))
+        status = report_data.get('status', 'UNKNOWN')
+        duration = report_data.get('duration', 0)
+        steps = report_data.get('steps', [])
+        
+        # Calculate success rate
+        total_steps = len(steps)
+        passed_steps = sum(1 for step in steps if step.get('status') == 'PASS')
+        failed_steps = total_steps - passed_steps
+        success_rate = (passed_steps / total_steps * 100) if total_steps > 0 else 0
+        
+        # Determine overall status color and icon
+        status_class = 'status-success' if status == 'SUCCESS' else 'status-failed'
+        status_icon = '✓' if status == 'SUCCESS' else '✗'
+        
+        # Generate HTML report
+        html_content = f"""
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Playwright MCP Test Report</title>
+    <style>
+        * {{ box-sizing: border-box; }}
+        body {{ 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            line-height: 1.6;
+            background: #f5f7fa;
+            color: #333;
+        }}
+        .container {{ max-width: 1200px; margin: 0 auto; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }}
+        .header {{ 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            border-radius: 8px;
+            margin-bottom: 30px;
+        }}
+        .header h1 {{ margin: 0 0 15px 0; font-size: 2em; }}
+        .header p {{ margin: 5px 0; opacity: 0.95; }}
+        .status-badge {{
+            display: inline-block;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: bold;
+            font-size: 1.1em;
+            margin-top: 10px;
+        }}
+        .status-success {{ background: #28a745; color: white; }}
+        .status-failed {{ background: #dc3545; color: white; }}
+        .summary-grid {{ 
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }}
+        .summary-card {{ 
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            border: none;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }}
+        .summary-value {{ font-size: 2.5em; font-weight: bold; margin: 10px 0; color: #667eea; }}
+        .summary-label {{ font-size: 0.9em; color: #666; text-transform: uppercase; letter-spacing: 1px; }}
+        .summary-sublabel {{ font-size: 1.2em; font-weight: 600; margin-top: 5px; color: #333; }}
+        .steps-section {{ margin-top: 30px; }}
+        .steps-section h2 {{ color: #667eea; border-bottom: 3px solid #667eea; padding-bottom: 10px; }}
+        .steps-table {{ 
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }}
+        .steps-table th, .steps-table td {{ 
+            border: 1px solid #e1e8ed;
+            padding: 14px;
+            text-align: left;
+        }}
+        .steps-table th {{ 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 0.85em;
+            letter-spacing: 0.5px;
+        }}
+        .steps-table tbody tr:hover {{ background: #f8f9fa; }}
+        .step-pass {{ background: #d4edda; }}
+        .step-fail {{ background: #f8d7da; }}
+        .step-number {{ font-weight: bold; font-size: 1.1em; color: #667eea; }}
+        .step-status-pass {{ color: #28a745; font-weight: bold; }}
+        .step-status-fail {{ color: #dc3545; font-weight: bold; }}
+        .code {{ 
+            background: #f4f5f7;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+            color: #d73a49;
+            border: 1px solid #e1e4e8;
+        }}
+        .footer {{
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 2px solid #e1e8ed;
+            text-align: center;
+            color: #666;
+            font-size: 0.9em;
+        }}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎭 Playwright MCP Automation Report</h1>
+            <p><strong>Test Instruction:</strong> {instruction}</p>
+            <p><strong>Generated:</strong> {datetime.datetime.now().strftime('%B %d, %Y at %I:%M %p')}</p>
+            <div class="status-badge {status_class}">{status_icon} {status}</div>
+        </div>
+        
+        <div class="summary-grid">
+            <div class="summary-card">
+                <div class="summary-label">Total Steps</div>
+                <div class="summary-value">{total_steps}</div>
+            </div>
+            <div class="summary-card">
+                <div class="summary-label">Passed</div>
+                <div class="summary-value" style="color: #28a745;">{passed_steps}</div>
+            </div>
+            <div class="summary-card">
+                <div class="summary-label">Failed</div>
+                <div class="summary-value" style="color: #dc3545;">{failed_steps}</div>
+            </div>
+            <div class="summary-card">
+                <div class="summary-label">Success Rate</div>
+                <div class="summary-value">{success_rate:.1f}%</div>
+            </div>
+            <div class="summary-card">
+                <div class="summary-label">Duration</div>
+                <div class="summary-value" style="font-size: 1.8em;">{duration/1000:.2f}s</div>
+            </div>
+        </div>
+        
+        <div class="steps-section">
+            <h2>📋 Execution Steps</h2>
+            <table class="steps-table">
+                <thead>
+                    <tr>
+                        <th style="width: 60px;">Step</th>
+                        <th style="width: 100px;">Status</th>
+                        <th>Description</th>
+                        <th style="width: 120px;">Action</th>
+                        <th style="width: 100px;">Duration</th>
+                    </tr>
+                </thead>
+                <tbody>
+"""
+        
+        # Add step details
+        for i, step in enumerate(steps, 1):
+            step_status = step.get('status', 'UNKNOWN')
+            step_class = 'step-pass' if step_status == 'PASS' else 'step-fail'
+            status_text_class = 'step-status-pass' if step_status == 'PASS' else 'step-status-fail'
+            status_icon = '✓' if step_status == 'PASS' else '✗'
+            
+            description = html.escape(step.get('description', 'No description'))
+            action = html.escape(step.get('action', 'N/A'))
+            duration_ms = step.get('duration', 0)
+            
+            html_content += f"""
+                    <tr class="{step_class}">
+                        <td class="step-number">{i}</td>
+                        <td class="{status_text_class}">{status_icon} {step_status}</td>
+                        <td>{description}</td>
+                        <td><span class="code">{action}</span></td>
+                        <td>{duration_ms}ms</td>
+                    </tr>
+"""
+        
+        html_content += f"""
+                </tbody>
+            </table>
+        </div>
+        
+        <div class="footer">
+            <p>Generated by Playwright MCP Automation Framework</p>
+            <p>Total Execution Time: {duration/1000:.2f} seconds | Success Rate: {success_rate:.1f}%</p>
+        </div>
+    </div>
+</body>
+</html>
+"""
+        
+        return html_content
+        
+    except Exception as e:
+        logger.error(f"Failed to generate HTML report: {e}")
+        import traceback
+        logger.error(f"Traceback: {traceback.format_exc()}")
+        
+        # Fallback simple report
+        return f"""
+<!DOCTYPE html>
+<html><head>
+    <meta charset="UTF-8">
+    <title>Test Report</title>
+    <style>
+        body {{ font-family: Arial, sans-serif; padding: 20px; }}
+        .error {{ background: #f8d7da; border: 1px solid #dc3545; padding: 15px; border-radius: 5px; }}
+    </style>
+</head>
+<body>
+    <h1>Playwright MCP Test Report</h1>
+    <div class="error">
+        <p><strong>Error generating detailed report.</strong></p>
+        <p>Report data: {str(report_data)[:200]}</p>
+    </div>
+</body></html>
+"""
+
+def upload_html_report_to_jira(access_token, cloud_id, ticket_id, html_content, filename):
+    """Upload an HTML report as attachment to Jira ticket"""
+    try:
+        # Convert HTML content to bytes
+        html_bytes = html_content.encode('utf-8')
+        
+        # Prepare multipart form data
+        files = {
+            'file': (filename, html_bytes, 'text/html')
+        }
+        
+        headers = {
+            'Authorization': f'Bearer {access_token}',
+            'X-Atlassian-Token': 'no-check'
+        }
+        
+        # Upload to Jira
+        upload_url = f'https://api.atlassian.com/ex/jira/{cloud_id}/rest/api/3/issue/{ticket_id}/attachments'
+        
+        response = requests.post(upload_url, headers=headers, files=files, timeout=60)
+        
+        if response.status_code == 200:
+            attachments = response.json()
+            logger.info(f"Successfully uploaded HTML report: {filename}")
+            return attachments
+        else:
+            logger.error(f"Failed to upload HTML report: {response.status_code} - {response.text}")
+            return None
+            
+    except Exception as e:
+        logger.error(f"Error uploading HTML report: {str(e)}")
+        return None
+
+def upload_screenshot_to_jira(access_token, cloud_id, ticket_id, screenshot_base64, filename):
+    """Upload a screenshot as attachment to Jira ticket"""
+    import base64
+    import io
+    
+    try:
+        # Decode base64 screenshot
+        screenshot_bytes = base64.b64decode(screenshot_base64)
+        
+        # Prepare multipart upload
+        files = {
+            'file': (filename, io.BytesIO(screenshot_bytes), 'image/png')
+        }
+        
+        headers = {
+            'Authorization': f'Bearer {access_token}',
+            'Accept': 'application/json',
+            'X-Atlassian-Token': 'no-check'
+        }
+        
+        attachment_url = f'https://api.atlassian.com/ex/jira/{cloud_id}/rest/api/3/issue/{ticket_id}/attachments'
+        
+        response = requests.post(attachment_url, headers=headers, files=files, timeout=30)
+        
+        if response.status_code in [200, 201]:
+            return response.json()
+        else:
+            logger.error(f"Failed to upload attachment {filename}: {response.status_code}")
+            return None
+            
+    except Exception as e:
+        logger.error(f"Error uploading screenshot {filename}: {str(e)}")
+        return None
+
+def convert_markdown_to_adf(markdown_text, uploaded_attachments=None):
+    """Convert markdown-style Jira wiki text to Atlassian Document Format (ADF)"""
+    import re
+    
+    # Parse the markdown and convert to ADF
+    adf = {
+        "version": 1,
+        "type": "doc",
+        "content": []
+    }
+    
+    uploaded_attachments = uploaded_attachments or []
+    
+    lines = markdown_text.split('\n')
+    current_paragraph = []
+    in_table = False
+    table_rows = []
+    
+    def parse_text_with_formatting(text):
+        """Parse text with color and code formatting"""
+        parts = []
+        
+        # Clean up text - remove double backslashes and other problematic characters
+        text = text.replace('\\\\', ' / ').replace('\\', ' / ')
+        
+        # Handle {color:xxx}text{color}
+        color_pattern = r'\{color:(\w+)\}([^{]+)\{color\}'
+        text_parts = re.split(color_pattern, text)
+        
+        i = 0
+        while i < len(text_parts):
+            part = text_parts[i]
+            if not part:
+                i += 1
+                continue
+            
+            # Check if this is a color name followed by colored text
+            if i + 2 < len(text_parts) and text_parts[i] in ['green', 'red', 'blue', 'orange']:
+                color = text_parts[i]
+                colored_text = text_parts[i + 1]
+                parts.append({"type": "text", "text": colored_text})
+                i += 3
+            # Handle inline code {{text}}
+            elif '{{' in part and '}}' in part:
+                code_parts = re.split(r'\{\{([^}]+)\}\}', part)
+                for j, code_part in enumerate(code_parts):
+                    if j % 2 == 1:  # Odd indices are code
+                        parts.append({"type": "text", "text": code_part, "marks": [{"type": "code"}]})
+                    elif code_part:
+                        parts.append({"type": "text", "text": code_part})
+                i += 1
+            else:
+                if part:
+                    parts.append({"type": "text", "text": part})
+                i += 1
+        
+        return parts if parts else [{"type": "text", "text": text}]
+    
+    def finalize_paragraph():
+        nonlocal current_paragraph
+        if current_paragraph:
+            text = ' '.join(current_paragraph)
+            adf["content"].append({
+                "type": "paragraph",
+                "content": parse_text_with_formatting(text)
+            })
+            current_paragraph = []
+    
+    def finalize_table():
+        nonlocal in_table, table_rows
+        if in_table and table_rows:
+            # Build ADF table structure
+            table = {
+                "type": "table",
+                "attrs": {"isNumberColumnEnabled": False, "layout": "default"},
+                "content": []
+            }
+            
+            for row_idx, row in enumerate(table_rows):
+                is_header = row_idx == 0
+                table_row = {
+                    "type": "tableRow",
+                    "content": []
+                }
+                
+                for cell in row:
+                    table_row["content"].append({
+                        "type": "tableHeader" if is_header else "tableCell",
+                        "content": [{
+                            "type": "paragraph",
+                            "content": parse_text_with_formatting(cell)
+                        }]
+                    })
+                
+                table["content"].append(table_row)
+            
+            adf["content"].append(table)
+            table_rows = []
+            in_table = False
+    
+    for line in lines:
+        line_stripped = line.strip()
+        
+        if not line_stripped:
+            finalize_paragraph()
+            finalize_table()
+            continue
+        
+        # Handle Jira table rows (||header|| or |cell|)
+        if line_stripped.startswith('||') or (line_stripped.startswith('|') and line_stripped.endswith('|')):
+            finalize_paragraph()
+            
+            if not in_table:
+                in_table = True
+            
+            # Parse table row
+            if line_stripped.startswith('||'):
+                # Header row
+                cells = [cell.strip() for cell in line_stripped.split('||') if cell.strip()]
+            else:
+                # Data row
+                cells = [cell.strip() for cell in line_stripped.split('|') if cell.strip()]
+            
+            table_rows.append(cells)
+            continue
+        
+        # Not a table line - finalize any pending table
+        finalize_table()
+        
+        # Handle headers (h3, h4)
+        if line_stripped.startswith('h3.'):
+            finalize_paragraph()
+            adf["content"].append({
+                "type": "heading",
+                "attrs": {"level": 3},
+                "content": [{"type": "text", "text": line_stripped[4:].strip()}]
+            })
+        elif line_stripped.startswith('h4.'):
+            finalize_paragraph()
+            adf["content"].append({
+                "type": "heading",
+                "attrs": {"level": 4},
+                "content": [{"type": "text", "text": line_stripped[4:].strip()}]
+            })
+        # Handle bold text (*text*)
+        elif line_stripped.startswith('*') and not line_stripped.startswith('**'):
+            finalize_paragraph()
+            # Remove leading asterisk
+            text = line_stripped[1:].strip()
+            adf["content"].append({
+                "type": "paragraph",
+                "content": parse_text_with_formatting(text)
+            })
+        else:
+            current_paragraph.append(line_stripped)
+    
+    # Finalize any remaining content
+    finalize_paragraph()
+    finalize_table()
+    
+    # Add attachments section if available
+    if uploaded_attachments and len(uploaded_attachments) > 0:
+        # Add separator and heading
+        adf["content"].append({
+            "type": "rule"
+        })
+        
+        adf["content"].append({
+            "type": "heading",
+            "attrs": {"level": 4},
+            "content": [{"type": "text", "text": "� Test Artifacts"}]
+        })
+        
+        # List all attachments
+        for attachment in uploaded_attachments:
+            filename = attachment.get('filename', 'attachment')
+            description = attachment.get('description', 'Attachment')
+            
+            adf["content"].append({
+                "type": "paragraph",
+                "content": [{"type": "text", "text": f"� {description}: {filename}"}]
+            })
+    
+    return adf
+
+def validate_adf_structure(adf):
+    """Validate basic ADF structure before sending to Jira"""
+    try:
+        if not isinstance(adf, dict):
+            return False
+        
+        if adf.get('version') != 1 or adf.get('type') != 'doc':
+            return False
+        
+        content = adf.get('content', [])
+        if not isinstance(content, list):
+            return False
+        
+        # Check each content block
+        for block in content:
+            if not isinstance(block, dict) or 'type' not in block:
+                return False
+            
+            block_type = block.get('type')
+            if block_type in ['paragraph', 'heading']:
+                # These should have content array
+                if 'content' not in block or not isinstance(block['content'], list):
+                    return False
+            elif block_type == 'table':
+                # Tables should have content with rows
+                if 'content' not in block or not isinstance(block['content'], list):
+                    return False
+            elif block_type == 'rule':
+                # Rules are simple - no content validation needed
+                pass
+            elif block_type == 'mediaSingle':
+                # Media blocks should have content with media
+                if 'content' not in block or not isinstance(block['content'], list):
+                    return False
+        
+        return True
+    except Exception as e:
+        logger.error(f"ADF validation error: {e}")
+        return False
+
+def create_simple_adf_comment(markdown_text, uploaded_attachments=None):
+    """Create a simple, guaranteed-valid ADF comment as fallback"""
+    adf = {
+        "version": 1,
+        "type": "doc",
+        "content": [
+            {
+                "type": "heading",
+                "attrs": {"level": 3},
+                "content": [{"type": "text", "text": "Playwright MCP Automation Results"}]
+            },
+            {
+                "type": "paragraph",
+                "content": [{"type": "text", "text": "Automation execution completed successfully."}]
+            }
+        ]
+    }
+    
+    # Add basic results as text blocks
+    lines = markdown_text.split('\n')
+    current_text = []
+    
+    for line in lines[:20]:  # Limit to first 20 lines to avoid issues
+        line = line.strip()
+        if line and not line.startswith('|'):  # Skip table lines
+            # Clean problematic characters
+            clean_line = line.replace('\\', ' / ').replace('{{', '').replace('}}', '')
+            current_text.append(clean_line)
+            
+            if len(current_text) >= 5:  # Group lines into paragraphs
+                adf["content"].append({
+                    "type": "paragraph",
+                    "content": [{"type": "text", "text": " ".join(current_text)}]
+                })
+                current_text = []
+    
+    # Add any remaining text
+    if current_text:
+        adf["content"].append({
+            "type": "paragraph",
+            "content": [{"type": "text", "text": " ".join(current_text)}]
+        })
+    
+    # Add attachment references if available
+    if uploaded_attachments and len(uploaded_attachments) > 0:
+        adf["content"].append({
+            "type": "paragraph",
+            "content": [{"type": "text", "text": "📎 Attachments:"}]
+        })
+        
+        for attachment in uploaded_attachments:
+            filename = attachment.get('filename', 'attachment')
+            description = attachment.get('description', 'Attachment')
+            adf["content"].append({
+                "type": "paragraph",
+                "content": [{"type": "text", "text": f"  • {description}: {filename}"}]
+            })
+    
+    return adf
 
 @app.route('/browseruse-automation-stepwise')
 def browseruse_automation_stepwise():
-    return render_template('browseruse-automation-stepwise.html', active_tab='browseruse-stepwise')
+    """Legacy route - redirect to main browseruse automation"""
+    return render_template('browseruse-automation-stepwise.html', active_tab='browseruse')
 
 @app.route('/pom-step-builder')
 def pom_step_builder():
@@ -10893,10 +12503,9 @@ def extract_text_from_document():
 @app.route('/api/browseruse/navigation', methods=['POST'])
 @llm_rate_limit
 def browseruse_navigation_executor():
-    """Handle browser automation requests from the frontend"""
+    """Enhanced browser automation endpoint with comprehensive action support"""
     logger.info("Browser automation endpoint called")
     
-    # Catch all exceptions at the top level to ensure we always return a valid response
     try:
         if not playwright_available:
             logger.error("Playwright is not installed. Cannot run browser automation.")
@@ -10909,7 +12518,6 @@ def browseruse_navigation_executor():
             }), 500
         
         data = request.get_json()
-        logger.info(f"Received data: {data is not None}")
         if not data:
             return jsonify({'success': False, 'error': 'No data provided'}), 400
         
@@ -10917,117 +12525,277 @@ def browseruse_navigation_executor():
         steps = data.get('steps')
         capture_screenshot = data.get('captureScreenshotOnFailure', True)
         
-        logger.info(f"Prompt: {prompt[:50] if prompt else 'None'}... Steps: {len(steps) if steps else 0}")
+        logger.info(f"Running browser automation with {len(steps) if steps else 0} steps")
         
-        if not prompt or not steps:
-            return jsonify({'success': False, 'error': 'Missing prompt or steps'}), 400
-        
-        logger.info(f"Running browser automation with {len(steps)} steps")
+        if not steps:
+            return jsonify({'success': False, 'error': 'No steps provided'}), 400
         
         results = []
         failure_screenshot = None
         success = True
+        page = None
+        browser = None
         
         try:
             with sync_playwright() as p:
-                browser = p.chromium.launch(headless=True)
-                context = browser.new_context()
+                browser = p.chromium.launch(
+                    headless=True,
+                    args=['--no-sandbox', '--disable-dev-shm-usage']
+                )
+                context = browser.new_context(
+                    viewport={'width': 1280, 'height': 720},
+                    user_agent='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+                )
                 page = context.new_page()
+                
+                # Set default timeouts
+                page.set_default_timeout(30000)  # 30 seconds
                 
                 for i, step in enumerate(steps):
                     action = step.get('action')
-                    logger.info(f"Executing step {i+1}/{len(steps)}: {action}")
+                    step_num = i + 1
+                    logger.info(f"Executing step {step_num}/{len(steps)}: {action}")
                     
-                    if action == 'navigate':
-                        url = step.get('url')
-                        if not url:
-                            raise ValueError("URL is required for navigate action")
-                        page.goto(url, wait_until='networkidle')
-                        results.append({'step': i, 'action': action, 'success': True})
+                    try:
+                        if action == 'navigate':
+                            url = step.get('url')
+                            if not url:
+                                raise ValueError("URL is required for navigate action")
+                            if not url.startswith(('http://', 'https://')):
+                                url = 'https://' + url
+                            page.goto(url, wait_until='networkidle', timeout=30000)
+                            results.append({'step': step_num, 'action': action, 'success': True, 'url': url})
+                        
+                        elif action == 'click':
+                            selector = step.get('selector')
+                            if not selector:
+                                raise ValueError("Selector is required for click action")
+                            page.click(selector, timeout=10000)
+                            results.append({'step': step_num, 'action': action, 'success': True, 'selector': selector})
+                        
+                        elif action == 'double_click':
+                            selector = step.get('selector')
+                            if not selector:
+                                raise ValueError("Selector is required for double_click action")
+                            page.dblclick(selector, timeout=10000)
+                            results.append({'step': step_num, 'action': action, 'success': True, 'selector': selector})
+                        
+                        elif action == 'right_click':
+                            selector = step.get('selector')
+                            if not selector:
+                                raise ValueError("Selector is required for right_click action")
+                            page.click(selector, button='right', timeout=10000)
+                            results.append({'step': step_num, 'action': action, 'success': True, 'selector': selector})
+                        
+                        elif action == 'hover':
+                            selector = step.get('selector')
+                            if not selector:
+                                raise ValueError("Selector is required for hover action")
+                            page.hover(selector, timeout=10000)
+                            results.append({'step': step_num, 'action': action, 'success': True, 'selector': selector})
+                        
+                        elif action == 'fill':
+                            selector = step.get('selector')
+                            value = step.get('value')
+                            if not selector or value is None:
+                                raise ValueError("Selector and value are required for fill action")
+                            page.fill(selector, str(value), timeout=10000)
+                            results.append({'step': step_num, 'action': action, 'success': True, 'selector': selector, 'value': value})
+                        
+                        elif action == 'select':
+                            selector = step.get('selector')
+                            value = step.get('value')
+                            if not selector or value is None:
+                                raise ValueError("Selector and value are required for select action")
+                            page.select_option(selector, value, timeout=10000)
+                            results.append({'step': step_num, 'action': action, 'success': True, 'selector': selector, 'value': value})
+                        
+                        elif action == 'check':
+                            selector = step.get('selector')
+                            value = step.get('value', 'check').lower()
+                            if not selector:
+                                raise ValueError("Selector is required for check action")
+                            if value == 'check':
+                                page.check(selector, timeout=10000)
+                            else:
+                                page.uncheck(selector, timeout=10000)
+                            results.append({'step': step_num, 'action': action, 'success': True, 'selector': selector, 'checked': value == 'check'})
+                        
+                        elif action == 'wait_for_element':
+                            selector = step.get('selector')
+                            if not selector:
+                                raise ValueError("Selector is required for wait_for_element action")
+                            page.wait_for_selector(selector, timeout=30000)
+                            results.append({'step': step_num, 'action': action, 'success': True, 'selector': selector})
+                        
+                        elif action == 'wait_for_navigation':
+                            page.wait_for_load_state('networkidle', timeout=30000)
+                            results.append({'step': step_num, 'action': action, 'success': True})
+                        
+                        elif action == 'wait_for_url':
+                            url = step.get('url')
+                            if not url:
+                                raise ValueError("URL is required for wait_for_url action")
+                            page.wait_for_url(url, timeout=30000)
+                            results.append({'step': step_num, 'action': action, 'success': True, 'url': url})
+                        
+                        elif action == 'wait_for_timeout':
+                            timeout = step.get('timeout', 1000)
+                            try:
+                                timeout = int(timeout)
+                            except ValueError:
+                                timeout = 1000
+                            page.wait_for_timeout(timeout)
+                            results.append({'step': step_num, 'action': action, 'success': True, 'timeout': timeout})
+                        
+                        elif action == 'scroll':
+                            selector = step.get('selector')
+                            if not selector:
+                                raise ValueError("Selector is required for scroll action")
+                            element = page.locator(selector).first
+                            element.scroll_into_view_if_needed(timeout=10000)
+                            results.append({'step': step_num, 'action': action, 'success': True, 'selector': selector})
+                        
+                        elif action == 'extract_text':
+                            selector = step.get('selector')
+                            if not selector:
+                                raise ValueError("Selector is required for extract_text action")
+                            text = page.text_content(selector, timeout=10000)
+                            results.append({'step': step_num, 'action': action, 'success': True, 'selector': selector, 'extracted_text': text})
+                        
+                        elif action == 'extract_attribute':
+                            selector = step.get('selector')
+                            attribute = step.get('attribute')
+                            if not selector or not attribute:
+                                raise ValueError("Selector and attribute are required for extract_attribute action")
+                            value = page.get_attribute(selector, attribute, timeout=10000)
+                            results.append({'step': step_num, 'action': action, 'success': True, 'selector': selector, 'attribute': attribute, 'value': value})
+                        
+                        elif action == 'screenshot':
+                            screenshot = page.screenshot(full_page=True)
+                            screenshot_base64 = base64.b64encode(screenshot).decode('utf-8')
+                            results.append({
+                                'step': step_num, 
+                                'action': action, 
+                                'success': True,
+                                'screenshot': f"data:image/png;base64,{screenshot_base64}"
+                            })
+                        
+                        elif action == 'page_html':
+                            html = page.content()
+                            results.append({'step': step_num, 'action': action, 'success': True, 'html': html[:1000] + '...' if len(html) > 1000 else html})
+                        
+                        elif action == 'assert_visible':
+                            selector = step.get('selector')
+                            if not selector:
+                                raise ValueError("Selector is required for assert_visible action")
+                            element = page.locator(selector).first
+                            if not element.is_visible(timeout=10000):
+                                raise ValueError(f"Element {selector} is not visible")
+                            results.append({'step': step_num, 'action': action, 'success': True, 'selector': selector})
+                        
+                        elif action == 'assert_text':
+                            selector = step.get('selector')
+                            text = step.get('text')
+                            if not selector or not text:
+                                raise ValueError("Selector and text are required for assert_text action")
+                            element_text = page.text_content(selector, timeout=10000)
+                            if text not in element_text:
+                                raise ValueError(f"Text '{text}' not found in element {selector}")
+                            results.append({'step': step_num, 'action': action, 'success': True, 'selector': selector, 'expected_text': text})
+                        
+                        elif action == 'assert_title':
+                            title = step.get('title')
+                            if not title:
+                                raise ValueError("Title is required for assert_title action")
+                            page_title = page.title()
+                            if title not in page_title:
+                                raise ValueError(f"Title '{title}' not found in page title '{page_title}'")
+                            results.append({'step': step_num, 'action': action, 'success': True, 'expected_title': title, 'actual_title': page_title})
+                        
+                        elif action == 'assert_url':
+                            url = step.get('url')
+                            if not url:
+                                raise ValueError("URL is required for assert_url action")
+                            current_url = page.url
+                            if url not in current_url:
+                                raise ValueError(f"URL '{url}' not found in current URL '{current_url}'")
+                            results.append({'step': step_num, 'action': action, 'success': True, 'expected_url': url, 'actual_url': current_url})
+                        
+                        elif action == 'js':
+                            script = step.get('script')
+                            if not script:
+                                raise ValueError("Script is required for js action")
+                            result = page.evaluate(script)
+                            results.append({'step': step_num, 'action': action, 'success': True, 'script': script, 'result': str(result)})
+                        
+                        elif action == 'custom':
+                            instruction = step.get('instruction', '')
+                            results.append({'step': step_num, 'action': action, 'success': True, 'instruction': instruction, 'note': 'Custom instructions are logged but not executed'})
+                        
+                        else:
+                            logger.warning(f"Unsupported action: {action}")
+                            results.append({'step': step_num, 'action': action, 'success': False, 'error': f'Unsupported action: {action}'})
                     
-                    elif action == 'click':
-                        selector = step.get('selector')
-                        if not selector:
-                            raise ValueError("Selector is required for click action")
-                        page.click(selector)
-                        results.append({'step': i, 'action': action, 'success': True})
-                    
-                    elif action == 'fill':
-                        selector = step.get('selector')
-                        value = step.get('value')
-                        if not selector or value is None:
-                            raise ValueError("Selector and value are required for fill action")
-                        page.fill(selector, value)
-                        results.append({'step': i, 'action': action, 'success': True})
-                    
-                    elif action == 'wait_for_element':
-                        selector = step.get('selector')
-                        if not selector:
-                            raise ValueError("Selector is required for wait_for_element action")
-                        page.wait_for_selector(selector)
-                        results.append({'step': i, 'action': action, 'success': True})
-                    
-                    elif action == 'wait_for_navigation':
-                        page.wait_for_load_state('networkidle')
-                        results.append({'step': i, 'action': action, 'success': True})
-                    
-                    elif action == 'screenshot':
-                        screenshot = page.screenshot()
-                        screenshot_base64 = base64.b64encode(screenshot).decode('utf-8')
+                    except Exception as step_error:
+                        logger.error(f"Error in step {step_num} ({action}): {str(step_error)}")
                         results.append({
-                            'step': i, 
+                            'step': step_num, 
                             'action': action, 
-                            'success': True,
-                            'screenshot': f"data:image/png;base64,{screenshot_base64}"
+                            'success': False,
+                            'error': str(step_error)
                         })
-                    
-                    elif action == 'custom':
-                        # Custom instructions are just logged, not executed
-                        instruction = step.get('instruction', '')
-                        results.append({'step': i, 'action': action, 'success': True, 'instruction': instruction})
-                    
-                    else:
-                        # For unsupported actions, log a warning but continue
-                        logger.warning(f"Unsupported action: {action}")
-                        results.append({'step': i, 'action': action, 'success': False, 'error': 'Unsupported action'})
+                        # Don't break on step errors, continue with remaining steps
                 
-                browser.close()
+                if browser:
+                    browser.close()
         
         except Exception as e:
             logger.error(f"Error during browser automation: {str(e)}")
             success = False
-            if capture_screenshot:
+            if capture_screenshot and page:
                 try:
                     screenshot = page.screenshot()
                     failure_screenshot = f"data:image/png;base64,{base64.b64encode(screenshot).decode('utf-8')}"
                 except Exception as screenshot_error:
                     logger.error(f"Failed to capture failure screenshot: {str(screenshot_error)}")
             
-            # Add the error to results
-            results.append({
-                'step': len(results), 
-                'action': 'error', 
-                'success': False,
-                'error': str(e)
-            })
+            if browser:
+                browser.close()
+            
+            # Add the error to results if not already added
+            if not results or results[-1].get('success', True):
+                results.append({
+                    'step': len(results) + 1, 
+                    'action': 'error', 
+                    'success': False,
+                    'error': str(e)
+                })
+        
+        # Calculate success based on individual step results
+        successful_steps = sum(1 for result in results if result.get('success', False))
+        total_steps = len(results)
+        overall_success = successful_steps == total_steps and total_steps > 0
         
         # Prepare response
         report = {
-            'steps_executed': len(results),
+            'steps_executed': total_steps,
+            'steps_successful': successful_steps,
             'total_steps': len(steps),
-            'success': success,
-            'message': 'Automation completed successfully' if success else 'Automation failed'
+            'success': overall_success,
+            'message': f'Automation completed: {successful_steps}/{total_steps} steps successful' if total_steps > 0 else 'No steps executed'
         }
         
         if failure_screenshot:
             report['failureScreenshot'] = failure_screenshot
         
         return jsonify({
-            'success': success,
+            'success': overall_success,
             'steps': results,
             'report': report,
-            'rawOutput': f"ActionResult(is_done=True, success={success})\n{prompt}\n{len(results)}/{len(steps)} steps executed."
+            'rawOutput': f"ActionResult(is_done=True, success={overall_success})\n{prompt or 'Browser automation'}\n{successful_steps}/{total_steps} steps successful."
         })
+        
     except Exception as unexpected_error:
         logger.error(f"Unexpected error in browser automation endpoint: {str(unexpected_error)}")
         return jsonify({
@@ -11037,11 +12805,6 @@ def browseruse_navigation_executor():
                 'message': 'Browser automation failed due to an unexpected error. Please check server logs.'
             }
         }), 500
-
-@app.route('/browseruse-automation', methods=['GET'])
-def browseruse_automation_page():
-    """Serve the browseruse automation page"""
-    return render_template('browseruse-automation-stepwise.html')
 
 @app.route('/api/llm-usage', methods=['GET'])
 def check_llm_usage():
@@ -15651,6 +17414,667 @@ def attach_file_to_jira():
     except Exception as e:
         logger.error(f"Error attaching file to Jira: {str(e)}")
         return jsonify({'success': False, 'error': str(e)}), 500
+
+# ========================================
+# Playwright Codegen API (for Automation Test Creator)
+# ========================================
+
+# Session storage for Playwright Codegen sessions
+playwright_codegen_sessions = {}
+
+@app.route('/api/playwright-codegen/start', methods=['POST'])
+@jira_auth_required
+def start_playwright_codegen():
+    """Start Playwright Codegen for test recording"""
+    try:
+        data = request.get_json()
+        url = data.get('url', '').strip()
+        
+        import uuid
+        import subprocess
+        import os
+        from threading import Thread
+        
+        session_id = str(uuid.uuid4())
+        
+        # Create output directory
+        output_dir = os.path.join('playwright-output', 'automation-test-creator', session_id)
+        os.makedirs(output_dir, exist_ok=True)
+        script_path = os.path.join(output_dir, 'test.spec.ts')
+        
+        # Store session info
+        playwright_codegen_sessions[session_id] = {
+            'status': 'recording',
+            'script_path': script_path,
+            'output_dir': output_dir,
+            'url': url,
+            'process': None,
+            'code': ''
+        }
+        
+        def run_codegen():
+            try:
+                logger.info(f"Starting Playwright Codegen for session {session_id}")
+                
+                # Build codegen command
+                cmd = [
+                    sys.executable, '-m', 'playwright',
+                    'codegen',
+                    '--target=python',
+                    f'--output={script_path}'
+                ]
+                
+                if url:
+                    cmd.append(url)
+                
+                # Start the process
+                process = subprocess.Popen(
+                    cmd,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.STDOUT,
+                    cwd=os.getcwd()
+                )
+                
+                playwright_codegen_sessions[session_id]['process'] = process
+                
+                # Wait for completion
+                stdout, _ = process.communicate()
+                
+                if stdout:
+                    logger.info(f"Codegen output: {stdout.decode('utf-8', errors='ignore')}")
+                
+                # Read the generated code
+                if os.path.exists(script_path):
+                    with open(script_path, 'r', encoding='utf-8') as f:
+                        code = f.read()
+                    playwright_codegen_sessions[session_id]['code'] = code
+                    playwright_codegen_sessions[session_id]['status'] = 'completed'
+                else:
+                    playwright_codegen_sessions[session_id]['status'] = 'failed'
+                    playwright_codegen_sessions[session_id]['error'] = 'No script file generated'
+                
+                logger.info(f"Codegen completed for session {session_id}")
+                
+            except Exception as e:
+                logger.error(f"Error in Codegen: {str(e)}")
+                playwright_codegen_sessions[session_id]['status'] = 'failed'
+                playwright_codegen_sessions[session_id]['error'] = str(e)
+        
+        thread = Thread(target=run_codegen)
+        thread.daemon = True
+        thread.start()
+        
+        return jsonify({
+            'success': True,
+            'session_id': session_id,
+            'message': 'Playwright Codegen started'
+        })
+        
+    except Exception as e:
+        logger.error(f"Error starting Codegen: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/playwright-codegen/stop', methods=['POST'])
+@jira_auth_required
+def stop_playwright_codegen():
+    """Stop Playwright Codegen recording"""
+    try:
+        data = request.get_json()
+        session_id = data.get('session_id')
+        
+        if not session_id or session_id not in playwright_codegen_sessions:
+            return jsonify({'success': False, 'error': 'Invalid session'}), 400
+        
+        session = playwright_codegen_sessions[session_id]
+        
+        # Try to terminate the process
+        if session.get('process'):
+            try:
+                session['process'].terminate()
+                session['process'].wait(timeout=5)
+            except:
+                session['process'].kill()
+        
+        # Read the final code
+        script_path = session.get('script_path')
+        if script_path and os.path.exists(script_path):
+            with open(script_path, 'r', encoding='utf-8') as f:
+                code = f.read()
+            session['code'] = code
+            session['status'] = 'completed'
+        
+        return jsonify({
+            'success': True,
+            'code': session.get('code', ''),
+            'status': session.get('status')
+        })
+        
+    except Exception as e:
+        logger.error(f"Error stopping Codegen: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/playwright-codegen/code/<session_id>', methods=['GET'])
+@jira_auth_required
+def get_playwright_codegen_code(session_id):
+    """Get the current recorded code for a session"""
+    try:
+        if session_id not in playwright_codegen_sessions:
+            return jsonify({'success': False, 'error': 'Session not found'}), 404
+        
+        session = playwright_codegen_sessions[session_id]
+        
+        # Try to read the latest code from file
+        script_path = session.get('script_path')
+        if script_path and os.path.exists(script_path):
+            with open(script_path, 'r', encoding='utf-8') as f:
+                code = f.read()
+            session['code'] = code
+        
+        return jsonify({
+            'success': True,
+            'code': session.get('code', ''),
+            'status': session.get('status', 'unknown')
+        })
+        
+    except Exception as e:
+        logger.error(f"Error getting code: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+# ========================================
+# Automation Test Creator Routes
+# ========================================
+
+@app.route('/automation-test-creator')
+@jira_auth_required
+def automation_test_creator():
+    """Automation Test Creator - Integrated workflow for test creation"""
+    return render_template('automation-test-creator.html', active_tab='ui-automation')
+
+@app.route('/api/automation-test-creator/generate-details', methods=['POST'])
+@jira_auth_required
+def generate_test_details():
+    """Generate test summary, description, and manual steps using AI"""
+    try:
+        data = request.json
+        code = data.get('code', '')
+        
+        if not code:
+            return jsonify({'success': False, 'error': 'No code provided'}), 400
+        
+        # Use Gemini to analyze the code and generate test details
+        import google.generativeai as genai
+        
+        genai_api_key = os.getenv('GEMINI_API_KEY')
+        if not genai_api_key:
+            return jsonify({'success': False, 'error': 'Gemini API key not configured'}), 500
+        
+        genai.configure(api_key=genai_api_key)
+        model = genai.GenerativeModel('gemini-1.5-flash')
+        
+        prompt = f"""
+Analyze the following Playwright automation code and generate:
+
+1. A concise test summary (one sentence, suitable for Jira task title)
+2. A detailed test description (2-3 sentences explaining what the test validates)
+3. Manual test steps (step-by-step instructions for a human tester, 5-10 steps)
+
+CODE:
+```javascript
+{code}
+```
+
+Respond in JSON format:
+{{
+    "summary": "...",
+    "description": "...",
+    "manual_steps": ["step 1", "step 2", ...]
+}}
+"""
+        
+        response = model.generate_content(prompt)
+        result_text = response.text.strip()
+        
+        # Extract JSON from response (handle markdown code blocks)
+        if '```json' in result_text:
+            result_text = result_text.split('```json')[1].split('```')[0].strip()
+        elif '```' in result_text:
+            result_text = result_text.split('```')[1].split('```')[0].strip()
+        
+        result = json.loads(result_text)
+        
+        return jsonify({
+            'success': True,
+            'summary': result.get('summary', ''),
+            'description': result.get('description', ''),
+            'manual_steps': result.get('manual_steps', [])
+        })
+        
+    except Exception as e:
+        logger.error(f"Error generating test details: {str(e)}")
+        import traceback
+        logger.error(traceback.format_exc())
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/automation-test-creator/export-jira', methods=['POST'])
+@jira_auth_required
+def export_test_to_jira():
+    """Create a Jira Task with automated code and manual steps"""
+    try:
+        data = request.json
+        summary = data.get('summary', '')
+        description = data.get('description', '')
+        automated_code = data.get('automated_code', '')
+        manual_steps = data.get('manual_steps', [])
+        project = data.get('project', 'IRA')
+        
+        if not summary or not automated_code:
+            return jsonify({'success': False, 'error': 'Summary and code are required'}), 400
+        
+        # Get Jira credentials
+        access_token = session.get('jira_access_token')
+        cloud_id = session.get('jira_cloud_id')
+        
+        if not access_token or not cloud_id:
+            return jsonify({'success': False, 'error': 'Not authenticated with Jira'}), 401
+        
+        # Build description with automated code and manual steps
+        jira_description = {
+            "version": 1,
+            "type": "doc",
+            "content": [
+                {
+                    "type": "heading",
+                    "attrs": {"level": 3},
+                    "content": [{"type": "text", "text": "Test Description"}]
+                },
+                {
+                    "type": "paragraph",
+                    "content": [{"type": "text", "text": description}]
+                },
+                {
+                    "type": "rule"
+                },
+                {
+                    "type": "heading",
+                    "attrs": {"level": 3},
+                    "content": [{"type": "text", "text": "🤖 Automated Test Code"}]
+                },
+                {
+                    "type": "codeBlock",
+                    "attrs": {"language": "javascript"},
+                    "content": [{"type": "text", "text": automated_code}]
+                }
+            ]
+        }
+        
+        # Add manual test steps if available
+        if manual_steps and len(manual_steps) > 0:
+            jira_description["content"].extend([
+                {
+                    "type": "rule"
+                },
+                {
+                    "type": "heading",
+                    "attrs": {"level": 3},
+                    "content": [{"type": "text", "text": "📋 Manual Test Steps"}]
+                },
+                {
+                    "type": "paragraph",
+                    "content": [{"type": "text", "text": "Follow these steps to manually validate the test:"}]
+                },
+                {
+                    "type": "orderedList",
+                    "content": [
+                        {
+                            "type": "listItem",
+                            "content": [
+                                {
+                                    "type": "paragraph",
+                                    "content": [{"type": "text", "text": step}]
+                                }
+                            ]
+                        } for step in manual_steps
+                    ]
+                }
+            ])
+        
+        # Create Jira issue
+        headers = {
+            'Authorization': f'Bearer {access_token}',
+            'Accept': 'application/json',
+            'Content-Type': 'application/json'
+        }
+        
+        jira_url = f'https://api.atlassian.com/ex/jira/{cloud_id}/rest/api/3/issue'
+        
+        # Get project ID first
+        project_url = f'https://api.atlassian.com/ex/jira/{cloud_id}/rest/api/3/project/{project}'
+        project_response = requests.get(project_url, headers=headers, timeout=30)
+        
+        if project_response.status_code != 200:
+            return jsonify({'success': False, 'error': f'Project {project} not found'}), 404
+        
+        project_data = project_response.json()
+        project_id = project_data.get('id')
+        
+        # Create issue payload
+        issue_payload = {
+            "fields": {
+                "project": {"id": project_id},
+                "summary": summary,
+                "description": jira_description,
+                "issuetype": {"name": "Task"}
+            }
+        }
+        
+        response = requests.post(jira_url, headers=headers, json=issue_payload, timeout=30)
+        
+        if response.status_code in [200, 201]:
+            issue_data = response.json()
+            issue_key = issue_data.get('key')
+            issue_url = f"https://upgrad-jira.atlassian.net/browse/{issue_key}"
+            
+            return jsonify({
+                'success': True,
+                'issue_key': issue_key,
+                'issue_url': issue_url,
+                'issue_id': issue_data.get('id')
+            })
+        else:
+            error_detail = response.text
+            logger.error(f"Jira API error: {response.status_code} - {error_detail}")
+            return jsonify({
+                'success': False,
+                'error': f'Failed to create Jira issue: {response.status_code}',
+                'details': error_detail
+            }), response.status_code
+        
+    except Exception as e:
+        logger.error(f"Error exporting to Jira: {str(e)}")
+        import traceback
+        logger.error(traceback.format_exc())
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/automation-test-creator/import-jira/<ticket_id>', methods=['GET'])
+@jira_auth_required
+def import_test_from_jira(ticket_id):
+    """Import test from Jira task"""
+    try:
+        # Get Jira credentials
+        access_token = session.get('jira_access_token')
+        cloud_id = session.get('jira_cloud_id')
+        
+        if not access_token or not cloud_id:
+            return jsonify({'success': False, 'error': 'Not authenticated with Jira'}), 401
+        
+        headers = {
+            'Authorization': f'Bearer {access_token}',
+            'Accept': 'application/json'
+        }
+        
+        # Fetch issue from Jira
+        jira_url = f'https://api.atlassian.com/ex/jira/{cloud_id}/rest/api/3/issue/{ticket_id}'
+        response = requests.get(jira_url, headers=headers, timeout=30)
+        
+        if response.status_code != 200:
+            return jsonify({'success': False, 'error': f'Failed to fetch Jira issue: {response.status_code}'}), response.status_code
+        
+        issue_data = response.json()
+        fields = issue_data.get('fields', {})
+        
+        summary = fields.get('summary', '')
+        description_adf = fields.get('description', {})
+        
+        # Extract code from ADF description
+        code = extract_code_from_adf(description_adf)
+        description_text = extract_text_from_adf(description_adf)
+        
+        return jsonify({
+            'success': True,
+            'test_data': {
+                'jira_key': ticket_id,
+                'summary': summary,
+                'description': description_text,
+                'code': code
+            }
+        })
+        
+    except Exception as e:
+        logger.error(f"Error importing from Jira: {str(e)}")
+        import traceback
+        logger.error(traceback.format_exc())
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+def extract_code_from_adf(adf):
+    """Extract code blocks from ADF format"""
+    try:
+        if not isinstance(adf, dict):
+            return ''
+        
+        content = adf.get('content', [])
+        code_blocks = []
+        
+        for block in content:
+            if block.get('type') == 'codeBlock':
+                code_content = block.get('content', [])
+                for code_item in code_content:
+                    if code_item.get('type') == 'text':
+                        code_blocks.append(code_item.get('text', ''))
+        
+        return '\n\n'.join(code_blocks)
+    except Exception as e:
+        logger.error(f"Error extracting code from ADF: {e}")
+        return ''
+
+def extract_text_from_adf(adf):
+    """Extract plain text from ADF format"""
+    try:
+        if not isinstance(adf, dict):
+            return ''
+        
+        def walk_content(content):
+            text_parts = []
+            if isinstance(content, list):
+                for item in content:
+                    text_parts.extend(walk_content(item))
+            elif isinstance(content, dict):
+                if content.get('type') == 'text':
+                    text_parts.append(content.get('text', ''))
+                elif 'content' in content:
+                    text_parts.extend(walk_content(content['content']))
+            return text_parts
+        
+        text_parts = walk_content(adf.get('content', []))
+        return ' '.join(text_parts)
+    except Exception as e:
+        logger.error(f"Error extracting text from ADF: {e}")
+        return ''
+
+@app.route('/api/automation-test-creator/execute', methods=['POST'])
+@jira_auth_required
+def execute_test():
+    """Execute the imported test code using Playwright"""
+    try:
+        data = request.json
+        code = data.get('code', '')
+        ticket_id = data.get('ticket_id', '')
+        
+        if not code:
+            return jsonify({'success': False, 'error': 'No code provided'}), 400
+        
+        # Save code to temporary file
+        import tempfile
+        import uuid
+        
+        session_id = str(uuid.uuid4())
+        temp_dir = tempfile.gettempdir()
+        test_file = os.path.join(temp_dir, f'test_{session_id}.js')
+        
+        with open(test_file, 'w', encoding='utf-8') as f:
+            f.write(code)
+        
+        # Execute using Playwright
+        try:
+            result = subprocess.run(
+                ['npx', 'playwright', 'test', test_file, '--reporter=json'],
+                capture_output=True,
+                text=True,
+                timeout=120
+            )
+            
+            # Parse results
+            execution_results = {
+                'status': 'SUCCESS' if result.returncode == 0 else 'FAILED',
+                'duration': 0,
+                'steps': []
+            }
+            
+            # Try to parse JSON output
+            try:
+                if result.stdout:
+                    test_output = json.loads(result.stdout)
+                    # Extract test details from Playwright output
+                    # This is a simplified version - you may need to adjust based on actual output format
+                    execution_results['steps'] = parse_playwright_output(test_output)
+            except:
+                pass
+            
+            return jsonify({
+                'success': True,
+                'results': execution_results
+            })
+            
+        finally:
+            # Clean up temp file
+            try:
+                os.remove(test_file)
+            except:
+                pass
+        
+    except subprocess.TimeoutExpired:
+        return jsonify({'success': False, 'error': 'Test execution timed out'}), 500
+    except Exception as e:
+        logger.error(f"Error executing test: {str(e)}")
+        import traceback
+        logger.error(traceback.format_exc())
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+def parse_playwright_output(output):
+    """Parse Playwright test output to extract steps"""
+    steps = []
+    try:
+        # This is a simplified parser - adjust based on actual Playwright JSON output
+        if isinstance(output, dict):
+            suites = output.get('suites', [])
+            for suite in suites:
+                specs = suite.get('specs', [])
+                for spec in specs:
+                    tests = spec.get('tests', [])
+                    for test in tests:
+                        results = test.get('results', [])
+                        for result in results:
+                            steps.append({
+                                'status': 'PASS' if result.get('status') == 'passed' else 'FAIL',
+                                'description': test.get('title', 'Test step'),
+                                'duration': result.get('duration', 0)
+                            })
+    except Exception as e:
+        logger.error(f"Error parsing Playwright output: {e}")
+    
+    return steps
+
+@app.route('/api/automation-test-creator/export-results/<ticket_id>', methods=['POST'])
+@jira_auth_required
+def export_results_to_jira(ticket_id):
+    """Export test execution results back to Jira as a comment"""
+    try:
+        data = request.json
+        results = data.get('results', {})
+        
+        # Get Jira credentials
+        access_token = session.get('jira_access_token')
+        cloud_id = session.get('jira_cloud_id')
+        
+        if not access_token or not cloud_id:
+            return jsonify({'success': False, 'error': 'Not authenticated with Jira'}), 401
+        
+        # Build ADF comment
+        status = results.get('status', 'UNKNOWN')
+        steps = results.get('steps', [])
+        
+        status_color = 'green' if status == 'SUCCESS' else 'red'
+        status_icon = '✓' if status == 'SUCCESS' else '✗'
+        
+        comment_adf = {
+            "version": 1,
+            "type": "doc",
+            "content": [
+                {
+                    "type": "heading",
+                    "attrs": {"level": 3},
+                    "content": [{"type": "text", "text": "🎭 Automation Test Execution Results"}]
+                },
+                {
+                    "type": "paragraph",
+                    "content": [
+                        {"type": "text", "text": "Status: "},
+                        {"type": "text", "text": f"{status_icon} {status}", "marks": [{"type": "strong"}]}
+                    ]
+                },
+                {
+                    "type": "paragraph",
+                    "content": [
+                        {"type": "text", "text": f"Executed: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"}
+                    ]
+                }
+            ]
+        }
+        
+        # Add steps table if available
+        if steps and len(steps) > 0:
+            passed = sum(1 for s in steps if s.get('status') == 'PASS')
+            failed = len(steps) - passed
+            
+            comment_adf["content"].append({
+                "type": "paragraph",
+                "content": [
+                    {"type": "text", "text": f"Total Steps: {len(steps)} | "},
+                    {"type": "text", "text": f"Passed: {passed} | ", "marks": [{"type": "textColor", "attrs": {"color": "green"}}]},
+                    {"type": "text", "text": f"Failed: {failed}", "marks": [{"type": "textColor", "attrs": {"color": "red"}}]}
+                ]
+            })
+        
+        # Post comment to Jira
+        headers = {
+            'Authorization': f'Bearer {access_token}',
+            'Accept': 'application/json',
+            'Content-Type': 'application/json'
+        }
+        
+        jira_url = f'https://api.atlassian.com/ex/jira/{cloud_id}/rest/api/3/issue/{ticket_id}/comment'
+        comment_payload = {'body': comment_adf}
+        
+        response = requests.post(jira_url, headers=headers, json=comment_payload, timeout=30)
+        
+        if response.status_code in [200, 201]:
+            return jsonify({'success': True, 'comment_id': response.json().get('id')})
+        else:
+            error_detail = response.text
+            logger.error(f"Jira API error: {response.status_code} - {error_detail}")
+            return jsonify({
+                'success': False,
+                'error': f'Failed to post comment: {response.status_code}'
+            }), response.status_code
+        
+    except Exception as e:
+        logger.error(f"Error exporting results to Jira: {str(e)}")
+        import traceback
+        logger.error(traceback.format_exc())
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+# ========================================
+# End Automation Test Creator Routes
+# ========================================
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)

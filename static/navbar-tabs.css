@@ -28,6 +28,39 @@
   align-items: center;
 }
 
+/* Navbar Logo Styling */
+.navbar-logo {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #6366f1;
+  transition: all 0.2s ease;
+}
+
+.navbar-logo:hover {
+  transform: scale(1.02);
+}
+
+.logo-emoji {
+  font-size: 1.4em;
+  animation: logoRotate 3s ease-in-out infinite;
+}
+
+.logo-text {
+  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+@keyframes logoRotate {
+  0%, 100% { transform: rotate(0deg); }
+  25% { transform: rotate(-5deg); }
+  75% { transform: rotate(5deg); }
+}
+
 .tabs-container {
   display: flex;
   gap: 0.3rem;
