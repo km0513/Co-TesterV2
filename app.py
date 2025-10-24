@@ -17422,6 +17422,205 @@ def attach_file_to_jira():
 # Session storage for Playwright Codegen sessions
 playwright_codegen_sessions = {}
 
+def beautify_playwright_code_with_ai(code):
+    """
+    Use AI to add comments, improve readability, and beautify Playwright code.
+    Returns the enhanced code with step-by-step comments.
+    """
+    import google.generativeai as genai
+    
+    genai_api_key = os.getenv('GOOGLE_API_KEY')
+    if not genai_api_key:
+        logger.warning('Google API key not configured, skipping code beautification')
+        return code
+    
+    try:
+        genai.configure(api_key=genai_api_key)
+        model_name = os.getenv('GOOGLE_API_MODEL', 'gemini-1.5-flash')
+        model = genai.GenerativeModel(model_name)
+        
+        prompt = f"""You are a code quality expert. Enhance the following Playwright test code by:
+
+1. Adding clear, descriptive comments before each test step explaining WHAT and WHY
+2. Grouping related actions with section comments (e.g., # Setup, # Navigation, # Form filling, # Assertions, # Cleanup)
+3. Adding inline comments for complex selectors explaining what element is being targeted
+4. Improving variable names if needed for better readability
+5. Adding a docstring at the top of the function explaining the test purpose
+6. Keeping the code functional and executable - DO NOT change the logic
+
+Original Code:
+```python
+{code}
+```
+
+Return ONLY the enhanced Python code. Do not include any explanatory text, markdown code blocks, or anything else - just the pure Python code that can be directly executed.
+
+The output should be clean, well-commented, production-ready test code."""
+
+        response = model.generate_content(prompt)
+        enhanced_code = response.text.strip()
+        
+        # Remove markdown code blocks if present
+        if '```python' in enhanced_code:
+            enhanced_code = enhanced_code.split('```python')[1].split('```')[0].strip()
+        elif '```' in enhanced_code:
+            enhanced_code = enhanced_code.split('```')[1].split('```')[0].strip()
+        
+        logger.info(f"Code beautified: {len(code)} chars → {len(enhanced_code)} chars")
+        return enhanced_code
+        
+    except Exception as e:
+        logger.error(f"Error beautifying code with AI: {str(e)}")
+        return code  # Return original code if beautification fails
+
+def generate_test_details_with_ai(code, video_path=None):
+    """
+    Generate test details using AI with optional video analysis.
+    Returns: (summary, description, automated_steps, manual_steps)
+    """
+    import google.generativeai as genai
+    import io
+    
+    genai_api_key = os.getenv('GOOGLE_API_KEY')
+    if not genai_api_key:
+        raise Exception('Google API key not configured')
+    
+    genai.configure(api_key=genai_api_key)
+    model_name = os.getenv('GOOGLE_API_MODEL', 'gemini-1.5-flash')
+    model = genai.GenerativeModel(model_name)
+    
+    # Base prompt for code analysis
+    prompt = f"""
+Analyze the following Playwright automation code and generate test documentation.
+
+CODE:
+```python
+{code}
+```
+
+IMPORTANT: You MUST respond with ONLY a valid JSON object. Do not include any explanatory text, markdown formatting, or anything else before or after the JSON.
+
+Required JSON format:
+{{
+    "summary": "one sentence test summary suitable for Jira task title",
+    "description": "2-3 sentences explaining what the test validates",
+    "manual_steps": ["manual step 1", "manual step 2", "manual step 3", ...]
+}}
+
+Generate:
+1. summary: A concise test summary (one sentence)
+2. description: A detailed test description (2-3 sentences)
+3. manual_steps: Step-by-step instructions for a human tester to manually perform this test (5-10 clear, actionable steps)
+
+Return ONLY the JSON object, nothing else."""
+    
+    # If video is provided, add video analysis
+    content_parts = [prompt]
+    
+    if video_path and os.path.exists(video_path):
+        try:
+            # Extract frames from video for analysis
+            import cv2
+            import numpy as np
+            # Import PIL at the function level to ensure it's available
+            try:
+                from PIL import Image as PILImage
+            except ImportError:
+                logger.error("PIL/Pillow not installed")
+                raise
+            
+            video = cv2.VideoCapture(video_path)
+            frames = []
+            frame_count = 0
+            total_frames = int(video.get(cv2.CAP_PROP_FRAME_COUNT))
+            
+            # Extract 5 evenly spaced frames
+            frame_indices = [int(total_frames * i / 5) for i in range(5)]
+            
+            while True:
+                ret, frame = video.read()
+                if not ret:
+                    break
+                
+                if frame_count in frame_indices:
+                    # Convert BGR to RGB
+                    frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                    # Create PIL Image from numpy array
+                    pil_image = PILImage.fromarray(frame_rgb)
+                    
+                    # Convert PIL Image to bytes to avoid PIL plugin issues
+                    img_byte_arr = io.BytesIO()
+                    pil_image.save(img_byte_arr, format='PNG')
+                    img_byte_arr = img_byte_arr.getvalue()
+                    
+                    # Recreate PIL Image from bytes (this ensures proper initialization)
+                    frames.append(PILImage.open(io.BytesIO(img_byte_arr)))
+                
+                frame_count += 1
+            
+            video.release()
+            
+            # Add video analysis instruction
+            video_instruction = """
+
+ADDITIONAL CONTEXT: Video frames from the actual test execution are provided.
+Enhance the manual steps with visual observations from these video frames.
+The video shows the actual UI interactions being performed.
+
+Remember: Respond with ONLY the JSON object."""
+            
+            content_parts = [prompt + video_instruction] + frames
+            
+            logger.info(f"Analyzing with {len(frames)} video frames")
+            
+        except Exception as e:
+            import traceback
+            logger.error(f"Error processing video: {str(e)}")
+            logger.error(f"Traceback: {traceback.format_exc()}")
+            # Continue without video analysis
+            frames = []
+    
+    try:
+        response = model.generate_content(content_parts)
+        result_text = response.text.strip()
+        
+        logger.info(f"AI Response: {result_text[:500]}...")  # Log first 500 chars for debugging
+        
+        # Extract JSON from response (handle various formats)
+        json_text = result_text
+        
+        # Try to extract from markdown code blocks
+        if '```json' in result_text:
+            json_text = result_text.split('```json')[1].split('```')[0].strip()
+        elif '```' in result_text:
+            json_text = result_text.split('```')[1].split('```')[0].strip()
+        
+        # Try to find JSON object boundaries
+        if not json_text.startswith('{'):
+            # Look for the first { and last }
+            start_idx = json_text.find('{')
+            end_idx = json_text.rfind('}')
+            if start_idx != -1 and end_idx != -1:
+                json_text = json_text[start_idx:end_idx+1]
+        
+        # Parse JSON
+        result = json.loads(json_text)
+        
+        return (
+            result.get('summary', ''),
+            result.get('description', ''),
+            result.get('automated_steps', []),
+            result.get('manual_steps', [])
+        )
+        
+    except json.JSONDecodeError as e:
+        logger.error(f"JSON parsing error: {str(e)}")
+        logger.error(f"Attempted to parse: {json_text[:500] if 'json_text' in locals() else result_text[:500]}")
+        raise Exception(f"Failed to parse AI response as JSON: {str(e)}")
+    except Exception as e:
+        logger.error(f"Error generating test details with AI: {str(e)}")
+        raise
+
 @app.route('/api/playwright-codegen/start', methods=['POST'])
 @jira_auth_required
 def start_playwright_codegen():
@@ -17583,6 +17782,334 @@ def get_playwright_codegen_code(session_id):
 # ========================================
 # Automation Test Creator Routes
 # ========================================
+
+@app.route('/api/automation-test-creator/start-recording', methods=['POST'])
+@jira_auth_required
+def automation_test_creator_start_recording():
+    """Start Playwright recording for Automation Test Creator"""
+    try:
+        data = request.get_json()
+        url = data.get('url', '').strip()
+        
+        import uuid
+        import subprocess
+        from threading import Thread
+        
+        session_id = str(uuid.uuid4())
+        logger.info(f"Creating new Automation Test Creator session: {session_id}")
+        
+        # Create output directory
+        output_dir = os.path.join('playwright-output', 'automation-test-creator', session_id)
+        os.makedirs(output_dir, exist_ok=True)
+        script_path = os.path.join(output_dir, 'test.spec.py')  # Changed to .py for Python
+        
+        logger.info(f"Output directory: {output_dir}")
+        logger.info(f"Script path: {script_path}")
+        
+        # Store session info
+        playwright_codegen_sessions[session_id] = {
+            'status': 'launching',
+            'script_path': script_path,
+            'output_dir': output_dir,
+            'url': url,
+            'process': None,
+            'code': '',
+            'video_path': None
+        }
+        
+        logger.info(f"Session created. Total active sessions: {len(playwright_codegen_sessions)}")
+        
+        def run_codegen():
+            try:
+                logger.info(f"Starting Playwright Codegen for Automation Test Creator session {session_id}")
+                
+                # Build codegen command
+                cmd = [
+                    sys.executable, '-m', 'playwright',
+                    'codegen',
+                    '--target=python',
+                    f'--output={script_path}'
+                ]
+                
+                if url:
+                    cmd.append(url)
+                
+                # Start the process
+                process = subprocess.Popen(
+                    cmd,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.STDOUT,
+                    cwd=os.getcwd()
+                )
+                
+                playwright_codegen_sessions[session_id]['process'] = process
+                playwright_codegen_sessions[session_id]['status'] = 'recording'
+                
+                # Wait for completion
+                stdout, _ = process.communicate()
+                
+                if stdout:
+                    logger.info(f"Codegen output: {stdout.decode('utf-8', errors='ignore')}")
+                
+                # Read the generated code
+                if os.path.exists(script_path):
+                    with open(script_path, 'r', encoding='utf-8') as f:
+                        code = f.read()
+                    playwright_codegen_sessions[session_id]['code'] = code
+                    playwright_codegen_sessions[session_id]['status'] = 'completed'
+                else:
+                    playwright_codegen_sessions[session_id]['status'] = 'failed'
+                    playwright_codegen_sessions[session_id]['error'] = 'No script file generated'
+                
+                logger.info(f"Codegen completed for Automation Test Creator session {session_id}")
+                
+            except Exception as e:
+                logger.error(f"Error in Codegen: {str(e)}")
+                playwright_codegen_sessions[session_id]['status'] = 'failed'
+                playwright_codegen_sessions[session_id]['error'] = str(e)
+        
+        thread = Thread(target=run_codegen)
+        thread.daemon = True
+        thread.start()
+        
+        return jsonify({
+            'success': True,
+            'session_id': session_id,
+            'message': 'Playwright browser launching...'
+        })
+        
+    except Exception as e:
+        logger.error(f"Error starting recording: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/automation-test-creator/recording-status/<session_id>', methods=['GET'])
+@jira_auth_required
+def automation_test_creator_recording_status(session_id):
+    """Check the status of a recording session"""
+    try:
+        if session_id not in playwright_codegen_sessions:
+            return jsonify({'success': False, 'error': 'Session not found'}), 404
+        
+        session = playwright_codegen_sessions[session_id]
+        
+        return jsonify({
+            'success': True,
+            'status': session.get('status', 'unknown'),
+            'error': session.get('error')
+        })
+        
+    except Exception as e:
+        logger.error(f"Error checking status: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/automation-test-creator/stop-recording/<session_id>', methods=['POST'])
+@jira_auth_required
+def automation_test_creator_stop_recording(session_id):
+    """Stop recording and return the generated code"""
+    try:
+        logger.info(f"Attempting to stop recording for session {session_id}")
+        logger.info(f"Active sessions: {list(playwright_codegen_sessions.keys())}")
+        
+        if session_id not in playwright_codegen_sessions:
+            return jsonify({'success': False, 'error': 'Invalid session. Session may have expired or never started.'}), 400
+        
+        session = playwright_codegen_sessions[session_id]
+        logger.info(f"Session status: {session.get('status')}, has process: {session.get('process') is not None}")
+        
+        # Try to terminate the process
+        if session.get('process'):
+            try:
+                logger.info("Terminating Playwright process...")
+                session['process'].terminate()
+                session['process'].wait(timeout=5)
+                logger.info("Process terminated successfully")
+            except Exception as e:
+                logger.warning(f"Error terminating process: {e}, trying to kill...")
+                try:
+                    session['process'].kill()
+                    logger.info("Process killed")
+                except Exception as e2:
+                    logger.error(f"Error killing process: {e2}")
+        
+        # Read the final code
+        script_path = session.get('script_path')
+        logger.info(f"Script path: {script_path}, exists: {os.path.exists(script_path) if script_path else False}")
+        
+        if script_path and os.path.exists(script_path):
+            with open(script_path, 'r', encoding='utf-8') as f:
+                code = f.read()
+            session['code'] = code
+            session['status'] = 'completed'
+            logger.info(f"Code read successfully, length: {len(code)}")
+        else:
+            # If no script file yet, check if we have code from the session
+            if session.get('code'):
+                logger.info("Using code from session (script file not found)")
+            else:
+                logger.warning(f"No script file found at {script_path}")
+                session['status'] = 'failed'
+                session['error'] = 'No script file generated'
+        
+        return jsonify({
+            'success': True,
+            'code': session.get('code', ''),
+            'status': session.get('status', 'unknown')
+        })
+        
+    except Exception as e:
+        logger.error(f"Error stopping recording: {str(e)}")
+        import traceback
+        logger.error(traceback.format_exc())
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/automation-test-creator/generate-with-ai', methods=['POST'])
+@jira_auth_required
+def automation_test_creator_generate_with_ai():
+    """Generate test details using AI with optional video analysis"""
+    try:
+        code = request.form.get('code', '').strip()
+        session_id = request.form.get('session_id', '').strip()
+        video = request.files.get('video')
+        
+        if not code:
+            return jsonify({'success': False, 'error': 'No code provided'}), 400
+        
+        # Save video if provided
+        video_path = None
+        if video:
+            session = playwright_codegen_sessions.get(session_id, {})
+            output_dir = session.get('output_dir')
+            if output_dir:
+                video_path = os.path.join(output_dir, 'recording.webm')
+                video.save(video_path)
+                session['video_path'] = video_path
+                logger.info(f"Video saved to {video_path}, size: {os.path.getsize(video_path)} bytes")
+        
+        # Generate test details with AI (AI only generates summary, description, manual_steps now)
+        logger.info(f"Calling AI generation with code length: {len(code)}, video: {video_path is not None}")
+        summary, description, automated_steps, manual_steps = generate_test_details_with_ai(code, video_path)
+        logger.info("AI generation completed successfully")
+        
+        # Step 1: Beautify code with AI comments and formatting
+        logger.info("Beautifying code with AI...")
+        beautified_code = beautify_playwright_code_with_ai(code)
+        
+        # Step 2: Add waits and stability improvements to the beautified code
+        logger.info("Adding waits to code...")
+        enhanced_code = add_waits_to_playwright_code(beautified_code)
+        
+        # Return enhanced code as automated_code instead of AI-generated steps
+        return jsonify({
+            'success': True,
+            'summary': summary,
+            'description': description,
+            'automated_code': enhanced_code,  # Return the beautified + enhanced Playwright code
+            'manual_steps': manual_steps
+        })
+        
+    except Exception as e:
+        import traceback
+        logger.error(f"Error generating with AI: {str(e)}")
+        logger.error(f"Full traceback:\n{traceback.format_exc()}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+@app.route('/api/automation-test-creator/download-zip', methods=['POST'])
+@jira_auth_required
+def automation_test_creator_download_zip():
+    """Generate and download a ZIP package with test files"""
+    try:
+        test_name = request.form.get('test_name', 'automation_test').strip()
+        summary = request.form.get('summary', '').strip()
+        description = request.form.get('description', '').strip()
+        automated_code = request.form.get('automated_code', '').strip()
+        automated_steps_json = request.form.get('automated_steps', '[]')
+        manual_steps_json = request.form.get('manual_steps', '[]')
+        video = request.files.get('video')
+        
+        import json
+        import zipfile
+        from io import BytesIO
+        
+        automated_steps = json.loads(automated_steps_json)
+        manual_steps = json.loads(manual_steps_json)
+        
+        # Create ZIP in memory
+        zip_buffer = BytesIO()
+        with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
+            # Add Playwright test file
+            test_filename = f'{test_name}.spec.py'
+            zip_file.writestr(test_filename, automated_code)
+            
+            # Add manual test document
+            manual_doc = f"""# {summary}
+
+## Description
+{description}
+
+## Automated Steps
+{chr(10).join([f"{i+1}. {step}" for i, step in enumerate(automated_steps)])}
+
+## Manual Test Steps
+{chr(10).join([f"{i+1}. {step}" for i, step in enumerate(manual_steps)])}
+"""
+            zip_file.writestr('MANUAL_STEPS.md', manual_doc)
+            
+            # Add package.json
+            package_json = {
+                "name": test_name,
+                "version": "1.0.0",
+                "description": summary,
+                "scripts": {
+                    "test": f"pytest {test_filename}"
+                },
+                "dependencies": {
+                    "playwright": "^1.40.0"
+                },
+                "devDependencies": {
+                    "pytest": "^7.4.0",
+                    "pytest-playwright": "^0.4.3"
+                }
+            }
+            zip_file.writestr('package.json', json.dumps(package_json, indent=2))
+            
+            # Add README
+            readme = f"""# {test_name}
+
+## Setup
+```bash
+# Install Python dependencies
+pip install pytest playwright pytest-playwright
+
+# Install Playwright browsers
+playwright install
+```
+
+## Run Test
+```bash
+pytest {test_filename}
+```
+
+## Manual Test Steps
+See MANUAL_STEPS.md for manual testing procedures.
+"""
+            zip_file.writestr('README.md', readme)
+            
+            # Add video if provided
+            if video:
+                video_bytes = video.read()
+                zip_file.writestr('test-recording.webm', video_bytes)
+        
+        zip_buffer.seek(0)
+        
+        return send_file(
+            zip_buffer,
+            mimetype='application/zip',
+            as_attachment=True,
+            download_name=f'{test_name}_{int(time.time())}.zip'
+        )
+        
+    except Exception as e:
+        logger.error(f"Error generating ZIP: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/automation-test-creator')
 @jira_auth_required
@@ -17890,10 +18417,92 @@ def extract_text_from_adf(adf):
         logger.error(f"Error extracting text from ADF: {e}")
         return ''
 
+def add_waits_to_playwright_code(code):
+    """
+    Add waits and stability improvements to Playwright code.
+    Transforms common patterns to include proper waits.
+    """
+    import re
+    
+    def extract_locator(line):
+        """Extract the complete locator call including nested parentheses"""
+        # Find where page.locator( starts
+        locator_start = line.find('page.locator(')
+        if locator_start == -1:
+            return None
+        
+        # Count parentheses to find the matching close
+        paren_count = 0
+        start_idx = locator_start + len('page.locator')
+        
+        for i in range(start_idx, len(line)):
+            if line[i] == '(':
+                paren_count += 1
+            elif line[i] == ')':
+                paren_count -= 1
+                if paren_count == 0:
+                    # Found the matching close parenthesis
+                    return line[locator_start:i+1]
+        
+        return None
+    
+    lines = code.split('\n')
+    enhanced_lines = []
+    
+    for line in lines:
+        stripped = line.strip()
+        indent = len(line) - len(line.lstrip())
+        indent_str = ' ' * indent
+        
+        # Add wait_for_load_state after goto()
+        if '.goto(' in stripped and 'wait_for_load_state' not in stripped:
+            enhanced_lines.append(line)
+            enhanced_lines.append(f'{indent_str}page.wait_for_load_state("networkidle")')
+            continue
+        
+        # Add wait_for() before click() - wait for element to be visible and stable
+        if '.click(' in stripped and 'wait_for(' not in stripped and 'page.locator(' in stripped:
+            locator = extract_locator(stripped)
+            if locator:
+                enhanced_lines.append(f'{indent_str}{locator}.wait_for(state="visible", timeout=10000)')
+                enhanced_lines.append(line)
+                continue
+        
+        # Add wait_for() before fill() - wait for element to be visible
+        if '.fill(' in stripped and 'wait_for(' not in stripped and 'page.locator(' in stripped:
+            locator = extract_locator(stripped)
+            if locator:
+                enhanced_lines.append(f'{indent_str}{locator}.wait_for(state="visible", timeout=10000)')
+                enhanced_lines.append(line)
+                continue
+        
+        # Add set_default_timeout after browser/context creation
+        if 'browser = playwright.' in stripped or 'context = browser.' in stripped:
+            enhanced_lines.append(line)
+            if 'context = browser.' in stripped:
+                enhanced_lines.append(f'{indent_str}context.set_default_timeout(30000)  # 30 second default timeout')
+            continue
+        
+        # Add default timeout after page creation
+        if 'page = ' in stripped and 'new_page()' in stripped:
+            enhanced_lines.append(line)
+            enhanced_lines.append(f'{indent_str}page.set_default_timeout(30000)  # 30 second default timeout')
+            continue
+        
+        # Keep line as-is
+        enhanced_lines.append(line)
+    
+    enhanced_code = '\n'.join(enhanced_lines)
+    
+    # Log the transformation
+    logger.info(f"Enhanced Playwright code with waits. Original lines: {len(lines)}, Enhanced lines: {len(enhanced_lines)}")
+    
+    return enhanced_code
+
 @app.route('/api/automation-test-creator/execute', methods=['POST'])
 @jira_auth_required
 def execute_test():
-    """Execute the imported test code using Playwright"""
+    """Execute the imported test code using Playwright (Python)"""
     try:
         data = request.json
         code = data.get('code', '')
@@ -17905,39 +18514,134 @@ def execute_test():
         # Save code to temporary file
         import tempfile
         import uuid
+        import re
         
         session_id = str(uuid.uuid4())
         temp_dir = tempfile.gettempdir()
-        test_file = os.path.join(temp_dir, f'test_{session_id}.js')
+        test_file = os.path.join(temp_dir, f'test_{session_id}.py')
+        
+        # Add waits and stability improvements to Playwright code
+        code = add_waits_to_playwright_code(code)
+        
+        # Convert Playwright codegen format to pytest format if needed
+        if 'def test_' not in code and 'from playwright.sync_api import' in code:
+            # Extract the function body from the run() function
+            # Playwright codegen creates: def run(playwright: Playwright) -> None:
+            code_lines = code.split('\n')
+            
+            # Find where the run() function body starts
+            run_func_start = -1
+            for i, line in enumerate(code_lines):
+                if 'def run(playwright:' in line:
+                    run_func_start = i + 1
+                    break
+            
+            if run_func_start > 0:
+                # Extract just the function body (indented code after def run())
+                body_lines = []
+                for line in code_lines[run_func_start:]:
+                    # Stop at the with sync_playwright() line or other function defs
+                    if 'with sync_playwright()' in line or (line.strip() and not line.startswith(' ')):
+                        break
+                    # Skip empty lines at the start
+                    if not body_lines and not line.strip():
+                        continue
+                    body_lines.append(line)
+                
+                # Remove trailing empty lines
+                while body_lines and not body_lines[-1].strip():
+                    body_lines.pop()
+                
+                # Remove one level of indentation
+                dedented_body = []
+                for line in body_lines:
+                    if line.strip():  # Non-empty lines
+                        # Remove 4 spaces of indentation
+                        if line.startswith('    '):
+                            dedented_body.append(line[4:])
+                        else:
+                            dedented_body.append(line)
+                    else:  # Empty lines
+                        dedented_body.append(line)
+                
+                # Create pytest-compatible test
+                code = f"""import re
+from playwright.sync_api import Playwright, sync_playwright, expect
+
+def test_example(playwright: Playwright) -> None:
+{chr(10).join('    ' + line for line in dedented_body)}
+
+# For direct execution without pytest
+if __name__ == '__main__':
+    with sync_playwright() as playwright:
+        test_example(playwright)
+"""
+                logger.info("Successfully extracted run() function body and wrapped in test_example()")
+            else:
+                # Fallback: just wrap the entire code
+                logger.warning("Could not find run() function, wrapping entire code")
+                code = f"""import re
+from playwright.sync_api import Playwright, sync_playwright, expect
+
+def test_example(playwright: Playwright) -> None:
+{chr(10).join('    ' + line for line in code.split(chr(10)))}
+
+# For direct execution without pytest
+if __name__ == '__main__':
+    with sync_playwright() as playwright:
+        test_example(playwright)
+"""
         
         with open(test_file, 'w', encoding='utf-8') as f:
             f.write(code)
         
-        # Execute using Playwright
+        logger.info(f"Test saved to {test_file}")
+        logger.info(f"Test code preview:\n{code[:500]}...")
+        
+        # Execute the test directly with Python (not pytest)
         try:
+            import sys
+            python_executable = sys.executable
+            
+            # Run the Python file directly - it has __main__ block that uses sync_playwright
             result = subprocess.run(
-                ['npx', 'playwright', 'test', test_file, '--reporter=json'],
+                [python_executable, test_file],
                 capture_output=True,
                 text=True,
-                timeout=120
+                timeout=120,
+                cwd=temp_dir
             )
             
-            # Parse results
+            # Parse results from execution
             execution_results = {
                 'status': 'SUCCESS' if result.returncode == 0 else 'FAILED',
                 'duration': 0,
-                'steps': []
+                'steps': [],
+                'output': result.stdout + '\n' + result.stderr
             }
             
-            # Try to parse JSON output
-            try:
-                if result.stdout:
-                    test_output = json.loads(result.stdout)
-                    # Extract test details from Playwright output
-                    # This is a simplified version - you may need to adjust based on actual output format
-                    execution_results['steps'] = parse_playwright_output(test_output)
-            except:
-                pass
+            # Check if there were any errors in stderr
+            if result.stderr and 'Error' in result.stderr:
+                execution_results['steps'].append({
+                    'status': 'FAIL',
+                    'description': 'Test execution encountered errors',
+                    'duration': 0
+                })
+            elif result.returncode == 0:
+                execution_results['steps'].append({
+                    'status': 'PASS',
+                    'description': 'Test executed successfully',
+                    'duration': 0
+                })
+            else:
+                execution_results['steps'].append({
+                    'status': 'FAIL',
+                    'description': f'Test failed with exit code {result.returncode}',
+                    'duration': 0
+                })
+            
+            logger.info(f"Test execution completed. Return code: {result.returncode}")
+            logger.info(f"Output length: {len(execution_results['output'])} chars")
             
             return jsonify({
                 'success': True,
@@ -17959,30 +18663,6 @@ def execute_test():
         logger.error(traceback.format_exc())
         return jsonify({'success': False, 'error': str(e)}), 500
 
-def parse_playwright_output(output):
-    """Parse Playwright test output to extract steps"""
-    steps = []
-    try:
-        # This is a simplified parser - adjust based on actual Playwright JSON output
-        if isinstance(output, dict):
-            suites = output.get('suites', [])
-            for suite in suites:
-                specs = suite.get('specs', [])
-                for spec in specs:
-                    tests = spec.get('tests', [])
-                    for test in tests:
-                        results = test.get('results', [])
-                        for result in results:
-                            steps.append({
-                                'status': 'PASS' if result.get('status') == 'passed' else 'FAIL',
-                                'description': test.get('title', 'Test step'),
-                                'duration': result.get('duration', 0)
-                            })
-    except Exception as e:
-        logger.error(f"Error parsing Playwright output: {e}")
-    
-    return steps
-
 @app.route('/api/automation-test-creator/export-results/<ticket_id>', methods=['POST'])
 @jira_auth_required
 def export_results_to_jira(ticket_id):
@@ -18001,8 +18681,8 @@ def export_results_to_jira(ticket_id):
         # Build ADF comment
         status = results.get('status', 'UNKNOWN')
         steps = results.get('steps', [])
+        output = results.get('output', '')
         
-        status_color = 'green' if status == 'SUCCESS' else 'red'
         status_icon = '✓' if status == 'SUCCESS' else '✗'
         
         comment_adf = {
@@ -18030,7 +18710,7 @@ def export_results_to_jira(ticket_id):
             ]
         }
         
-        # Add steps table if available
+        # Add steps summary if available
         if steps and len(steps) > 0:
             passed = sum(1 for s in steps if s.get('status') == 'PASS')
             failed = len(steps) - passed
@@ -18038,9 +18718,47 @@ def export_results_to_jira(ticket_id):
             comment_adf["content"].append({
                 "type": "paragraph",
                 "content": [
-                    {"type": "text", "text": f"Total Steps: {len(steps)} | "},
-                    {"type": "text", "text": f"Passed: {passed} | ", "marks": [{"type": "textColor", "attrs": {"color": "green"}}]},
-                    {"type": "text", "text": f"Failed: {failed}", "marks": [{"type": "textColor", "attrs": {"color": "red"}}]}
+                    {"type": "text", "text": f"Total Steps: {len(steps)} | Passed: {passed} | Failed: {failed}"}
+                ]
+            })
+            
+            # Add individual step results
+            comment_adf["content"].append({
+                "type": "heading",
+                "attrs": {"level": 4},
+                "content": [{"type": "text", "text": "Step Details"}]
+            })
+            
+            for i, step in enumerate(steps, 1):
+                step_status = step.get('status', 'UNKNOWN')
+                step_desc = step.get('description', 'No description')
+                step_icon = '✓' if step_status == 'PASS' else '✗'
+                
+                comment_adf["content"].append({
+                    "type": "paragraph",
+                    "content": [
+                        {"type": "text", "text": f"{step_icon} Step {i}: {step_desc}"}
+                    ]
+                })
+        
+        # Add execution output if available
+        if output and len(output.strip()) > 0:
+            comment_adf["content"].append({
+                "type": "heading",
+                "attrs": {"level": 4},
+                "content": [{"type": "text", "text": "Execution Output"}]
+            })
+            
+            # Truncate output if too long (Jira has limits)
+            max_output_length = 5000
+            if len(output) > max_output_length:
+                output = output[:max_output_length] + "\n\n... (output truncated)"
+            
+            comment_adf["content"].append({
+                "type": "codeBlock",
+                "attrs": {"language": "text"},
+                "content": [
+                    {"type": "text", "text": output}
                 ]
             })
         
@@ -18054,6 +18772,7 @@ def export_results_to_jira(ticket_id):
         jira_url = f'https://api.atlassian.com/ex/jira/{cloud_id}/rest/api/3/issue/{ticket_id}/comment'
         comment_payload = {'body': comment_adf}
         
+        logger.info(f"Posting comment to Jira: {ticket_id}")
         response = requests.post(jira_url, headers=headers, json=comment_payload, timeout=30)
         
         if response.status_code in [200, 201]:
@@ -18063,7 +18782,8 @@ def export_results_to_jira(ticket_id):
             logger.error(f"Jira API error: {response.status_code} - {error_detail}")
             return jsonify({
                 'success': False,
-                'error': f'Failed to post comment: {response.status_code}'
+                'error': f'Failed to post comment: {response.status_code}',
+                'details': error_detail
             }), response.status_code
         
     except Exception as e:
