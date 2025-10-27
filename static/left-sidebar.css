@@ -14,12 +14,13 @@
 /* Top Right User Section */
 .top-user-section {
   position: fixed;
-  top: 0.5rem;
-  right: 1rem;
-  z-index: 9999;
+  top: 0.25rem;
+  right: 0.75rem;
+  z-index: 99999 !important;
   display: flex;
   align-items: center;
   gap: 0.5rem;
+  pointer-events: auto;
 }
 
 .top-user-profile {
@@ -33,6 +34,8 @@
   border: 1px solid var(--glass-border);
   backdrop-filter: blur(10px);
   transition: all 0.3s ease;
+  position: relative;
+  z-index: 99999;
 }
 
 .top-user-profile:hover {
@@ -137,6 +140,8 @@
 
 .top-login-section {
   display: none;
+  position: relative;
+  z-index: 99999;
 }
 
 .top-login-btn {
@@ -177,6 +182,8 @@
   border: 1px solid var(--glass-border);
   backdrop-filter: blur(10px);
   transition: all 0.3s ease;
+  position: relative;
+  z-index: 99999;
 }
 
 .top-user-profile-mini:hover {
