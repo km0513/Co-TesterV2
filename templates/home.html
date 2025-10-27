@@ -176,13 +176,12 @@
 
     /* Quote Header */
     .quote-header {
-      max-width: 900px;
-      margin: 0 auto 3rem;
-      padding: 2rem 2.5rem;
-      background: linear-gradient(135deg, rgba(99, 102, 241, 0.05) 0%, rgba(139, 92, 246, 0.05) 100%);
-      border-left: 4px solid #6366f1;
-      border-radius: 12px;
-      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+      width: 100%;
+      margin: 0;
+      padding: 1rem 2rem;
+      background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+      border-bottom: 2px solid #cbd5e1;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
       position: relative;
       overflow: hidden;
     }
@@ -190,30 +189,31 @@
     .quote-header::before {
       content: '"';
       position: absolute;
-      top: -10px;
-      left: 20px;
-      font-size: 120px;
+      top: -15px;
+      left: 15px;
+      font-size: 80px;
       font-family: Georgia, serif;
-      color: rgba(99, 102, 241, 0.1);
+      color: rgba(100, 116, 139, 0.1);
       line-height: 1;
     }
 
     .quote-text {
-      font-size: 1.4rem;
+      font-size: 1.1rem;
       font-style: italic;
-      color: #374151;
-      line-height: 1.8;
-      margin-bottom: 1rem;
+      color: #475569;
+      line-height: 1.6;
+      margin-bottom: 0.25rem;
       position: relative;
       z-index: 1;
       font-weight: 500;
+      text-align: center;
     }
 
     .quote-author {
-      font-size: 1rem;
-      color: #6366f1;
+      font-size: 0.875rem;
+      color: #64748b;
       font-weight: 600;
-      text-align: right;
+      text-align: center;
     }
 
     .quote-author::before {
@@ -1344,15 +1344,16 @@
   <div class="bg-animation"></div>
   
   <div class="main-content">
-     <!-- Hero Section -->
+    <!-- Quote Header -->
+    <div class="quote-header">
+      <p class="quote-text">
+        "Quality is not an act, it is a habit. Let AI amplify your testing excellence."
+      </p>
+      <p class="quote-author">Co-Tester Team</p>
+    </div>
+
+    <!-- Hero Section -->
     <section class="hero">
-      <!-- Quote Header -->
-      <div class="quote-header">
-        <p class="quote-text">
-          "Quality is not an act, it is a habit. Let AI amplify your testing excellence."
-        </p>
-        <p class="quote-author">Co-Tester Team</p>
-      </div>
 
       <div class="hero-logo">
         <span class="hero-logo-icon">
