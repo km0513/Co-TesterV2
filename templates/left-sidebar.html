@@ -16,8 +16,23 @@
       <div class="top-user-name" id="topUserName">Welcome!</div>
       <div class="top-user-email" id="topUserEmail">Connecting...</div>
     </div>
+    <button class="top-minimize-btn" id="topMinimizeBtn" title="Minimize">
+      <i class="fas fa-chevron-right"></i>
+    </button>
     <button class="top-logout-btn" id="topUserLogoutBtn" title="Logout">
       <i class="fas fa-sign-out-alt"></i>
+    </button>
+  </div>
+
+  <!-- Minimized User Profile (compact view) -->
+  <div class="top-user-profile-mini" id="topUserProfileMini" style="display: none;">
+    <div class="top-user-avatar-mini">
+      <img id="topUserAvatarImgMini" src="" alt="User Avatar" style="display: none;"
+        onerror="this.style.display='none'; document.getElementById('topUserAvatarPlaceholderMini').style.display='flex';">
+      <div id="topUserAvatarPlaceholderMini" class="top-avatar-placeholder-mini">👤</div>
+    </div>
+    <button class="top-expand-btn" id="topExpandBtn" title="Expand">
+      <i class="fas fa-chevron-left"></i>
     </button>
   </div>
 
@@ -639,6 +654,8 @@
       const topUserEmail = document.getElementById('topUserEmail');
       const topUserAvatarImg = document.getElementById('topUserAvatarImg');
       const topUserAvatarPlaceholder = document.getElementById('topUserAvatarPlaceholder');
+      const topUserAvatarImgMini = document.getElementById('topUserAvatarImgMini');
+      const topUserAvatarPlaceholderMini = document.getElementById('topUserAvatarPlaceholderMini');
 
       // Show the profile section and hide login section
       showUserProfile();
@@ -663,12 +680,24 @@
             topUserAvatarPlaceholder.style.display = 'flex';
             topUserAvatarPlaceholder.textContent = displayName.charAt(0).toUpperCase();
           }
+          // Update mini version too
+          if (topUserAvatarImgMini) topUserAvatarImgMini.style.display = 'none';
+          if (topUserAvatarPlaceholderMini) {
+            topUserAvatarPlaceholderMini.style.display = 'flex';
+            topUserAvatarPlaceholderMini.textContent = displayName.charAt(0).toUpperCase();
+          }
         };
 
         topUserAvatarImg.onload = function () {
           console.log('User avatar loaded successfully');
           this.style.display = 'block';
           if (topUserAvatarPlaceholder) topUserAvatarPlaceholder.style.display = 'none';
+          // Update mini version too
+          if (topUserAvatarImgMini) {
+            topUserAvatarImgMini.src = userData.user_avatar;
+            topUserAvatarImgMini.style.display = 'block';
+          }
+          if (topUserAvatarPlaceholderMini) topUserAvatarPlaceholderMini.style.display = 'none';
         };
 
         topUserAvatarImg.src = userData.user_avatar;
@@ -677,6 +706,12 @@
         if (topUserAvatarPlaceholder) {
           topUserAvatarPlaceholder.style.display = 'flex';
           topUserAvatarPlaceholder.textContent = displayName.charAt(0).toUpperCase();
+        }
+        // Update mini version too
+        if (topUserAvatarImgMini) topUserAvatarImgMini.style.display = 'none';
+        if (topUserAvatarPlaceholderMini) {
+          topUserAvatarPlaceholderMini.style.display = 'flex';
+          topUserAvatarPlaceholderMini.textContent = displayName.charAt(0).toUpperCase();
         }
       }
     }
@@ -724,6 +759,7 @@
     function showUserProfile() {
       const topUserSection = document.getElementById('topUserSection');
       const topUserProfile = document.getElementById('topUserProfile');
+      const topUserProfileMini = document.getElementById('topUserProfileMini');
       const topLoginSection = document.getElementById('topLoginSection');
       const sidebar = document.getElementById('sidebar');
       const mainContent = document.querySelector('.main-content');
@@ -754,8 +790,20 @@
         detail: { authenticated: true, sidebarVisible: true, collapsed: isCollapsed }
       }));
 
-      // Show user profile and hide login button
-      if (topUserProfile) topUserProfile.style.display = 'flex';
+      // Check if profile should be minimized (from localStorage)
+      let isMinimized = false;
+      try {
+        isMinimized = localStorage.getItem('topProfileMinimized') === 'true';
+      } catch (e) { /* ignore */ }
+
+      // Show appropriate profile view and hide login button
+      if (isMinimized) {
+        if (topUserProfile) topUserProfile.style.display = 'none';
+        if (topUserProfileMini) topUserProfileMini.style.display = 'flex';
+      } else {
+        if (topUserProfile) topUserProfile.style.display = 'flex';
+        if (topUserProfileMini) topUserProfileMini.style.display = 'none';
+      }
       if (topLoginSection) topLoginSection.style.display = 'none';
     }
 
@@ -967,7 +1015,64 @@
       if (e.target.closest('#topUserLoginBtn') || e.target.closest('#userLoginBtn')) {
         window.location.href = '/api/jira/oauth/login';
       }
+      // Minimize profile
+      if (e.target.closest('#topMinimizeBtn')) {
+        minimizeUserProfile();
+      }
+      // Expand profile
+      if (e.target.closest('#topExpandBtn')) {
+        expandUserProfile();
+      }
     });
+
+    // Minimize user profile to compact view
+    function minimizeUserProfile() {
+      const topUserProfile = document.getElementById('topUserProfile');
+      const topUserProfileMini = document.getElementById('topUserProfileMini');
+      const topUserAvatarImg = document.getElementById('topUserAvatarImg');
+      const topUserAvatarImgMini = document.getElementById('topUserAvatarImgMini');
+      const topUserAvatarPlaceholder = document.getElementById('topUserAvatarPlaceholder');
+      const topUserAvatarPlaceholderMini = document.getElementById('topUserAvatarPlaceholderMini');
+
+      if (topUserProfile) topUserProfile.style.display = 'none';
+      if (topUserProfileMini) topUserProfileMini.style.display = 'flex';
+
+      // Copy avatar state to mini version
+      if (topUserAvatarImg && topUserAvatarImg.style.display !== 'none' && topUserAvatarImg.src) {
+        if (topUserAvatarImgMini) {
+          topUserAvatarImgMini.src = topUserAvatarImg.src;
+          topUserAvatarImgMini.style.display = 'block';
+        }
+        if (topUserAvatarPlaceholderMini) topUserAvatarPlaceholderMini.style.display = 'none';
+      } else {
+        if (topUserAvatarImgMini) topUserAvatarImgMini.style.display = 'none';
+        if (topUserAvatarPlaceholderMini) {
+          topUserAvatarPlaceholderMini.style.display = 'flex';
+          if (topUserAvatarPlaceholder) {
+            topUserAvatarPlaceholderMini.textContent = topUserAvatarPlaceholder.textContent;
+          }
+        }
+      }
+
+      // Store minimized state
+      try {
+        localStorage.setItem('topProfileMinimized', 'true');
+      } catch (e) { /* ignore */ }
+    }
+
+    // Expand user profile to full view
+    function expandUserProfile() {
+      const topUserProfile = document.getElementById('topUserProfile');
+      const topUserProfileMini = document.getElementById('topUserProfileMini');
+
+      if (topUserProfile) topUserProfile.style.display = 'flex';
+      if (topUserProfileMini) topUserProfileMini.style.display = 'none';
+
+      // Remove minimized state
+      try {
+        localStorage.removeItem('topProfileMinimized');
+      } catch (e) { /* ignore */ }
+    }
 
 
     // Logout function
