@@ -1,0 +1,87 @@
+# Docker ignore file - excludes unnecessary files from Docker image
+# This keeps the image size small and secure
+
+# Git files
+.git
+.gitignore
+.gitattributes
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Virtual environments
+venv/
+env/
+ENV/
+.venv
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# User data (will be mounted as volumes)
+instance/
+uploads/
+reports/
+playwright-output/
+codegen-output/
+logs/
+data/
+
+# Environment files (use environment variables instead)
+.env
+.env.*
+
+# Documentation
+*.md
+docs/
+
+# Test files
+tests/
+pytest.ini
+.pytest_cache/
+
+# CI/CD
+.github/
+.gitlab-ci.yml
+
+# Backup files
+*.backup
+*.bak
+*-backup/
+python-backup/
+templates-backup/
+
+# Temporary files
+*.tmp
+*.temp
+tmp/
+temp/
+
+# Node modules (if any)
+node_modules/
+package-lock.json
+Jira-helper/node_modules/
+
+# Migration scripts (already applied in production)
+migrations/
+
+# Context files
+context/
+
+# Setup scripts (not needed in container)
+setup.bat
+setup.sh
+
+# Docker files themselves
+Dockerfile
+docker-compose.yml
+.dockerignore

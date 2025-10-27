@@ -1,0 +1,38 @@
+version: '3.8'
+
+services:
+  co-tester:
+    build: .
+    image: co-tester:latest
+    container_name: co-tester
+    ports:
+      - "5000:5000"
+    environment:
+      - FLASK_ENV=production
+      - SECRET_KEY=${SECRET_KEY}
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+      - GOOGLE_API_MODEL=${GOOGLE_API_MODEL:-gemini-2.0-flash-exp}
+      - JIRA_CLIENT_ID=${JIRA_CLIENT_ID}
+      - JIRA_CLIENT_SECRET=${JIRA_CLIENT_SECRET}
+      - JIRA_CALLBACK_URL=${JIRA_CALLBACK_URL:-http://localhost:5000/api/jira/oauth/callback}
+      - DAILY_LLM_LIMIT=${DAILY_LLM_LIMIT:-20}
+      - ADMIN_EMAILS=${ADMIN_EMAILS}
+    volumes:
+      # Persist user data across updates
+      - ./data/instance:/app/instance
+      - ./data/uploads:/app/uploads
+      - ./data/reports:/app/reports
+      - ./data/playwright-output:/app/playwright-output
+      - ./data/codegen-output:/app/codegen-output
+      - ./data/logs:/app/logs
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import requests; requests.get('http://localhost:5000/health', timeout=5)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+volumes:
+  co-tester-data:
+    driver: local
