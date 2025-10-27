@@ -36,12 +36,12 @@ charset-normalizer==3.4.1
 idna==3.10
 
 # AI & Machine Learning  
-google-generativeai>=0.8.0
+google-generativeai==0.5.4
 google-genai>=0.3.0  # Google GenAI SDK for Computer Use
 openai>=1.86.0,<2.0.0
-langchain-core>=0.2.0,<0.3.0
-langchain-openai>=0.1.0,<0.2.0
-langchain-google-genai>=1.0.0,<2.0.0
+langchain-core==1.0.0
+langchain-openai==0.3.27
+langchain-google-genai==3.0.0
 pydantic==2.12.3
 pydantic_core==2.41.4
 annotated-types==0.7.0
