@@ -17446,11 +17446,13 @@ def beautify_playwright_code_with_ai(code):
 3. Adding inline comments for complex selectors explaining what element is being targeted
 4. Improving variable names if needed for better readability
 5. Adding a docstring at the top of the function explaining the test purpose
-6. **IMPORTANT**: For any locator that might match multiple elements, add `.first` or `.nth(0)` to ensure strict mode compliance
-   - Example: Change `page.locator(".icon-square")` to `page.locator(".icon-square").first`
-   - Example: Change `page.locator("button")` to `page.locator("button").nth(0)` or use more specific selector
-7. Add comments explaining why `.first` or `.nth()` is used when multiple elements exist
-8. Keeping the code functional and executable - DO NOT change the logic
+6. **CRITICAL - Selector Specificity**: 
+   - If a selector looks ambiguous (like a common class name: `.icon`, `.button`, `.item`, etc.), add `.first` or use more specific selectors
+   - Keep specific selectors unchanged (with IDs, unique attributes, or text content)
+   - Add comments explaining why `.first` is used: "# Click the first/leftmost/topmost element" or "# Target the primary action button"
+   - Example: `page.locator(".icon-square")` → `page.locator(".icon-square").first  # Click the first icon in the toolbar`
+   - Example: `page.locator("button")` → Keep as is if text content makes it unique: `page.locator("button").filter(has_text="Submit")`
+7. Keeping the code functional and executable - DO NOT change the logic or break working tests
 
 Original Code:
 ```python
@@ -17459,7 +17461,7 @@ Original Code:
 
 Return ONLY the enhanced Python code. Do not include any explanatory text, markdown code blocks, or anything else - just the pure Python code that can be directly executed.
 
-The output should be clean, well-commented, production-ready test code with strict mode compatible selectors."""
+The output should be clean, well-commented, production-ready test code that avoids Playwright strict mode violations."""
 
         response = model.generate_content(prompt)
         enhanced_code = response.text.strip()
@@ -17470,21 +17472,30 @@ The output should be clean, well-commented, production-ready test code with stri
         elif '```' in enhanced_code:
             enhanced_code = enhanced_code.split('```')[1].split('```')[0].strip()
         
-        # Post-process: Add .first to common ambiguous selectors that don't have it
+        # Post-process: Add .first ONLY to obviously ambiguous class-only selectors
+        # that don't have any other specificity and don't already have .first/.nth/.last
         import re
-        # Find patterns like .locator("selector") that don't have .first, .nth(), or .last
-        # and add .first to make them strict mode compliant
-        pattern = r'\.locator\((["\'])([^"\']+)\1\)(?!\.(?:first|last|nth\(|filter\(|get_by_|count\(\)))'
         
-        def add_first_if_generic(match):
-            quote = match.group(1)
-            selector = match.group(2)
-            # Add .first for generic selectors (class, tag, or simple selectors without IDs)
-            if not selector.startswith('#') and not '=' in selector:
-                return f'.locator({quote}{selector}{quote}).first'
-            return match.group(0)
+        # Pattern: .locator with only class selector (starts with .) and nothing else
+        # Example: .locator(".icon-square") but NOT .locator("#id") or .locator("button[name='submit']")
+        pattern = r'\.locator\(["\'](\.[a-zA-Z0-9_-]+)["\']?\)(?!\.(?:first|last|nth\(|filter\(|get_by_|count\(\)|and_\(|or_\())'
         
-        enhanced_code = re.sub(pattern, add_first_if_generic, enhanced_code)
+        def add_first_with_comment(match):
+            full_match = match.group(0)
+            selector = match.group(1)
+            # Only add .first if it's a simple class selector with no other attributes
+            # and the class name suggests it could match multiple elements
+            ambiguous_keywords = ['icon', 'button', 'item', 'card', 'tile', 'box', 'container', 'wrapper', 'list', 'element']
+            selector_lower = selector.lower()
+            
+            # Check if selector contains any ambiguous keywords
+            is_ambiguous = any(keyword in selector_lower for keyword in ambiguous_keywords)
+            
+            if is_ambiguous:
+                return f'{full_match}.first'
+            return full_match
+        
+        enhanced_code = re.sub(pattern, add_first_with_comment, enhanced_code)
         
         logger.info(f"Code beautified: {len(code)} chars → {len(enhanced_code)} chars")
         return enhanced_code

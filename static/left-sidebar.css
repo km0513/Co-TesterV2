@@ -3,7 +3,7 @@
   --primary: #6366f1;
   --primary-hover: #4f46e5;
   --sidebar-width: 280px;
-  --sidebar-bg: linear-gradient(180deg, #f1f5f9 0%, #e2e8f0 50%, #cbd5e1 100%);
+  --sidebar-bg: linear-gradient(180deg, #f8fafc 0%, #e0e7ff 50%, #ddd6fe 100%);
   --sidebar-text: rgba(51, 65, 85, 0.8);
   --sidebar-active-text: #1e293b;
   --glass-bg: rgba(99, 102, 241, 0.05);
@@ -420,6 +420,58 @@
   font-weight: 800;
   letter-spacing: 0.5px;
   text-transform: uppercase;
+}
+
+/* My Details with Logout Button */
+.sidebar-item-with-action {
+  position: relative;
+  margin: 0.25rem 0.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.sidebar-item-with-action .sidebar-item {
+  margin: 0;
+  flex: 1;
+  padding-right: 2.5rem;
+}
+
+.sidebar-logout-btn {
+  position: absolute;
+  right: 0.5rem;
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  border: none;
+  color: white;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.3);
+  z-index: 10;
+}
+
+.sidebar-logout-btn:hover {
+  background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
+}
+
+.sidebar-logout-btn:active {
+  transform: translateY(0);
+}
+
+.sidebar-logout-btn i {
+  font-size: 0.85rem;
+}
+
+/* Hide logout button when sidebar is collapsed */
+.sidebar.collapsed .sidebar-logout-btn {
+  display: none;
 }
 
 /* User Profile */
