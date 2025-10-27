@@ -8,16 +8,11 @@
   <div class="sidebar-menu">
 
   
-    <!-- My Details with Logout Button -->
-    <div class="sidebar-item-with-action">
-      <a href="#" data-href="/my-details" class="nav-link sidebar-item{% if active_tab == 'jira' %} active{% endif %}">
-        <span class="sidebar-icon"><i class="fas fa-user"></i></span>
-        <span class="sidebar-label">My Details</span>
-      </a>
-      <button class="sidebar-logout-btn" id="sidebarLogoutBtn" title="Logout">
-        <i class="fas fa-sign-out-alt"></i>
-      </button>
-    </div>
+    <!-- My Details -->
+    <a href="#" data-href="/my-details" class="nav-link sidebar-item{% if active_tab == 'jira' %} active{% endif %}">
+      <span class="sidebar-icon"><i class="fas fa-user"></i></span>
+      <span class="sidebar-label">My Details</span>
+    </a>
 
 
     <!-- Manual Test Generator (Parent with Sub-menu) -->
@@ -102,12 +97,6 @@
       <span class="sidebar-label">Bug Builder <span class="ai-badge">AI</span></span>
     </a>
 
-    <a href="#" data-href="/data-generator"
-      class="nav-link sidebar-item{% if active_tab == 'data' %} active{% endif %}">
-      <span class="sidebar-icon"><i class="fas fa-database"></i></span>
-      <span class="sidebar-label">Data Generator</span>
-    </a>
-
 
     <!-- Jira Dashboard (Parent with Sub-menu) -->
     <div
@@ -163,6 +152,12 @@
       class="nav-link sidebar-item{% if active_tab == 'learning' %} active{% endif %}">
       <span class="sidebar-icon"><i class="fas fa-book"></i></span>
       <span class="sidebar-label">Learning Resources</span>
+    </a>
+
+    <!-- Logout -->
+    <a href="#" id="sidebarLogoutBtn" class="nav-link sidebar-item sidebar-logout-item">
+      <span class="sidebar-icon"><i class="fas fa-sign-out-alt"></i></span>
+      <span class="sidebar-label">Logout</span>
     </a>
   </div>
 

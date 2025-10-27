@@ -474,6 +474,27 @@
   display: none;
 }
 
+/* Logout Sidebar Item */
+.sidebar-logout-item {
+  margin-top: 0.5rem !important;
+  border-top: 1px solid rgba(100, 116, 139, 0.15);
+  padding-top: 0.75rem !important;
+  color: #ef4444 !important;
+}
+
+.sidebar-logout-item:hover {
+  background: rgba(239, 68, 68, 0.08) !important;
+  border-color: rgba(239, 68, 68, 0.3) !important;
+}
+
+.sidebar-logout-item .sidebar-icon {
+  color: #ef4444 !important;
+}
+
+.sidebar-logout-item:hover .sidebar-icon {
+  color: #dc2626 !important;
+}
+
 /* User Profile */
 .user-profile-section,
 .login-profile-section {
