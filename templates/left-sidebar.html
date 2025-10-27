@@ -3,48 +3,6 @@
 <link rel="stylesheet" href="/static/left-sidebar.css">
 <script src="/static/auth-utils.js"></script>
 
-<!-- Top Right User Profile/Login -->
-<div class="top-user-section" id="topUserSection" style="display: none;">
-  <!-- User Profile (shown when logged in) -->
-  <div class="top-user-profile" id="topUserProfile" style="display: none;">
-    <div class="top-user-avatar">
-      <img id="topUserAvatarImg" src="" alt="User Avatar" style="display: none;"
-        onerror="this.style.display='none'; document.getElementById('topUserAvatarPlaceholder').style.display='flex';">
-      <div id="topUserAvatarPlaceholder" class="top-avatar-placeholder">👤</div>
-    </div>
-    <div class="top-user-info">
-      <div class="top-user-name" id="topUserName">Welcome!</div>
-      <div class="top-user-email" id="topUserEmail">Connecting...</div>
-    </div>
-    <button class="top-minimize-btn" id="topMinimizeBtn" title="Minimize">
-      <i class="fas fa-chevron-right"></i>
-    </button>
-    <button class="top-logout-btn" id="topUserLogoutBtn" title="Logout">
-      <i class="fas fa-sign-out-alt"></i>
-    </button>
-  </div>
-
-  <!-- Minimized User Profile (compact view) -->
-  <div class="top-user-profile-mini" id="topUserProfileMini" style="display: none;">
-    <div class="top-user-avatar-mini">
-      <img id="topUserAvatarImgMini" src="" alt="User Avatar" style="display: none;"
-        onerror="this.style.display='none'; document.getElementById('topUserAvatarPlaceholderMini').style.display='flex';">
-      <div id="topUserAvatarPlaceholderMini" class="top-avatar-placeholder-mini">👤</div>
-    </div>
-    <button class="top-expand-btn" id="topExpandBtn" title="Expand">
-      <i class="fas fa-chevron-left"></i>
-    </button>
-  </div>
-
-  <!-- Login Button (shown when not authenticated) -->
-  <div class="top-login-section" id="topLoginSection" style="display: none;">
-    <button class="top-login-btn" id="topUserLoginBtn" title="Login to Jira">
-      <i class="fas fa-sign-in-alt"></i>
-      <span>Login to Jira</span>
-    </button>
-  </div>
-</div>
-
 <div class="sidebar" id="sidebar" style="display: none;">
 
   <div class="sidebar-menu">

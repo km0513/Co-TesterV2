@@ -1,13 +1,13 @@
 /* Ultra-Modern Sleek Sidebar - Light Version */
 :root {
-  --primary: #6366f1;
-  --primary-hover: #4f46e5;
+  --primary: #10b981;
+  --primary-hover: #059669;
   --sidebar-width: 280px;
-  --sidebar-bg: linear-gradient(180deg, #f8fafc 0%, #e0e7ff 50%, #ddd6fe 100%);
-  --sidebar-text: rgba(51, 65, 85, 0.8);
-  --sidebar-active-text: #1e293b;
-  --glass-bg: rgba(99, 102, 241, 0.05);
-  --glass-border: rgba(99, 102, 241, 0.12);
+  --sidebar-bg: linear-gradient(180deg, #f0fdf4 0%, #d1fae5 50%, #a7f3d0 100%);
+  --sidebar-text: rgba(31, 41, 55, 0.8);
+  --sidebar-active-text: #064e3b;
+  --glass-bg: rgba(16, 185, 129, 0.05);
+  --glass-border: rgba(16, 185, 129, 0.12);
   --shadow-xl: 0 25px 50px -12px rgba(0, 0, 0, 0.15);
 }
 
@@ -62,7 +62,7 @@
   width: 100%;
   height: 100%;
   border-radius: 50%;
-  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+  background: linear-gradient(135deg, #10b981 0%, #047857 100%);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -98,7 +98,7 @@
 .top-minimize-btn {
   background: rgba(99, 102, 241, 0.1);
   border: none;
-  color: #6366f1;
+  color: #10b981;
   width: 28px;
   height: 28px;
   border-radius: 50%;
@@ -112,7 +112,7 @@
 }
 
 .top-minimize-btn:hover {
-  background: #6366f1;
+  background: #10b981;
   color: white;
   transform: scale(1.1);
 }
@@ -145,7 +145,7 @@
 }
 
 .top-login-btn {
-  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+  background: linear-gradient(135deg, #10b981 0%, #047857 100%);
   border: none;
   color: white;
   padding: 0.45rem 1rem;
@@ -161,7 +161,7 @@
 }
 
 .top-login-btn:hover {
-  background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+  background: linear-gradient(135deg, #059669 0%, #065f46 100%);
   transform: translateY(-2px);
   box-shadow: 0 6px 16px rgba(99, 102, 241, 0.4);
 }
@@ -209,7 +209,7 @@
   width: 100%;
   height: 100%;
   border-radius: 50%;
-  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+  background: linear-gradient(135deg, #10b981 0%, #047857 100%);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -221,7 +221,7 @@
 .top-expand-btn {
   background: rgba(99, 102, 241, 0.1);
   border: none;
-  color: #6366f1;
+  color: #10b981;
   width: 24px;
   height: 24px;
   border-radius: 50%;
@@ -235,7 +235,7 @@
 }
 
 .top-expand-btn:hover {
-  background: #6366f1;
+  background: #10b981;
   color: white;
   transform: scale(1.1);
 }
@@ -297,7 +297,7 @@
 }
 
 .brand-text {
-  background: linear-gradient(135deg, var(--primary) 0%, #8b5cf6 100%);
+  background: linear-gradient(135deg, var(--primary) 0%, #047857 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -315,7 +315,7 @@
   overflow-y: auto;
   overflow-x: hidden;
   scrollbar-width: thin;
-  scrollbar-color: #6366f1 rgba(0, 0, 0, 0.1);
+  scrollbar-color: #10b981 rgba(0, 0, 0, 0.1);
   will-change: scroll-position;
   contain: layout style paint;
 }
@@ -332,13 +332,13 @@
 }
 
 .sidebar-menu::-webkit-scrollbar-thumb {
-  background: linear-gradient(180deg, #6366f1 0%, #8b5cf6 100%);
+  background: linear-gradient(180deg, #10b981 0%, #047857 100%);
   border-radius: 10px;
   transition: background 0.2s ease;
 }
 
 .sidebar-menu::-webkit-scrollbar-thumb:hover {
-  background: linear-gradient(180deg, #4f46e5 0%, #7c3aed 100%);
+  background: linear-gradient(180deg, #059669 0%, #047857 100%);
 }
 
 /* Sidebar Items */
@@ -364,14 +364,14 @@
 }
 
 .sidebar-item:hover {
-  background: rgba(99, 102, 241, 0.08);
-  border-color: rgba(99, 102, 241, 0.3);
+  background: rgba(16, 185, 129, 0.08);
+  border-color: rgba(16, 185, 129, 0.3);
 }
 
 .sidebar-item.active {
-  background: linear-gradient(135deg, rgba(99, 102, 241, 0.2) 0%, rgba(139, 92, 246, 0.15) 100%);
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.2) 0%, rgba(5, 150, 105, 0.15) 100%);
   color: var(--sidebar-active-text);
-  border-color: rgba(99, 102, 241, 0.5);
+  border-color: rgba(16, 185, 129, 0.5);
   font-weight: 500;
 }
 
@@ -386,16 +386,16 @@
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  color: #6366f1;
+  color: #10b981;
   transition: color 0.3s ease;
 }
 
 .sidebar-item:hover .sidebar-icon {
-  color: #4f46e5;
+  color: #059669;
 }
 
 .sidebar-item.active .sidebar-icon {
-  color: #6366f1;
+  color: #10b981;
 }
 
 .sidebar-label {
@@ -510,7 +510,7 @@
   width: 100%;
   height: 100%;
   border-radius: 50%;
-  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+  background: linear-gradient(135deg, #10b981 0%, #047857 100%);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -686,7 +686,7 @@
   left: 260px;
   width: 36px;
   height: 36px;
-  background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
   border: 2px solid rgba(255, 255, 255, 0.2);
   border-radius: 50%;
   color: #ffffff;
@@ -710,7 +710,7 @@
 }
 
 .sidebar-toggle:hover {
-  background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+  background: linear-gradient(135deg, #059669 0%, #065f46 100%);
   transform: scale(1.1);
   box-shadow: 
     0 6px 20px rgba(99, 102, 241, 0.5),
@@ -753,7 +753,7 @@
 .sidebar.collapsed .sidebar-icon {
   margin: 0;
   font-size: 1.1rem;
-  color: #6366f1;
+  color: #10b981;
 }
 
 /* Ensure parent item icons are visible when collapsed */
@@ -763,7 +763,7 @@
 
 .sidebar.collapsed .sidebar-item.has-submenu .sidebar-icon {
   display: flex !important;
-  color: #6366f1;
+  color: #10b981;
 }
 
 /* Main content adjustment when sidebar is collapsed */
