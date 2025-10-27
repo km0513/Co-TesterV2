@@ -36,7 +36,7 @@ charset-normalizer==3.4.1
 idna==3.10
 
 # AI & Machine Learning  
-google-generativeai==0.5.4
+google-generativeai>=0.7.0,<0.8.0
 google-genai>=0.3.0  # Google GenAI SDK for Computer Use
 openai==1.109.1
 langchain-core>=0.3.66,<1.0.0
