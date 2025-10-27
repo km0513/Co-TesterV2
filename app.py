@@ -17446,7 +17446,11 @@ def beautify_playwright_code_with_ai(code):
 3. Adding inline comments for complex selectors explaining what element is being targeted
 4. Improving variable names if needed for better readability
 5. Adding a docstring at the top of the function explaining the test purpose
-6. Keeping the code functional and executable - DO NOT change the logic
+6. **IMPORTANT**: For any locator that might match multiple elements, add `.first` or `.nth(0)` to ensure strict mode compliance
+   - Example: Change `page.locator(".icon-square")` to `page.locator(".icon-square").first`
+   - Example: Change `page.locator("button")` to `page.locator("button").nth(0)` or use more specific selector
+7. Add comments explaining why `.first` or `.nth()` is used when multiple elements exist
+8. Keeping the code functional and executable - DO NOT change the logic
 
 Original Code:
 ```python
@@ -17455,7 +17459,7 @@ Original Code:
 
 Return ONLY the enhanced Python code. Do not include any explanatory text, markdown code blocks, or anything else - just the pure Python code that can be directly executed.
 
-The output should be clean, well-commented, production-ready test code."""
+The output should be clean, well-commented, production-ready test code with strict mode compatible selectors."""
 
         response = model.generate_content(prompt)
         enhanced_code = response.text.strip()
@@ -17465,6 +17469,22 @@ The output should be clean, well-commented, production-ready test code."""
             enhanced_code = enhanced_code.split('```python')[1].split('```')[0].strip()
         elif '```' in enhanced_code:
             enhanced_code = enhanced_code.split('```')[1].split('```')[0].strip()
+        
+        # Post-process: Add .first to common ambiguous selectors that don't have it
+        import re
+        # Find patterns like .locator("selector") that don't have .first, .nth(), or .last
+        # and add .first to make them strict mode compliant
+        pattern = r'\.locator\((["\'])([^"\']+)\1\)(?!\.(?:first|last|nth\(|filter\(|get_by_|count\(\)))'
+        
+        def add_first_if_generic(match):
+            quote = match.group(1)
+            selector = match.group(2)
+            # Add .first for generic selectors (class, tag, or simple selectors without IDs)
+            if not selector.startswith('#') and not '=' in selector:
+                return f'.locator({quote}{selector}{quote}).first'
+            return match.group(0)
+        
+        enhanced_code = re.sub(pattern, add_first_if_generic, enhanced_code)
         
         logger.info(f"Code beautified: {len(code)} chars → {len(enhanced_code)} chars")
         return enhanced_code
