@@ -342,6 +342,11 @@
     const navLinks = document.querySelectorAll('.nav-link');
     navLinks.forEach(link => {
       link.addEventListener('click', function (e) {
+        // Skip logout button - it has its own handler
+        if (this.id === 'sidebarLogoutBtn') {
+          return;
+        }
+
         e.preventDefault();
         e.stopPropagation();
 
