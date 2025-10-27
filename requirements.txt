@@ -38,8 +38,8 @@ idna==3.10
 # AI & Machine Learning  
 google-generativeai==0.5.4
 google-genai>=0.3.0  # Google GenAI SDK for Computer Use
-openai>=1.86.0,<2.0.0
-langchain-core==1.0.0
+openai==1.109.1
+langchain-core>=0.3.66,<1.0.0
 langchain-openai==0.3.27
 langchain-google-genai==3.0.0
 pydantic==2.12.3
