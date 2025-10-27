@@ -1,6 +1,16 @@
-# Co-Tester - Comprehensive Testing Automation Platform
+<div align="center">
+  <img src="static/images/co-tester-logo.svg" alt="Co-Tester Logo" width="200"/>
+  
+  # Co-Tester - Comprehensive Testing Automation Platform
+  
+  **AI-Powered Testing Automation Platform for Modern QA Teams**
+  
+  [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+  [![Python](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
+  [![Node](https://img.shields.io/badge/node-20.x-green.svg)](https://nodejs.org/)
+</div>
 
-![Co-Tester](static/images/logo.png)
+---
 
 ## 🎯 Overview
 
