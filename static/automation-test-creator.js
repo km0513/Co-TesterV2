@@ -587,9 +587,19 @@ async function downloadZip() {
 // Step 4: Import & Execute (Keep existing)
 // ========================================
 
-document.getElementById('importFromJiraBtn').addEventListener('click', importFromJira);
-document.getElementById('executeTestBtn').addEventListener('click', executeTest);
-document.getElementById('exportResultsBtn').addEventListener('click', exportResultsToJira);
+const importFromJiraBtn = document.getElementById('importFromJiraBtn');
+const executeTestBtn = document.getElementById('executeTestBtn');
+const exportResultsBtn = document.getElementById('exportResultsBtn');
+
+if (importFromJiraBtn) {
+  importFromJiraBtn.addEventListener('click', importFromJira);
+}
+if (executeTestBtn) {
+  executeTestBtn.addEventListener('click', executeTest);
+}
+if (exportResultsBtn) {
+  exportResultsBtn.addEventListener('click', exportResultsToJira);
+}
 
 async function importFromJira() {
   const ticketId = document.getElementById('importTicketId').value.trim();
