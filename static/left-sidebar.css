@@ -674,17 +674,15 @@
   left: 40px;
 }
 
-.sidebar.collapsed .sidebar-toggle i {
-  transform: rotate(180deg);
-}
-
 .sidebar.collapsed .sidebar-label,
 .sidebar.collapsed .logo-text,
 .sidebar.collapsed .ai-badge,
 .sidebar.collapsed .user-info,
 .sidebar.collapsed .user-actions,
 .sidebar.collapsed .login-info,
-.sidebar.collapsed .login-actions {
+.sidebar.collapsed .login-actions,
+.sidebar.collapsed .sidebar-submenu,
+.sidebar.collapsed .sidebar-arrow {
   display: none;
 }
 
