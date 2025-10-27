@@ -3,47 +3,34 @@
 <link rel="stylesheet" href="/static/left-sidebar.css">
 <script src="/static/auth-utils.js"></script>
 
+<!-- Top Right User Profile/Login -->
+<div class="top-user-section" id="topUserSection" style="display: none;">
+  <!-- User Profile (shown when logged in) -->
+  <div class="top-user-profile" id="topUserProfile" style="display: none;">
+    <div class="top-user-avatar">
+      <img id="topUserAvatarImg" src="" alt="User Avatar" style="display: none;"
+        onerror="this.style.display='none'; document.getElementById('topUserAvatarPlaceholder').style.display='flex';">
+      <div id="topUserAvatarPlaceholder" class="top-avatar-placeholder">👤</div>
+    </div>
+    <div class="top-user-info">
+      <div class="top-user-name" id="topUserName">Welcome!</div>
+      <div class="top-user-email" id="topUserEmail">Connecting...</div>
+    </div>
+    <button class="top-logout-btn" id="topUserLogoutBtn" title="Logout">
+      <i class="fas fa-sign-out-alt"></i>
+    </button>
+  </div>
 
+  <!-- Login Button (shown when not authenticated) -->
+  <div class="top-login-section" id="topLoginSection" style="display: none;">
+    <button class="top-login-btn" id="topUserLoginBtn" title="Login to Jira">
+      <i class="fas fa-sign-in-alt"></i>
+      <span>Login to Jira</span>
+    </button>
+  </div>
+</div>
 
 <div class="sidebar" id="sidebar" style="display: none;">
-  
-  <!-- User Profile Section (shown when logged in) -->
-  <div class="user-profile-section" id="userProfileSection" style="display: none;">
-    <div class="user-profile">
-      <div class="user-avatar">
-        <img id="userAvatarImg" src="" alt="User Avatar" style="display: none;"
-          onerror="this.style.display='none'; document.getElementById('userAvatarPlaceholder').style.display='flex';">
-        <div id="userAvatarPlaceholder" class="avatar-placeholder">👤</div>
-      </div>
-      <div class="user-info">
-        <div class="user-name" id="userName">Welcome!</div>
-        <div class="user-email" id="userEmail">Connecting...</div>
-      </div>
-      <div class="user-actions">
-        <button class="logout-btn" id="userLogoutBtn" title="Logout">
-          <i class="fas fa-sign-out-alt"></i>
-        </button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Login Section (shown when not authenticated) -->
-  <div class="login-profile-section" id="loginProfileSection" style="display: none;">
-    <div class="login-profile">
-      <div class="login-avatar">
-        <div class="login-avatar-placeholder">🔐</div>
-      </div>
-      <div class="login-info">
-        <div class="login-text">Authentication Required</div>
-        <div class="login-subtext">Connect to access features</div>
-      </div>
-      <div class="login-actions">
-        <button class="login-btn" id="userLoginBtn" title="Login to Jira">
-          <i class="fas fa-sign-in-alt"></i>
-        </button>
-      </div>
-    </div>
-  </div>
 
   <div class="sidebar-menu">
 
@@ -92,7 +79,7 @@
     </a>
 
     <!-- UI Automation (Parent with Sub-menu) -->
-    <div class="sidebar-parent-item{% if active_tab == 'browseruse' or active_tab == 'playwright-mcp' or active_tab == 'ui-automation' or active_tab == 'bug-builder' %} active{% endif %}">
+    <div class="sidebar-parent-item{% if active_tab == 'browseruse' or active_tab == 'playwright-mcp' or active_tab == 'ui-automation'%} active{% endif %}">
       <a href="#" class="nav-link sidebar-item sidebar-parent" data-toggle="ui-automation-submenu">
         <span class="sidebar-icon"><i class="fas fa-robot"></i></span>
         <span class="sidebar-label">UI Automation <span class="ai-badge">AI</span></span>
@@ -118,11 +105,7 @@
           <span class="sidebar-sublabel">Automation Test Creator</span>
         </a>
 
-        <a href="#" data-href="/bug-builder"
-          class="nav-link sidebar-subitem{% if active_tab == 'bug-builder' %} active{% endif %}">
-          <span class="sidebar-subicon"><i class="fas fa-bug"></i></span>
-          <span class="sidebar-sublabel">Bug Builder</span>
-        </a>
+
       </div>
     </div>
 
@@ -134,7 +117,11 @@
     </a>
     -->
 
-
+    <a href="#" data-href="/bug-builder"
+      class="nav-link sidebar-item{% if active_tab == 'bug-builder' %} active{% endif %}">
+      <span class="sidebar-icon"><i class="fas fa-bug"></i></span>
+      <span class="sidebar-label">Bug Builder <span class="ai-badge">AI</span></span>
+    </a>
 
     <a href="#" data-href="/data-generator"
       class="nav-link sidebar-item{% if active_tab == 'data' %} active{% endif %}">
@@ -644,14 +631,14 @@
         });
     }
 
-    // Update user profile in sidebar
+    // Update user profile in top right
     function updateUserProfile(userData) {
       console.log('Updating user profile with data:', userData);
 
-      const userName = document.getElementById('userName');
-      const userEmail = document.getElementById('userEmail');
-      const userAvatarImg = document.getElementById('userAvatarImg');
-      const userAvatarPlaceholder = document.getElementById('userAvatarPlaceholder');
+      const topUserName = document.getElementById('topUserName');
+      const topUserEmail = document.getElementById('topUserEmail');
+      const topUserAvatarImg = document.getElementById('topUserAvatarImg');
+      const topUserAvatarPlaceholder = document.getElementById('topUserAvatarPlaceholder');
 
       // Show the profile section and hide login section
       showUserProfile();
@@ -663,45 +650,53 @@
       console.log('Setting user name to:', displayName);
       console.log('Setting user email to:', displayEmail);
 
-      userName.textContent = displayName;
-      userEmail.textContent = displayEmail;
+      if (topUserName) topUserName.textContent = displayName;
+      if (topUserEmail) topUserEmail.textContent = displayEmail;
 
       // Update avatar with error handling
-      if (userData.user_avatar) {
+      if (userData.user_avatar && topUserAvatarImg) {
         // Add error handler before setting src
-        userAvatarImg.onerror = function () {
+        topUserAvatarImg.onerror = function () {
           console.warn('Failed to load user avatar, using placeholder');
           this.style.display = 'none';
-          userAvatarPlaceholder.style.display = 'flex';
-          userAvatarPlaceholder.textContent = displayName.charAt(0).toUpperCase();
+          if (topUserAvatarPlaceholder) {
+            topUserAvatarPlaceholder.style.display = 'flex';
+            topUserAvatarPlaceholder.textContent = displayName.charAt(0).toUpperCase();
+          }
         };
 
-        userAvatarImg.onload = function () {
+        topUserAvatarImg.onload = function () {
           console.log('User avatar loaded successfully');
           this.style.display = 'block';
-          userAvatarPlaceholder.style.display = 'none';
+          if (topUserAvatarPlaceholder) topUserAvatarPlaceholder.style.display = 'none';
         };
 
-        userAvatarImg.src = userData.user_avatar;
+        topUserAvatarImg.src = userData.user_avatar;
       } else {
-        userAvatarImg.style.display = 'none';
-        userAvatarPlaceholder.style.display = 'flex';
-        userAvatarPlaceholder.textContent = displayName.charAt(0).toUpperCase();
+        if (topUserAvatarImg) topUserAvatarImg.style.display = 'none';
+        if (topUserAvatarPlaceholder) {
+          topUserAvatarPlaceholder.style.display = 'flex';
+          topUserAvatarPlaceholder.textContent = displayName.charAt(0).toUpperCase();
+        }
       }
     }
 
-    // Hide user profile and show login section - KEEP SIDEBAR VISIBLE
+    // Hide user profile and show login button
     function hideUserProfile() {
-      const userProfileSection = document.getElementById('userProfileSection');
-      const loginProfileSection = document.getElementById('loginProfileSection');
+      const topUserSection = document.getElementById('topUserSection');
+      const topUserProfile = document.getElementById('topUserProfile');
+      const topLoginSection = document.getElementById('topLoginSection');
       const sidebar = document.getElementById('sidebar');
       const mainContent = document.querySelector('.main-content');
 
-      // KEEP the sidebar visible - just show login section instead of user profile
-      sidebar.style.display = 'flex';
+      // Show the sidebar
+      if (sidebar) sidebar.style.display = 'flex';
+
+      // Show top user section
+      if (topUserSection) topUserSection.style.display = 'block';
 
       // Maintain proper main content margin
-      const isCollapsed = sidebar.classList.contains('collapsed');
+      const isCollapsed = sidebar && sidebar.classList.contains('collapsed');
       const isMobile = window.innerWidth <= 768;
 
       if (mainContent) {
@@ -720,24 +715,27 @@
         detail: { authenticated: false, sidebarVisible: true, collapsed: isCollapsed }
       }));
 
-      // Show login section, hide user profile
-      userProfileSection.style.display = 'none';
-      loginProfileSection.style.display = 'block';
+      // Show login button, hide user profile
+      if (topLoginSection) topLoginSection.style.display = 'block';
+      if (topUserProfile) topUserProfile.style.display = 'none';
     }
 
-    // Show user profile and hide login section - SHOW ENTIRE SIDEBAR when authenticated
+    // Show user profile and hide login button
     function showUserProfile() {
-      const userProfileSection = document.getElementById('userProfileSection');
-      const loginProfileSection = document.getElementById('loginProfileSection');
+      const topUserSection = document.getElementById('topUserSection');
+      const topUserProfile = document.getElementById('topUserProfile');
+      const topLoginSection = document.getElementById('topLoginSection');
       const sidebar = document.getElementById('sidebar');
       const mainContent = document.querySelector('.main-content');
-      const quotesHeader = document.querySelector('.quotes-header');
 
       // Show the entire sidebar when authenticated
-      sidebar.style.display = 'flex';
+      if (sidebar) sidebar.style.display = 'flex';
+
+      // Show top user section
+      if (topUserSection) topUserSection.style.display = 'block';
 
       // Restore main content margin based on sidebar state
-      const isCollapsed = sidebar.classList.contains('collapsed');
+      const isCollapsed = sidebar && sidebar.classList.contains('collapsed');
       const isMobile = window.innerWidth <= 768;
 
       if (mainContent) {
@@ -751,14 +749,14 @@
         mainContent.style.transition = 'margin-left 0.4s cubic-bezier(0.4, 0, 0.2, 1)';
       }
 
-      // Trigger authentication state change event for quotes header
+      // Trigger authentication state change event
       window.dispatchEvent(new CustomEvent('authStateChanged', {
         detail: { authenticated: true, sidebarVisible: true, collapsed: isCollapsed }
       }));
 
-      // Show user profile and hide login section
-      userProfileSection.style.display = 'block';
-      loginProfileSection.style.display = 'none';
+      // Show user profile and hide login button
+      if (topUserProfile) topUserProfile.style.display = 'flex';
+      if (topLoginSection) topLoginSection.style.display = 'none';
     }
 
     // Show welcome message
@@ -961,12 +959,12 @@
 
 
 
-    // User profile and login buttons
+    // User profile and login buttons (top right)
     document.addEventListener('click', function (e) {
-      if (e.target.closest('#userLogoutBtn')) {
+      if (e.target.closest('#topUserLogoutBtn') || e.target.closest('#userLogoutBtn')) {
         logoutFromJira();
       }
-      if (e.target.closest('#userLoginBtn')) {
+      if (e.target.closest('#topUserLoginBtn') || e.target.closest('#userLoginBtn')) {
         window.location.href = '/api/jira/oauth/login';
       }
     });

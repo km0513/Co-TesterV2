@@ -11,6 +11,138 @@
   --shadow-xl: 0 25px 50px -12px rgba(0, 0, 0, 0.15);
 }
 
+/* Top Right User Section */
+.top-user-section {
+  position: fixed;
+  top: 1rem;
+  right: 1.5rem;
+  z-index: 1001;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.top-user-profile {
+  display: none;
+  align-items: center;
+  gap: 0.75rem;
+  background: white;
+  padding: 0.5rem 1rem;
+  border-radius: 50px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  border: 1px solid var(--glass-border);
+  backdrop-filter: blur(10px);
+  transition: all 0.3s ease;
+}
+
+.top-user-profile:hover {
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
+  transform: translateY(-2px);
+}
+
+.top-user-avatar {
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  position: relative;
+}
+
+.top-user-avatar img {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid var(--primary);
+}
+
+.top-avatar-placeholder {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  color: white;
+  font-weight: 600;
+}
+
+.top-user-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-width: 180px;
+}
+
+.top-user-name {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--sidebar-active-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.top-user-email {
+  font-size: 0.75rem;
+  color: var(--sidebar-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.top-logout-btn {
+  background: rgba(239, 68, 68, 0.1);
+  border: none;
+  color: #dc2626;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.875rem;
+}
+
+.top-logout-btn:hover {
+  background: #dc2626;
+  color: white;
+  transform: scale(1.1);
+}
+
+.top-login-section {
+  display: none;
+}
+
+.top-login-btn {
+  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+  border: none;
+  color: white;
+  padding: 0.65rem 1.5rem;
+  border-radius: 50px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+}
+
+.top-login-btn:hover {
+  background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(99, 102, 241, 0.4);
+}
+
+.top-login-btn i {
+  font-size: 1rem;
+}
+
 /* Sidebar Container */
 .sidebar {
   position: fixed;
@@ -26,6 +158,8 @@
   z-index: 1000;
   border-right: 1px solid var(--glass-border);
   overflow: hidden;
+  min-width: var(--sidebar-width);
+  max-width: var(--sidebar-width);
 }
 
 /* Main Content */
@@ -82,8 +216,11 @@
   flex: 1;
   padding: 0.75rem;
   overflow-y: auto;
+  overflow-x: hidden;
   scrollbar-width: thin;
   scrollbar-color: #6366f1 rgba(0, 0, 0, 0.1);
+  will-change: scroll-position;
+  contain: layout style paint;
 }
 
 /* Custom Scrollbar - Webkit Browsers (Chrome, Edge, Safari) */
@@ -118,13 +255,19 @@
   border-radius: 12px;
   background: var(--glass-bg);
   border: 1px solid transparent;
-  transition: all 0.3s ease;
+  transition: background 0.3s ease, border-color 0.3s ease, color 0.3s ease;
   min-height: 42px;
+  max-height: 42px;
+  height: 42px;
+  font-weight: 500;
+  font-size: 0.85rem;
+  line-height: 1.2;
+  box-sizing: border-box;
+  will-change: background, border-color, color;
 }
 
 .sidebar-item:hover {
   background: rgba(99, 102, 241, 0.08);
-  transform: translateX(6px);
   border-color: rgba(99, 102, 241, 0.3);
 }
 
@@ -132,22 +275,30 @@
   background: linear-gradient(135deg, rgba(99, 102, 241, 0.2) 0%, rgba(139, 92, 246, 0.15) 100%);
   color: var(--sidebar-active-text);
   border-color: rgba(99, 102, 241, 0.5);
-  transform: translateX(8px);
+  font-weight: 500;
 }
 
 .sidebar-icon {
   margin-right: 0.75rem;
   font-size: 1rem;
   width: 1.2rem;
+  min-width: 1.2rem;
+  max-width: 1.2rem;
+  height: 1rem;
   display: flex;
   align-items: center;
   justify-content: center;
+  flex-shrink: 0;
 }
 
 .sidebar-label {
-  font-weight: 500;
-  font-size: 0.85rem;
+  font-weight: inherit;
+  font-size: inherit;
+  line-height: inherit;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 1;
 }
 
 /* AI Badge */
@@ -277,12 +428,23 @@
 /* Hierarchical Navigation */
 .sidebar-parent-item {
   position: relative;
+  margin: 0;
+  contain: layout;
+}
+
+.sidebar-parent-item .sidebar-item {
+  font-weight: 500;
+}
+
+.sidebar-parent-item .sidebar-item.active {
+  font-weight: 500;
 }
 
 .sidebar-arrow {
   margin-left: auto;
   transition: transform 0.3s ease;
   font-size: 0.75rem;
+  flex-shrink: 0;
 }
 
 .sidebar-parent.expanded .sidebar-arrow {
@@ -307,12 +469,20 @@
   align-items: center !important;
   padding: 0.75rem 1rem 0.75rem 2rem !important;
   font-size: 0.875rem !important;
+  font-weight: 500 !important;
+  line-height: 1.2 !important;
   color: var(--sidebar-text) !important;
   text-decoration: none !important;
-  transition: all 0.3s ease !important;
+  transition: background 0.3s ease, color 0.3s ease, border-left 0.3s ease !important;
   background: transparent !important;
   border-radius: 0 !important;
   margin: 0 !important;
+  border-left: 3px solid transparent !important;
+  min-height: 40px !important;
+  max-height: 40px !important;
+  height: 40px !important;
+  box-sizing: border-box !important;
+  will-change: background, color, border-left-color !important;
 }
 
 .sidebar-subitem:hover {
@@ -322,14 +492,32 @@
 
 .sidebar-subitem.active {
   background: rgba(255, 255, 255, 0.15) !important;
-  border-left: 3px solid #a5b4fc !important;
+  border-left-color: #a5b4fc !important;
   color: var(--sidebar-active-text) !important;
+  font-weight: 500 !important;
 }
 
 .sidebar-subicon {
   width: 1rem;
+  min-width: 1rem;
+  max-width: 1rem;
+  height: 0.75rem;
   margin-right: 0.75rem;
   font-size: 0.75rem;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.sidebar-sublabel {
+  font-weight: inherit;
+  font-size: inherit;
+  line-height: inherit;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 1;
 }
 
 /* Toggle Button - Right Side Placement */
