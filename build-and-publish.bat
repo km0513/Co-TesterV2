@@ -5,8 +5,7 @@ setlocal enabledelayedexpansion
 
 REM Configuration
 set IMAGE_NAME=co-tester
-set DOCKER_USERNAME=your-dockerhub-username
-REM Change DOCKER_USERNAME to your Docker Hub username
+set DOCKER_USERNAME=kishore1305
 
 REM Get version from argument or default to "latest"
 if "%~1"=="" (

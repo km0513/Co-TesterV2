@@ -3,7 +3,7 @@ version: '3.8'
 services:
   co-tester:
     build: .
-    image: co-tester:latest
+    image: kishore1305/co-tester:latest
     container_name: co-tester
     ports:
       - "5000:5000"

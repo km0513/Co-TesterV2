@@ -5,7 +5,7 @@ set -e  # Exit on error
 
 # Configuration
 IMAGE_NAME="co-tester"
-DOCKER_USERNAME="your-dockerhub-username"  # Change this to your Docker Hub username
+DOCKER_USERNAME="kishore1305"
 VERSION=${1:-"latest"}  # Use first argument as version, default to "latest"
 
 echo "=================================="
