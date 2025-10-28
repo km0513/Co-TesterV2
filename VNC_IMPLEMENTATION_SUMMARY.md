@@ -156,8 +156,10 @@ docker run -p 5000:5000 -p 5900:5900 --env-file .env -e ENABLE_VNC=true -e PLAYW
 ```
 
 ### 3. Download VNC Viewer
-- Windows: https://www.realvnc.com/en/connect/download/viewer/
-- It's free and small (~10MB)
+- **TigerVNC** (Recommended - 100% free & open source): https://github.com/TigerVNC/tigervnc/releases
+- **TightVNC** (Free for all use): https://www.tightvnc.com/download.php
+- **RealVNC Viewer** (Free for personal use): https://www.realvnc.com/en/connect/download/viewer/
+- All are small downloads (2-10MB) and work on Windows
 
 ### 4. Connect and Test
 1. Open VNC Viewer

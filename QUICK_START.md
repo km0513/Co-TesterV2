@@ -135,7 +135,10 @@ docker run -p 5000:5000 -p 5900:5900 --env-file .env -e ENABLE_VNC=true -e PLAYW
 ```
 
 Then:
-1. Download VNC Viewer: https://www.realvnc.com/en/connect/download/viewer/
+1. Download a **FREE VNC Viewer**:
+   - **TigerVNC** (Recommended): https://github.com/TigerVNC/tigervnc/releases
+   - **TightVNC**: https://www.tightvnc.com/download.php
+   - **RealVNC Viewer**: https://www.realvnc.com/en/connect/download/viewer/ (free for personal use)
 2. Connect to `localhost:5900` with password `cotester`
 3. You'll see and interact with the browser inside Docker!
 

@@ -42,7 +42,10 @@ VNC_PASSWORD=cotester
 ```
 
 **Connect with VNC:**
-1. Download [VNC Viewer](https://www.realvnc.com/en/connect/download/viewer/)
+1. Download a **FREE VNC Viewer**:
+   - **TigerVNC** (Recommended): https://github.com/TigerVNC/tigervnc/releases
+   - **TightVNC**: https://www.tightvnc.com/download.php  
+   - **RealVNC Viewer**: https://www.realvnc.com/en/connect/download/viewer/ (free for personal use)
 2. Open VNC Viewer
 3. Connect to: `localhost:5900`
 4. Password: `cotester`

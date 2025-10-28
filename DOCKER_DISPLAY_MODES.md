@@ -71,9 +71,17 @@ This adds a VNC server to Docker so you can see and interact with the browser re
    docker run -p 5000:5000 -p 5900:5900 --env-file .env -e PLAYWRIGHT_HEADLESS=false -e ENABLE_VNC=true kishore1305/co-tester:vnc
    ```
 
-3. **Download VNC Viewer** (free):
-   - Windows: [RealVNC Viewer](https://www.realvnc.com/en/connect/download/viewer/)
-   - Alternative: [TightVNC Viewer](https://www.tightvnc.com/download.php)
+3. **Download VNC Viewer** (100% FREE options):
+   - **TigerVNC Viewer** (Recommended): https://github.com/TigerVNC/tigervnc/releases
+     * Completely free and open source
+     * Lightweight (~5MB)
+     * Works on Windows, Mac, Linux
+   - **TightVNC Viewer**: https://www.tightvnc.com/download.php
+     * Free for personal and commercial use
+     * Small download (~2MB)
+   - **RealVNC Viewer**: https://www.realvnc.com/en/connect/download/viewer/
+     * Free for non-commercial use
+     * Feature-rich (~10MB)
 
 4. **Connect to VNC**:
    - Open VNC Viewer
