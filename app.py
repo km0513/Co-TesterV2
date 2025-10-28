@@ -10564,10 +10564,11 @@ def browseruse_custom_instruction():
         print(f"🚀 Starting Computer Use automation for: {instruction}")
         playwright = sync_playwright().start()
         
-        # Launch browser in visible mode so you can see what's happening
+        # Launch browser - headless mode controlled by PLAYWRIGHT_HEADLESS env var
+        headless_mode = os.getenv('PLAYWRIGHT_HEADLESS', 'false').lower() == 'true'
         browser = playwright.chromium.launch(
-            headless=False,  # Changed to False - browser will be visible!
-            args=['--start-maximized']
+            headless=headless_mode,
+            args=['--start-maximized'] if not headless_mode else []
         )
         context = browser.new_context(
             viewport={"width": SCREEN_WIDTH, "height": SCREEN_HEIGHT},
@@ -10792,9 +10793,10 @@ def playwright_mcp_execute():
         # Launch Playwright browser
         print("🌐 Launching browser...")
         playwright = sync_playwright().start()
+        headless_mode = os.getenv('PLAYWRIGHT_HEADLESS', 'false').lower() == 'true'
         browser = playwright.chromium.launch(
-            headless=False,
-            args=['--start-maximized']
+            headless=headless_mode,
+            args=['--start-maximized'] if not headless_mode else []
         )
         context = browser.new_context(viewport={'width': 1440, 'height': 900})
         page = context.new_page()
@@ -12538,8 +12540,9 @@ def browseruse_navigation_executor():
         
         try:
             with sync_playwright() as p:
+                headless_mode = os.getenv('PLAYWRIGHT_HEADLESS', 'true').lower() == 'true'
                 browser = p.chromium.launch(
-                    headless=True,
+                    headless=headless_mode,
                     args=['--no-sandbox', '--disable-dev-shm-usage']
                 )
                 context = browser.new_context(
