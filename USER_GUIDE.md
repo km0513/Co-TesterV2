@@ -64,6 +64,12 @@ JIRA_CLIENT_ID=your-jira-client-id
 JIRA_CLIENT_SECRET=your-jira-client-secret
 ```
 
+⚠️ **IMPORTANT - Docker .env Format Rules:**
+- **NO spaces around the `=` sign** (use `KEY=VALUE` not `KEY = VALUE`)
+- **NO spaces after variable names** (wrong: `KEY =VALUE`, correct: `KEY=VALUE`)
+- **NO quotes around values** (unless they're part of the value itself)
+- If you copy from another .env file, Docker may reject it - re-type manually
+
 💡 **Tip:** To generate a random SECRET_KEY:
 - Windows: Use any password generator online
 - Mac/Linux: Run `openssl rand -hex 32`

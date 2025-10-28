@@ -123,8 +123,23 @@ PLAYWRIGHT_HEADLESS=false
 ```
 
 **When to use headless vs headed:**
-- ✅ **Headless (`true`)**: Recommended for Docker, faster, uses less resources
-- 🖥️ **Headed (`false`)**: Good for debugging locally, see what's happening
+- ✅ **Headless (`true`)**: Recommended for Docker, faster, uses less resources, good for automated tests
+- 🖥️ **Headed (`false`)**: For interactive features (Bug Builder, Test Generator)
+
+**⚠️ Important for Interactive Features:**
+If you're using **Bug Builder** or **Test Generator** (features where you manually click and interact with browser), you need to use the **VNC-enabled Docker image**:
+
+```powershell
+docker pull kishore1305/co-tester:vnc
+docker run -p 5000:5000 -p 5900:5900 --env-file .env -e ENABLE_VNC=true -e PLAYWRIGHT_HEADLESS=false kishore1305/co-tester:vnc
+```
+
+Then:
+1. Download VNC Viewer: https://www.realvnc.com/en/connect/download/viewer/
+2. Connect to `localhost:5900` with password `cotester`
+3. You'll see and interact with the browser inside Docker!
+
+📖 **See `DOCKER_DISPLAY_MODES.md` for detailed explanation of all options.**
 
 ### ❌ Error: "port is already allocated"
 Another application is using port 5000. Use a different port:
