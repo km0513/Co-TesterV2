@@ -36,7 +36,13 @@ RUN apt-get update && apt-get install -y \
     libxshmfence1 \
     xdg-utils \
     git \
+    xvfb \
+    dbus \
     && rm -rf /var/lib/apt/lists/*
+
+# Set up virtual display for Playwright
+ENV DISPLAY=:99
+ENV DBUS_SESSION_BUS_ADDRESS=/dev/null
 
 # Copy requirements first for better caching
 COPY requirements.txt .
@@ -67,5 +73,11 @@ EXPOSE 5000
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
     CMD python -c "import requests; requests.get('http://localhost:5000/health', timeout=5)" || exit 1
 
-# Run the application
-CMD ["python", "app.py"]
+# Create startup script
+RUN echo '#!/bin/bash\n\
+Xvfb :99 -screen 0 1920x1080x24 -ac +extension GLX +render -noreset &\n\
+sleep 2\n\
+exec python app.py' > /start.sh && chmod +x /start.sh
+
+# Run the application with Xvfb
+CMD ["/bin/bash", "/start.sh"]
