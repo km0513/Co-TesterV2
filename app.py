@@ -18264,6 +18264,284 @@ Respond in JSON format:
         logger.error(f"Error analyzing test goal: {str(e)}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
+# ==============================
+# Cross-Tool Integration APIs
+# ==============================
+
+@app.route('/api/integration/export-to-mcp', methods=['POST'])
+@jira_auth_required
+def export_codegen_to_mcp():
+    """Export Codegen/Agent test to MCP for refinement"""
+    try:
+        data = request.json
+        source = data.get('source', 'codegen')  # 'codegen' or 'agent'
+        code = data.get('code', '')
+        actions = data.get('actions', [])
+        url = data.get('url', '')
+        metadata = data.get('metadata', {})
+        
+        if not code:
+            return jsonify({'success': False, 'error': 'No code provided'}), 400
+        
+        # Create integration package
+        integration_id = f"integration_{int(time.time())}_{source}"
+        integration_data = {
+            'id': integration_id,
+            'source': source,
+            'code': code,
+            'actions': actions,
+            'url': url,
+            'metadata': metadata,
+            'timestamp': datetime.now().isoformat(),
+            'context': {
+                'original_tool': source,
+                'purpose': 'refinement',
+                'preserved_state': True
+            }
+        }
+        
+        # Store in session for MCP to retrieve
+        session[f'integration_{integration_id}'] = integration_data
+        
+        logger.info(f"Created integration package: {integration_id}")
+        
+        return jsonify({
+            'success': True,
+            'integration_id': integration_id,
+            'message': 'Test exported successfully. Opening MCP...',
+            'redirect_url': f'/playwright-mcp-automation?import={integration_id}'
+        })
+        
+    except Exception as e:
+        logger.error(f"Error exporting to MCP: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/integration/import-from-source', methods=['POST'])
+@jira_auth_required
+def import_from_source():
+    """Import test from another tool (for MCP/Codegen/Agent)"""
+    try:
+        data = request.json
+        integration_id = data.get('integration_id', '')
+        target_tool = data.get('target_tool', 'mcp')  # 'mcp', 'codegen', or 'agent'
+        
+        if not integration_id:
+            return jsonify({'success': False, 'error': 'No integration ID provided'}), 400
+        
+        # Retrieve integration data from session
+        integration_key = f'integration_{integration_id}'
+        integration_data = session.get(integration_key)
+        
+        if not integration_data:
+            return jsonify({'success': False, 'error': 'Integration data not found or expired'}), 404
+        
+        # Transform data for target tool
+        transformed_data = {
+            'original_source': integration_data['source'],
+            'code': integration_data['code'],
+            'actions': integration_data['actions'],
+            'url': integration_data['url'],
+            'metadata': integration_data['metadata'],
+            'suggestions': []
+        }
+        
+        # Add tool-specific suggestions using AI
+        if target_tool == 'mcp':
+            transformed_data['suggestions'] = [
+                'Add assertions to verify expected outcomes',
+                'Include error handling for edge cases',
+                'Optimize selectors for better stability',
+                'Add comments explaining test logic'
+            ]
+        elif target_tool == 'codegen':
+            transformed_data['suggestions'] = [
+                'Record missing UI interactions',
+                'Capture additional user flows',
+                'Fill gaps in visual testing'
+            ]
+        elif target_tool == 'agent':
+            transformed_data['suggestions'] = [
+                'Use natural language for complex interactions',
+                'Enable self-healing for dynamic elements',
+                'Add visual verification steps'
+            ]
+        
+        return jsonify({
+            'success': True,
+            'data': transformed_data,
+            'message': f'Successfully imported from {integration_data["source"]}'
+        })
+        
+    except Exception as e:
+        logger.error(f"Error importing from source: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/integration/export-agent-exploration', methods=['POST'])
+@jira_auth_required
+def export_agent_exploration():
+    """Export AI Agent exploration results to Codegen"""
+    try:
+        data = request.json
+        exploration_id = data.get('exploration_id', '')
+        successful_paths = data.get('successful_paths', [])
+        selectors = data.get('selectors', {})
+        interactions = data.get('interactions', [])
+        screenshots = data.get('screenshots', [])
+        
+        # Create exploration package
+        integration_id = f"agent_exploration_{int(time.time())}"
+        exploration_data = {
+            'id': integration_id,
+            'source': 'agent_exploration',
+            'exploration_id': exploration_id,
+            'successful_paths': successful_paths,
+            'selectors': selectors,
+            'interactions': interactions,
+            'screenshots': screenshots,
+            'timestamp': datetime.now().isoformat(),
+            'analysis': {
+                'total_paths': len(successful_paths),
+                'unique_selectors': len(selectors),
+                'interaction_count': len(interactions)
+            }
+        }
+        
+        # Store for Codegen to retrieve
+        session[f'integration_{integration_id}'] = exploration_data
+        
+        return jsonify({
+            'success': True,
+            'integration_id': integration_id,
+            'message': 'Exploration exported successfully',
+            'redirect_url': f'/automation-test-creator?import={integration_id}'
+        })
+        
+    except Exception as e:
+        logger.error(f"Error exporting agent exploration: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/integration/merge-tests', methods=['POST'])
+@jira_auth_required
+def merge_test_sources():
+    """Merge tests from multiple sources into unified test"""
+    try:
+        data = request.json
+        sources = data.get('sources', [])  # Array of integration_ids
+        merge_strategy = data.get('strategy', 'sequential')  # 'sequential', 'parallel', 'conditional'
+        
+        if not sources or len(sources) < 2:
+            return jsonify({'success': False, 'error': 'At least 2 sources required for merging'}), 400
+        
+        merged_code = []
+        merged_actions = []
+        all_metadata = []
+        
+        # Retrieve all source data
+        for source_id in sources:
+            integration_key = f'integration_{source_id}'
+            source_data = session.get(integration_key)
+            
+            if source_data:
+                merged_actions.extend(source_data.get('actions', []))
+                all_metadata.append({
+                    'source': source_data.get('source'),
+                    'timestamp': source_data.get('timestamp')
+                })
+        
+        # Use AI to intelligently merge the code
+        try:
+            model = genai.GenerativeModel(
+                model_name=os.getenv('GOOGLE_API_MODEL', 'gemini-2.0-flash-exp'),
+                generation_config=generation_config
+            )
+            
+            merge_prompt = f"""You are merging multiple Playwright test sources into a single cohesive test.
+
+Sources: {len(sources)}
+Strategy: {merge_strategy}
+Total Actions: {len(merged_actions)}
+
+Merge Strategy Guidelines:
+- sequential: Execute tests one after another
+- parallel: Run tests concurrently (use Promise.all)
+- conditional: Add logic to choose execution path
+
+Generate a unified Playwright test that:
+1. Combines all test logic efficiently
+2. Eliminates redundant steps
+3. Maintains proper error handling
+4. Includes clear comments
+5. Follows best practices
+
+Return only the merged Playwright code."""
+            
+            response = model.generate_content(merge_prompt)
+            merged_code_text = response.text.strip()
+            
+            # Clean up code markers
+            merged_code_text = merged_code_text.replace('```javascript', '').replace('```python', '').replace('```', '').strip()
+            
+        except Exception as ai_error:
+            logger.error(f"AI merge error: {str(ai_error)}")
+            # Fallback: simple concatenation
+            merged_code_text = "\n\n// Merged Test - Sequential Execution\n\n"
+            for idx, source_id in enumerate(sources, 1):
+                merged_code_text += f"\n// Source {idx}\n"
+        
+        # Create merged integration package
+        merge_id = f"merged_{int(time.time())}"
+        merged_data = {
+            'id': merge_id,
+            'source': 'merged',
+            'code': merged_code_text,
+            'actions': merged_actions,
+            'metadata': {
+                'source_count': len(sources),
+                'merge_strategy': merge_strategy,
+                'sources': all_metadata
+            },
+            'timestamp': datetime.now().isoformat()
+        }
+        
+        session[f'integration_{merge_id}'] = merged_data
+        
+        return jsonify({
+            'success': True,
+            'merge_id': merge_id,
+            'merged_code': merged_code_text,
+            'source_count': len(sources),
+            'message': 'Tests merged successfully'
+        })
+        
+    except Exception as e:
+        logger.error(f"Error merging tests: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/integration/get-context', methods=['GET'])
+@jira_auth_required
+def get_integration_context():
+    """Retrieve integration context by ID"""
+    try:
+        integration_id = request.args.get('id', '')
+        
+        if not integration_id:
+            return jsonify({'success': False, 'error': 'No integration ID provided'}), 400
+        
+        integration_key = f'integration_{integration_id}'
+        context_data = session.get(integration_key)
+        
+        if not context_data:
+            return jsonify({'success': False, 'error': 'Context not found or expired'}), 404
+        
+        return jsonify({
+            'success': True,
+            'context': context_data
+        })
+        
+    except Exception as e:
+        logger.error(f"Error retrieving context: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
 @app.route('/automation-test-creator')
 @jira_auth_required
 def automation_test_creator():
