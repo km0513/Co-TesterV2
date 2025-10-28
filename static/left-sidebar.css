@@ -671,8 +671,8 @@
 }
 
 .sidebar-subitem.active {
-  background: rgba(255, 255, 255, 0.15) !important;
-  border-left-color: #a5b4fc !important;
+  background: rgba(100, 116, 139, 0.15) !important;
+  border-left-color: #64748b !important;
   color: var(--sidebar-active-text) !important;
   font-weight: 500 !important;
 }
