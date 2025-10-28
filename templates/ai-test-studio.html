@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Test Studio - Co-Tester</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='left-sidebar.css') }}">
+    <style>
+        :root {
+            --primary: #64748b;
+            --primary-dark: #475569;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --info: #3b82f6;
+        }
+
+        body {
+            background: #f8fafc;
+            margin: 0;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+        }
+
+        .main-content {
+            padding: 2rem;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .studio-header {
+            text-align: center;
+            margin-bottom: 3rem;
+        }
+
+        .studio-title {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: #1e293b;
+            margin-bottom: 0.5rem;
+        }
+
+        .studio-subtitle {
+            font-size: 1.1rem;
+            color: #64748b;
+        }
+
+        /* Smart Routing Card */
+        .routing-card {
+            background: white;
+            border-radius: 16px;
+            padding: 2rem;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            margin-bottom: 2rem;
+        }
+
+        .routing-title {
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: #1e293b;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .routing-input {
+            width: 100%;
+            min-height: 120px;
+            padding: 1rem;
+            border: 2px solid #e5e7eb;
+            border-radius: 12px;
+            font-size: 1rem;
+            font-family: inherit;
+            resize: vertical;
+            transition: border 0.3s;
+        }
+
+        .routing-input:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+
+        .analyze-btn {
+            margin-top: 1rem;
+            padding: 0.875rem 2rem;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .analyze-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px rgba(100, 116, 139, 0.3);
+        }
+
+        .analyze-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* Recommendation Result */
+        .recommendation-result {
+            display: none;
+            margin-top: 1.5rem;
+            padding: 1.5rem;
+            background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+            border-radius: 12px;
+            border-left: 4px solid var(--primary);
+        }
+
+        .recommendation-result.show {
+            display: block;
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .recommended-tool {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: var(--primary-dark);
+            margin-bottom: 0.5rem;
+        }
+
+        .recommendation-reason {
+            color: #475569;
+            margin-bottom: 1rem;
+            line-height: 1.6;
+        }
+
+        .launch-tool-btn {
+            padding: 0.75rem 1.5rem;
+            background: var(--success);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .launch-tool-btn:hover {
+            background: #059669;
+            transform: translateY(-2px);
+        }
+
+        /* Tool Cards Grid */
+        .tools-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .tool-card {
+            background: white;
+            border-radius: 16px;
+            padding: 2rem;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            transition: transform 0.3s, box-shadow 0.3s;
+            cursor: pointer;
+            border: 2px solid transparent;
+        }
+
+        .tool-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+            border-color: var(--primary);
+        }
+
+        .tool-icon {
+            width: 64px;
+            height: 64px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            margin-bottom: 1rem;
+        }
+
+        .tool-icon.record {
+            background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+        }
+
+        .tool-icon.agent {
+            background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+        }
+
+        .tool-icon.conversational {
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+        }
+
+        .tool-name {
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: #1e293b;
+            margin-bottom: 0.5rem;
+        }
+
+        .tool-description {
+            color: #64748b;
+            margin-bottom: 1rem;
+            line-height: 1.6;
+        }
+
+        .tool-features {
+            list-style: none;
+            padding: 0;
+            margin: 1rem 0;
+        }
+
+        .tool-features li {
+            padding: 0.5rem 0;
+            color: #475569;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .tool-features li i {
+            color: var(--success);
+            font-size: 0.875rem;
+        }
+
+        .best-for {
+            background: #f1f5f9;
+            padding: 1rem;
+            border-radius: 8px;
+            margin-top: 1rem;
+        }
+
+        .best-for-title {
+            font-weight: 600;
+            color: #1e293b;
+            font-size: 0.875rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .best-for-text {
+            font-size: 0.875rem;
+            color: #64748b;
+        }
+
+        /* Cross-Feature Integration */
+        .integration-section {
+            background: white;
+            border-radius: 16px;
+            padding: 2rem;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            margin-top: 2rem;
+        }
+
+        .integration-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #1e293b;
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .integration-flows {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .integration-flow {
+            background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+            padding: 1.5rem;
+            border-radius: 12px;
+            border: 2px solid #e2e8f0;
+        }
+
+        .flow-title {
+            font-weight: 600;
+            color: #1e293b;
+            margin-bottom: 0.75rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .flow-steps {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .flow-step {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.9rem;
+            color: #475569;
+        }
+
+        .flow-arrow {
+            color: var(--primary);
+            font-size: 0.75rem;
+        }
+    </style>
+</head>
+<body>
+    {% set active_tab = 'ui-automation' %}
+    {% include 'left-sidebar.html' %}
+
+    <div class="main-content">
+        <!-- Header -->
+        <div class="studio-header">
+            <h1 class="studio-title">🎯 AI Test Studio</h1>
+            <p class="studio-subtitle">Intelligent test automation with smart tool routing and cross-feature integration</p>
+        </div>
+
+        <!-- Smart Routing Card -->
+        <div class="routing-card">
+            <h2 class="routing-title">
+                <i class="fas fa-magic"></i>
+                Smart Tool Recommendation
+            </h2>
+            <p style="color: #64748b; margin-bottom: 1rem;">
+                Describe your testing goal, and our AI will recommend the best tool for your needs:
+            </p>
+            <textarea 
+                id="testGoalInput" 
+                class="routing-input" 
+                placeholder="Example: I need to test a login flow with dynamic captcha and multi-step authentication..."
+            ></textarea>
+            <button id="analyzeBtn" class="analyze-btn">
+                <i class="fas fa-wand-magic-sparkles"></i> Analyze & Recommend
+            </button>
+
+            <div id="recommendationResult" class="recommendation-result">
+                <div class="recommended-tool" id="recommendedTool"></div>
+                <div class="recommendation-reason" id="recommendationReason"></div>
+                <button id="launchToolBtn" class="launch-tool-btn">
+                    <i class="fas fa-rocket"></i> Launch Tool
+                </button>
+            </div>
+        </div>
+
+        <!-- Tool Cards -->
+        <div class="tools-grid">
+            <!-- Record & Enhance -->
+            <div class="tool-card" onclick="window.location.href='/automation-test-creator'">
+                <div class="tool-icon record">🎬</div>
+                <h3 class="tool-name">Record & Enhance</h3>
+                <p class="tool-description">
+                    Record user interactions with Playwright Codegen, then let AI beautify and document your code.
+                </p>
+                <ul class="tool-features">
+                    <li><i class="fas fa-check-circle"></i> Visual recording</li>
+                    <li><i class="fas fa-check-circle"></i> AI code beautification</li>
+                    <li><i class="fas fa-check-circle"></i> Manual editing</li>
+                    <li><i class="fas fa-check-circle"></i> Jira/ZIP export</li>
+                </ul>
+                <div class="best-for">
+                    <div class="best-for-title">Best For:</div>
+                    <div class="best-for-text">
+                        ✓ Learning by doing<br>
+                        ✓ Quick test creation<br>
+                        ✓ Standard web flows
+                    </div>
+                </div>
+            </div>
+
+            <!-- AI Agent Mode -->
+            <div class="tool-card" onclick="window.location.href='/browseruse-automation'">
+                <div class="tool-icon agent">🤖</div>
+                <h3 class="tool-name">AI Agent (Computer Use)</h3>
+                <p class="tool-description">
+                    Vision-based AI agent that understands and interacts with web pages naturally.
+                </p>
+                <ul class="tool-features">
+                    <li><i class="fas fa-check-circle"></i> Natural language control</li>
+                    <li><i class="fas fa-check-circle"></i> Vision-based interaction</li>
+                    <li><i class="fas fa-check-circle"></i> Self-healing</li>
+                    <li><i class="fas fa-check-circle"></i> Complex workflows</li>
+                </ul>
+                <div class="best-for">
+                    <div class="best-for-title">Best For:</div>
+                    <div class="best-for-text">
+                        ✓ Dynamic/complex sites<br>
+                        ✓ Visual verification<br>
+                        ✓ No selectors needed
+                    </div>
+                </div>
+            </div>
+
+            <!-- Conversational Mode -->
+            <div class="tool-card" onclick="window.location.href='/playwright-mcp-automation'">
+                <div class="tool-icon conversational">💬</div>
+                <h3 class="tool-name">Conversational MCP</h3>
+                <p class="tool-description">
+                    Chat-based test creation with Playwright MCP for iterative refinement.
+                </p>
+                <ul class="tool-features">
+                    <li><i class="fas fa-check-circle"></i> Chat interface</li>
+                    <li><i class="fas fa-check-circle"></i> Iterative refinement</li>
+                    <li><i class="fas fa-check-circle"></i> Code generation</li>
+                    <li><i class="fas fa-check-circle"></i> API-first approach</li>
+                </ul>
+                <div class="best-for">
+                    <div class="best-for-title">Best For:</div>
+                    <div class="best-for-text">
+                        ✓ Structured tests<br>
+                        ✓ API testing<br>
+                        ✓ Detailed specifications
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Cross-Feature Integration -->
+        <div class="integration-section">
+            <h2 class="integration-title">
+                <i class="fas fa-network-wired"></i>
+                Cross-Feature Integration Flows
+            </h2>
+            <div class="integration-flows">
+                <!-- Flow 1 -->
+                <div class="integration-flow">
+                    <div class="flow-title">
+                        <i class="fas fa-arrow-right"></i>
+                        Record → Refine → Execute
+                    </div>
+                    <div class="flow-steps">
+                        <div class="flow-step">
+                            <span>1.</span> Record test with Codegen
+                        </div>
+                        <div class="flow-step">
+                            <i class="fas fa-arrow-down flow-arrow"></i>
+                            <span>2.</span> Import to MCP for refinement
+                        </div>
+                        <div class="flow-step">
+                            <i class="fas fa-arrow-down flow-arrow"></i>
+                            <span>3.</span> Execute with AI Agent
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Flow 2 -->
+                <div class="integration-flow">
+                    <div class="flow-title">
+                        <i class="fas fa-arrow-right"></i>
+                        Describe → Generate → Record
+                    </div>
+                    <div class="flow-steps">
+                        <div class="flow-step">
+                            <span>1.</span> Describe test in MCP
+                        </div>
+                        <div class="flow-step">
+                            <i class="fas fa-arrow-down flow-arrow"></i>
+                            <span>2.</span> Generate initial code
+                        </div>
+                        <div class="flow-step">
+                            <i class="fas fa-arrow-down flow-arrow"></i>
+                            <span>3.</span> Record missing steps
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Flow 3 -->
+                <div class="integration-flow">
+                    <div class="flow-title">
+                        <i class="fas fa-arrow-right"></i>
+                        Agent → Extract → Codegen
+                    </div>
+                    <div class="flow-steps">
+                        <div class="flow-step">
+                            <span>1.</span> Run AI Agent exploration
+                        </div>
+                        <div class="flow-step">
+                            <i class="fas fa-arrow-down flow-arrow"></i>
+                            <span>2.</span> Extract successful actions
+                        </div>
+                        <div class="flow-step">
+                            <i class="fas fa-arrow-down flow-arrow"></i>
+                            <span>3.</span> Codegen for reusable tests
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Smart Routing Logic
+        const analyzeBtn = document.getElementById('analyzeBtn');
+        const testGoalInput = document.getElementById('testGoalInput');
+        const recommendationResult = document.getElementById('recommendationResult');
+        const recommendedTool = document.getElementById('recommendedTool');
+        const recommendationReason = document.getElementById('recommendationReason');
+        const launchToolBtn = document.getElementById('launchToolBtn');
+
+        let recommendedToolUrl = '';
+
+        analyzeBtn.addEventListener('click', async () => {
+            const goal = testGoalInput.value.trim();
+            if (!goal) {
+                alert('Please describe your testing goal');
+                return;
+            }
+
+            analyzeBtn.disabled = true;
+            analyzeBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Analyzing...';
+
+            try {
+                const response = await fetch('/api/analyze-test-goal', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ goal })
+                });
+
+                const data = await response.json();
+                
+                recommendedTool.innerHTML = `<i class="fas fa-star"></i> Recommended: ${data.tool}`;
+                recommendationReason.innerHTML = data.reason;
+                recommendedToolUrl = data.url;
+                
+                recommendationResult.classList.add('show');
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Failed to analyze. Please try again.');
+            } finally {
+                analyzeBtn.disabled = false;
+                analyzeBtn.innerHTML = '<i class="fas fa-wand-magic-sparkles"></i> Analyze & Recommend';
+            }
+        });
+
+        launchToolBtn.addEventListener('click', () => {
+            if (recommendedToolUrl) {
+                window.location.href = recommendedToolUrl;
+            }
+        });
+    </script>
+</body>
+</html>

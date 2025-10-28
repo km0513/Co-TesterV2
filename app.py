@@ -10564,11 +10564,10 @@ def browseruse_custom_instruction():
         print(f"🚀 Starting Computer Use automation for: {instruction}")
         playwright = sync_playwright().start()
         
-        # Launch browser - headless mode controlled by PLAYWRIGHT_HEADLESS env var
-        headless_mode = os.getenv('PLAYWRIGHT_HEADLESS', 'false').lower() == 'true'
+        # Launch browser in visible mode so you can see what's happening
         browser = playwright.chromium.launch(
-            headless=headless_mode,
-            args=['--start-maximized'] if not headless_mode else []
+            headless=False,  # Changed to False - browser will be visible!
+            args=['--start-maximized']
         )
         context = browser.new_context(
             viewport={"width": SCREEN_WIDTH, "height": SCREEN_HEIGHT},
@@ -10793,10 +10792,9 @@ def playwright_mcp_execute():
         # Launch Playwright browser
         print("🌐 Launching browser...")
         playwright = sync_playwright().start()
-        headless_mode = os.getenv('PLAYWRIGHT_HEADLESS', 'false').lower() == 'true'
         browser = playwright.chromium.launch(
-            headless=headless_mode,
-            args=['--start-maximized'] if not headless_mode else []
+            headless=False,
+            args=['--start-maximized']
         )
         context = browser.new_context(viewport={'width': 1440, 'height': 900})
         page = context.new_page()
@@ -12540,9 +12538,8 @@ def browseruse_navigation_executor():
         
         try:
             with sync_playwright() as p:
-                headless_mode = os.getenv('PLAYWRIGHT_HEADLESS', 'true').lower() == 'true'
                 browser = p.chromium.launch(
-                    headless=headless_mode,
+                    headless=True,
                     args=['--no-sandbox', '--disable-dev-shm-usage']
                 )
                 context = browser.new_context(
@@ -18143,6 +18140,128 @@ See MANUAL_STEPS.md for manual testing procedures.
         
     except Exception as e:
         logger.error(f"Error generating ZIP: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+# ==============================
+# AI Test Studio - Unified Entry Point
+# ==============================
+
+@app.route('/ai-test-studio')
+@jira_auth_required
+def ai_test_studio():
+    """AI Test Studio - Smart routing and cross-feature integration"""
+    return render_template('ai-test-studio.html', active_tab='ui-automation')
+
+@app.route('/api/analyze-test-goal', methods=['POST'])
+@jira_auth_required
+def analyze_test_goal():
+    """Analyze user's testing goal and recommend the best tool"""
+    try:
+        data = request.json
+        goal = data.get('goal', '').lower()
+        
+        if not goal:
+            return jsonify({'success': False, 'error': 'No goal provided'}), 400
+        
+        # Smart routing logic based on keywords and patterns
+        recommendation = {
+            'tool': '',
+            'reason': '',
+            'url': ''
+        }
+        
+        # Keywords for each tool
+        record_keywords = ['record', 'capture', 'learn', 'visual', 'see', 'manual', 'click', 'step by step']
+        agent_keywords = ['complex', 'dynamic', 'changing', 'visual verification', 'captcha', 'iframe', 
+                         'shadow dom', 'canvas', 'no selectors', 'flexible', 'adapt']
+        mcp_keywords = ['api', 'structured', 'chat', 'describe', 'specification', 'detailed', 
+                       'iterate', 'refine', 'conversation']
+        
+        # Score each tool
+        record_score = sum(1 for kw in record_keywords if kw in goal)
+        agent_score = sum(1 for kw in agent_keywords if kw in goal)
+        mcp_score = sum(1 for kw in mcp_keywords if kw in goal)
+        
+        # Pattern matching for specific scenarios
+        if any(word in goal for word in ['multi-step', 'multiple steps', 'workflow']):
+            agent_score += 2
+        
+        if any(word in goal for word in ['simple', 'basic', 'quick']):
+            record_score += 2
+        
+        if any(word in goal for word in ['api', 'rest', 'graphql', 'endpoint']):
+            mcp_score += 3
+        
+        # Determine recommendation
+        max_score = max(record_score, agent_score, mcp_score)
+        
+        if max_score == 0:
+            # Default recommendation based on AI analysis
+            try:
+                # Use AI to analyze the goal
+                model = genai.GenerativeModel(
+                    model_name=os.getenv('GOOGLE_API_MODEL', 'gemini-2.0-flash-exp'),
+                    generation_config=generation_config
+                )
+                
+                prompt = f"""Analyze this testing goal and recommend ONE tool:
+
+Testing Goal: {goal}
+
+Tools Available:
+1. Record & Enhance (Playwright Codegen) - Visual recording, AI beautification, manual editing
+2. AI Agent (Computer Use) - Vision-based, natural language, self-healing, complex workflows
+3. Conversational MCP - Chat-based, API testing, structured tests, iterative refinement
+
+Respond in JSON format:
+{{
+    "tool": "<tool name>",
+    "reason": "<2-3 sentences explaining why this tool is best>"
+}}"""
+                
+                response = model.generate_content(prompt)
+                ai_recommendation = json.loads(response.text.strip())
+                
+                recommendation['tool'] = ai_recommendation['tool']
+                recommendation['reason'] = ai_recommendation['reason']
+                
+            except Exception as e:
+                logger.error(f"AI analysis error: {str(e)}")
+                # Fallback to Record & Enhance
+                recommendation['tool'] = 'Record & Enhance'
+                recommendation['reason'] = 'This is a versatile tool suitable for most testing scenarios. You can record your interactions and then enhance them with AI.'
+        
+        elif record_score == max_score:
+            recommendation['tool'] = 'Record & Enhance'
+            recommendation['reason'] = 'Based on your goal, <strong>Record & Enhance</strong> is perfect. You can visually record your test steps, and our AI will beautify the code and add documentation. Great for learning and quick test creation.'
+            recommendation['url'] = '/automation-test-creator'
+        
+        elif agent_score == max_score:
+            recommendation['tool'] = 'AI Agent (Computer Use)'
+            recommendation['reason'] = 'Your scenario requires <strong>AI Agent</strong> capabilities. It uses vision-based interaction, handles dynamic content naturally, and self-heals when elements change. Perfect for complex workflows.'
+            recommendation['url'] = '/browseruse-automation'
+        
+        else:  # mcp_score
+            recommendation['tool'] = 'Conversational MCP'
+            recommendation['reason'] = 'For your needs, <strong>Conversational MCP</strong> is ideal. It offers a chat-based interface where you can describe your tests iteratively, perfect for API testing and structured test creation.'
+            recommendation['url'] = '/playwright-mcp-automation'
+        
+        # Set URL if not set by AI
+        if not recommendation['url']:
+            if 'Record' in recommendation['tool']:
+                recommendation['url'] = '/automation-test-creator'
+            elif 'Agent' in recommendation['tool']:
+                recommendation['url'] = '/browseruse-automation'
+            else:
+                recommendation['url'] = '/playwright-mcp-automation'
+        
+        return jsonify({
+            'success': True,
+            **recommendation
+        })
+        
+    except Exception as e:
+        logger.error(f"Error analyzing test goal: {str(e)}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/automation-test-creator')
