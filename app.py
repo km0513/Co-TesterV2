@@ -18165,6 +18165,14 @@ def analyze_test_goal():
         
         # Always use AI for intelligent recommendations
         try:
+            # Generation config for Gemini
+            generation_config = {
+                "temperature": 0.3,
+                "top_p": 0.95,
+                "top_k": 40,
+                "max_output_tokens": 1024,
+            }
+            
             model = genai.GenerativeModel(
                 model_name=os.getenv('GOOGLE_API_MODEL', 'gemini-2.0-flash-exp'),
                 generation_config=generation_config
@@ -18248,7 +18256,12 @@ Respond in JSON format (ensure valid JSON, no markdown):
                 
         except Exception as e:
             logger.error(f"AI analysis error: {str(e)}")
-            logger.error(f"Response text: {response.text if 'response' in locals() else 'No response'}")
+            logger.error(f"Error type: {type(e).__name__}")
+            if 'response' in locals():
+                logger.error(f"Response text: {response.text}")
+            import traceback
+            logger.error(f"Traceback: {traceback.format_exc()}")
+            
             # Fallback to Record & Enhance with keyword-based logic
             goal_lower = goal.lower()
             
