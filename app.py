@@ -1851,11 +1851,21 @@ except Exception as e:
 
 # Import and register Model-Based Testing routes
 try:
-    from routes.mbt_routes import mbt_bp
-    app.register_blueprint(mbt_bp)
+    from routes import mbt_routes
+    from models.mbt_models import StateMachine, MBTTestExecution, MBTTemplate
+    
+    # Inject models and db into routes module
+    mbt_routes.db = db
+    mbt_routes.StateMachine = StateMachine
+    mbt_routes.MBTTestExecution = MBTTestExecution
+    mbt_routes.MBTTemplate = MBTTemplate
+    
+    app.register_blueprint(mbt_routes.mbt_bp)
     print("✅ Model-Based Testing routes registered")
 except Exception as e:
     print(f"⚠️  Warning: Could not register MBT routes: {e}")
+    import traceback
+    traceback.print_exc()
 
 # Define Jira OAuth URLs
 JIRA_AUTH_URL = 'https://auth.atlassian.com/authorize'

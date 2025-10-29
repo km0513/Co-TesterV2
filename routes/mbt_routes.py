@@ -4,18 +4,21 @@ API endpoints for state machine management, test generation, and execution
 """
 
 from flask import Blueprint, request, jsonify, render_template
-from models.mbt_models import StateMachine, MBTTestExecution, MBTTemplate
 from utils.mbt_test_generator import MBTTestGenerator
 from utils.ai_state_discovery import AIStateMachineDiscovery
-from extensions import db
 import json
 import os
 from datetime import datetime
 
+# Models and db will be injected from app.py when blueprint is registered
+db = None
+StateMachine = None
+MBTTestExecution = None
+MBTTemplate = None
+
 mbt_bp = Blueprint('mbt', __name__, url_prefix='/mbt')
 
-# Initialize utilities
-test_generator = MBTTestGenerator()
+# Initialize AI discovery utility (test generator is created per request)
 ai_discovery = AIStateMachineDiscovery()
 
 
@@ -267,10 +270,11 @@ def generate_tests():
         # Get state machine
         machine = StateMachine.query.get_or_404(machine_id)
         
+        # Create generator for this machine
+        generator = MBTTestGenerator(machine.definition)
+        
         # Generate tests
-        files = test_generator.generate_all_files(
-            machine_definition=machine.definition,
-            machine_name=machine.name,
+        files = generator.generate_all_files(
             output_dir=output_dir
         )
         
@@ -296,9 +300,12 @@ def list_paths():
         if not machine_definition:
             return jsonify({'success': False, 'error': 'State machine definition is required'}), 400
         
+        # Create generator for this machine
+        generator = MBTTestGenerator(machine_definition)
+        
         # Calculate paths
-        paths = test_generator.calculate_test_paths(machine_definition, strategy)
-        coverage = test_generator.get_coverage_info(machine_definition)
+        paths = generator.calculate_test_paths(strategy)
+        coverage = generator.get_coverage_info()
         
         return jsonify({
             'success': True,
@@ -372,7 +379,9 @@ def get_coverage(machine_id):
             status='completed'
         ).order_by(MBTTestExecution.completed_at.desc()).first()
         
-        coverage_info = test_generator.get_coverage_info(machine.definition)
+        # Create generator for coverage info
+        generator = MBTTestGenerator(machine.definition)
+        coverage_info = generator.get_coverage_info()
         
         result = {
             'success': True,
