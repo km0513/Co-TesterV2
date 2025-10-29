@@ -520,7 +520,7 @@
             }
 
             analyzeBtn.disabled = true;
-            analyzeBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Analyzing...';
+            analyzeBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Analyzing with AI...';
 
             try {
                 const response = await fetch('/api/analyze-test-goal', {
@@ -531,14 +531,47 @@
 
                 const data = await response.json();
                 
-                recommendedTool.innerHTML = `<i class="fas fa-star"></i> Recommended: ${data.tool}`;
-                recommendationReason.innerHTML = data.reason;
+                if (!data.success) {
+                    throw new Error(data.error || 'Analysis failed');
+                }
+                
+                // Confidence badge
+                const confidenceColors = {
+                    high: '#10b981',
+                    medium: '#f59e0b', 
+                    low: '#ef4444'
+                };
+                const confidenceColor = confidenceColors[data.confidence] || '#64748b';
+                const confidenceBadge = data.confidence ? 
+                    `<span style="display: inline-block; padding: 2px 8px; border-radius: 12px; background: ${confidenceColor}20; color: ${confidenceColor}; font-size: 0.75rem; font-weight: 600; margin-left: 8px; text-transform: uppercase;">
+                        ${data.confidence} confidence
+                    </span>` : '';
+                
+                recommendedTool.innerHTML = `
+                    <i class="fas fa-star"></i> Recommended: ${data.tool}
+                    ${confidenceBadge}
+                `;
+                
+                // Add alternative if available
+                let reasonHtml = data.reason;
+                if (data.alternative) {
+                    reasonHtml += `
+                        <div style="margin-top: 12px; padding: 12px; background: #f1f5f9; border-left: 3px solid #64748b; border-radius: 4px;">
+                            <strong style="color: #475569;">💡 Alternative:</strong> ${data.alternative}
+                        </div>
+                    `;
+                }
+                
+                recommendationReason.innerHTML = reasonHtml;
                 recommendedToolUrl = data.url;
                 
                 recommendationResult.classList.add('show');
+                
+                // Log for debugging
+                console.log('AI Recommendation:', data);
             } catch (error) {
                 console.error('Error:', error);
-                alert('Failed to analyze. Please try again.');
+                alert('Failed to analyze: ' + error.message);
             } finally {
                 analyzeBtn.disabled = false;
                 analyzeBtn.innerHTML = '<i class="fas fa-wand-magic-sparkles"></i> Analyze & Recommend';
@@ -548,6 +581,13 @@
         launchToolBtn.addEventListener('click', () => {
             if (recommendedToolUrl) {
                 window.location.href = recommendedToolUrl;
+            }
+        });
+        
+        // Allow Enter key to trigger analysis
+        testGoalInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter' && !analyzeBtn.disabled) {
+                analyzeBtn.click();
             }
         });
     </script>

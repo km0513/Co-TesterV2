@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jira Dashboard - Co-Tester</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='left-sidebar.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='jira-helper.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* Override for sidebar integration and app consistency */
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --bg: #f8fafc;
+            --text: #111827;
+            --muted: #6b7280;
+            --border: #e5e7eb;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background: var(--bg);
+            font-family: 'Inter', system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+        }
+
+        .main-content {
+            padding: 2rem 2rem 2rem 2rem;
+            margin-left: 280px;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 50%, #cbd5e1 100%);
+            position: relative;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        .main-content::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 280px;
+            right: 0;
+            bottom: 0;
+            background: radial-gradient(circle at 20% 80%, rgba(99, 102, 241, 0.05) 0%, transparent 50%),
+                        radial-gradient(circle at 80% 20%, rgba(139, 92, 246, 0.05) 0%, transparent 50%);
+            pointer-events: none;
+            z-index: 0;
+        }
+        
+        .container {
+            padding: 2rem;
+            max-width: 1400px;
+            margin: 0 auto;
+            position: relative;
+            z-index: 1;
+        }
+        
+        /* Add spacing between elements */
+        .query-section,
+        .results-section,
+        .release-cards-grid {
+            margin-top: 2rem;
+        }
+        
+        .query-section:first-child {
+            margin-top: 0;
+        }
+
+        /* When sidebar is collapsed */
+        body.sidebar-collapsed .main-content {
+            padding: 2rem 2rem 2rem 2rem;
+            margin-left: 60px;
+        }
+        
+        body.sidebar-collapsed .main-content::before {
+            left: 60px;
+        }
+
+        /* Adjust card grid when sidebar is collapsed for more space */
+        body.sidebar-collapsed .release-cards-grid {
+            grid-template-columns: repeat(5, 1fr);
+        }
+
+        @media (max-width: 1600px) {
+            body.sidebar-collapsed .release-cards-grid {
+                grid-template-columns: repeat(4, 1fr);
+            }
+        }
+
+        @media (max-width: 1200px) {
+            body.sidebar-collapsed .release-cards-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
+        }
+
+        /* Match app's card styling */
+        .query-section {
+            background: white;
+            border: 1px solid var(--border);
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark)) !important;
+            border: none !important;
+            box-shadow: 0 6px 16px rgba(79, 70, 229, .25) !important;
+        }
+
+        .btn-secondary {
+            background: white;
+            border: 1px solid var(--border);
+            color: var(--text);
+        }
+
+        .btn-secondary:hover {
+            background: #f9fafb;
+        }
+
+        /* Match bucket styling with app cards */
+        .bucket {
+            background: white;
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+        }
+
+        /* Keep the original bucket header gradient colors - DO NOT override */
+        .bucket-header {
+            /* Original gradient is preserved from jira-helper.css */
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        /* Results section styling */
+        .results {
+            background: white;
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+            padding: 1.5rem;
+        }
+
+        .results-header {
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        /* Fix modal z-index and positioning - USE MORE SCREEN SPACE */
+        .modal {
+            z-index: 10000 !important;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+        }
+
+        .modal-backdrop {
+            z-index: 9999 !important;
+        }
+
+        .modal-content {
+            position: relative;
+            z-index: 10001 !important;
+            width: 95vw !important;
+            max-width: 1600px !important;
+            max-height: 90vh !important;
+            margin: 0 !important;
+            overflow-y: auto;
+            padding: 2rem !important;
+        }
+
+        /* Ensure modal is above sidebar */
+        .sidebar {
+            z-index: 1000;
+        }
+
+        /* Fix modal table layout - wider columns */
+        .modal-content table {
+            width: 100%;
+            table-layout: fixed;
+        }
+
+        .modal-content th:first-child,
+        .modal-content td:first-child {
+            width: 120px;
+        }
+
+        .modal-content th:nth-child(2),
+        .modal-content td:nth-child(2) {
+            width: auto;
+        }
+
+        .modal-content th:last-child,
+        .modal-content td:last-child {
+            width: 150px;
+        }
+
+        .modal-content th,
+        .modal-content td {
+            padding: 1rem;
+            word-wrap: break-word;
+            vertical-align: top;
+        }
+
+        /* Make issue distribution section more spacious */
+        .modal-content .issue-distribution {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+            gap: 1rem;
+            margin: 1.5rem 0;
+        }
+
+        /* Larger modal header */
+        .modal-content h2,
+        .modal-content h3 {
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+        }
+
+        /* Better spacing for modal sections */
+        .modal-content>div {
+            margin-bottom: 2rem;
+        }
+
+        /* Responsive modal for smaller screens */
+        @media (max-width: 1200px) {
+            .modal-content {
+                width: 90vw !important;
+                max-height: 85vh !important;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .modal {
+                padding: 1rem;
+            }
+
+            .modal-content {
+                width: 95vw !important;
+                max-height: 90vh !important;
+                padding: 1rem !important;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    {% set active_tab = 'dashboards' %}
+    {% include 'left-sidebar.html' %}
+
+    <div class="main-content">
+         {% set page_title = '<i class="fas fa-chart-pie"></i> Release Dashboard' %}
+        {% set allow_html = true %}
+        {% set page_subtitle = 'Release progress & Issue tracking' %}
+        {% include 'page-header.html' %}
+        
+        <div class="container">
+
+            <div class="query-section">
+                <div class="query-section-header" id="querySectionHeader">
+                    <h3>🔍 Filters</h3>
+                    <button class="query-toggle" id="queryToggle" aria-label="Toggle filters">
+                        <span class="toggle-icon">v</span>
+                    </button>
+                </div>
+                <div class="query-section-content" id="querySectionContent">
+                    <div class="favorite-filters">
+                        <label for="favoriteFilterSelect">Quick Filters:</label>
+                        <select id="favoriteFilterSelect">
+                            <option value="">Select a filter…</option>
+                            <option value="filter = 10908 AND issuetype IN (Bug, Story)">Current Release</option>
+                            <option value="filter = 11004 AND issuetype IN (Story, Bug)">Future Release</option>
+                            <option value="filter = 10925 AND issuetype IN (Story, Bug)">Current Hotfix</option>
+                        </select>
+                    </div>
+                    <div class="query-input">
+                        <label for="jql">JQL Query:</label>
+                        <textarea id="jql" placeholder="project = MYPROJ AND assignee = currentUser()"
+                            rows="2"></textarea>
+                    </div>
+                    <div class="query-controls">
+                        <button id="runQuery" class="btn-primary">🔍 Run Query</button>
+                        <button id="clearQuery" class="btn-secondary">🗑️ Clear</button>
+                        <div class="query-options">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="loading" class="loading hidden">
+                <div class="spinner"></div>
+                <p>Fetching issues from Jira...</p>
+            </div>
+
+            <div id="error" class="error hidden"></div>
+
+            <div class="results hidden" id="results">
+                <div class="results-header">
+                    <div class="view-toggle">
+                        <button id="featureViewBtn" class="view-btn active">Features</button>
+                        <button id="teamViewBtn" class="view-btn">Teams</button>
+                        <button id="assigneeViewBtn" class="view-btn">Assignees</button>
+                    </div>
+                    <div class="header-right">
+                        <div class="summary">
+                            <span id="totalCount">0 issues</span>
+                            <span class="separator">|</span>
+                            <span id="bucketSummary"></span>
+                        </div>
+                        <div class="layout-toggle">
+                            <button id="cardViewBtn" class="layout-btn active" title="Card View">
+                                <span class="layout-icon">▦</span>
+                            </button>
+                            <button id="listViewBtn" class="layout-btn" title="List View">
+                                <span class="layout-icon">☰</span>
+                            </button>
+                            <button id="refreshResultsBtn" class="layout-btn" title="Refresh Results">
+                                <span class="layout-icon">⟳</span>
+                            </button>
+                            <button id="downloadReportBtn" class="layout-btn" title="Download Report">
+                                <span class="layout-icon">⬇</span>
+                            </button>
+                            <button id="generateSummaryBtn" class="layout-btn" title="Generate Summary">
+                                <span class="layout-icon">📄</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="parent-overview-section" id="featureView">
+                    <div class="view-controls">
+                        <div class="control-group">
+                            <button id="expandAllFeatures" class="btn-secondary btn-sm">Expand All</button>
+                            <button id="collapseAllFeatures" class="btn-secondary btn-sm">Collapse All</button>
+                        </div>
+                    </div>
+                    <div id="parentOverview" class="parent-overview"></div>
+                </div>
+
+                <div class="buckets hidden" id="teamView">
+                    <div class="view-controls">
+                        <button id="expandAllTeams" class="btn-secondary btn-sm">Expand All</button>
+                        <button id="collapseAllTeams" class="btn-secondary btn-sm">Collapse All</button>
+                    </div>
+                    <div class="bucket" data-bucket="dev">
+                        <div class="bucket-header">
+                            <h3>🔧 Dev</h3>
+                            <span class="count" id="devCount">0</span>
+                        </div>
+                        <div class="bucket-content" id="devBucket"></div>
+                    </div>
+
+                    <div class="bucket" data-bucket="qa">
+                        <div class="bucket-header">
+                            <h3>🧪 QA</h3>
+                            <span class="count" id="qaCount">0</span>
+                        </div>
+                        <div class="bucket-content" id="qaBucket"></div>
+                    </div>
+
+                    <div class="bucket" data-bucket="product">
+                        <div class="bucket-header">
+                            <h3>🚀 UAT</h3>
+                            <span class="count" id="productCount">0</span>
+                        </div>
+                        <div class="bucket-content" id="productBucket"></div>
+                    </div>
+
+                    <div class="bucket" data-bucket="completed">
+                        <div class="bucket-header">
+                            <h3>✅ Completed/Deployment Ready</h3>
+                            <span class="count" id="completedCount">0</span>
+                        </div>
+                        <div class="bucket-content" id="completedBucket"></div>
+                    </div>
+
+                    <div class="bucket" data-bucket="dropped">
+                        <div class="bucket-header">
+                            <h3>❌ Dropped</h3>
+                            <span class="count" id="droppedCount">0</span>
+                        </div>
+                        <div class="bucket-content" id="droppedBucket"></div>
+                    </div>
+
+                    <div class="bucket" data-bucket="deployed">
+                        <div class="bucket-header">
+                            <h3>🎉 Deployed</h3>
+                            <span class="count" id="deployedCount">0</span>
+                        </div>
+                        <div class="bucket-content" id="deployedBucket"></div>
+                    </div>
+
+                    <div class="bucket" data-bucket="other">
+                        <div class="bucket-header">
+                            <h3>📋 Other</h3>
+                            <span class="count" id="otherCount">0</span>
+                        </div>
+                        <div class="bucket-content" id="otherBucket"></div>
+                    </div>
+                </div>
+
+                <div class="assignee-view hidden" id="assigneeView">
+                    <div class="view-controls">
+                        <button id="expandAllAssignees" class="btn-secondary btn-sm">Expand All</button>
+                        <button id="collapseAllAssignees" class="btn-secondary btn-sm">Collapse All</button>
+                    </div>
+                    <div id="assigneeContainer"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="featureModal" class="modal hidden" role="dialog" aria-modal="true">
+        <div class="modal-backdrop"></div>
+        <div class="modal-content" role="document">
+            <button class="modal-close" aria-label="Close">×</button>
+            <div id="modalBody"></div>
+        </div>
+    </div>
+
+    {% include 'footer.html' %}
+
+    <script>
+        // Set Jira base URL from Flask template
+        window.JIRA_BASE_URL = {{ jira_domain | tojson }};
+        window.API_ENDPOINT = '/api/jira-helper/jql';
+
+        // Watch for sidebar collapse/expand
+        document.addEventListener('DOMContentLoaded', function () {
+            const sidebar = document.getElementById('sidebar');
+            if (sidebar) {
+                // Check initial state
+                const updateSidebarState = () => {
+                    if (sidebar.classList.contains('collapsed')) {
+                        document.body.classList.add('sidebar-collapsed');
+                    } else {
+                        document.body.classList.remove('sidebar-collapsed');
+                    }
+                };
+
+                // Initial check
+                updateSidebarState();
+
+                // Watch for changes using MutationObserver
+                const observer = new MutationObserver(updateSidebarState);
+                observer.observe(sidebar, { attributes: true, attributeFilter: ['class'] });
+            }
+        });
+    </script>
+    <script src="{{ url_for('static', filename='jira-helper.js') }}"></script>
+</body>
+
+</html>

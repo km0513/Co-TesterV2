@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Auto-Healing HTML Extractor</title>
+  <link rel="stylesheet" href="/static/styles.css" />
+  <style>
+    :root { --primary:#6366f1; --primary-hover:#4f46e5; --border:#e5e7eb; --bg:#f8fafc; --text:#111827; --muted:#6b7280; }
+    body { font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; background: var(--bg); color: var(--text); margin: 0; }
+    .container { max-width: 1180px; margin: 32px auto; padding: 0 16px; }
+    .header { display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; }
+    .title { font-size: 20px; font-weight: 800; display:flex; gap:10px; align-items:center; }
+    .badge { font-size:12px; font-weight:700; color:#fff; background: linear-gradient(135deg,#ff6b6b,#ffa726); padding:4px 10px; border-radius:999px; }
+    .card { background:#fff; border:1px solid var(--border); border-radius:16px; padding:16px; box-shadow: 0 10px 24px rgba(0,0,0,0.06); min-height: 0; }
+    .grid { display:grid; grid-template-columns: 1.15fr 1fr; gap:16px; align-items:start; }
+    #previewBox { contain: layout paint size; position: relative; overflow: hidden !important; max-height: 420px !important; }
+    #htmlPreview { max-width: 100% !important; max-height: 100% !important; }
+    .section-title { font-size:13px; font-weight:800; color:#374151; margin-bottom:8px; text-transform:uppercase; letter-spacing:.04em; }
+    .buttons { display:flex; gap:8px; flex-wrap:wrap; }
+    button { appearance:none; border:none; border-radius:10px; padding:10px 14px; font-weight:700; cursor:pointer; background: var(--primary); color:#fff; }
+    button.secondary { background:#eef2ff; color:#3730a3; }
+    button.ghost { background:#fff; color:#111827; border:1px solid var(--border); }
+    .field input { width:100%; border:1px solid var(--border); border-radius:10px; padding:8px; }
+    .list { max-height: 360px; overflow:auto; border:1px solid var(--border); border-radius:12px; padding:12px; background:#fafafa; }
+    .item { background:#fff; border:1px solid var(--border); border-radius:10px; padding:10px; margin-bottom:10px; }
+    .muted { color: var(--muted); font-size: 12px; }
+    textarea.code { width:100%; border:1px solid var(--border); border-radius:12px; padding:12px; background:#f8fafc; color:#1e293b; font-size:12px; }
+    pre, code, textarea { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="title">
+        <span>Auto-Healing HTML Extractor</span>
+        <span class="badge">AI</span>
+      </div>
+      <div class="muted">Paste HTML → Preview → Click elements → Name → Export/POM</div>
+    </div>
+
+    <div class="grid">
+      <div class="card">
+        <div class="section-title">HTML Paste</div>
+        <div style="margin-bottom:8px">
+          <textarea id="htmlTextarea" class="code" spellcheck="false" placeholder="Paste HTML markup here..." style="height:180px"></textarea>
+        </div>
+        <div class="buttons" style="margin-bottom:8px">
+          <button class="secondary" id="newSessionBtn">New Session</button>
+          <button class="secondary" id="previewHtmlBtn">Preview HTML</button>
+          <button class="ghost" id="clearHtmlBtn">Clear</button>
+          <span class="muted">Session: <span id="sessionId">-</span></span>
+        </div>
+        <div class="section-title">Page Preview</div>
+        <div id="previewBox" style="border:1px solid var(--border); border-radius:12px; overflow:hidden; background:#fff; height:420px;">
+          <iframe id="htmlPreview" title="HTML Preview" sandbox="allow-same-origin" style="width:100%; height:100%; border:0; display:block"></iframe>
+        </div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:12px;">
+          <div>
+            <div class="section-title">Element Preview (outerHTML)</div>
+            <pre id="selectedPreview" class="list" style="height:180px; overflow:auto; white-space:pre-wrap;"></pre>
+          </div>
+          <div>
+            <div class="section-title">Element Snapshot</div>
+            <pre id="selectedSnapshot" class="list" style="height:180px; overflow:auto;"></pre>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="section-title">Extracted Elements</div>
+        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;">
+          <div class="muted">Total: <span id="elementsCount">0</span></div>
+          <div class="buttons">
+            <button class="ghost" id="clearSelectedBtn">Clear Selected</button>
+            <button class="secondary" id="downloadExtractBtn">Download JSON</button>
+          </div>
+        </div>
+        <div id="elementsList" class="list"></div>
+      </div>
+    </div>
+  </div>
+
+  <script src="/static/autoheal-html.js?v=4"></script>
+</body>
+</html>

@@ -1,0 +1,1526 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>API Co-Test</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="/static/styles.css">
+  <link rel="stylesheet" href="/static/left-sidebar.css">
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    ::selection {
+      background: #6366f1 !important;
+      color: white !important;
+    }
+
+    ::-moz-selection {
+      background: #6366f1 !important;
+      color: white !important;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      margin: 0;
+      background: #f8f9fa;
+      color: #1f2937;
+      line-height: 1.6;
+    }
+
+    .main-content {
+      margin-left: 280px;
+      padding: 2rem;
+      min-height: 100vh;
+    }
+
+    .container {
+      max-width: 100%;
+      background: white;
+      padding: 0;
+      border-radius: 8px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+      overflow: hidden;
+    }
+
+    h3 {
+      font-size: 16px;
+      font-weight: 700;
+      color: #111827;
+      margin: 0 0 16px 0;
+    }
+
+    /* Tabs */
+    .tabs {
+      display: flex;
+      gap: 0;
+      margin: 0;
+      padding: 0 24px;
+      border-bottom: 1px solid #e5e7eb;
+      background: #fafafa;
+    }
+
+    .tab {
+      padding: 14px 20px;
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 600;
+      color: #6b7280;
+      border-bottom: 2px solid transparent;
+      margin-bottom: -1px;
+      transition: all 0.15s ease;
+      font-family: 'Inter', sans-serif;
+    }
+
+    .tab.active {
+      color: #6366f1 !important;
+      border-bottom: 2px solid #6366f1 !important;
+      background: white !important;
+    }
+
+    .tab:hover:not(.active) {
+      color: #4b5563;
+      background: #f3f4f6;
+    }
+
+    .tab-content {
+      padding: 24px;
+      display: none;
+    }
+
+    .tab-content.active {
+      display: block;
+    }
+
+    /* Form Elements */
+    .form-group {
+      margin-bottom: 18px;
+    }
+
+    .form-group label {
+      display: flex;
+      align-items: center;
+      margin-bottom: 8px;
+      font-weight: 600;
+      color: #374151;
+      font-size: 13px;
+    }
+
+    .url-row {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 18px;
+      align-items: stretch;
+    }
+
+    .method-select {
+      padding: 11px 14px;
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 600;
+      width: 120px;
+      background: white;
+      color: #374151;
+      cursor: pointer;
+      transition: border-color 0.2s;
+      font-family: 'Inter', sans-serif;
+    }
+
+    .method-select:hover {
+      border-color: #6366f1;
+    }
+
+    .method-select:focus {
+      outline: none;
+      border-color: #6366f1;
+      box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+    }
+
+    .url-input {
+      flex: 1;
+      padding: 11px 14px;
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+      font-size: 14px;
+      transition: border-color 0.2s;
+      font-family: 'Inter', sans-serif;
+    }
+
+    .url-input:hover {
+      border-color: #9ca3af;
+    }
+
+    .url-input:focus {
+      outline: none;
+      border-color: #6366f1;
+      box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+    }
+
+    .btn-primary {
+      padding: 11px 24px;
+      background: #6366f1;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 14px;
+      transition: background-color 0.2s;
+      font-family: 'Inter', sans-serif;
+      white-space: nowrap;
+    }
+
+    .btn-primary:hover {
+      background: #4f46e5;
+    }
+
+    .btn-primary:active {
+      background: #4338ca;
+    }
+
+    .btn-secondary {
+      padding: 6px 12px;
+      background: #10b981;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 600;
+      transition: background-color 0.2s;
+      font-family: 'Inter', sans-serif;
+      margin-left: 8px;
+    }
+
+    .btn-secondary:hover {
+      background: #059669;
+    }
+
+    /* Params/Headers */
+    .row {
+      display: grid;
+      grid-template-columns: 1fr 1fr auto;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+
+    .row input {
+      padding: 9px 12px;
+      border: 1px solid #d1d5db;
+      border-radius: 5px;
+      font-size: 13px;
+      transition: border-color 0.2s;
+      font-family: 'Inter', sans-serif;
+    }
+
+    .row input:hover {
+      border-color: #9ca3af;
+    }
+
+    .row input:focus {
+      outline: none;
+      border-color: #6366f1;
+      box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+    }
+
+    .btn-remove {
+      padding: 9px 12px;
+      background: #ef4444;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      font-weight: 600;
+      transition: background-color 0.2s;
+      font-family: 'Inter', sans-serif;
+      font-size: 16px;
+      line-height: 1;
+    }
+
+    .btn-remove:hover {
+      background: #dc2626;
+    }
+
+    /* Textarea */
+    textarea {
+      width: 100%;
+      min-height: 180px;
+      padding: 12px;
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+      font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+      font-size: 13px;
+      line-height: 1.5;
+      transition: border-color 0.2s;
+      resize: vertical;
+    }
+
+    textarea:hover {
+      border-color: #9ca3af;
+    }
+
+    textarea:focus {
+      outline: none;
+      border-color: #6366f1;
+      box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+    }
+
+    /* Response */
+    .response {
+      margin-top: 20px;
+      padding: 16px;
+      background: #f9fafb;
+      border-radius: 6px;
+      border: 1px solid #e5e7eb;
+    }
+
+    .response h4 {
+      font-size: 14px;
+      font-weight: 700;
+      color: #111827;
+      margin: 0 0 10px 0;
+    }
+
+    .response-meta {
+      padding: 10px 14px;
+      background: #eff6ff;
+      border-radius: 5px;
+      margin-bottom: 10px;
+      font-size: 12px;
+      font-weight: 500;
+      color: #1e40af;
+      border: 1px solid #dbeafe;
+    }
+
+    .response-body {
+      padding: 14px;
+      background: #ffffff;
+      border: 1px solid #e5e7eb;
+      border-radius: 5px;
+      min-height: 200px;
+      max-height: 400px;
+      overflow: auto;
+      font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+      font-size: 12px;
+      white-space: pre-wrap;
+      line-height: 1.5;
+      color: #1f2937;
+    }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: #f3f4f6;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: #d1d5db;
+      border-radius: 4px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: #9ca3af;
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  {% set active_tab = 'api' %}
+  {% include 'left-sidebar.html' %}
+
+  <div class="main-content" style="padding: 2rem;">
+       
+
+    {% set page_title = 'API <span class="ai-badge">AI</span>' %}
+        {% set page_subtitle = 'Test REST APIs, GraphQL, cURL commands, and Postman collections' %}
+        {% set allow_html = true %}
+        {% include 'page-header.html' %}
+
+    <div class="container">
+      <div
+        style="display: flex; justify-content: space-between; align-items: center; padding: 16px 24px; background: white; border-bottom: 1px solid #e5e7eb;">
+        <div class="tabs" style="margin: 0; padding: 0; border: none; flex: 1;">
+          <button class="tab active" onclick="switchTab('rest', this)">REST API</button>
+          <button class="tab" onclick="switchTab('graphql', this)">GraphQL</button>
+          <button class="tab" onclick="switchTab('curl', this)">cURL</button>
+          <button class="tab" onclick="switchTab('collections', this)">Collections</button>
+        </div>
+        <button class="btn-secondary" onclick="openCurlImport()" style="margin: 0; padding: 8px 16px; font-size: 13px;">
+          📋 Import cURL
+        </button>
+      </div>
+
+      <!-- REST API Tab -->
+      <div id="rest-tab" class="tab-content active">
+        <h3>REST API Request</h3>
+
+        <!-- AI Test Generator Section -->
+        <div
+          style="margin-bottom: 24px; padding: 16px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: 1px solid #5a67d8; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+            <h4 style="margin: 0; font-size: 16px; font-weight: 700; color: white;">🤖 AI Test Suite Generator</h4>
+            <button onclick="toggleAIPanel('rest')" id="rest-ai-toggle"
+              style="background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); cursor: pointer; font-size: 18px; color: white; padding: 4px 12px; border-radius: 4px; font-weight: bold;">▼</button>
+          </div>
+
+          <div id="rest-ai-panel" style="display: none;">
+            <div style="display: flex; gap: 8px; margin-bottom: 12px;">
+              <button class="btn-primary" onclick="generateAITestsInline('rest')"
+                style="flex: 1; padding: 10px; font-size: 13px; background: white; color: #667eea; font-weight: 700;">🤖
+                Generate Tests</button>
+              <button class="btn-secondary" onclick="importTestsInline('rest')"
+                style="padding: 10px; font-size: 13px; margin: 0; background: rgba(255,255,255,0.9); color: #667eea;">📤
+                Import</button>
+              <button class="btn-secondary" onclick="exportTestsInline('rest')"
+                style="padding: 10px; font-size: 13px; margin: 0; background: rgba(255,255,255,0.9); color: #f59e0b;">📥
+                Export</button>
+              <button class="btn-secondary" onclick="clearTestsInline('rest')"
+                style="padding: 10px; font-size: 13px; margin: 0; background: rgba(255,255,255,0.9); color: #ef4444;">🗑️
+                Clear</button>
+            </div>
+            <input type="file" id="rest-import-file" accept=".json" style="display: none;"
+              onchange="handleImport(event, 'rest')">
+
+            <div id="rest-test-selector-container" style="display: none;">
+              <label style="display: block; margin-bottom: 6px; font-weight: 600; color: white; font-size: 12px;">
+                Select Test Case (<span id="rest-test-count">0</span> tests loaded):
+              </label>
+              <select id="rest-test-selector" onchange="loadTestToForm('rest')"
+                style="width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 5px; font-size: 13px; margin-bottom: 12px;">
+                <option value="">-- Select a test case --</option>
+              </select>
+
+              <div id="rest-original-request"
+                style="padding: 10px; background: rgba(255,255,255,0.95); border-radius: 5px; margin-bottom: 12px; font-size: 12px; color: #1e40af; display: none;">
+                <strong>📋 Base Request:</strong> <span id="rest-base-request-info"></span>
+              </div>
+
+              <div id="rest-test-info"
+                style="display: none; padding: 10px; background: rgba(255,255,255,0.95); border: 1px solid #e5e7eb; border-radius: 5px; margin-bottom: 12px; font-size: 12px;">
+                <div style="margin-bottom: 4px;"><strong>Test:</strong> <span id="rest-test-name"></span></div>
+                <div style="margin-bottom: 4px;"><strong>Category:</strong> <span id="rest-test-category"></span></div>
+                <div><strong>Expected Status:</strong> <span id="rest-test-status"></span></div>
+              </div>
+
+              <div style="display: flex; gap: 8px;">
+                <button class="btn-primary" onclick="runSelectedTestInline('rest')"
+                  style="flex: 1; padding: 10px; font-size: 13px; background: white; color: #667eea;">▶ Run Selected
+                  Test</button>
+                <button class="btn-primary" onclick="runAllTestsInline('rest')"
+                  style="flex: 1; padding: 10px; font-size: 13px; background: #10b981; color: white;">▶ Run All
+                  Tests</button>
+              </div>
+            </div>
+
+            <div id="rest-ai-loading" style="display: none; text-align: center; padding: 20px;">
+              <div
+                style="display: inline-block; width: 30px; height: 30px; border: 3px solid rgba(255,255,255,0.3); border-top-color: white; border-radius: 50%; animation: spin 1s linear infinite;">
+              </div>
+              <p style="margin-top: 12px; color: white; font-size: 13px; font-weight: 600;">Generating tests with AI...
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div class="url-row">
+          <select id="rest-method" class="method-select">
+            <option value="GET">GET</option>
+            <option value="POST">POST</option>
+            <option value="PUT">PUT</option>
+            <option value="DELETE">DELETE</option>
+            <option value="PATCH">PATCH</option>
+          </select>
+          <input type="text" id="rest-url" class="url-input" placeholder="https://api.example.com/endpoint">
+          <button class="btn-primary" onclick="sendRest()">Send</button>
+        </div>
+
+        <div class="form-group">
+          <label>Query Parameters <button class="btn-secondary" onclick="addRow('rest-params')">+ Add</button></label>
+          <div id="rest-params"></div>
+        </div>
+
+        <div class="form-group">
+          <label>Headers <button class="btn-secondary" onclick="addRow('rest-headers')">+ Add</button></label>
+          <div id="rest-headers"></div>
+        </div>
+
+        <div class="form-group">
+          <label>
+            Body (JSON)
+            <span
+              style="margin-left: 8px; padding: 2px 8px; background: #eff6ff; color: #1e40af; border-radius: 4px; font-size: 11px; font-weight: 600;">
+              💡 Use {% raw %}{{$randomEmail}}{% endraw %}, {% raw %}{{$randomString}}{% endraw %}, {% raw
+              %}{{$randomInt}}{% endraw %}, etc.
+            </span>
+          </label>
+          <textarea id="rest-body"
+            placeholder='{"email": "{% raw %}{{$randomEmail}}{% endraw %}", "name": "{% raw %}{{$randomFullName}}{% endraw %}"}'></textarea>
+        </div>
+
+        <div class="response">
+          <h4>Response</h4>
+          <div id="rest-meta" class="response-meta">Ready to send request...</div>
+          <div id="rest-response" class="response-body">Response will appear here...</div>
+        </div>
+      </div>
+
+      <!-- GraphQL Tab -->
+      <div id="graphql-tab" class="tab-content">
+        <h3>GraphQL Request</h3>
+
+        <!-- AI Test Generator Section -->
+        <div
+          style="margin-bottom: 24px; padding: 16px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: 1px solid #5a67d8; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+            <h4 style="margin: 0; font-size: 16px; font-weight: 700; color: white;">🤖 AI Test Suite Generator</h4>
+            <button onclick="toggleAIPanel('graphql')" id="graphql-ai-toggle"
+              style="background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); cursor: pointer; font-size: 18px; color: white; padding: 4px 12px; border-radius: 4px; font-weight: bold;">▼</button>
+          </div>
+
+          <div id="graphql-ai-panel" style="display: none;">
+            <div style="display: flex; gap: 8px; margin-bottom: 12px;">
+              <button class="btn-primary" onclick="generateAITestsInline('graphql')"
+                style="flex: 1; padding: 10px; font-size: 13px; background: white; color: #667eea; font-weight: 700;">🤖
+                Generate Tests</button>
+              <button class="btn-secondary" onclick="importTestsInline('graphql')"
+                style="padding: 10px; font-size: 13px; margin: 0; background: rgba(255,255,255,0.9); color: #667eea;">📤
+                Import</button>
+              <button class="btn-secondary" onclick="exportTestsInline('graphql')"
+                style="padding: 10px; font-size: 13px; margin: 0; background: rgba(255,255,255,0.9); color: #f59e0b;">📥
+                Export</button>
+              <button class="btn-secondary" onclick="clearTestsInline('graphql')"
+                style="padding: 10px; font-size: 13px; margin: 0; background: rgba(255,255,255,0.9); color: #ef4444;">🗑️
+                Clear</button>
+            </div>
+            <input type="file" id="graphql-import-file" accept=".json" style="display: none;"
+              onchange="handleImport(event, 'graphql')">
+
+            <div id="graphql-test-selector-container" style="display: none;">
+              <label style="display: block; margin-bottom: 6px; font-weight: 600; color: white; font-size: 12px;">
+                Select Test Case (<span id="graphql-test-count">0</span> tests loaded):
+              </label>
+              <select id="graphql-test-selector" onchange="loadTestToForm('graphql')"
+                style="width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 5px; font-size: 13px; margin-bottom: 12px;">
+                <option value="">-- Select a test case --</option>
+              </select>
+
+              <div id="graphql-original-request"
+                style="padding: 10px; background: rgba(255,255,255,0.95); border-radius: 5px; margin-bottom: 12px; font-size: 12px; color: #1e40af; display: none;">
+                <strong>📋 Base Request:</strong> <span id="graphql-base-request-info"></span>
+              </div>
+
+              <div id="graphql-test-info"
+                style="display: none; padding: 10px; background: rgba(255,255,255,0.95); border: 1px solid #e5e7eb; border-radius: 5px; margin-bottom: 12px; font-size: 12px;">
+                <div style="margin-bottom: 4px;"><strong>Test:</strong> <span id="graphql-test-name"></span></div>
+                <div style="margin-bottom: 4px;"><strong>Category:</strong> <span id="graphql-test-category"></span>
+                </div>
+                <div><strong>Expected Status:</strong> <span id="graphql-test-status"></span></div>
+              </div>
+
+              <div style="display: flex; gap: 8px;">
+                <button class="btn-primary" onclick="runSelectedTestInline('graphql')"
+                  style="flex: 1; padding: 10px; font-size: 13px; background: white; color: #667eea;">▶ Run Selected
+                  Test</button>
+                <button class="btn-primary" onclick="runAllTestsInline('graphql')"
+                  style="flex: 1; padding: 10px; font-size: 13px; background: #10b981; color: white;">▶ Run All
+                  Tests</button>
+              </div>
+            </div>
+
+            <div id="graphql-ai-loading" style="display: none; text-align: center; padding: 20px;">
+              <div
+                style="display: inline-block; width: 30px; height: 30px; border: 3px solid rgba(255,255,255,0.3); border-top-color: white; border-radius: 50%; animation: spin 1s linear infinite;">
+              </div>
+              <p style="margin-top: 12px; color: white; font-size: 13px; font-weight: 600;">Generating tests with AI...
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>GraphQL Endpoint</label>
+          <input type="text" id="graphql-url" class="url-input" placeholder="https://api.example.com/graphql">
+        </div>
+
+        <div class="form-group">
+          <label>Query</label>
+          <textarea id="graphql-query" placeholder="query { users { id name } }"></textarea>
+        </div>
+
+        <div class="form-group">
+          <label>Variables (JSON)</label>
+          <textarea id="graphql-vars" style="min-height: 100px;" placeholder='{"limit": 10}'></textarea>
+        </div>
+
+        <div class="form-group">
+          <label>Headers <button class="btn-secondary" onclick="addRow('graphql-headers')">+ Add</button></label>
+          <div id="graphql-headers"></div>
+        </div>
+
+        <button class="btn-primary" onclick="sendGraphQL()">Send Query</button>
+        <div
+          style="margin-top: 24px; padding: 16px; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+            <h4 style="margin: 0; font-size: 15px; font-weight: 700; color: #111827;">🤖 AI Test Suite</h4>
+            <button onclick="toggleAIPanel('graphql')" id="graphql-ai-toggle"
+              style="background: none; border: none; cursor: pointer; font-size: 20px; color: #6b7280;">▼</button>
+          </div>
+
+          <div id="graphql-ai-panel" style="display: none;">
+            <div style="display: flex; gap: 8px; margin-bottom: 12px;">
+              <button class="btn-primary" onclick="generateAITestsInline('graphql')"
+                style="flex: 1; padding: 10px; font-size: 13px;">🤖 Generate Tests</button>
+              <button class="btn-secondary" onclick="importTestsInline('graphql')"
+                style="padding: 10px; font-size: 13px; margin: 0;">📤 Import</button>
+              <button class="btn-secondary" onclick="exportTestsInline('graphql')"
+                style="padding: 10px; font-size: 13px; margin: 0; background: #f59e0b;">📥 Export</button>
+              <button class="btn-secondary" onclick="clearTestsInline('graphql')"
+                style="padding: 10px; font-size: 13px; margin: 0; background: #ef4444;">🗑️ Clear</button>
+            </div>
+            <input type="file" id="graphql-import-file" accept=".json" style="display: none;"
+              onchange="handleImport(event, 'graphql')">
+
+            <div id="graphql-test-selector-container" style="display: none;">
+              <label style="display: block; margin-bottom: 6px; font-weight: 600; color: #374151; font-size: 12px;">
+                Select Test Case (<span id="graphql-test-count">0</span> tests loaded):
+              </label>
+              <select id="graphql-test-selector" onchange="loadTestToForm('graphql')"
+                style="width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 5px; font-size: 13px; margin-bottom: 12px;">
+                <option value="">-- Select a test case --</option>
+              </select>
+
+              <div id="graphql-original-request"
+                style="padding: 10px; background: #eff6ff; border-radius: 5px; margin-bottom: 12px; font-size: 12px; color: #1e40af; display: none;">
+                <strong>📋 Base Request:</strong> <span id="graphql-base-request-info"></span>
+              </div>
+
+              <div id="graphql-test-info"
+                style="display: none; padding: 10px; background: white; border: 1px solid #e5e7eb; border-radius: 5px; margin-bottom: 12px; font-size: 12px;">
+                <div style="margin-bottom: 4px;"><strong>Test:</strong> <span id="graphql-test-name"></span></div>
+                <div style="margin-bottom: 4px;"><strong>Category:</strong> <span id="graphql-test-category"></span>
+                </div>
+                <div><strong>Expected Status:</strong> <span id="graphql-test-status"></span></div>
+              </div>
+
+              <div style="display: flex; gap: 8px;">
+                <button class="btn-primary" onclick="runSelectedTestInline('graphql')"
+                  style="flex: 1; padding: 10px; font-size: 13px;">▶ Run Selected Test</button>
+                <button class="btn-primary" onclick="runAllTestsInline('graphql')"
+                  style="flex: 1; padding: 10px; font-size: 13px; background: #10b981;">▶ Run All Tests</button>
+              </div>
+            </div>
+
+            <div id="graphql-ai-loading" style="display: none; text-align: center; padding: 20px;">
+              <div
+                style="display: inline-block; width: 30px; height: 30px; border: 3px solid #e5e7eb; border-top-color: #8b5cf6; border-radius: 50%; animation: spin 1s linear infinite;">
+              </div>
+              <p style="margin-top: 12px; color: #6b7280; font-size: 13px;">Generating tests with AI...</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="response">
+          <h4>Response</h4>
+          <div id="graphql-meta" class="response-meta">Ready to send query...</div>
+          <div id="graphql-response" class="response-body">Response will appear here...</div>
+        </div>
+      </div>
+
+      <!-- cURL Tab -->
+      <div id="curl-tab" class="tab-content">
+        <h3>cURL Command Runner</h3>
+
+        <div class="form-group">
+          <label>Paste cURL Command</label>
+          <textarea id="curl-command"
+            placeholder="curl -X GET 'https://api.example.com/users' -H 'Authorization: Bearer token'"></textarea>
+        </div>
+
+        <button class="btn-primary" onclick="sendCurl()">Execute</button>
+
+        <div class="response">
+          <h4>Response</h4>
+          <div id="curl-meta" class="response-meta">Ready to execute...</div>
+          <div id="curl-response" class="response-body">Response will appear here...</div>
+        </div>
+      </div>
+
+      <!-- Collections Tab -->
+      <div id="collections-tab" class="tab-content">
+        <h3>Postman Collections</h3>
+
+        <div class="form-group">
+          <label>Import Collection</label>
+          <input type="file" id="collection-file" accept=".json" onchange="loadCollection(event)">
+        </div>
+
+        <div id="collection-info"></div>
+
+        <div class="response">
+          <h4>Results</h4>
+          <div id="collection-meta" class="response-meta">Import a collection to start...</div>
+          <div id="collection-response" class="response-body">Results will appear here...</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Smart cURL Import Modal -->
+  <div id="curl-modal"
+    style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 9999; align-items: center; justify-content: center;">
+    <div
+      style="background: white; border-radius: 12px; width: 90%; max-width: 700px; max-height: 80vh; overflow: auto; box-shadow: 0 20px 60px rgba(0,0,0,0.3);">
+      <div
+        style="padding: 20px 24px; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: center;">
+        <h3 style="margin: 0; font-size: 18px; font-weight: 700; color: #111827;">📋 Import cURL Command</h3>
+        <button onclick="closeCurlModal()"
+          style="background: none; border: none; font-size: 28px; color: #9ca3af; cursor: pointer; line-height: 1; padding: 0; width: 32px; height: 32px;">&times;</button>
+      </div>
+      <div style="padding: 24px;">
+        <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #374151; font-size: 14px;">
+          Paste your cURL command:
+        </label>
+        <textarea id="curl-import-input"
+          placeholder="curl -X POST 'https://api.example.com/endpoint' -H 'Content-Type: application/json' -d '{&quot;key&quot;: &quot;value&quot;}'"
+          style="width: 100%; min-height: 200px; padding: 12px; border: 1px solid #d1d5db; border-radius: 6px; font-family: 'Consolas', monospace; font-size: 13px; resize: vertical;"></textarea>
+        <div id="curl-detection-info"
+          style="margin-top: 12px; padding: 12px; background: #f3f4f6; border-radius: 6px; font-size: 13px; color: #6b7280; display: none;">
+          <span id="curl-detection-text"></span>
+        </div>
+        <div style="margin-top: 8px; font-size: 12px; color: #6b7280;">
+          💡 <strong>Tip:</strong> Paste a standard cURL command. If it's a nested request (cURL calling your API),
+          extract the inner request first.
+        </div>
+      </div>
+      <div
+        style="padding: 16px 24px; border-top: 1px solid #e5e7eb; display: flex; justify-content: flex-end; gap: 12px;">
+        <button onclick="closeCurlModal()"
+          style="padding: 10px 20px; background: #f3f4f6; color: #374151; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 14px;">Cancel</button>
+        <button onclick="parseSmartCurlCommand()"
+          style="padding: 10px 20px; background: #6366f1; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 14px;">🚀
+          Auto-Import</button>
+      </div>
+    </div>
+  </div>
+
+  {% include 'footer.html' %}
+
+  <script src="/static/shared-utils.js"></script>
+  <script>
+
+    // Tab switching
+    function switchTab(tabName, button) {
+      document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      document.getElementById(tabName + '-tab').classList.add('active');
+      button.classList.add('active');
+    }
+
+    // Add parameter/header row
+    function addRow(containerId) {
+      const container = document.getElementById(containerId);
+      const row = document.createElement('div');
+      row.className = 'row';
+      row.innerHTML = `
+        <input type="text" placeholder="Key">
+        <input type="text" placeholder="Value">
+        <button class="btn-remove" onclick="this.parentElement.remove()">×</button>
+      `;
+      container.appendChild(row);
+    }
+
+    // cURL Import Modal Functions
+    function openCurlImport() {
+      document.getElementById('curl-modal').style.display = 'flex';
+      document.getElementById('curl-import-input').value = '';
+      document.getElementById('curl-detection-info').style.display = 'none';
+      document.getElementById('curl-import-input').focus();
+    }
+
+    function closeCurlModal() {
+      document.getElementById('curl-modal').style.display = 'none';
+    }
+
+    function parseSmartCurlCommand() {
+      const curlCommand = document.getElementById('curl-import-input').value.trim();
+
+      if (!curlCommand) {
+        alert('Please paste a cURL command');
+        return;
+      }
+
+      try {
+        // Check if this is a nested request (cURL calling /send-request)
+        if (curlCommand.includes('/send-request') && curlCommand.includes('--data-raw')) {
+          // Extract the nested request data
+          const nestedMatch = curlCommand.match(/--data-raw\s+'({.*})'/s) || curlCommand.match(/--data-raw\s+"({.*})"/s);
+          if (nestedMatch) {
+            try {
+              const requestData = JSON.parse(nestedMatch[1]);
+              console.log('Parsed nested request:', requestData);
+
+              if (requestData.method && requestData.url) {
+                // This is a nested request - extract and use the inner request
+                const method = requestData.method.toUpperCase();
+                console.log('Setting method to:', method);
+
+                // Switch to REST tab first
+                switchTab('rest', document.querySelectorAll('.tab')[0]);
+
+                // Use setTimeout to ensure DOM is ready after tab switch
+                setTimeout(() => {
+                  // Set method and URL
+                  const methodSelect = document.getElementById('rest-method');
+                  methodSelect.value = method;
+                  console.log('Method set to:', methodSelect.value, 'from:', method);
+
+                  document.getElementById('rest-url').value = requestData.url;
+
+                  // Set body
+                  if (requestData.body) {
+                    let bodyData = requestData.body;
+                    try {
+                      if (typeof bodyData === 'string') {
+                        const jsonBody = JSON.parse(bodyData);
+                        bodyData = JSON.stringify(jsonBody, null, 2);
+                      } else {
+                        bodyData = JSON.stringify(bodyData, null, 2);
+                      }
+                    } catch (e) {
+                      // Use as-is
+                    }
+                    document.getElementById('rest-body').value = bodyData;
+                  }
+
+                  // Set headers
+                  if (requestData.headers) {
+                    const headersContainer = document.getElementById('rest-headers');
+                    headersContainer.innerHTML = '';
+                    for (const [key, value] of Object.entries(requestData.headers)) {
+                      addRow('rest-headers');
+                      const rows = headersContainer.querySelectorAll('.row');
+                      const lastRow = rows[rows.length - 1];
+                      lastRow.querySelector('input:nth-child(1)').value = key;
+                      lastRow.querySelector('input:nth-child(2)').value = value;
+                    }
+                  }
+
+                  // Show success message
+                  document.getElementById('curl-detection-info').innerHTML = `✅ Extracted nested <strong>${method}</strong> request - imported to REST tab`;
+                  document.getElementById('curl-detection-info').style.display = 'block';
+                  document.getElementById('curl-detection-info').style.background = '#d1fae5';
+                  document.getElementById('curl-detection-info').style.color = '#065f46';
+
+                  setTimeout(() => closeCurlModal(), 1500);
+                }, 100); // Small delay to ensure DOM is ready
+
+                return;
+              }
+            } catch (e) {
+              console.error('Error parsing nested request:', e);
+            }
+          }
+        }
+
+        // Clean up the command - remove line continuations
+        let cleanCommand = curlCommand.replace(/\\\s*\n\s*/g, ' ').replace(/\s+/g, ' ');
+
+        // Parse cURL command - improved regex patterns
+        const urlMatch = cleanCommand.match(/curl\s+(?:-X\s+\w+\s+)?['"]?([^'"\s]+)/);
+        const methodMatch = cleanCommand.match(/-X\s+(\w+)/i);
+        const headersMatch = cleanCommand.matchAll(/-H\s+['"]([^'"]+)['"]/gi);
+
+        // Better data parsing - handle both --data-raw and -d, with proper quote handling
+        let dataMatch = null;
+        // Try to match --data-raw or --data with single quotes
+        dataMatch = cleanCommand.match(/(?:--data-raw|--data|-d)\s+'([^']+)'/s);
+        if (!dataMatch) {
+          // Try double quotes
+          dataMatch = cleanCommand.match(/(?:--data-raw|--data|-d)\s+"([^"]+)"/s);
+        }
+        if (!dataMatch) {
+          // Try without quotes
+          dataMatch = cleanCommand.match(/(?:--data-raw|--data|-d)\s+(\{[^}]+\})/s);
+        }
+
+        if (!urlMatch) {
+          alert('Could not parse URL from cURL command');
+          return;
+        }
+
+        const url = urlMatch[1];
+        // If no method specified but has data, default to POST (cURL behavior)
+        let method = 'GET';
+        if (methodMatch) {
+          method = methodMatch[1].toUpperCase();
+        } else if (dataMatch) {
+          method = 'POST'; // cURL defaults to POST when data is present
+        }
+
+        // Detect if it's GraphQL
+        const isGraphQL = dataMatch && (
+          dataMatch[1].includes('"query"') ||
+          url.includes('graphql') ||
+          curlCommand.toLowerCase().includes('graphql')
+        );
+
+        if (isGraphQL) {
+          // Switch to GraphQL tab
+          switchTab('graphql', document.querySelectorAll('.tab')[1]);
+
+          // Set URL
+          document.getElementById('graphql-url').value = url;
+
+          // Parse and set query/variables
+          if (dataMatch) {
+            try {
+              const data = JSON.parse(dataMatch[1]);
+              if (data.query) {
+                document.getElementById('graphql-query').value = data.query;
+              }
+              if (data.variables) {
+                document.getElementById('graphql-vars').value = JSON.stringify(data.variables, null, 2);
+              }
+            } catch (e) {
+              console.error('Error parsing GraphQL data:', e);
+            }
+          }
+
+          // Set headers
+          const headersContainer = document.getElementById('graphql-headers');
+          headersContainer.innerHTML = '';
+          for (const match of headersMatch) {
+            const [key, value] = match[1].split(':').map(s => s.trim());
+            if (key && value) {
+              addRow('graphql-headers');
+              const rows = headersContainer.querySelectorAll('.row');
+              const lastRow = rows[rows.length - 1];
+              lastRow.querySelector('input:nth-child(1)').value = key;
+              lastRow.querySelector('input:nth-child(2)').value = value;
+            }
+          }
+
+          document.getElementById('curl-detection-info').innerHTML = '✅ Detected <strong>GraphQL</strong> request - imported to GraphQL tab';
+          document.getElementById('curl-detection-info').style.display = 'block';
+          document.getElementById('curl-detection-info').style.background = '#d1fae5';
+          document.getElementById('curl-detection-info').style.color = '#065f46';
+
+        } else {
+          // Switch to REST tab
+          switchTab('rest', document.querySelectorAll('.tab')[0]);
+
+          // Use setTimeout to ensure DOM is ready after tab switch
+          setTimeout(() => {
+            // Set method and URL
+            console.log('Setting method to:', method);
+            document.getElementById('rest-method').value = method;
+            document.getElementById('rest-url').value = url;
+            console.log('Method dropdown value:', document.getElementById('rest-method').value);
+
+            // Set body
+            if (dataMatch) {
+              let bodyData = dataMatch[1];
+              // Try to parse and pretty-print JSON
+              try {
+                const jsonBody = JSON.parse(bodyData);
+                bodyData = JSON.stringify(jsonBody, null, 2);
+              } catch (e) {
+                // If not valid JSON, use as-is
+                console.log('Body is not JSON, using raw data');
+              }
+              document.getElementById('rest-body').value = bodyData;
+            }
+
+            // Set headers
+            const headersContainer = document.getElementById('rest-headers');
+            headersContainer.innerHTML = '';
+            for (const match of headersMatch) {
+              const [key, value] = match[1].split(':').map(s => s.trim());
+              if (key && value) {
+                addRow('rest-headers');
+                const rows = headersContainer.querySelectorAll('.row');
+                const lastRow = rows[rows.length - 1];
+                lastRow.querySelector('input:nth-child(1)').value = key;
+                lastRow.querySelector('input:nth-child(2)').value = value;
+              }
+            }
+
+            document.getElementById('curl-detection-info').innerHTML = `✅ Detected <strong>${method} REST</strong> request - imported to REST tab`;
+            document.getElementById('curl-detection-info').style.display = 'block';
+            document.getElementById('curl-detection-info').style.background = '#dbeafe';
+            document.getElementById('curl-detection-info').style.color = '#1e40af';
+          }, 100);
+        }
+
+        // Close modal after a short delay
+        setTimeout(() => {
+          closeCurlModal();
+        }, 1500);
+
+      } catch (error) {
+        console.error('Error parsing cURL:', error);
+        alert('Error parsing cURL command. Please check the format.');
+      }
+    }
+
+    // Close modal when clicking outside
+    document.getElementById('curl-modal')?.addEventListener('click', function (e) {
+      if (e.target === this) {
+        closeCurlModal();
+      }
+    });
+
+    // Send REST request
+    async function sendRest() {
+      const method = document.getElementById('rest-method').value;
+      let url = document.getElementById('rest-url').value;
+      let body = document.getElementById('rest-body').value;
+
+      if (!url) {
+        alert('Please enter a URL');
+        return;
+      }
+
+      // Auto-replace dynamic variables
+      url = replaceDynamicVariables(url);
+      body = replaceDynamicVariables(body);
+
+      const params = {};
+      document.querySelectorAll('#rest-params .row').forEach(row => {
+        const inputs = row.querySelectorAll('input');
+        if (inputs[0].value) {
+          params[inputs[0].value] = replaceDynamicVariables(inputs[1].value);
+        }
+      });
+
+      const headers = {};
+      document.querySelectorAll('#rest-headers .row').forEach(row => {
+        const inputs = row.querySelectorAll('input');
+        if (inputs[0].value) {
+          headers[inputs[0].value] = replaceDynamicVariables(inputs[1].value);
+        }
+      });
+
+      document.getElementById('rest-meta').textContent = 'Sending request...';
+      document.getElementById('rest-response').textContent = '';
+
+      try {
+        const response = await fetch('/send-request', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ method, url, params, headers, body })
+        });
+
+        const data = await response.json();
+        const time = data.request_time ? (data.request_time * 1000).toFixed(2) : 0;
+        document.getElementById('rest-meta').textContent = `Status: ${data.status_code} | Time: ${time}ms`;
+        document.getElementById('rest-response').textContent = typeof data.body === 'string' ? data.body : JSON.stringify(data.body, null, 2);
+      } catch (err) {
+        document.getElementById('rest-meta').textContent = 'Error: ' + err.message;
+        document.getElementById('rest-response').textContent = err.stack || err.message;
+      }
+    }
+
+    // Send GraphQL request
+    async function sendGraphQL() {
+      let url = document.getElementById('graphql-url').value;
+      let query = document.getElementById('graphql-query').value;
+      let vars = document.getElementById('graphql-vars').value;
+
+      if (!url || !query) {
+        alert('Please enter URL and query');
+        return;
+      }
+
+      // Auto-replace dynamic variables
+      url = replaceDynamicVariables(url);
+      query = replaceDynamicVariables(query);
+      vars = replaceDynamicVariables(vars);
+
+      const headers = {};
+      document.querySelectorAll('#graphql-headers .row').forEach(row => {
+        const inputs = row.querySelectorAll('input');
+        if (inputs[0].value) {
+          headers[inputs[0].value] = replaceDynamicVariables(inputs[1].value);
+        }
+      });
+
+      document.getElementById('graphql-meta').textContent = 'Sending query...';
+      document.getElementById('graphql-response').textContent = '';
+
+      try {
+        let variables = {};
+        if (vars) variables = JSON.parse(vars);
+
+        const response = await fetch('/send-request', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            method: 'POST',
+            url,
+            headers: { ...headers, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ query, variables })
+          })
+        });
+
+        const data = await response.json();
+        const time = data.request_time ? (data.request_time * 1000).toFixed(2) : 0;
+        document.getElementById('graphql-meta').textContent = `Status: ${data.status_code} | Time: ${time}ms`;
+        document.getElementById('graphql-response').textContent = typeof data.body === 'string' ? data.body : JSON.stringify(data.body, null, 2);
+      } catch (err) {
+        document.getElementById('graphql-meta').textContent = 'Error: ' + err.message;
+        document.getElementById('graphql-response').textContent = err.stack || err.message;
+      }
+    }
+
+    // Send cURL command
+    async function sendCurl() {
+      const command = document.getElementById('curl-command').value;
+
+      if (!command) {
+        alert('Please enter a cURL command');
+        return;
+      }
+
+      document.getElementById('curl-meta').textContent = 'Executing...';
+      document.getElementById('curl-response').textContent = '';
+
+      try {
+        const response = await fetch('/execute-curl', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ curl_command: command })
+        });
+
+        const data = await response.json();
+        const time = data.request_time ? (data.request_time * 1000).toFixed(2) : 0;
+        document.getElementById('curl-meta').textContent = `Status: ${data.status_code} | Time: ${time}ms`;
+        document.getElementById('curl-response').textContent = data.body || 'No response body';
+      } catch (err) {
+        document.getElementById('curl-meta').textContent = 'Error: ' + err.message;
+        document.getElementById('curl-response').textContent = err.stack || err.message;
+      }
+    }
+
+    // Load Postman collection
+    function loadCollection(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function (e) {
+        try {
+          const collection = JSON.parse(e.target.result);
+          document.getElementById('collection-info').innerHTML = `
+            <h4>${collection.info?.name || 'Collection'}</h4>
+            <p>Requests: ${collection.item?.length || 0}</p>
+          `;
+          document.getElementById('collection-meta').textContent = 'Collection loaded successfully';
+        } catch (err) {
+          alert('Error loading collection: ' + err.message);
+        }
+      };
+      reader.readAsText(file);
+    }
+
+    // Initialize
+    addRow('rest-params');
+    addRow('rest-headers');
+    addRow('graphql-headers');
+  </script>
+
+  <script>
+    // AI Test Generator - Inline Version
+    let restTests = [];
+    let graphqlTests = [];
+    let restOriginalRequest = null;
+    let graphqlOriginalRequest = null;
+
+    function toggleAIPanel(type) {
+      const panel = document.getElementById(`${type}-ai-panel`);
+      const isVisible = panel.style.display !== 'none';
+      panel.style.display = isVisible ? 'none' : 'block';
+    }
+
+    async function generateAITestsInline(type) {
+      const url = document.getElementById(`${type}-url`).value;
+      if (!url || !url.trim() || (!url.startsWith('http://') && !url.startsWith('https://'))) {
+        alert('Please enter a valid URL starting with http:// or https://');
+        return;
+      }
+
+      // Show loading
+      document.getElementById(`${type}-ai-loading`).style.display = 'block';
+      document.getElementById(`${type}-test-selector-container`).style.display = 'none';
+
+      let requestData = { type: type.toUpperCase() };
+
+      if (type === 'rest') {
+        requestData.method = document.getElementById('rest-method').value;
+        requestData.url = url;
+        requestData.body = document.getElementById('rest-body').value;
+        requestData.headers = [];
+        document.querySelectorAll('#rest-headers .row').forEach(row => {
+          const inputs = row.querySelectorAll('input');
+          if (inputs[0].value) {
+            requestData.headers.push({ key: inputs[0].value, value: inputs[1].value });
+          }
+        });
+        restOriginalRequest = { ...requestData };
+      } else {
+        requestData.url = url;
+        requestData.query = document.getElementById('graphql-query').value;
+        requestData.variables = document.getElementById('graphql-vars').value;
+        requestData.headers = [];
+        document.querySelectorAll('#graphql-headers .row').forEach(row => {
+          const inputs = row.querySelectorAll('input');
+          if (inputs[0].value) {
+            requestData.headers.push({ key: inputs[0].value, value: inputs[1].value });
+          }
+        });
+        graphqlOriginalRequest = { ...requestData };
+      }
+
+      try {
+        const response = await fetch('/generate-api-tests', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(requestData)
+        });
+
+        const data = await response.json();
+
+        if (data.success && data.tests) {
+          const tests = Array.isArray(data.tests) ? data.tests : (data.tests.tests || []);
+          if (type === 'rest') restTests = tests;
+          else graphqlTests = tests;
+
+          populateTestSelector(type, tests);
+          document.getElementById(`${type}-test-selector-container`).style.display = 'block';
+          document.getElementById(`${type}-test-count`).textContent = tests.length;
+
+          if (type === 'rest' && restOriginalRequest) {
+            document.getElementById('rest-original-request').style.display = 'block';
+            document.getElementById('rest-base-request-info').textContent =
+              `${restOriginalRequest.method} ${restOriginalRequest.url}`;
+          } else if (type === 'graphql' && graphqlOriginalRequest) {
+            document.getElementById('graphql-original-request').style.display = 'block';
+            document.getElementById('graphql-base-request-info').textContent =
+              `${graphqlOriginalRequest.url}`;
+          }
+        } else {
+          alert('Error generating tests: ' + (data.error || 'Unknown error'));
+        }
+      } catch (err) {
+        alert('Error generating tests: ' + err.message);
+      } finally {
+        document.getElementById(`${type}-ai-loading`).style.display = 'none';
+      }
+    }
+
+    function populateTestSelector(type, tests) {
+      const selector = document.getElementById(`${type}-test-selector`);
+      selector.innerHTML = '<option value="">-- Select a test case --</option>';
+      tests.forEach((test, index) => {
+        const option = document.createElement('option');
+        option.value = index;
+        option.textContent = `${test.testCaseId || `TC${index + 1}`}: ${test.name}`;
+        selector.appendChild(option);
+      });
+    }
+
+    function loadTestToForm(type) {
+      const selector = document.getElementById(`${type}-test-selector`);
+      const index = selector.value;
+
+      if (index === '') {
+        document.getElementById(`${type}-test-info`).style.display = 'none';
+        return;
+      }
+
+      const tests = type === 'rest' ? restTests : graphqlTests;
+      const test = tests[parseInt(index)];
+
+      document.getElementById(`${type}-test-name`).textContent = test.name;
+      document.getElementById(`${type}-test-category`).textContent = test.category;
+      document.getElementById(`${type}-test-status`).textContent = test.expectedStatusCode || test.expectedStatus || 200;
+      document.getElementById(`${type}-test-info`).style.display = 'block';
+
+      if (type === 'rest') {
+        document.getElementById('rest-method').value = test.method;
+        document.getElementById('rest-url').value = test.url;
+        document.getElementById('rest-body').value = typeof test.requestBody === 'string' ? test.requestBody : JSON.stringify(test.requestBody || {}, null, 2);
+      } else {
+        document.getElementById('graphql-url').value = test.url;
+        document.getElementById('graphql-query').value = test.requestBody?.query || test.query || '';
+        document.getElementById('graphql-vars').value = JSON.stringify(test.requestBody?.variables || test.variables || {}, null, 2);
+      }
+    }
+
+    // Helper function to replace dynamic variables
+    function replaceDynamicVariables(text) {
+      if (!text) return text;
+
+      // Check if there are any variables to replace
+      const hasVariables = /\{\{.*?\}\}/.test(text);
+
+      // Generate random values
+      const randomEmail = `test${Math.floor(Math.random() * 10000)}@example.com`;
+      const randomString = Math.random().toString(36).substring(2, 15);
+      const randomInt = Math.floor(Math.random() * 1000);
+      const randomUUID = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+        const r = Math.random() * 16 | 0;
+        const v = c === 'x' ? r : (r & 0x3 | 0x8);
+        return v.toString(16);
+      });
+      const timestamp = Date.now();
+      const randomPhoneNumber = `+1${Math.floor(Math.random() * 9000000000) + 1000000000}`;
+      const randomName = ['John', 'Jane', 'Alice', 'Bob', 'Charlie'][Math.floor(Math.random() * 5)] + ' ' +
+        ['Smith', 'Doe', 'Johnson', 'Williams', 'Brown'][Math.floor(Math.random() * 5)];
+
+      // Replace Postman-style variables
+      let result = text;
+      result = result.replace(/\{\{\$randomEmail\}\}/g, randomEmail);
+      result = result.replace(/\{\{\$randomString\}\}/g, randomString);
+      result = result.replace(/\{\{\$randomInt\}\}/g, randomInt);
+      result = result.replace(/\{\{\$randomUUID\}\}/g, randomUUID);
+      result = result.replace(/\{\{\$timestamp\}\}/g, timestamp);
+      result = result.replace(/\{\{\$guid\}\}/g, randomUUID);
+      result = result.replace(/\{\{\$randomPhoneNumber\}\}/g, randomPhoneNumber);
+      result = result.replace(/\{\{\$randomFullName\}\}/g, randomName);
+
+      // Replace common patterns (without $)
+      result = result.replace(/\{\{randomEmail\}\}/g, randomEmail);
+      result = result.replace(/\{\{randomString\}\}/g, randomString);
+      result = result.replace(/\{\{randomInt\}\}/g, randomInt);
+      result = result.replace(/\{\{timestamp\}\}/g, timestamp);
+      result = result.replace(/\{\{randomPhoneNumber\}\}/g, randomPhoneNumber);
+      result = result.replace(/\{\{randomFullName\}\}/g, randomName);
+
+      // Log if variables were replaced
+      if (hasVariables && result !== text) {
+        console.log('🔄 Replaced dynamic variables:', { original: text.substring(0, 100), replaced: result.substring(0, 100) });
+      }
+
+      return result;
+    }
+
+    async function runSelectedTestInline(type) {
+      const selector = document.getElementById(`${type}-test-selector`);
+      if (selector.value === '') {
+        alert('Please select a test case');
+        return;
+      }
+
+      // Get current values and replace dynamic variables
+      if (type === 'rest') {
+        const body = document.getElementById('rest-body').value;
+        const url = document.getElementById('rest-url').value;
+
+        // Replace variables in body and URL
+        document.getElementById('rest-body').value = replaceDynamicVariables(body);
+        document.getElementById('rest-url').value = replaceDynamicVariables(url);
+
+        await sendRest();
+      } else {
+        const query = document.getElementById('graphql-query').value;
+        const vars = document.getElementById('graphql-vars').value;
+        const url = document.getElementById('graphql-url').value;
+
+        // Replace variables
+        document.getElementById('graphql-query').value = replaceDynamicVariables(query);
+        document.getElementById('graphql-vars').value = replaceDynamicVariables(vars);
+        document.getElementById('graphql-url').value = replaceDynamicVariables(url);
+
+        await sendGraphQL();
+      }
+    }
+
+    async function runAllTestsInline(type) {
+      const tests = type === 'rest' ? restTests : graphqlTests;
+      if (tests.length === 0) {
+        alert('No tests to run');
+        return;
+      }
+
+      let results = `Running ${tests.length} tests...\n${'='.repeat(60)}\n\n`;
+      let passed = 0, failed = 0;
+
+      for (let i = 0; i < tests.length; i++) {
+        const test = tests[i];
+        results += `${i + 1}. ${test.name} (${test.category})\n`;
+
+        try {
+          let bodyData = test.requestBody || test.body;
+          let testUrl = test.url;
+
+          // Replace dynamic variables in body and URL
+          if (typeof bodyData === 'string') {
+            bodyData = replaceDynamicVariables(bodyData);
+          } else if (bodyData) {
+            bodyData = JSON.parse(replaceDynamicVariables(JSON.stringify(bodyData)));
+          }
+          testUrl = replaceDynamicVariables(testUrl);
+
+          const response = await fetch('/send-request', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              method: test.method || 'POST',
+              url: testUrl,
+              headers: test.headers || {},
+              body: typeof bodyData === 'string' ? bodyData : JSON.stringify(bodyData)
+            })
+          });
+
+          const data = await response.json();
+          const expectedStatus = test.expectedStatusCode || test.expectedStatus || 200;
+          const actualStatus = data.status_code || data.status;
+
+          if (actualStatus === expectedStatus) {
+            passed++;
+            results += `   ✓ PASSED - Status: ${actualStatus}\n\n`;
+          } else {
+            failed++;
+            results += `   ✗ FAILED - Status: ${actualStatus} (Expected: ${expectedStatus})\n\n`;
+          }
+        } catch (err) {
+          failed++;
+          results += `   ✗ ERROR - ${err.message}\n\n`;
+        }
+      }
+
+      results += `${'='.repeat(60)}\nSummary: ${passed} passed, ${failed} failed\n`;
+
+      const metaId = type === 'rest' ? 'rest-meta' : 'graphql-meta';
+      const responseId = type === 'rest' ? 'rest-response' : 'graphql-response';
+
+      document.getElementById(metaId).textContent = `Test Results: ${passed} passed, ${failed} failed`;
+      document.getElementById(metaId).style.background = failed === 0 ? '#d1fae5' : '#fee2e2';
+      document.getElementById(metaId).style.color = failed === 0 ? '#065f46' : '#991b1b';
+      document.getElementById(responseId).textContent = results;
+    }
+
+    function exportTestsInline(type) {
+      const tests = type === 'rest' ? restTests : graphqlTests;
+      if (tests.length === 0) {
+        alert('No tests to export');
+        return;
+      }
+
+      const originalRequest = type === 'rest' ? restOriginalRequest : graphqlOriginalRequest;
+      const exportData = {
+        version: '1.0',
+        type: type.toUpperCase(),
+        generated_at: new Date().toISOString(),
+        original_request: originalRequest,
+        tests: tests
+      };
+
+      const dataStr = JSON.stringify(exportData, null, 2);
+      const dataBlob = new Blob([dataStr], { type: 'application/json' });
+      const url = URL.createObjectURL(dataBlob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${type}-api-tests-${Date.now()}.json`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    }
+
+    function importTestsInline(type) {
+      document.getElementById(`${type}-import-file`).click();
+    }
+
+    function handleImport(event, type) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function (e) {
+        try {
+          const importData = JSON.parse(e.target.result);
+
+          if (!importData.tests || !Array.isArray(importData.tests)) {
+            alert('Invalid test file format');
+            return;
+          }
+
+          if (type === 'rest') {
+            restTests = importData.tests;
+            restOriginalRequest = importData.original_request;
+          } else {
+            graphqlTests = importData.tests;
+            graphqlOriginalRequest = importData.original_request;
+          }
+
+          populateTestSelector(type, importData.tests);
+          document.getElementById(`${type}-test-selector-container`).style.display = 'block';
+          document.getElementById(`${type}-test-count`).textContent = importData.tests.length;
+
+          if (importData.original_request) {
+            document.getElementById(`${type}-original-request`).style.display = 'block';
+            if (type === 'rest') {
+              document.getElementById('rest-base-request-info').textContent =
+                `${importData.original_request.method} ${importData.original_request.url}`;
+            } else {
+              document.getElementById('graphql-base-request-info').textContent =
+                importData.original_request.url;
+            }
+          }
+
+          alert(`✓ Imported ${importData.tests.length} tests successfully`);
+        } catch (err) {
+          alert('Error importing tests: ' + err.message);
+        }
+      };
+      reader.readAsText(file);
+      event.target.value = '';
+    }
+
+    function clearTestsInline(type) {
+      const tests = type === 'rest' ? restTests : graphqlTests;
+      if (tests.length === 0) {
+        alert('No tests to clear');
+        return;
+      }
+
+      if (confirm(`Clear all ${tests.length} tests?`)) {
+        if (type === 'rest') {
+          restTests = [];
+          restOriginalRequest = null;
+        } else {
+          graphqlTests = [];
+          graphqlOriginalRequest = null;
+        }
+
+        document.getElementById(`${type}-test-selector-container`).style.display = 'none';
+        document.getElementById(`${type}-test-info`).style.display = 'none';
+        document.getElementById(`${type}-original-request`).style.display = 'none';
+        alert('✓ All tests cleared');
+      }
+    }
+  </script>
+</body>
+
+</html>

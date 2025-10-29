@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin Panel</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+  <link rel="stylesheet" href="{{ url_for('static', filename='left-sidebar.css') }}">
+  <style>
+    :root {
+      --primary: #6366f1;
+      --primary-dark: #4f46e5;
+      --success: #10b981;
+      --warning: #f59e0b;
+      --error: #ef4444;
+      --bg: #f8fafc;
+      --text: #1f2937;
+      --muted: #6b7280;
+      --border: #e5e7eb;
+    }
+
+    body { background: var(--bg); min-height: 100vh; display: flex; flex-direction: column; font-family: 'Inter', system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, 'Apple Color Emoji', 'Segoe UI Emoji'; }
+    .page { margin-left: var(--sidebar-width, 280px); padding: 2rem; flex: 1 0 auto; }
+    .card { border: 1px solid var(--border); border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.06); }
+    .card-header { background: white; border-bottom: 1px solid var(--border); padding: 1rem 1.25rem; }
+    .card-title { margin: 0; font-weight: 700; color: var(--text); display: flex; align-items: center; gap: .5rem; }
+    .card-title i { color: var(--primary); }
+    .filters .form-control, .filters .form-select { border-radius: 10px; }
+    .btn-primary { background: linear-gradient(135deg, var(--primary), var(--primary-dark)); border: none; box-shadow: 0 6px 16px rgba(79,70,229,.25); }
+    .btn-primary:disabled { opacity: .6; }
+    .stat-pill { background: #eef2ff; border: 1px solid #e0e7ff; color: #3730a3; padding: .5rem .75rem; border-radius: 999px; font-weight: 600; }
+    .empty { text-align:center; color: var(--muted); padding: 2rem; }
+    table thead th { font-size: .875rem; color: #475569; text-transform: uppercase; letter-spacing: .04em; }
+    table tbody td { vertical-align: middle; font-size: .95rem; }
+    .loading-spinner { width: 32px; height: 32px; border: 3px solid #e2e8f0; border-top-color: var(--primary); border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Minimal clean enhancements */
+    .table-responsive { position: relative; }
+    table thead th { position: sticky; top: 0; background: #fff; z-index: 5; border-bottom: 1px solid var(--border); }
+    table tbody tr:nth-child(even) td { background-color: #f9fafb; }
+    table tbody tr:hover td { background-color: #eef2ff; }
+
+    .btn-outline-primary { border-color: var(--primary); color: var(--primary); }
+    .btn-outline-primary:hover { background: var(--primary); color: #fff; }
+
+    /* Overview controls responsive behavior */
+    #overviewControls { display: flex; gap: .5rem; flex-wrap: wrap; }
+    #overviewControls .form-control { min-width: 160px; }
+    @media (max-width: 576px) {
+      .page { padding: 1rem; }
+      #overviewControls { width: 100%; }
+      #overviewControls > * { flex: 1 1 auto; }
+    }
+  </style>
+</head>
+<body>
+  {% include 'left-sidebar.html' %}
+  <div class="page">
+    <div class="container-fluid">
+      <div class="card mb-4">
+        <div class="card-header">
+          <h1 class="card-title"><i class="fas fa-user-shield"></i> Admin Panel</h1>
+        </div>
+        <div class="card-body">
+          <div class="row g-3 filters align-items-end">
+            <div class="col-md-5">
+              <label for="userQuery" class="form-label">User (email or name)</label>
+              <div style="position: relative;">
+                <input type="text" id="userQuery" class="form-control" placeholder="e.g. jane.doe@company.com or Jane Doe" autocomplete="off" />
+                <div id="userSuggestions" class="list-group" style="position:absolute; z-index:1000; top:100%; left:0; right:0; display:none; max-height:260px; overflow:auto;"></div>
+              </div>
+              <input type="hidden" id="selectedAccountId" />
+            </div>
+            <div class="col-md-3">
+              <label for="dateFilter" class="form-label">Date (optional)</label>
+              <input type="date" id="dateFilter" class="form-control" />
+            </div>
+            <div class="col-md-2">
+              <button id="searchBtn" class="btn btn-primary w-100"><i class="fas fa-search"></i> Search</button>
+            </div>
+            <div class="col-md-2 d-flex flex-column align-items-end">
+              <span id="totalTime" class="stat-pill mb-2" style="display:none;"></span>
+              <div>
+                <button id="syncUsersBtn" class="btn btn-sm btn-outline-secondary">
+                  <i class="fas fa-rotate"></i> Sync Jira Users
+                </button>
+              </div>
+              <small id="lastSyncText" class="text-muted mt-1" style="font-size:.8rem;"></small>
+            </div>
+          </div>
+          <div id="userInfo" class="mt-3" style="display:none; color:#374151;"></div>
+        </div>
+      </div>
+
+      <!-- Daily Overview (All Users) -->
+      <div class="card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <h2 class="card-title" style="font-size:1.1rem;"><i class="fas fa-table"></i> Daily Overview (All Users)</h2>
+          <div id="overviewControls" class="d-flex align-items-center gap-2">
+            <input type="date" id="overviewDate" class="form-control form-control-sm" style="width: 180px;" />
+            <button id="refreshOverviewBtn" class="btn btn-sm btn-outline-primary"><i class="fas fa-rotate"></i> Refresh</button>
+          </div>
+        </div>
+        <div class="card-body p-0">
+          <div id="overviewLoading" class="empty" style="display:none;">
+            <div class="loading-spinner"></div>
+            <div class="mt-2">Loading overview...</div>
+          </div>
+          <div id="overviewEmpty" class="empty" style="display:none;">
+            <i class="fas fa-inbox"></i> No time logged on this date
+          </div>
+          <div class="p-3">
+            <div id="overviewStatus" class="stat-pill" style="display:none;"></div>
+          </div>
+          <div class="table-responsive">
+            <table class="table mb-0">
+              <thead>
+                <tr>
+                  <th>User</th>
+                  <th>Email</th>
+                  <th style="width:12%">Entries</th>
+                  <th style="width:12%">Total Time</th>
+                  <th style="width:12%">Action</th>
+                </tr>
+              </thead>
+              <tbody id="overviewBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <h2 class="card-title" style="font-size:1.1rem;"><i class="fas fa-clock"></i> Aggregated Worklogs</h2>
+          <div id="statusArea" class="text-muted" style="font-size:.9rem;"></div>
+        </div>
+        <div class="card-body p-0">
+          <div id="resultsLoading" class="empty" style="display:none;">
+            <div class="loading-spinner"></div>
+            <div class="mt-2">Loading time entries...</div>
+          </div>
+          <div id="resultsEmpty" class="empty" style="display:none;">
+            <i class="fas fa-inbox"></i> No entries found
+          </div>
+          <div class="table-responsive">
+            <table class="table mb-0">
+              <thead>
+                <tr>
+                  <th style="width:12%">Issue</th>
+                  <th>Summary</th>
+                  <th style="width:12%">Time</th>
+                  <th style="width:18%">Latest Logged</th>
+                  <th style="width:30%">Comments (aggregated)</th>
+                </tr>
+              </thead>
+              <tbody id="entriesBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div id="errorBox" class="alert alert-danger mt-3" role="alert" style="display:none;"></div>
+    </div>
+  </div>
+
+  {% include 'footer.html' %}
+  <script>
+    function setTodayIfEmptyId(id) {
+      const d = document.getElementById(id);
+      if (d && !d.value) {
+        const now = new Date();
+        const yyyy = now.getFullYear();
+        const mm = String(now.getMonth()+1).padStart(2,'0');
+        const dd = String(now.getDate()).padStart(2,'0');
+        d.value = `${yyyy}-${mm}-${dd}`;
+      }
+    }
+
+    function setTodayIfEmpty() {
+      const d = document.getElementById('dateFilter');
+      if (d && !d.value) {
+        const now = new Date();
+        const yyyy = now.getFullYear();
+        const mm = String(now.getMonth()+1).padStart(2,'0');
+        const dd = String(now.getDate()).padStart(2,'0');
+        d.value = `${yyyy}-${mm}-${dd}`;
+      }
+    }
+
+    function el(tag, cls) { const n = document.createElement(tag); if (cls) n.className = cls; return n; }
+
+    let suggestionsVisible = false;
+    let suggestionsTimer = null;
+
+    function hideSuggestions() {
+      const box = document.getElementById('userSuggestions');
+      box.style.display = 'none';
+      suggestionsVisible = false;
+    }
+
+    function showSuggestions(items) {
+      const box = document.getElementById('userSuggestions');
+      box.innerHTML = '';
+      if (!items || !items.length) { hideSuggestions(); return; }
+      for (const u of items) {
+        const a = document.createElement('a');
+        a.href = '#';
+        a.className = 'list-group-item list-group-item-action d-flex align-items-center gap-2';
+        const img = document.createElement('img');
+        img.src = u.avatar48 || 'https://via.placeholder.com/24';
+        img.width = 24; img.height = 24; img.style.borderRadius = '50%';
+        const span = document.createElement('span');
+        span.textContent = u.displayName + (u.email ? ` <${u.email}>` : '');
+        a.appendChild(img);
+        a.appendChild(span);
+        a.addEventListener('click', (e) => {
+          e.preventDefault();
+          document.getElementById('userQuery').value = u.displayName + (u.email ? ` <${u.email}>` : '');
+          document.getElementById('selectedAccountId').value = u.accountId || '';
+          hideSuggestions();
+        });
+        box.appendChild(a);
+      }
+      box.style.display = 'block';
+      suggestionsVisible = true;
+    }
+
+    async function fetchAdminEntries() {
+      const q = document.getElementById('userQuery').value.trim();
+      const date = document.getElementById('dateFilter').value.trim();
+      const accountId = document.getElementById('selectedAccountId').value.trim();
+      const errorBox = document.getElementById('errorBox');
+      const loading = document.getElementById('resultsLoading');
+      const empty = document.getElementById('resultsEmpty');
+      const tbody = document.getElementById('entriesBody');
+      const totalTime = document.getElementById('totalTime');
+      const userInfo = document.getElementById('userInfo');
+      const statusArea = document.getElementById('statusArea');
+
+      errorBox.style.display = 'none';
+      loading.style.display = 'block';
+      empty.style.display = 'none';
+      tbody.textContent = '';
+      totalTime.style.display = 'none';
+      userInfo.style.display = 'none';
+      statusArea.textContent = '';
+
+      try {
+        const params = new URLSearchParams();
+        if (accountId) params.set('accountId', accountId); else if (q) params.set('q', q);
+        if (date) params.set('date', date);
+        const resp = await fetch(`/api/jira/admin/time-entries?${params.toString()}`);
+        const data = await resp.json();
+        loading.style.display = 'none';
+        if (!resp.ok) {
+          throw new Error(data && data.error ? data.error : `HTTP ${resp.status}`);
+        }
+
+        // Render user info
+        const user = data.user || {};
+        const parts = [];
+        if (user.displayName) parts.push(user.displayName);
+        if (user.emailAddress) parts.push(`<${user.emailAddress}>`);
+        userInfo.textContent = parts.join(' ');
+        userInfo.style.display = parts.length ? 'block' : 'none';
+
+        // Render totals
+        if (data.totalTimeDisplay) {
+          totalTime.textContent = `Total: ${data.totalTimeDisplay}`;
+          totalTime.style.display = 'inline-block';
+        }
+
+        const entries = Array.isArray(data.timeEntries) ? data.timeEntries : [];
+        if (!entries.length) {
+          empty.style.display = 'block';
+          statusArea.textContent = date ? `Date: ${date}` : '';
+          return;
+        }
+
+        statusArea.textContent = `${entries.length} aggregated entr${entries.length === 1 ? 'y' : 'ies'}${date ? ` • Date: ${date}` : ''}`;
+
+        for (const e of entries) {
+          const tr = el('tr');
+
+          const tdIssue = el('td');
+          const a = el('a');
+          const jiraDomain = {{ (session.get('jira_domain') or 'https://upgrad-jira.atlassian.net') | tojson }};
+          const base = (jiraDomain || 'https://upgrad-jira.atlassian.net').replace(/\/+$/, '');
+          a.href = `${base}/browse/${encodeURIComponent(e.issueKey || '')}`;
+          a.target = '_blank';
+          a.rel = 'noopener noreferrer';
+          a.textContent = e.issueKey || '';
+          tdIssue.appendChild(a);
+
+          const tdSummary = el('td');
+          tdSummary.textContent = e.issueSummary || '';
+
+          const tdTime = el('td');
+          tdTime.textContent = e.timeSpent || '';
+
+          const tdStarted = el('td');
+          tdStarted.textContent = e.started ? new Date(e.started).toLocaleString() : '';
+
+          const tdComment = el('td');
+          const pre = el('pre', 'mb-0');
+          pre.style.whiteSpace = 'pre-wrap';
+          pre.textContent = e.comment || '';
+          tdComment.appendChild(pre);
+
+          tr.appendChild(tdIssue);
+          tr.appendChild(tdSummary);
+          tr.appendChild(tdTime);
+          tr.appendChild(tdStarted);
+          tr.appendChild(tdComment);
+          tbody.appendChild(tr);
+        }
+      } catch (err) {
+        loading.style.display = 'none';
+        errorBox.textContent = `Error: ${err.message || err}`;
+        errorBox.style.display = 'block';
+      }
+    }
+
+    async function fetchOverview() {
+      const date = (document.getElementById('overviewDate').value || '').trim();
+      const loading = document.getElementById('overviewLoading');
+      const empty = document.getElementById('overviewEmpty');
+      const tbody = document.getElementById('overviewBody');
+      const status = document.getElementById('overviewStatus');
+      const errorBox = document.getElementById('errorBox');
+
+      errorBox.style.display = 'none';
+      loading.style.display = 'block';
+      empty.style.display = 'none';
+      status.style.display = 'none';
+      status.textContent = '';
+      tbody.textContent = '';
+
+      try {
+        const params = new URLSearchParams();
+        if (date) params.set('date', date);
+        const resp = await fetch(`/api/jira/admin/time-entries-overview?${params.toString()}`);
+        const data = await resp.json();
+        loading.style.display = 'none';
+        if (!resp.ok) throw new Error(data && data.error ? data.error : `HTTP ${resp.status}`);
+
+        const users = Array.isArray(data.users) ? data.users : [];
+        if (!users.length) {
+          empty.style.display = 'block';
+          return;
+        }
+
+        status.textContent = `${data.totalUsers} users • Total: ${data.totalTimeDisplay || ''} • Date: ${data.date || date}`;
+        status.style.display = 'inline-block';
+
+        for (const u of users) {
+          const tr = document.createElement('tr');
+
+          const tdUser = document.createElement('td');
+          tdUser.textContent = u.displayName || u.accountId || 'User';
+
+          const tdEmail = document.createElement('td');
+          tdEmail.textContent = u.emailAddress || '';
+
+          const tdCount = document.createElement('td');
+          tdCount.textContent = String(u.entriesCount || 0);
+
+          const tdTime = document.createElement('td');
+          tdTime.textContent = u.timeSpent || '';
+
+          const tdAction = document.createElement('td');
+          const btn = document.createElement('button');
+          btn.className = 'btn btn-sm btn-outline-secondary';
+          btn.innerHTML = '<i class="fas fa-magnifying-glass"></i> Drill down';
+          btn.addEventListener('click', () => {
+            document.getElementById('userQuery').value = u.displayName || '';
+            document.getElementById('selectedAccountId').value = u.accountId || '';
+            const df = document.getElementById('dateFilter');
+            const od = document.getElementById('overviewDate');
+            if (df && od && od.value) df.value = od.value;
+            fetchAdminEntries();
+          });
+          tdAction.appendChild(btn);
+
+          tr.appendChild(tdUser);
+          tr.appendChild(tdEmail);
+          tr.appendChild(tdCount);
+          tr.appendChild(tdTime);
+          tr.appendChild(tdAction);
+          tbody.appendChild(tr);
+        }
+      } catch (err) {
+        loading.style.display = 'none';
+        errorBox.textContent = `Overview error: ${err.message || err}`;
+        errorBox.style.display = 'block';
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      // default to today for convenience
+      setTodayIfEmpty();
+      setTodayIfEmptyId('overviewDate');
+      // auto-load overview on page load
+      fetchOverview();
+      document.getElementById('searchBtn').addEventListener('click', fetchAdminEntries);
+      document.getElementById('refreshOverviewBtn').addEventListener('click', fetchOverview);
+      document.getElementById('overviewDate').addEventListener('change', fetchOverview);
+      const userInput = document.getElementById('userQuery');
+      const selectedAccountInput = document.getElementById('selectedAccountId');
+      userInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') fetchAdminEntries(); });
+      userInput.addEventListener('input', () => {
+        // Clear selected account when user types
+        selectedAccountInput.value = '';
+        const val = userInput.value.trim();
+        if (suggestionsTimer) clearTimeout(suggestionsTimer);
+        if (val.length < 2) { hideSuggestions(); return; }
+        suggestionsTimer = setTimeout(async () => {
+          try {
+            const resp = await fetch(`/api/jira/admin/users?q=${encodeURIComponent(val)}&limit=10`);
+            const data = await resp.json();
+            if (resp.ok) {
+              showSuggestions((data && data.results) || []);
+            } else {
+              hideSuggestions();
+            }
+          } catch (e) {
+            hideSuggestions();
+          }
+        }, 200);
+      });
+      document.addEventListener('click', (e) => {
+        const box = document.getElementById('userSuggestions');
+        const target = e.target;
+        if (!box.contains(target) && target !== userInput) {
+          hideSuggestions();
+        }
+      });
+
+      // Sync users button
+      const syncBtn = document.getElementById('syncUsersBtn');
+      const lastSyncText = document.getElementById('lastSyncText');
+      syncBtn.addEventListener('click', async () => {
+        syncBtn.disabled = true;
+        const orig = syncBtn.innerHTML;
+        syncBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Syncing...';
+        try {
+          const resp = await fetch('/api/jira/admin/sync-users', { method: 'POST' });
+          const data = await resp.json();
+          if (!resp.ok) throw new Error(data && data.error ? data.error : `HTTP ${resp.status}`);
+          lastSyncText.textContent = `Last sync: ${new Date(data.lastSync || Date.now()).toLocaleString()} • +${data.inserted} / ${data.updated}`;
+        } catch (e) {
+          lastSyncText.textContent = `Sync failed: ${e.message || e}`;
+        } finally {
+          syncBtn.disabled = false;
+          syncBtn.innerHTML = orig;
+        }
+      });
+    });
+  </script>
+</body>
+</html>

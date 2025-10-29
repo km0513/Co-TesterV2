@@ -1,0 +1,1865 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    
+  <meta charset="UTF-8">
+  <title>UI Co-Tester</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text x=%2250%22 y=%2250%22 font-size=%2280%22 text-anchor=%22middle%22 dy=%2220%22>🚀</text></svg>">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/styles.css">
+  <link rel="stylesheet" href="/static/navbar-tabs.css">
+  <style>
+    :root {
+      /* upGrad Brand Colors - matching main application */
+      --primary: #D32F2F;
+      --primary-hover: #B71C1C;
+      --secondary: #212529;
+      --bg-light: #FAFAFA;
+      --bg-dark: #23272B;
+      --text-light: #757575;
+      --text-dark: #23272B;
+      --border: #E0E0E0;
+      --success: #388E3C;
+      --error: #C62828;
+      --warning: #FFA000;
+      --info: #1976D2;
+    }
+    
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    
+    body { 
+      font-family: 'Inter', Arial, sans-serif;
+      background: var(--bg-light);
+      color: var(--text-dark);
+      font-size: 15px;
+      min-height: 100vh;
+    }
+    
+    .container {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 1.2rem;
+    }
+    
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1.2rem;
+      padding: 0.7rem 1.2rem;
+      border-bottom: 1px solid var(--border);
+      background: #fff;
+      border-radius: 6px;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    
+    .header h1 {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: var(--primary);
+      margin-right: 1.5rem;
+      letter-spacing: 0.5px;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+    
+    .header h1::before {
+      content: "🚀";
+      font-size: 1.1rem;
+    }
+    
+    .button-group {
+      display: flex;
+      gap: 0.5rem;
+    }
+    
+    .tabs-container {
+      display: flex;
+      gap: 0.3rem;
+      margin-bottom: 0.7rem;
+      padding: 0.5rem 0.5rem 0 0.5rem;
+      background: #fff;
+      border-radius: 5px;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+      align-items: center;
+    }
+    
+    .tab {
+      padding: 0.4rem 1.1rem;
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 0.95rem;
+      font-weight: 500;
+      color: var(--primary);
+      transition: background 0.15s, color 0.15s;
+      text-decoration: none !important;
+    }
+    
+    .tab.active {
+      background: var(--primary);
+      color: #fff;
+      border-color: var(--primary);
+      text-decoration: none !important;
+    }
+    
+    .tab:hover:not(.active) {
+      background: var(--primary-hover);
+      color: #fff;
+    }
+    
+    .tab[disabled], .tab:disabled {
+      background: #f5f5f5 !important;
+      color: #bdbdbd !important;
+      opacity: 0.6;
+      border-color: #f5f5f5;
+    }
+    
+    .content-area {
+      background: #fff;
+      border-radius: 7px;
+      padding: 1.5rem;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+      margin-top: 1rem;
+    }
+    
+    .content-title {
+      font-size: 1.5rem;
+      font-weight: 600;
+      margin-bottom: 1rem;
+      color: var(--secondary);
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+    }
+    
+    .content-description {
+      margin-bottom: 1.5rem;
+      color: var(--text-light);
+      line-height: 1.5;
+    }
+    
+    .panels {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+      margin-top: 1.5rem;
+    }
+    
+    .panel {
+      background: #fff;
+      border-radius: 7px;
+      border: 1px solid var(--border);
+      padding: 1.1rem 1.2rem;
+      min-height: 400px;
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .panel-title {
+      font-size: 1.1rem;
+      font-weight: 500;
+      margin-bottom: 1rem;
+      color: var(--secondary);
+    }
+    
+    textarea { 
+      width: 100%; 
+      padding: 0.5rem 0.7rem;
+      font-family: 'Monaco', 'Consolas', monospace;
+      font-size: 0.97rem;
+      border: 1px solid var(--border);
+      border-radius: 5px;
+      resize: vertical;
+      background: var(--bg-light);
+      height: 300px;
+      margin-bottom: 1rem;
+      flex: 1;
+    }
+    
+    textarea:focus {
+      outline: none;
+      border-color: var(--primary);
+      background: #fff;
+    }
+    
+    button { 
+      padding: 0.45rem 1.2rem;
+      border-radius: 5px;
+      font-size: 0.95rem;
+      font-weight: 500;
+      border: none;
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s;
+      background: var(--primary);
+      color: #fff;
+    }
+    
+    button:hover {
+      background: var(--primary-hover);
+    }
+    
+    #results { 
+      padding: 0;
+      border-radius: 6px;
+      min-height: 300px;
+      overflow-y: auto;
+      background: var(--bg-light);
+    }
+    
+    .element-row { 
+      padding: 0.7rem 1rem;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      background: #fff;
+      margin-bottom: 0.5rem;
+      border-radius: 5px;
+    }
+    
+    .element-row:last-child {
+      margin-bottom: 0;
+    }
+    
+    .selector { 
+      font-family: 'Monaco', 'Consolas', monospace;
+      background: #f0f0f0;
+      padding: 0.3rem 0.6rem;
+      border-radius: 4px;
+      font-size: 0.9rem;
+      flex-shrink: 0;
+    }
+    
+    .element-preview {
+      color: var(--text-light);
+      font-size: 0.9rem;
+      margin-left: 0.8rem;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      flex-grow: 1;
+    }
+    
+    .copy-btn { 
+      background: #fff;
+      color: var(--primary);
+      border: 1px solid var(--border);
+      padding: 0.3rem 0.8rem;
+      font-size: 0.9rem;
+      margin-left: 0.8rem;
+      flex-shrink: 0;
+      border-radius: 5px;
+    }
+    
+    .copy-btn:hover {
+      background: var(--primary);
+      color: white;
+    }
+    
+    .empty-result {
+      padding: 1.5rem;
+      text-align: center;
+      color: var(--text-light);
+      font-style: italic;
+    }
+    
+    @media (max-width: 768px) {
+      .panels {
+        grid-template-columns: 1fr;
+      }
+    }
+    
+    .extracted-card {
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      margin-bottom: 1.2em;
+      padding: 1.1em 1.2em;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+      display: flex;
+      flex-direction: column;
+      gap: 0.7em;
+    }
+    .extracted-row {
+      display: grid;
+      grid-template-columns: 120px 1fr 120px;
+      align-items: center;
+      gap: 0.7em;
+      margin-bottom: 0.5em;
+    }
+    .extracted-label {
+      color: var(--text-light);
+      font-weight: 600;
+      text-align: right;
+      font-size: 1em;
+    }
+    .extracted-value {
+      font-family: 'Monaco', 'Consolas', monospace;
+      background: #f7f7f7;
+      padding: 0.4em 0.7em;
+      border-radius: 4px;
+      font-size: 1em;
+      color: #333;
+      min-width: 180px;
+      text-align: center;
+      justify-self: start;
+    }
+    .copy-btn {
+      margin-left: 0;
+      min-width: 120px;
+    }
+    .element-snapshot {
+      width: 60px;
+      height: 32px;
+      border: 1px solid #eee;
+      background: #fafafa;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      margin-left: 0.5em;
+    }
+    .element-snapshot * {
+      max-width: 100%;
+      max-height: 100%;
+    }
+    .preview-btn {
+      background: var(--info);
+      color: #fff;
+      border: none;
+      border-radius: 5px;
+      padding: 0.3rem 0.8rem;
+      font-size: 0.9rem;
+      margin-left: 0.5em;
+      min-width: 90px;
+      cursor: pointer;
+    }
+    .preview-btn:hover {
+      background: #125ea2;
+    }
+    .modal-preview {
+      display: none;
+      position: fixed;
+      z-index: 9999;
+      left: 0; top: 0; width: 100vw; height: 100vh;
+      background: rgba(0,0,0,0.35);
+      align-items: center;
+      justify-content: center;
+    }
+    .modal-preview.active {
+      display: flex;
+    }
+    .modal-content-preview {
+      background: #fff;
+      border-radius: 10px;
+      padding: 2em 2.5em;
+      min-width: 420px;
+      min-height: 180px;
+      max-width: 90vw;
+      max-height: 80vh;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.18);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      position: relative;
+    }
+    .modal-content-preview h3 {
+      margin-bottom: 1.2em;
+      color: var(--primary);
+      font-size: 1.2em;
+    }
+    .modal-element-preview-box {
+      background: #fafafa;
+      border: 1px solid #eee;
+      border-radius: 7px;
+      min-width: 320px;
+      min-height: 80px;
+      max-width: 600px;
+      max-height: 300px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: auto;
+      margin-bottom: 1.2em;
+      padding: 1.2em;
+      pointer-events: none;
+      user-select: none;
+    }
+    .modal-close-btn {
+      position: absolute;
+      top: 1em;
+      right: 1em;
+      background: #eee;
+      color: #333;
+      border: none;
+      border-radius: 50%;
+      width: 32px;
+      height: 32px;
+      font-size: 1.2em;
+      cursor: pointer;
+    }
+    .modal-close-btn:hover {
+      background: var(--error);
+      color: #fff;
+    }
+    .button-group .tab,
+    .button-group .tab.active,
+    .button-group .tab:visited,
+    .button-group .tab:focus,
+    .button-group .tab:active,
+    .button-group .tab:any-link {
+      text-decoration: none !important;
+      box-shadow: none !important;
+      outline: none !important;
+    }
+    .selector-row-flex {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.7em;
+    }
+    .selector-value-flex {
+      word-break: break-all;
+      white-space: pre-wrap;
+      flex: 1 1 auto;
+      min-width: 0;
+      background: #f7f7f7;
+      padding: 0.4em 0.7em;
+      border-radius: 4px;
+      font-size: 1em;
+      color: #333;
+      text-align: left;
+      margin-right: 0.5em;
+    }
+    .copy-btn {
+      align-self: flex-start;
+    }
+    .element-preview-inner {
+      pointer-events: none;
+      user-select: none;
+      opacity: 0.85;
+    }
+  </style>
+</head>
+<body>
+  {% set active_tab = 'ui' %}
+  {% include 'navbar.html' %}
+  <div class="container">
+    <div class="content-area" style="width:100%; padding:1.5rem;">
+      <div class="instructions" style="margin-bottom:1.2em; background: #fffbe7; border: 1.5px solid #ffe082; color: #7c5a00; border-radius: 7px; padding: 0.7em 1em; font-size: 0.98em; max-width:600px; margin-left:0; text-align:left; line-height:1.3;">
+        <b>Instructions:</b>
+        <ol style="margin:0.3em 0 0.3em 1.2em; padding:0;">
+          <li>Paste the <b>OUTER HTML of the entire page</b> in the input box below.</li>
+          <li>Click <b>Extract Elements</b> to identify UI elements.</li>
+          <li>Assign actions and validations to each element as needed.</li>
+          <li>Click <b>Generate Class</b> to create a Java Page Object Model.</li>
+        </ol>
+      </div>
+      
+      <button id="toggleExtractionPanel" class="btn-secondary" style="margin-bottom:1em;">Hide Extraction Panel</button>
+      <div id="extractionPanel">
+        <div class="panels">
+          <div class="panel">
+            <div class="panel-title">Code Input</div>
+            <div id="htmlInputTabs" style="display:flex;gap:0.5em;margin-bottom:0.5em;">
+              <button class="tab active" onclick="switchHtmlTab(0)" data-tab="0">State 1</button>
+              <button class="tab" onclick="switchHtmlTab(1)" data-tab="1">State 2</button>
+              <button class="tab" onclick="switchHtmlTab(2)" data-tab="2">State 3</button>
+              <button onclick="addHtmlTab()" style="background:#1976D2;font-size:0.9em;padding:0.3em 0.6em;border-radius:4px;border:none;color:white;cursor:pointer;">+ Add State</button>
+            </div>
+            
+            <div id="htmlInputContainer">
+              <div class="html-input-tab active" data-tab="0">
+                <label for="htmlInput0" style="font-weight:600;">Paste HTML for State 1 or Fetch from URL:</label>
+                <div style="display:flex;gap:0.5em;align-items:center;margin-bottom:0.5em;flex-wrap:wrap;">
+                  <input type="text" id="fetchUrlInput0" placeholder="Enter page URL (https://...)" style="flex:2 1 220px;padding:0.5em;border-radius:4px;border:1px solid #ccc;min-width:180px;">
+                  <button type="button" class="add-btn" style="background:#1976D2;" onclick="fetchHtmlFromUrl(0)">Fetch</button>
+                </div>
+                <textarea id="htmlInput0" rows="7" style="width:100%;font-family:monospace;padding:0.7rem;border-radius:5px;border:1px solid #E0E0E0;margin-bottom:0.5rem;" placeholder="Paste DOM HTML for State 1 here..."></textarea>
+              </div>
+              
+              <div class="html-input-tab" data-tab="1" style="display:none;">
+                <label for="htmlInput1" style="font-weight:600;">Paste HTML for State 2 or Fetch from URL:</label>
+                <div style="display:flex;gap:0.5em;align-items:center;margin-bottom:0.5em;flex-wrap:wrap;">
+                  <input type="text" id="fetchUrlInput1" placeholder="Enter page URL (https://...)" style="flex:2 1 220px;padding:0.5em;border-radius:4px;border:1px solid #ccc;min-width:180px;">
+                  <button type="button" class="add-btn" style="background:#1976D2;" onclick="fetchHtmlFromUrl(1)">Fetch</button>
+                </div>
+                <textarea id="htmlInput1" rows="7" style="width:100%;font-family:monospace;padding:0.7rem;border-radius:5px;border:1px solid #E0E0E0;margin-bottom:0.5rem;" placeholder="Paste DOM HTML for State 2 here..."></textarea>
+              </div>
+              
+              <div class="html-input-tab" data-tab="2" style="display:none;">
+                <label for="htmlInput2" style="font-weight:600;">Paste HTML for State 3 or Fetch from URL:</label>
+                <div style="display:flex;gap:0.5em;align-items:center;margin-bottom:0.5em;flex-wrap:wrap;">
+                  <input type="text" id="fetchUrlInput2" placeholder="Enter page URL (https://...)" style="flex:2 1 220px;padding:0.5em;border-radius:4px;border:1px solid #ccc;min-width:180px;">
+                  <button type="button" class="add-btn" style="background:#1976D2;" onclick="fetchHtmlFromUrl(2)">Fetch</button>
+                </div>
+                <textarea id="htmlInput2" rows="7" style="width:100%;font-family:monospace;padding:0.7rem;border-radius:5px;border:1px solid #E0E0E0;margin-bottom:0.5rem;" placeholder="Paste DOM HTML for State 3 here..."></textarea>
+              </div>
+            </div>
+            
+            <div style="display:flex;gap:0.5em;margin-bottom:1rem;">
+              <button id="extractAllBtn" onclick="extractAllElements()" style="background:#4CAF50;">Extract All</button>
+              <button onclick="clearElements()" style="background:#F44336;">Clear All</button>
+            </div>
+          </div>
+          <div class="panel">
+            <div class="panel-title">Extracted Elements</div>
+            <div id="results" class="empty-result"><em>Paste HTML and click \"Extract Elements\" to begin</em></div>
+          </div>
+        </div>
+      </div>
+      <!-- Java Page Class Generation Section -->
+      <div class="panel" style="margin-top:2em;">
+        <div class="panel-title">Generate Java Page Class (POM)</div>
+        <div style="display:flex;align-items:center;gap:1em;margin-bottom:1em;flex-wrap:wrap;">
+          <div class="form-row">
+            <label for="pageClassName">Class Name:</label>
+            <input id="pageClassName" type="text" value="" placeholder="Enter class name" style="padding:0.4em 1em;border-radius:5px;border:1px solid #ccc;font-size:1em;min-width:180px;">
+          </div>
+          <div class="form-row">
+            <label for="pomMode">POM Mode:</label>
+            <select id="pomMode" class="full-width">
+              <option value="playwright-js">Playwright (JavaScript)</option>
+              <option value="playwright-js-autohealing" selected>Playwright (JavaScript) with Auto-healing</option>
+              <option value="playwright">Playwright (Java)</option>
+              <option value="selenium">Selenium (Java)</option>
+              <option value="upgrad">upGrad (Java)</option>
+              <option value="ai" disabled>AI-Generated (Coming Soon)</option>
+            </select>
+          </div>
+          <div class="form-row">
+            <label for="elementExtractionMode">Element Extraction:</label>
+            <select id="elementExtractionMode" class="full-width">
+              <option value="all">All Elements</option>
+              <option value="top-level" selected>Only Top-Level Visible Elements</option>
+            </select>
+          </div>
+          <div class="form-row">
+            <label for="includeActions">Include Actions:</label>
+            <select id="includeActions" class="full-width">
+              <option value="no" selected>No - Only Extract Elements</option>
+              <option value="yes">Yes - Include Basic Actions</option>
+            </select>
+          </div>
+          <button id="generatePageClassBtn" style="background:var(--primary);color:#fff;">Generate Class</button>
+        </div>
+        <div id="javaPageClassResult" style="display:none;margin-top:1.2em;">
+          <div style="margin-bottom:0.7em;font-weight:600;">Generated Page Class:</div>
+          <pre id="javaPageClassCode" style="background:#23272B;color:#fff;padding:1em;border-radius:6px;overflow:auto;max-height:400px;font-size:1em;"></pre>
+          <div style="margin-top:0.7em;display:flex;gap:1em;">
+            <button onclick="copyJavaPageClass()" style="background:var(--info);color:#fff;">Copy Code</button>
+            <button onclick="downloadJavaPageClass()" style="background:var(--success);color:#fff;">Download Class</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <script>
+    let isDirty = false;
+    // Store extracted elements globally
+    window._allExtractedSelectors = [];
+
+    // Add dirty page validation
+    window.addEventListener('beforeunload', function(e) {
+        if (isDirty) {
+            e.preventDefault();
+            e.returnValue = '';
+            return '';
+        }
+    });
+
+    // Initialize all tabs when the page loads
+    document.addEventListener('DOMContentLoaded', function() {
+      // Add click event listeners to all existing tabs
+      document.querySelectorAll('#htmlInputTabs .tab').forEach(tab => {
+        if (!tab.classList.contains('add-tab-btn')) {
+          const tabIndex = parseInt(tab.getAttribute('data-tab'));
+          tab.addEventListener('click', function() {
+            switchHtmlTab(tabIndex);
+          });
+        }
+      });
+      
+      // Set isDirty on textarea input
+      document.querySelectorAll('[id^="htmlInput"]').forEach(textarea => {
+        textarea.addEventListener('input', function() {
+          isDirty = true;
+        });
+      });
+    });
+
+    function getAllSelectors(el, root) {
+      function isDynamic(str) {
+        return str && (str.length > 10 || /[_\d]/.test(str));
+      }
+      
+      // Safety check - if element is not valid, return a default selector
+      if (!el || !el.tagName) {
+        console.log("Invalid element provided to getAllSelectors");
+        return ['body'];
+      }
+      
+      console.log("Getting selectors for", el.tagName);
+      
+      const selectors = [];
+      // Add tag name as the most basic selector
+      selectors.push(el.tagName.toLowerCase());
+      
+      // [name]
+      if (el.getAttribute) {
+        const name = el.getAttribute('name');
+        if (name) selectors.push(`[name='${name}']`);
+        const placeholder = el.getAttribute('placeholder');
+        if (placeholder) selectors.push(`[placeholder='${placeholder}']`);
+        const aria = el.getAttribute('aria-label');
+        if (aria) selectors.push(`[aria-label='${aria}']`);
+      }
+      
+      // id (most specific)
+      if (el.id && !isDynamic(el.id)) selectors.push('#' + el.id);
+      
+      // first stable class
+      if (el.classList && el.classList.length > 0) {
+        for (let cls of el.classList) {
+          if (!isDynamic(cls)) {
+            selectors.push('.' + cls);
+            break;
+          }
+        }
+      }
+      
+      // button/link text
+      if ((el.tagName === 'BUTTON' || el.tagName === 'A') && el.innerText) {
+        const text = el.innerText.trim();
+        if (text) {
+          // Use a more compatible selector for Playwright
+          selectors.push(`${el.tagName.toLowerCase()}:has-text("${text}")`);
+        }
+      }
+      
+      // Only keep unique selectors, up to 4
+      return Array.from(new Set(selectors)).slice(0, 4);
+    }
+    
+    function getLabel(el) {
+      // Try to get label from <label for>, aria-label, placeholder, or nearby text
+      if (el.labels && el.labels.length > 0) return el.labels[0].innerText;
+      if (el.getAttribute('aria-label')) return el.getAttribute('aria-label');
+      if (el.placeholder) return el.placeholder;
+      if (el.name) return el.name;
+      if (el.id) {
+        // Try to find a <label for=...>
+        const label = document.querySelector(`label[for='${el.id}']`);
+        if (label) return label.innerText;
+      }
+      if (el.innerText && el.innerText.trim().length > 0) return el.innerText.trim();
+      return el.tagName.toLowerCase();
+    }
+    
+    function getValuePreview(el) {
+      if (el.value) return el.value;
+      if (el.placeholder) return el.placeholder;
+      if (el.innerText && el.innerText.trim().length > 0) return el.innerText.trim();
+      return '';
+    }
+    
+    function getType(el) {
+      if (el.tagName.toLowerCase() === 'input') {
+        return (el.type ? el.type.charAt(0).toUpperCase() + el.type.slice(1) : 'Input') + ' Field';
+      }
+      if (el.tagName.toLowerCase() === 'button') return 'Button';
+      if (el.tagName.toLowerCase() === 'select') return 'Dropdown';
+      if (el.tagName.toLowerCase() === 'textarea') return 'Textarea';
+      if (el.tagName.toLowerCase() === 'a') return 'Link';
+      return el.tagName.charAt(0).toUpperCase() + el.tagName.slice(1).toLowerCase();
+    }
+    
+    // Spinner HTML
+    const spinnerHtml = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true" style="margin-right:0.5em;"></span>';
+
+    // Switch HTML tabs
+    function switchHtmlTab(tabIndex) {
+      // Remove active class from all tabs
+      document.querySelectorAll('#htmlInputTabs .tab').forEach(tab => {
+        tab.classList.remove('active');
+      });
+      
+      // Hide all tab contents
+      document.querySelectorAll('.html-input-tab').forEach(content => {
+        content.style.display = 'none';
+      });
+      
+      // Add active class to selected tab
+      const selectedTab = document.querySelector(`#htmlInputTabs .tab[data-tab="${tabIndex}"]`);
+      if (selectedTab) {
+        selectedTab.classList.add('active');
+      }
+      
+      // Show selected tab content
+      const selectedContent = document.querySelector(`.html-input-tab[data-tab="${tabIndex}"]`);
+      if (selectedContent) {
+        selectedContent.style.display = 'block';
+      }
+    }
+    
+    // Add new HTML tab
+    function addHtmlTab() {
+      const tabCount = document.querySelectorAll('#htmlInputTabs .tab').length - 1; // -1 for the + button
+      const newTabIndex = tabCount;
+      
+      // Create new tab button
+      const tabButton = document.createElement('button');
+      tabButton.className = 'tab';
+      tabButton.textContent = `State ${newTabIndex + 1}`;
+      tabButton.setAttribute('data-tab', newTabIndex);
+      
+      // Insert before the + button
+      const addButton = document.querySelector('#htmlInputTabs button:last-child');
+      document.getElementById('htmlInputTabs').insertBefore(tabButton, addButton);
+      
+      // Create new tab content
+      const tabContent = document.createElement('div');
+      tabContent.className = 'html-input-tab';
+      tabContent.setAttribute('data-tab', newTabIndex);
+      tabContent.style.display = 'none';
+      tabContent.innerHTML = `
+        <label for="htmlInput${newTabIndex}" style="font-weight:600;">Paste HTML for State ${newTabIndex + 1} or Fetch from URL:</label>
+        <div style="display:flex;gap:0.5em;align-items:center;margin-bottom:0.5em;flex-wrap:wrap;">
+          <input type="text" id="fetchUrlInput${newTabIndex}" placeholder="Enter page URL (https://...)" style="flex:2 1 220px;padding:0.5em;border-radius:4px;border:1px solid #ccc;min-width:180px;">
+          <button type="button" class="add-btn" style="background:#1976D2;" onclick="fetchHtmlFromUrl(${newTabIndex})">Fetch</button>
+        </div>
+        <textarea id="htmlInput${newTabIndex}" rows="7" style="width:100%;font-family:monospace;padding:0.7rem;border-radius:5px;border:1px solid #E0E0E0;margin-bottom:0.5rem;" placeholder="Paste DOM HTML for State ${newTabIndex + 1} here..."></textarea>
+      `;
+      
+      document.getElementById('htmlInputContainer').appendChild(tabContent);
+      
+      // Add event listener for the new textarea
+      document.getElementById(`htmlInput${newTabIndex}`).addEventListener('input', function() {
+        isDirty = true;
+      });
+      
+      // Add click event listener to the tab button (instead of using onclick attribute)
+      tabButton.addEventListener('click', function() {
+        switchHtmlTab(newTabIndex);
+      });
+      
+      // Switch to the new tab
+      switchHtmlTab(newTabIndex);
+    }
+    
+    // Fetch & Extract button
+    function fetchHtmlFromUrl(tabIndex = 0) {
+      let url = document.getElementById(`fetchUrlInput${tabIndex}`).value.trim();
+      if (!url) {
+        alert('Please enter a URL');
+        return;
+      }
+      if (!/^https?:\/\//i.test(url)) {
+        url = 'https://' + url;
+      }
+      const btn = document.querySelector(`button[onclick="fetchHtmlFromUrl(${tabIndex})"]`);
+      const original = btn.innerHTML;
+      btn.innerHTML = spinnerHtml + 'Fetching...';
+      btn.disabled = true;
+      fetch(`/api/fetch-html?url=${encodeURIComponent(url)}`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.error) {
+            alert('Error: ' + data.error);
+            btn.innerHTML = original;
+            btn.disabled = false;
+            return;
+          }
+          document.getElementById(`htmlInput${tabIndex}`).value = data.html;
+          btn.innerHTML = original;
+          btn.disabled = false;
+        })
+        .catch(err => {
+          alert('Error fetching URL: ' + err);
+          btn.innerHTML = original;
+          btn.disabled = false;
+        });
+    }
+
+    // Extract Elements from all tabs
+    function extractAllElements() {
+      const btn = document.getElementById('extractAllBtn');
+      if (btn) {
+        const original = btn.innerHTML;
+        btn.innerHTML = spinnerHtml + 'Extracting...';
+        btn.disabled = true;
+        
+        // Clear previous results first
+        document.getElementById('results').innerHTML = '';
+        window._allExtractedSelectors = [];
+        
+        const tabs = document.querySelectorAll('#htmlInputTabs .tab:not(.add-tab-btn)');
+        if (tabs.length === 0) {
+          btn.disabled = false;
+          btn.innerHTML = 'Extract All';
+          return;
+        }
+        
+        processTabsSequentially(tabs, 0, false);
+      }
+    }
+    
+    // Process tabs one by one
+    function processTabsSequentially(tabs, currentIndex = 0, append = false) {
+      if (currentIndex >= tabs.length) {
+        // All tabs processed
+        document.getElementById('extractAllBtn').innerHTML = 'Extract All';
+        document.getElementById('extractAllBtn').disabled = false;
+        return;
+      }
+      
+      const tabIndex = parseInt(tabs[currentIndex].getAttribute('data-tab'));
+      console.log("Processing tab", tabIndex, "of", tabs.length);
+      
+      // Make sure we have HTML content in this tab
+      const htmlContent = document.getElementById(`htmlInput${tabIndex}`).value;
+      if (!htmlContent || !htmlContent.trim()) {
+        console.log("No HTML content in tab", tabIndex, "- skipping");
+        // Skip empty tab and move to next
+        processTabsSequentially(tabs, currentIndex + 1, append);
+        return;
+      }
+      
+      _extractElementsFromTab(tabIndex, append, function() {
+        // Process next tab
+        processTabsSequentially(tabs, currentIndex + 1, true);
+      });
+    }
+    
+    // Clear Elements button
+    function clearElements() {
+      window._allExtractedSelectors = [];
+      window._extractedSelectors = [];
+      document.getElementById('results').innerHTML = '<div class="empty-result"><em>Elements cleared. Paste HTML and click "Extract Elements" to begin</em></div>';
+      
+      // Clear all textareas
+      document.querySelectorAll('[id^="htmlInput"]').forEach(textarea => {
+        textarea.value = '';
+      });
+    }
+    function _extractElementsFromTab(tabIndex, shouldAppend, callback) {
+      const html = document.getElementById(`htmlInput${tabIndex}`).value;
+      
+      _extractElementsCore(html, shouldAppend, callback);
+    }
+    
+    function _extractElementsCore(html, append = false, callback = null) {
+      if (!html || !html.trim()) {
+        if (!append) {
+          document.getElementById('results').innerHTML = '<div class="empty-result"><em>No HTML content provided</em></div>';
+        }
+        if (callback) callback();
+        return;
+      }
+      
+      console.log("Processing HTML content:", html.substring(0, 100) + "...");
+      
+      const temp = document.createElement('div');
+      temp.innerHTML = html;
+      const selectors = [];
+      
+      // Get extraction mode
+      const extractionMode = document.getElementById('elementExtractionMode').value;
+      console.log("Extraction mode:", extractionMode);
+      
+      // Expanded selector to capture more UI elements
+      let elements;
+      if (extractionMode === 'top-level') {
+        // For top-level elements, we'll be more selective
+        // Focus on interactive elements and main content containers that are likely visible
+        elements = temp.querySelectorAll('input, button, select, textarea, a[href], [role="button"], [type="checkbox"], [type="radio"], form, nav, header, main, footer, section, article');
+        console.log("Found top-level elements:", elements.length);
+      } else {
+        // Default: get all elements
+        elements = temp.querySelectorAll('input, button, select, textarea, a, [role="button"], [type="checkbox"], [type="radio"], [role="checkbox"], [role="radio"], [role="link"], [role="tab"], [role="menuitem"], [role="option"], label, h1, h2, h3, h4, h5, h6');
+        console.log("Found all elements:", elements.length);
+      }
+      
+      console.log("Processing", elements.length, "elements");
+      
+      // Count how many elements we process
+      let processedCount = 0;
+      
+      elements.forEach(el => {
+        try {
+          // Skip elements without any useful attributes or content
+          if (!el.id && !el.name && !el.className && !el.getAttribute('aria-label') && 
+              !el.getAttribute('placeholder') && (!el.textContent || !el.textContent.trim())) {
+            return;
+          }
+          
+          // For top-level mode, check if element is likely visible
+          if (extractionMode === 'top-level') {
+            // Skip elements that are likely not interactive or important
+            if (el.tagName === 'SPAN' || el.tagName === 'DIV' || el.tagName === 'P') {
+              // Only include these elements if they have an ID or specific class
+              if (!el.id && (!el.className || el.className.indexOf('btn') === -1)) {
+                return;
+              }
+            }
+          }
+          
+          let displayText = el.outerHTML.replace(/\s+/g, ' ').trim();
+          if (displayText.length > 80) {
+            displayText = displayText.slice(0, 80) + '...';
+          }
+          
+          const allSelectors = getAllSelectors(el, temp);
+          // Skip if no valid selectors found
+          if (!allSelectors || allSelectors.length === 0) return;
+          
+          processedCount++;
+          
+          selectors.push({
+            tag: el.tagName.toLowerCase(),
+            selectors: allSelectors,
+            selector: allSelectors[0],
+            label: getLabel(el),
+            type: getType(el),
+            value: getValuePreview(el),
+            outer: displayText,
+            html: el.outerHTML
+          });
+        } catch (error) {
+          console.error("Error processing element:", error);
+        }
+      });
+      
+      console.log("Processed", processedCount, "elements, found", selectors.length, "valid selectors");
+      
+      const results = document.getElementById('results');
+      if (selectors.length === 0) {
+        results.innerHTML = '<div class="empty-result"><em>No UI elements found in the provided HTML. Please check your HTML content or try with "All Elements" extraction mode.</em></div>';
+        if (callback) callback();
+        return;
+      }
+      
+      displayExtractedElements(selectors, append);
+      if (callback) callback();
+    }
+    
+    // Helper function to display extracted elements
+    function displayExtractedElements(selectors, shouldAppend = false) {
+      const results = document.getElementById('results');
+      if (!selectors || selectors.length === 0) {
+        results.innerHTML = '<div class="empty-result"><em>No UI elements found in the provided HTML</em></div>';
+        return;
+      }
+      
+      // Show count when appending
+      let countMessage = '';
+      if (window._allExtractedSelectors && window._allExtractedSelectors.length > 0) {
+        countMessage = `<div style="margin-bottom:1em;font-weight:600;color:#4CAF50;">${window._allExtractedSelectors.length} unique elements extracted</div>`;
+      }
+      
+      results.innerHTML = countMessage + selectors.map((s, idx) => `
+        <div class="extracted-card">
+          <div class="extracted-row">
+            <span class="extracted-label">Label:</span>
+            <span class="extracted-value">${s.label}</span>
+            <button class="preview-btn" onclick="showPreviewModal(${idx})">Preview</button>
+          </div>
+          <div class="extracted-row">
+            <span class="extracted-label">Type:</span>
+            <span class="extracted-value">${s.type}</span>
+          </div>
+          <div class="extracted-row selector-row-flex">
+            <span class="extracted-label">Selectors:</span>
+            <span class="extracted-value selector-value-flex" style="display:flex;flex-direction:column;gap:0.3em;">
+              ${s.selectors.map(sel => `<span style='display:flex;align-items:center;gap:0.5em;'><span style='word-break:break-all;'>${sel}</span><button class="copy-btn" onclick="copySelector('${sel.replace(/'/g, '&#39;')}', this)">Copy</button></span>`).join('')}
+            </span>
+          </div>
+          <div class="extracted-row">
+            <span class="extracted-label">Value/Preview:</span>
+            <span class="extracted-value">${s.value || s.outer}</span>
+            <button class="copy-btn" onclick="copyValue('${(s.value || '').replace(/'/g, '&#39;')}', this)" ${!s.value ? 'disabled' : ''}>Copy Value</button>
+          </div>
+        </div>
+      `).join('');
+      // Store selectors globally for modal preview
+      window._extractedSelectors = selectors;
+      
+      // If appending, merge with existing selectors and remove duplicates
+      if (shouldAppend && window._allExtractedSelectors && window._allExtractedSelectors.length > 0) {
+        // Combine all selectors
+        const combinedSelectors = [...window._allExtractedSelectors, ...selectors];
+        
+        // Remove duplicates based on selector
+        const uniqueSelectors = [];
+        const selectorSet = new Set();
+        
+        combinedSelectors.forEach(selector => {
+          // Create a unique key for this selector
+          const key = selector.selector + '|' + selector.tag + '|' + selector.label;
+          
+          if (!selectorSet.has(key)) {
+            selectorSet.add(key);
+            uniqueSelectors.push(selector);
+          }
+        });
+        
+        // Update the global selectors
+        window._allExtractedSelectors = uniqueSelectors;
+        window._extractedSelectors = uniqueSelectors;
+        
+        // Update the results display with the combined selectors
+        displayExtractedElements(uniqueSelectors, false);
+      } else {
+        // Just store the current selectors
+        window._allExtractedSelectors = selectors;
+      }
+    }
+    
+    function copySelector(sel, btn) {
+      navigator.clipboard.writeText(sel).then(() => {
+        let originalText = btn.textContent;
+        btn.textContent = "Copied!";
+        btn.style.background = "var(--success)";
+        btn.style.color = "white";
+        setTimeout(() => {
+          btn.textContent = originalText;
+          btn.style.background = "";
+          btn.style.color = "";
+        }, 1500);
+      }).catch(err => {
+        console.error('Copy failed:', err);
+        alert('Copy failed. Please try again.');
+      });
+    }
+    
+    function copyValue(val, btn) {
+      if (!val) return;
+      navigator.clipboard.writeText(val).then(() => {
+        let originalText = btn.textContent;
+        btn.textContent = "Copied!";
+        btn.style.background = "var(--success)";
+        btn.style.color = "white";
+        setTimeout(() => {
+          btn.textContent = originalText;
+          btn.style.background = "";
+          btn.style.color = "";
+        }, 1500);
+      }).catch(err => {
+        console.error('Copy failed:', err);
+        alert('Copy failed. Please try again.');
+      });
+    }
+  </script>
+  <!-- Modal for element preview -->
+  <div class="modal-preview" id="modalPreview">
+    <div class="modal-content-preview">
+      <button class="modal-close-btn" onclick="closePreviewModal()">&times;</button>
+      <h3>Element Preview</h3>
+      <div class="modal-element-preview-box" id="modalElementPreviewBox"></div>
+    </div>
+  </div>
+  <script>
+    function showPreviewModal(idx) {
+      const modal = document.getElementById('modalPreview');
+      const box = document.getElementById('modalElementPreviewBox');
+      if (window._extractedSelectors && window._extractedSelectors[idx]) {
+        box.innerHTML = window._extractedSelectors[idx].html;
+      } else {
+        box.innerHTML = '<em>Element not found</em>';
+      }
+      modal.classList.add('active');
+    }
+    function closePreviewModal() {
+      document.getElementById('modalPreview').classList.remove('active');
+      document.getElementById('modalElementPreviewBox').innerHTML = '';
+    }
+  </script>
+  <script>
+    // Store the original HTML context for each tab
+    window._originalHtmlContexts = {};
+    
+    // Function to save the original HTML context
+    function saveOriginalHtmlContext(tabIndex, html) {
+      if (html && html.trim()) {
+        window._originalHtmlContexts[tabIndex] = html.trim();
+        console.log(`Saved original HTML context for tab ${tabIndex}, length: ${html.length} characters`);
+      }
+    }
+    
+    // Modify the _extractElementsFromTab function to save the original HTML
+    const originalExtractElementsFromTab = _extractElementsFromTab;
+    _extractElementsFromTab = function(tabIndex, shouldAppend, callback) {
+      const html = document.getElementById(`htmlInput${tabIndex}`).value;
+      // Save the original HTML context
+      saveOriginalHtmlContext(tabIndex, html);
+      // Call the original function
+      originalExtractElementsFromTab(tabIndex, shouldAppend, callback);
+    };
+    
+    document.getElementById('generatePageClassBtn').onclick = function() {
+      generatePageClassBtn.disabled = true;
+      const original = generatePageClassBtn.innerHTML;
+      generatePageClassBtn.innerHTML = spinnerHtml + 'Generating...';
+      setTimeout(() => {
+        const className = document.getElementById('pageClassName').value.trim() || 'PageObject';
+        const mode = document.getElementById('pomMode').value;
+        
+        // Use combined selectors if available, otherwise use current selectors
+        const selectorsToUse = window._allExtractedSelectors && window._allExtractedSelectors.length > 0 ? 
+                              window._allExtractedSelectors : window._extractedSelectors;
+        
+        if (!selectorsToUse || selectorsToUse.length === 0) {
+          alert('Extract elements first!');
+          generatePageClassBtn.innerHTML = original;
+          generatePageClassBtn.disabled = false;
+          return;
+        }
+        
+        // Get all HTML contexts for test case generation
+        const htmlContexts = window._originalHtmlContexts || {};
+        console.log(`Using ${Object.keys(htmlContexts).length} HTML contexts for test case generation`);
+        
+        // Add HTML contexts to the generated code if available
+        if (Object.keys(htmlContexts).length > 0) {
+          // We'll add this information to the generated code later
+          window._htmlContextsForTestGeneration = htmlContexts;
+        }
+        
+        // Format the selectors for the code generator
+        const formattedElements = selectorsToUse.map((element, index) => {
+          // Create a valid name for the element
+          let name = '';
+          if (element.label && element.label.trim()) {
+            name = toJavaIdentifier(element.label.trim().toLowerCase());
+          } else if (element.selector.startsWith('#')) {
+            name = toJavaIdentifier(element.selector.slice(1).toLowerCase());
+          } else if (element.selector.startsWith('.')) {
+            name = toJavaIdentifier(element.selector.slice(1).toLowerCase());
+          } else {
+            name = 'element' + index;
+          }
+          
+          return {
+            name: name,
+            selectors: element.selectors,
+            type: element.type,
+            label: element.label
+          };
+        });
+        
+        let code = generateJavaPageClass(formattedElements, className, mode);
+        document.getElementById('javaPageClassCode').textContent = code;
+        document.getElementById('javaPageClassResult').style.display = 'block';
+        generatePageClassBtn.innerHTML = original;
+        generatePageClassBtn.disabled = false;
+      }, 800); // simulate loading
+    };
+    function copyJavaPageClass() {
+      const code = document.getElementById('javaPageClassCode').textContent;
+      navigator.clipboard.writeText(code).then(() => {
+        alert('Copied!');
+      });
+    }
+    function downloadJavaPageClass() {
+      const code = document.getElementById('javaPageClassCode').textContent;
+      const className = document.getElementById('pageClassName').value.trim() || 'GeneratedPage';
+      const mode = document.getElementById('pomMode').value;
+      let fileType = 'text/x-java-source';
+      let fileExtension = '.java';
+      
+      if (mode === 'playwright-js' || mode === 'playwright-js-autohealing') {
+        fileType = 'text/javascript';
+        fileExtension = '.js';
+      }
+      
+      const blob = new Blob([code], {type: fileType});
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = className + fileExtension;
+      a.click();
+    }
+    function toJavaIdentifier(str) {
+      return str.replace(/[^a-zA-Z0-9_]/g, '_').replace(/^\d+/, '').replace(/_+/g, '_');
+    }
+    function generateJavaPageClass(elements, className, mode) {
+      // For JavaScript Playwright modes, handle separately
+      if (mode === 'playwright-js') {
+        return generateJsPlaywrightPageClass(elements, className, false);
+      }
+      if (mode === 'playwright-js-autohealing') {
+        return generateJsPlaywrightPageClass(elements, className, true);
+      }
+      let imports = [];
+      let code = '';
+      
+      if (mode === 'playwright') {
+        // Playwright imports
+        imports = [
+          'import com.microsoft.playwright.Page;',
+          'import com.microsoft.playwright.Locator;',
+          'import com.microsoft.playwright.options.AriaRole;',
+          'import java.util.*;',
+          'import java.time.*;',
+          'import static org.junit.Assert.*;'
+        ];
+        code += imports.join('\n') + '\n\n';
+        code += `public class ${className} {\n`;
+        code += '    private final Page page;\n';
+      } else {
+        // Selenium imports
+        imports = [
+          'import org.openqa.selenium.*;',
+          'import org.openqa.selenium.support.ui.*;',
+          'import org.openqa.selenium.support.PageFactory;',
+          'import org.openqa.selenium.support.FindBy;',
+          'import java.util.*;',
+          'import java.time.*;',
+          'import org.junit.Assert;'
+        ];
+        if (mode === 'upgrad') {
+          imports.push('import com.Upgrad.CommonLibrary.Helper.WebHelper;');
+        }
+        code += imports.join('\n') + '\n\n';
+        code += `public class ${className} {\n`;
+        code += '    private WebDriver driver;\n';
+        if (mode === 'upgrad') code += '    WebHelper helper;\n';
+      }
+      // Locators
+      const usedFields = new Set();
+      elements.forEach((el, i) => {
+        // Create descriptive field name with page name prefix and element type
+        let elementType = el.type.toLowerCase().replace(/\s+/g, '_');
+        if (elementType === 'input_field') elementType = 'textbox';
+        if (elementType === 'text_field') elementType = 'textbox';
+        
+        // Create a descriptive name based on the label or other attributes
+        let descriptiveName = '';
+        if (el.label && el.label.trim()) {
+          descriptiveName = el.label.trim();
+        } else if (el.value && el.value.trim()) {
+          descriptiveName = el.value.trim();
+        } else if (el.selector.startsWith('#')) {
+          descriptiveName = el.selector.slice(1);
+        } else if (el.selector.startsWith('.')) {
+          descriptiveName = el.selector.slice(1);
+        } else {
+          descriptiveName = 'element' + i;
+        }
+        
+        // Format the field name as PageName_ElementName_ElementType
+        let fieldName = `${className}_${toJavaIdentifier(descriptiveName)}_${elementType}`;
+        fieldName = fieldName.toLowerCase();
+        
+        // Make sure it's a valid identifier
+        fieldName = toJavaIdentifier(fieldName);
+        if (!fieldName) fieldName = `${className}_element_${i}`;
+        
+        // Handle duplicates by adding a number suffix
+        let originalFieldName = fieldName;
+        let counter = 1;
+        while (usedFields.has(fieldName)) {
+          fieldName = `${originalFieldName}_${counter}`;
+          counter++;
+        }
+        
+        usedFields.add(fieldName);
+        
+        if (mode === 'playwright') {
+          // Playwright locator
+          let locatorExpr = '';
+          if (el.selector.startsWith('#')) {
+            locatorExpr = `page.locator("#${el.selector.slice(1)}")`;  
+          } else if (el.selector.startsWith('.')) {
+            locatorExpr = `page.locator(".${el.selector.slice(1)}")`;  
+          } else if (el.selector.startsWith('[name=')) {
+            const name = el.selector.match(/\[name='([^']+)'\]/)[1];
+            locatorExpr = `page.getByRole(AriaRole.TEXTBOX, new Page.GetByRoleOptions().setName("${name}"))`;  
+          } else if (el.selector.startsWith('[placeholder=')) {
+            const placeholder = el.selector.match(/\[placeholder='([^']+)'\]/)[1];
+            locatorExpr = `page.getByPlaceholder("${placeholder}")`;  
+          } else if (el.selector.startsWith('[aria-label=')) {
+            const ariaLabel = el.selector.match(/\[aria-label='([^']+)'\]/)[1];
+            locatorExpr = `page.getByLabel("${ariaLabel}")`;  
+          } else {
+            locatorExpr = `page.locator("${el.selector}")`;  
+          }
+          code += `    private final Locator ${fieldName};\n`;
+        } else {
+          // Selenium By locator
+          let byExpr = '';
+          if (el.selector.startsWith('#')) {
+            byExpr = `By.id(\"${el.selector.slice(1)}\")`;  
+          } else if (el.selector.startsWith('.')) {
+            byExpr = `By.className(\"${el.selector.slice(1)}\")`;  
+          } else if (el.selector.startsWith('[name=')) {
+            byExpr = `By.name(\"${el.selector.match(/\[name='([^']+)'\]/)[1]}\")`;  
+          } else if (el.selector.startsWith('[placeholder=')) {
+            byExpr = `By.cssSelector(\"${el.selector}\")`;  
+          } else if (el.selector.startsWith('[aria-label=')) {
+            byExpr = `By.cssSelector(\"${el.selector}\")`;  
+          } else {
+            byExpr = `By.cssSelector(\"${el.selector}\")`;  
+          }
+          code += `    By ${fieldName} = ${byExpr};\n`;
+        }
+      });
+      if (mode === 'playwright') {
+        code += '\n    public ' + className + '(Page page) {\n';
+        code += '        this.page = page;\n';
+        // Initialize all locators
+        usedFields.forEach(fieldName => {
+          let locatorExpr = '';
+          const el = elements.find(e => toJavaIdentifier(e.label || e.selector || '') === fieldName);
+          if (!el) return;
+          
+          if (el.selector.startsWith('#')) {
+            locatorExpr = `page.locator("#${el.selector.slice(1)}")`;  
+          } else if (el.selector.startsWith('.')) {
+            locatorExpr = `page.locator(".${el.selector.slice(1)}")`;  
+          } else if (el.selector.startsWith('[name=')) {
+            const name = el.selector.match(/\[name='([^']+)'\]/)[1];
+            locatorExpr = `page.getByRole(AriaRole.TEXTBOX, new Page.GetByRoleOptions().setName("${name}"))`;  
+          } else if (el.selector.startsWith('[placeholder=')) {
+            const placeholder = el.selector.match(/\[placeholder='([^']+)'\]/)[1];
+            locatorExpr = `page.getByPlaceholder("${placeholder}")`;  
+          } else if (el.selector.startsWith('[aria-label=')) {
+            const ariaLabel = el.selector.match(/\[aria-label='([^']+)'\]/)[1];
+            locatorExpr = `page.getByLabel("${ariaLabel}")`;  
+          } else {
+            locatorExpr = `page.locator("${el.selector}")`;  
+          }
+          code += `        this.${fieldName} = ${locatorExpr};\n`;
+        });
+        code += '    }\n\n';
+      } else {
+        code += '\n    public ' + className + '(WebDriver driver) {\n';
+        code += '        this.driver = driver;\n';
+        if (mode === 'upgrad') code += '        helper = new WebHelper(this.driver);\n';
+        code += '    }\n\n';
+      }
+      // Methods for each element
+      usedFields.forEach(fieldName => {
+        let methodBase = fieldName.charAt(0).toUpperCase() + fieldName.slice(1);
+        
+        if (mode === 'playwright') {
+          // Playwright methods
+          code += `    public void click${methodBase}() {\n`;
+          code += `        ${fieldName}.click();\n`;
+          code += '    }\n\n';
+          
+          code += `    public String get${methodBase}Text() {\n`;
+          code += `        return ${fieldName}.textContent();\n`;
+          code += '    }\n\n';
+          
+          code += `    public void fill${methodBase}(String text) {\n`;
+          code += `        ${fieldName}.fill(text);\n`;
+          code += '    }\n\n';
+          
+          code += `    public boolean is${methodBase}Visible() {\n`;
+          code += `        return ${fieldName}.isVisible();\n`;
+          code += '    }\n\n';
+        } else {
+          // Selenium methods
+          code += `    public void click${methodBase}() {\n`;
+          code += `        driver.findElement(${fieldName}).click();\n`;
+          code += '    }\n\n';
+          
+          code += `    public String get${methodBase}Text() {\n`;
+          code += `        return driver.findElement(${fieldName}).getText();\n`;
+          code += '    }\n\n';
+        }
+      });
+      code += '}\n';
+      return code;
+    }
+    // Function to generate JavaScript Playwright Page Object Model
+    function generateJsPlaywrightPageClass(elements, className, autoHealing) {
+      const includeActions = document.getElementById('includeActions').value === 'yes';
+      
+      // Create a set of unique field names
+      const fieldNames = new Set();
+      const usedFields = [];
+      
+      // Generate unique field names for each element
+      elements.forEach(element => {
+        let fieldName = generateFieldName(element);
+        let counter = 1;
+        
+        // Ensure unique field names
+        while (fieldNames.has(fieldName)) {
+          fieldName = generateFieldName(element, counter);
+          counter++;
+        }
+        
+        fieldNames.add(fieldName);
+        usedFields.push(fieldName);
+        element.fieldName = fieldName;
+      });
+      
+      // Start building the class
+      let code = '';
+      
+      // Add JSDoc comment
+      if (autoHealing) {
+        code += `/**\n * ${className} - Page Object Model for Playwright\n * Generated with auto-healing capabilities\n */\n`;
+        code += `const AutoHealingPage = require('../../utils/helpers/auto-healing-page');\n\n`;
+        code += `class ${className} extends AutoHealingPage {\n`;
+      } else {
+        code += `/**\n * ${className} - Page Object Model for Playwright\n */\n`;
+        code += `class ${className} {\n`;
+      }
+      
+      // Add constructor
+      code += '  /**\n   * @param {import(\'@playwright/test\').Page} page\n   */\n';
+      code += '  constructor(page) {\n';
+      code += '    ' + (autoHealing ? 'super(page);\n' : 'this.page = page;\n');
+      
+      // Add element locators
+      elements.forEach(element => {
+        const fieldName = element.fieldName;
+        const selector = element.selector;
+        
+        code += `    /**\n     * @type {import('@playwright/test').Locator}\n     */\n`;
+        code += `    this.${fieldName} = page.locator('${selector.replace(/'/g, "\\'")}')`;
+        
+        // Add any additional properties for better element identification
+        if (element.label) {
+          code += `; // ${element.label}`;
+        }
+        code += '\n';
+      });
+      
+      code += '  }\n\n';
+      
+      // Add auto-healing methods if enabled
+      if (autoHealing) {
+        // Add selector map
+        code += '  // Selector map for auto-healing\n';
+        code += '  get selectorMap() {\n';
+        code += '    return {\n';
+        
+        elements.forEach((element, index) => {
+          const fieldName = element.fieldName;
+          
+          // Add all alternative selectors
+          code += `      '${fieldName}': [`;
+          element.selectors.forEach((selector, i) => {
+            code += `'${selector.replace(/'/g, "\\'")}'`;
+            if (i < element.selectors.length - 1) {
+              code += ', ';
+            }
+          });
+          code += ']';
+          
+          if (index < elements.length - 1) {
+            code += ',\n';
+          } else {
+            code += '\n';
+          }
+        });
+        
+        code += '    };\n';
+        code += '  }\n\n';
+        
+        // Add getElement method
+        code += `  /**
+   * Get element with auto-healing capability
+   * @param {string} name - Element name
+   * @returns {Promise<import('@playwright/test').Locator>} - Playwright locator
+   */\n`;
+        code += `  async getElement(name) {\n`;
+        code += `    const selectors = this.selectorMap[name];\n`;
+        code += `    if (!selectors || selectors.length === 0) {\n`;
+        code += `      throw new Error(\`Element \${name} not found in selector map\`);\n`;
+        code += `    }\n\n`;
+        code += `    // Try each selector in order\n`;
+        code += `    for (const selector of selectors) {\n`;
+        code += `      const element = this.page.locator(selector);\n`;
+        code += `      if (await element.count() > 0) {\n`;
+        code += `        return element;\n`;
+        code += `      }\n`;
+        code += `    }\n\n`;
+        code += `    // If no selector worked, return the first one (will likely fail)\n`;
+        code += `    return this.page.locator(selectors[0]);\n`;
+        code += `  }\n\n`;
+        
+        // Add helper methods
+        code += `  /**
+   * Fill element with text
+   * @param {string} name - Element name
+   * @param {string} value - Value to fill
+   */\n`;
+        code += `  async fill(name, value) {\n`;
+        code += `    const element = await this.getElement(name);\n`;
+        code += `    await element.fill(value);\n`;
+        code += `  }\n\n`;
+        
+        code += `  /**
+   * Click on element
+   * @param {string} name - Element name
+   */\n`;
+        code += `  async click(name) {\n`;
+        code += `    const element = await this.getElement(name);\n`;
+        code += `    await element.click();\n`;
+        code += `  }\n\n`;
+        
+        code += `  /**
+   * Get text from element
+   * @param {string} name - Element name
+   * @returns {Promise<string>} - Element text content
+   */\n`;
+        code += `  async getText(name) {\n`;
+        code += `    const element = await this.getElement(name);\n`;
+        code += `    return await element.textContent();\n`;
+        code += `  }\n\n`;
+        
+        code += `  /**
+   * Check if element is visible
+   * @param {string} name - Element name
+   * @returns {Promise<boolean>} True if element is visible
+   */\n`;
+        code += `  async isVisible(name) {\n`;
+        code += `    try {\n`;
+        code += `      const element = await this.getElement(name);\n`;
+        code += `      return await element.isVisible();\n`;
+        code += `    } catch (error) {\n`;
+        code += `      return false;\n`;
+        code += `    }\n`;
+        code += `  }\n\n`;
+      }
+      
+      // Methods for each element - only add if includeActions is true
+      if (includeActions) {
+        usedFields.forEach(fieldName => {
+          let methodBase = fieldName.charAt(0).toUpperCase() + fieldName.slice(1);
+          
+          // Click method
+          code += `  /**
+   * Click on ${fieldName}
+   */\n`;
+          code += `  async click${methodBase}() {\n`;
+          code += `    await this.${fieldName}.click();\n`;
+          code += `  }\n\n`;
+          
+          // Get text method
+          code += `  /**
+   * Get text from ${fieldName}
+   * @returns {Promise<string>}
+   */\n`;
+          code += `  async get${methodBase}Text() {\n`;
+          code += `    return await this.${fieldName}.textContent();\n`;
+          code += `  }\n\n`;
+          
+          // Fill method for input fields
+          if (fieldName.includes('input') || fieldName.includes('field') || fieldName.includes('textarea')) {
+            code += `  /**
+   * Fill ${fieldName} with text
+   * @param {string} text - Text to fill
+   */\n`;
+            code += `  async fill${methodBase}(text) {\n`;
+            code += `    await this.${fieldName}.fill(text);\n`;
+            code += `  }\n\n`;
+          }
+          
+          // Check method for checkboxes and radio buttons
+          if (fieldName.includes('checkbox') || fieldName.includes('radio')) {
+            code += `  /**
+   * Check the ${fieldName} element
+   */\n`;
+            code += `  async check${methodBase}() {\n`;
+            code += `    await this.${fieldName}.check();\n`;
+            code += `  }\n\n`;
+          }
+        });
+      }
+      
+      // Close the class definition
+      code += '}\n\n';
+      code += `module.exports = ${className};\n`;
+      return code;
+    }
+    // Function to generate a valid field name
+    function generateFieldName(element, counter = 0) {
+      // Create a descriptive name based on the label or other attributes
+      let name = '';
+      if (element.label && element.label.trim()) {
+        name = element.label.trim();
+      } else if (element.value && element.value.trim()) {
+        name = element.value.trim();
+      } else if (element.selector.startsWith('#')) {
+        name = element.selector.slice(1);
+      } else if (element.selector.startsWith('.')) {
+        name = element.selector.slice(1);
+      } else {
+        name = 'element';
+      }
+      
+      // Make it a valid identifier
+      name = toJavaIdentifier(name.toLowerCase());
+      
+      // Add counter suffix if provided
+      if (counter > 0) {
+        name += '_' + counter;
+      }
+      
+      return name;
+    }
+  
+  // Main function to generate Playwright Page Object Model
+  function generateJsPlaywrightPageClass(elements, className, autoHealing) {
+      console.log("Generating Playwright Page Class with", elements.length, "elements");
+      console.log("Auto-healing:", autoHealing);
+      console.log("Class name:", className);
+      
+      // Simple version to avoid syntax errors
+      let code = [];
+      
+      // Start with imports and class declaration
+      code.push("const { expect } = require('@playwright/test');\n");
+      
+      if (autoHealing) {
+        // Add auto-healing base class import
+        code.push("// Auto-healing base class can be imported from your project\n");
+        code.push("// const AutoHealingPage = require('../../utils/helpers/auto-healing-page');\n\n");
+      }
+      
+      code.push(`class ${className} {\n`);
+      code.push("  constructor(page) {\n");
+      
+      if (autoHealing) {
+        code.push("    // If using auto-healing base class, uncomment the next line\n");
+        code.push("    // super(page);\n");
+      }
+      
+      code.push("    this.page = page;\n");
+      code.push("    this.timeout = 30000;\n");
+      
+      if (autoHealing) {
+        // Define elements with auto-healing structure
+        code.push("    // Define selectors with auto-healing capabilities\n");
+        code.push("    this.elements = {\n");
+        
+        elements.forEach((element, index) => {
+          if (element.name && element.selectors && element.selectors.length > 0) {
+            code.push(`      '${element.name}': [\n`);
+            
+            // Add primary selector
+            code.push(`        { type: 'css', selector: '${element.selectors[0]}' }`);
+            
+            // Add fallback selectors if available
+            if (element.selectors.length > 1) {
+              code.push(',\n');
+              for (let i = 1; i < element.selectors.length; i++) {
+                const isLast = i === element.selectors.length - 1;
+                code.push(`        { type: 'css', selector: '${element.selectors[i]}' }${isLast ? '' : ','}\n`);
+              }
+            } else {
+              code.push('\n');
+            }
+            
+            code.push(`      ]${index < elements.length - 1 ? ',' : ''}\n`);
+          }
+        });
+        
+        code.push("    };\n");
+      } else {
+        // Add simple selectors without auto-healing
+        elements.forEach(element => {
+          if (element.name && element.selectors && element.selectors.length > 0) {
+            code.push(`    this.${element.name}Selector = '${element.selectors[0]}';\n`);
+          }
+        });
+      }
+      
+      code.push("  }\n\n");
+      
+      // Create a set of unique element names
+      const elementNames = new Set();
+      elements.forEach(element => {
+        if (element.name) {
+          elementNames.add(element.name);
+        }
+      });
+      
+      // Add basic methods for auto-healing
+      if (autoHealing) {
+        // Get element method
+        code.push("  /**\n   * Get element using auto-healing locators\n   * @param {string} name - Element name\n   * @returns {Promise<Locator>} Playwright locator\n   */\n");
+        code.push("  async getElement(name) {\n");
+        code.push("    if (!this.elements[name]) {\n");
+        code.push("      throw new Error(`Element ${name} not found in page object`);\n");
+        code.push("    }\n\n");
+        code.push("    // Try each locator strategy until one works\n");
+        code.push("    for (const strategy of this.elements[name]) {\n");
+        code.push("      try {\n");
+        code.push("        const locator = this.page.locator(strategy.selector);\n");
+        code.push("        // Check if the element is visible before returning it\n");
+        code.push("        if (await locator.isVisible()) {\n");
+        code.push("          return locator;\n");
+        code.push("        }\n");
+        code.push("      } catch (error) {\n");
+        code.push("        console.log(`Strategy ${strategy.type}:${strategy.selector} failed: ${error.message}`);\n");
+        code.push("      }\n");
+        code.push("    }\n\n");
+        code.push("    // If we get here, all strategies failed\n");
+        code.push("    throw new Error(`All locator strategies failed for ${name}`);\n");
+        code.push("  }\n\n");
+        
+        // Is visible method
+        code.push("  /**\n   * Check if element is visible\n   * @param {string} name - Element name\n   * @returns {Promise<boolean>} Whether element is visible\n   */\n");
+        code.push("  async isVisible(name) {\n");
+        code.push("    try {\n");
+        code.push("      const element = await this.getElement(name);\n");
+        code.push("      return await element.isVisible();\n");
+        code.push("    } catch (error) {\n");
+        code.push("      console.error(`Error checking visibility: ${error.message}`);\n");
+        code.push("      return false;\n");
+        code.push("    }\n");
+        code.push("  }\n\n");
+      }
+      
+      // Add element-specific methods if actions are included
+      if (document.getElementById('includeActions').value === 'yes') {
+        elementNames.forEach(name => {
+          const capitalizedName = name.charAt(0).toUpperCase() + name.slice(1);
+          
+          // Getter method
+          if (autoHealing) {
+            code.push(`  /**\n   * Get ${name} element\n   * @returns {Promise<Locator>} Playwright locator\n   */\n`);
+            code.push(`  async get${capitalizedName}() {\n`);
+            code.push(`    return this.getElement('${name}');\n`);
+            code.push("  }\n\n");
+          }
+          
+          // Click method
+          code.push(`  /**\n   * Click on ${name}\n   */\n`);
+          code.push(`  async click${capitalizedName}() {\n`);
+          if (autoHealing) {
+            code.push(`    const element = await this.getElement('${name}');\n`);
+            code.push("    await element.click();\n");
+          } else {
+            code.push(`    await this.page.locator(this.${name}Selector).click();\n`);
+          }
+          code.push("  }\n\n");
+          
+          // Get text method
+          code.push(`  /**\n   * Get text from ${name}\n   * @returns {Promise<string>} Text content\n   */\n`);
+          code.push(`  async getText${capitalizedName}() {\n`);
+          if (autoHealing) {
+            code.push(`    const element = await this.getElement('${name}');\n`);
+            code.push("    return await element.textContent();\n");
+          } else {
+            code.push(`    return await this.page.locator(this.${name}Selector).textContent();\n`);
+          }
+          code.push("  }\n\n");
+          
+          // Fill method (for inputs)
+          code.push(`  /**\n   * Fill ${name} with value\n   * @param {string} value - Value to fill\n   */\n`);
+          code.push(`  async fill${capitalizedName}(value) {\n`);
+          if (autoHealing) {
+            code.push(`    const element = await this.getElement('${name}');\n`);
+            code.push("    await element.fill(value);\n");
+          } else {
+            code.push(`    await this.page.locator(this.${name}Selector).fill(value);\n`);
+          }
+          code.push("  }\n\n");
+        });
+      }
+      
+      // Add navigate method
+      code.push("  /**\n   * Navigate to page\n   */\n");
+      code.push("  async navigateTo() {\n");
+      code.push(`    await this.page.goto('/${className.toLowerCase()}');\n`);
+      code.push("    await this.page.waitForLoadState('networkidle');\n");
+      code.push("  }\n\n");
+      
+      // Close class and export
+      code.push("}\n\n");
+      code.push(`module.exports = ${className};\n`);
+      
+      // Add test case generation if HTML contexts are available
+      if (window._htmlContextsForTestGeneration && Object.keys(window._htmlContextsForTestGeneration).length > 0) {
+        code.push("\n// Example test cases generated from HTML contexts\n");
+        code.push("/**\n * These test cases are generated based on the HTML contexts provided.\n * They can be used as a starting point for manual content testing.\n */\n");
+        code.push(`const { test, expect } = require('@playwright/test');\n\n`);
+        code.push(`test.describe('${className} Tests', () => {\n`);
+        code.push(`  test('should navigate to ${className.toLowerCase()} page', async ({ page }) => {\n`);
+        code.push(`    const pageObject = new ${className}(page);\n`);
+        code.push(`    await pageObject.navigateTo();\n`);
+        code.push(`    // Add assertions based on the page content\n`);
+        code.push(`    // Example: await expect(page).toHaveTitle('Expected Title');\n`);
+        code.push(`  });\n\n`);
+        
+        // Add a test case for each element if actions are included
+        if (document.getElementById('includeActions').value === 'yes' && elementNames.size > 0) {
+          elementNames.forEach(name => {
+            const capitalizedName = name.charAt(0).toUpperCase() + name.slice(1);
+            code.push(`  test('should interact with ${name}', async ({ page }) => {\n`);
+            code.push(`    const pageObject = new ${className}(page);\n`);
+            code.push(`    await pageObject.navigateTo();\n`);
+            code.push(`    // Verify element is visible\n`);
+            if (autoHealing) {
+              code.push(`    await expect(await pageObject.isVisible('${name}')).toBeTruthy();\n`);
+            } else {
+              code.push(`    await expect(page.locator(pageObject.${name}Selector)).toBeVisible();\n`);
+            }
+            code.push(`    // Interact with the element\n`);
+            code.push(`    // Example: await pageObject.click${capitalizedName}();\n`);
+            code.push(`  });\n\n`);
+          });
+        }
+        
+        // Add a test case for content verification using the HTML contexts
+        code.push(`  test('should verify content based on HTML context', async ({ page }) => {\n`);
+        code.push(`    const pageObject = new ${className}(page);\n`);
+        code.push(`    await pageObject.navigateTo();\n`);
+        code.push(`    // Verify key content elements from the original HTML\n`);
+        code.push(`    // The test should check for specific text or elements that were present in the original HTML\n`);
+        code.push(`    // Example: await expect(page.locator('h1')).toContainText('Expected Heading');\n`);
+        code.push(`  });\n`);
+        
+        code.push(`});\n`);
+      }
+      
+      // Join all code parts and return
+      return code.join("");
+    }
+    
+    document.getElementById('pomMode').addEventListener('change', function() {
+      const btn = document.getElementById('generatePageClassBtn');
+      if (this.value === 'ai') {
+        btn.disabled = true;
+        btn.style.opacity = 0.6;
+        btn.title = 'AI mode coming soon';
+      } else {
+        btn.disabled = false;
+        btn.style.opacity = 1;
+        btn.title = '';
+      }
+    });
+    // Initialize button state on page load
+    document.getElementById('pomMode').dispatchEvent(new Event('change'));
+  </script>
+  <script>
+    document.getElementById('toggleExtractionPanel').onclick = function() {
+      const panel = document.getElementById('extractionPanel');
+      if (panel.style.display === 'none') {
+        panel.style.display = '';
+        this.textContent = 'Hide Extraction Panel';
+      } else {
+        panel.style.display = 'none';
+        this.textContent = 'Show Extraction Panel';
+      }
+    };
+  </script>
+</body>
+</html>

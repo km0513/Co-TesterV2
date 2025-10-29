@@ -1,0 +1,1143 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>QA Learning Resources - Co-Tester</title>
+  <link rel="icon"
+    href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none'><defs><linearGradient id='favGradient' x1='0%' y1='0%' x2='100%' y2='100%'><stop offset='0%' style='stop-color:%23f59e0b;stop-opacity:1' /><stop offset='100%' style='stop-color:%23d97706;stop-opacity:1' /></linearGradient></defs><path d='M12 2L13.09 8.26L20 9L13.09 9.74L12 16L10.91 9.74L4 9L10.91 8.26L12 2Z' fill='url(%23favGradient)'/><circle cx='12' cy='12' r='3' fill='none' stroke='url(%23favGradient)' stroke-width='1.8'/></svg>">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+    rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="/static/styles.css">
+  <link rel="stylesheet" href="/static/left-sidebar.css">
+  <style>
+    :root {
+      --primary: #6366f1;
+      --primary-hover: #4f46e5;
+      --primary-light: #a5b4fc;
+      --secondary: #1f2937;
+      --secondary-light: #374151;
+      --bg-light: #f8fafc;
+      --bg-dark: #0f172a;
+      --text-light: #64748b;
+      --text-dark: #0f172a;
+      --text-white: #ffffff;
+      --border: #e2e8f0;
+      --success: #10b981;
+      --error: #ef4444;
+      --warning: #f59e0b;
+      --info: #3b82f6;
+      --glass-bg: rgba(255, 255, 255, 0.7);
+      --glass-border: rgba(255, 255, 255, 0.2);
+      --shadow-xl: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+      --transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg-light);
+      color: var(--text-dark);
+      margin: 0;
+      padding: 0;
+    }
+
+    .main-content {
+      padding: 2rem 2rem 2rem 2rem;
+      margin-left: 280px;
+      min-height: 100vh;
+      background: transparent;
+      position: relative;
+      transition: var(--transition);
+    }
+
+    .main-content::before {
+      content: '';
+      position: fixed;
+      top: 0;
+      left: 280px;
+      right: 0;
+      bottom: 0;
+      background: radial-gradient(circle at 20% 80%, rgba(99, 102, 241, 0.05) 0%, transparent 50%),
+        radial-gradient(circle at 80% 20%, rgba(139, 92, 246, 0.05) 0%, transparent 50%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .learning-container {
+      padding: 2rem;
+      max-width: 1400px;
+      margin: 0 auto;
+      position: relative;
+      z-index: 1;
+    }
+
+    .learning-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+      gap: 2rem;
+      margin-top: 2rem;
+    }
+
+    .learning-section {
+      background: white;
+      backdrop-filter: blur(20px);
+      border-radius: 16px;
+      padding: 2rem;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+      border: 1px solid rgba(99, 102, 241, 0.1);
+      transition: var(--transition);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .learning-section::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 4px;
+      background: linear-gradient(90deg, var(--primary), var(--info));
+    }
+
+    .learning-section:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
+    }
+
+    .section-header {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .section-icon {
+      width: 48px;
+      height: 48px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.5rem;
+      color: white;
+      background: linear-gradient(135deg, var(--primary) 0%, var(--info) 100%);
+    }
+
+    .section-title {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: var(--text-dark);
+      margin: 0;
+    }
+
+    .section-content {
+      color: var(--text-light);
+      line-height: 1.6;
+    }
+
+    .resource-list {
+      list-style: none;
+      padding: 0;
+      margin: 1rem 0;
+    }
+
+    .resource-item {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.75rem 0;
+      border-bottom: 1px solid var(--border);
+      transition: var(--transition);
+    }
+
+    .resource-item:last-child {
+      border-bottom: none;
+    }
+
+    .resource-item:hover {
+      background: rgba(99, 102, 241, 0.05);
+      border-radius: 8px;
+      padding-left: 0.5rem;
+      margin: 0 -0.5rem;
+    }
+
+    .resource-icon {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.875rem;
+      color: white;
+      flex-shrink: 0;
+    }
+
+    .resource-link {
+      color: var(--text-dark);
+      text-decoration: none;
+      font-weight: 500;
+      flex: 1;
+      transition: var(--transition);
+    }
+
+    .resource-link:hover {
+      color: var(--primary);
+    }
+
+    .resource-description {
+      font-size: 0.875rem;
+      color: var(--text-light);
+      margin-top: 0.25rem;
+    }
+
+    .external-link-icon {
+      opacity: 0;
+      transition: var(--transition);
+      color: var(--text-light);
+    }
+
+    .resource-item:hover .external-link-icon {
+      opacity: 1;
+    }
+
+    .quick-tips {
+      background: linear-gradient(135deg, rgba(245, 158, 11, 0.15) 0%, rgba(251, 191, 36, 0.15) 100%);
+      border: 1px solid rgba(245, 158, 11, 0.3);
+      border-radius: 12px;
+      padding: 1.5rem;
+      margin: 2rem 0;
+      backdrop-filter: blur(10px);
+    }
+
+    .quick-tips-title {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-weight: 700;
+      color: #92400e;
+      margin-bottom: 1rem;
+    }
+
+    .tip-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+
+    .tip-item {
+      padding: 0.5rem 0;
+      color: #92400e;
+      display: flex;
+      align-items: flex-start;
+      gap: 0.5rem;
+    }
+
+    .co-tester-tutorials {
+      background: linear-gradient(135deg, #e0f2fe 0%, #b3e5fc 100%);
+      border: 1px solid #0ea5e9;
+    }
+
+    .co-tester-tutorials::before {
+      background: linear-gradient(90deg, #0ea5e9, #0284c7);
+    }
+
+    .certification-path {
+      background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+      border: 1px solid #22c55e;
+    }
+
+    .certification-path::before {
+      background: linear-gradient(90deg, #22c55e, #16a34a);
+    }
+
+    .progress-indicator {
+      display: inline-block;
+      background: linear-gradient(45deg, #10b981, #059669);
+      color: white;
+      padding: 0.25rem 0.75rem;
+      border-radius: 8px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      margin-left: 0.5rem;
+    }
+
+    @media (max-width: 768px) {
+      .main-content {
+        padding: 0;
+        padding-top: 0;
+        margin-left: 0;
+      }
+
+      .learning-container {
+        padding: 1rem;
+      }
+
+      .learning-grid {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+      }
+
+      .learning-section {
+        padding: 1.5rem;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  {% set active_tab = 'learning' %}
+  {% include 'left-sidebar.html' %}
+
+  <div class="main-content">
+    {% set page_title = 'QA Learning Resources' %}
+    {% set page_subtitle = 'Comprehensive guides, tutorials, and references to master quality assurance and testing
+    methodologies.' %}
+    {% include 'page-header.html' %}
+
+    <div class="learning-container">
+
+      <div class="quick-tips">
+        <div class="quick-tips-title">
+          <i class="fas fa-lightbulb"></i>
+          Quick Start Tips
+        </div>
+        <ul class="tip-list">
+          <li class="tip-item">
+            <i class="fas fa-star"></i>
+            Start with QA fundamentals if you're new to testing
+          </li>
+          <li class="tip-item">
+            <i class="fas fa-star"></i>
+            Practice with Co-Tester tools to reinforce learning
+          </li>
+          <li class="tip-item">
+            <i class="fas fa-star"></i>
+            Join testing communities for continuous learning
+          </li>
+        </ul>
+      </div>
+
+      <div class="learning-grid">
+
+        <!-- QA Fundamentals -->
+        <div class="learning-section">
+          <div class="section-header">
+            <div class="section-icon">
+              <i class="fas fa-graduation-cap"></i>
+            </div>
+            <h2 class="section-title">QA Fundamentals</h2>
+          </div>
+          <div class="section-content">
+            <p>Master the core principles and methodologies of software quality assurance.</p>
+
+            <ul class="resource-list">
+              <li class="resource-item">
+                <div class="resource-icon" style="background: #10b981;">
+                  <i class="fas fa-book"></i>
+                </div>
+                <div>
+                  <a href="https://www.guru99.com/software-testing.html" target="_blank" class="resource-link">
+                    Software Testing Tutorial
+                    <i class="fas fa-external-link-alt external-link-icon"></i>
+                  </a>
+                  <div class="resource-description">Complete guide to software testing concepts</div>
+                </div>
+              </li>
+
+              <li class="resource-item">
+                <div class="resource-icon" style="background: #3b82f6;">
+                  <i class="fas fa-cycle"></i>
+                </div>
+                <div>
+                  <a href="https://www.browserstack.com/guide/software-testing-life-cycle" target="_blank"
+                    class="resource-link">
+                    STLC - Testing Life Cycle
+                    <i class="fas fa-external-link-alt external-link-icon"></i>
+                  </a>
+                  <div class="resource-description">Complete guide to software testing lifecycle phases</div>
+                </div>
+              </li>
+
+              <li class="resource-item">
+                <div class="resource-icon" style="background: #f59e0b;">
+                  <i class="fas fa-layer-group"></i>
+                </div>
+                <div>
+                  <a href="https://www.browserstack.com/guide/testing-pyramid" target="_blank"
+                    class="resource-link">
+                    Testing Pyramid & Levels
+                    <i class="fas fa-external-link-alt external-link-icon"></i>
+                  </a>
+                  <div class="resource-description">Unit, Integration, System, and E2E testing strategies</div>
+                </div>
+              </li>
+
+              <li class="resource-item">
+                <div class="resource-icon" style="background: #8b5cf6;">
+                  <i class="fas fa-bug"></i>
+                </div>
+                <div>
+                  <a href="https://www.atlassian.com/continuous-delivery/software-testing/types-of-software-testing"
+                    target="_blank" class="resource-link">
+                    Testing Types Guide
+                    <i class="fas fa-external-link-alt external-link-icon"></i>
+                  </a>
+                  <div class="resource-description">Functional vs Non-functional testing explained</div>
+                </div>
+              </li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- Testing Tools & Techniques -->
+        <div class="learning-section">
+          <div class="section-header">
+            <div class="section-icon">
+              <i class="fas fa-tools"></i>
+            </div>
+            <h2 class="section-title">Tools & Techniques</h2>
+          </div>
+          <div class="section-content">
+            <p>Learn about popular testing tools and advanced techniques.</p>
+
+            <ul class="resource-list">
+              <li class="resource-item">
+                <div class="resource-icon" style="background: #059669;">
+                  <i class="fas fa-robot"></i>
+                </div>
+                <div>
+                  <a href="https://selenium-python.readthedocs.io/" target="_blank" class="resource-link">
+                    Selenium Documentation
+                    <i class="fas fa-external-link-alt external-link-icon"></i>
+                  </a>
+                  <div class="resource-description">Web automation testing framework</div>
+                </div>
+              </li>
+
+              <li class="resource-item">
+                <div class="resource-icon" style="background: #dc2626;">
+                  <i class="fas fa-vial"></i>
+                </div>
+                <div>
+                  <a href="https://docs.pytest.org/" target="_blank" class="resource-link">
+                    PyTest Framework
+                    <i class="fas fa-external-link-alt external-link-icon"></i>
+                  </a>
+                  <div class="resource-description">Python testing framework guide</div>
+                </div>
+              </li>
+
+              <li class="resource-item">
+                <div class="resource-icon" style="background: #ea580c;">
+                  <i class="fas fa-rocket"></i>
+                </div>
+                <div>
+                  <a href="https://learning.postman.com/docs/getting-started/introduction/" target="_blank"
+                    class="resource-link">
+                    Postman API Testing
+                    <i class="fas fa-external-link-alt external-link-icon"></i>
+                  </a>
+                  <div class="resource-description">API testing and documentation tool</div>
+                </div>
+              </li>
+
+              <li class="resource-item">
+                <div class="resource-icon" style="background: #2e8555;">
+                  <i class="fas fa-desktop"></i>
+                </div>
+                <div>
+                  <a href="https://playwright.dev/docs/intro" target="_blank" class="resource-link">
+                    Playwright Testing
+                    <i class="fas fa-external-link-alt external-link-icon"></i>
+                  </a>
+                  <div class="resource-description">Modern cross-browser automation framework</div>
+                </div>
+              </li>
+
+              <li class="resource-item">
+                <div class="resource-icon" style="background: #00d8ff;">
+                  <i class="fas fa-robot"></i>
+                </div>
+                <div>
+                  <a href="https://www.cypress.io/app/" target="_blank" class="resource-link">
+                    Cypress E2E Testing
+                    <i class="fas fa-external-link-alt external-link-icon"></i>
+                  </a>
+                  <div class="resource-description">Fast, easy and reliable testing for modern web apps</div>
+                </div>
+              </li>
+
+              <li class="resource-item">
+                <div class="resource-icon" style="background: #dc2626;">
+                  <i class="fas fa-tachometer-alt"></i>
+                </div>
+                <div>
+                  <a href="https://jmeter.apache.org/usermanual/get-started.html" target="_blank" class="resource-link">
+                    JMeter Performance Testing
+                    <i class="fas fa-external-link-alt external-link-icon"></i>
+                  </a>
+                  <div class="resource-description">Load and performance testing tool</div>
+                </div>
+              </li>
+
+              <li class="resource-item">
+                <div class="resource-icon" style="background: #059669;">
+                  <i class="fas fa-bolt"></i>
+                </div>
+                <div>
+                  <a href="https://k6.io/docs/" target="_blank" class="resource-link">
+                    K6 Load Testing
+                    <i class="fas fa-external-link-alt external-link-icon"></i>
+                  </a>
+                  <div class="resource-description">Modern load testing for developers</div>
+                </div>
+              </li>
+
+              <li class="resource-item">
+                <div class="resource-icon" style="background: #1d4ed8;">
+                  <i class="fas fa-chart-line"></i>
+                </div>
+                <div>
+                  <a href="https://gatling.io/docs/gatling/" target="_blank" class="resource-link">
+                    Gatling Performance Testing
+                    <i class="fas fa-external-link-alt external-link-icon"></i>
+                  </a>
+                  <div class="resource-description">High-performance load testing framework</div>
+                </div>
+              </li>
+
+              <li class="resource-item">
+                <div class="resource-icon" style="background: #dc2626;">
+                  <i class="fas fa-shield-alt"></i>
+                </div>
+                <div>
+                  <a href="https://www.zaproxy.org/getting-started/" target="_blank" class="resource-link">
+                    OWASP ZAP Security Testing
+                    <i class="fas fa-external-link-alt external-link-icon"></i>
+                  </a>
+                  <div class="resource-description">Free security testing proxy tool</div>
+                </div>
+              </li>
+
+              <li class="resource-item">
+                <div class="resource-icon" style="background: #ea580c;">
+                  <i class="fas fa-bug"></i>
+                </div>
+                <div>
+                  <a href="https://portswigger.net/burp/documentation" target="_blank" class="resource-link">
+                    Burp Suite Security Testing
+                    <i class="fas fa-external-link-alt external-link-icon"></i>
+                  </a>
+                  <div class="resource-description">Professional web security testing</div>
+                </div>
+              </li>
+
+              <li class="resource-item">
+                <div class="resource-icon" style="background: #7c3aed;">
+                  <i class="fas fa-lock"></i>
+                </div>
+                <div>
+                  <a href="https://github.com/zaproxy/zaproxy" target="_blank" class="resource-link">
+                    Web Vulnerability Scanning
+                    <i class="fas fa-external-link-alt external-link-icon"></i>
+                  </a>
+                  <div class="resource-description">Automated security vulnerability detection with OWASP ZAP</div>
+                </div>
+              </li>
+
+              <li class="resource-item">
+                <div class="resource-icon" style="background: #6366f1;">
+                  <i class="fas fa-flask"></i>
+                </div>
+                <div>
+                  <a href="https://testcontainers.com/" target="_blank" class="resource-link">
+                    Testcontainers
+                    <i class="fas fa-external-link-alt external-link-icon"></i>
+                  </a>
+                  <div class="resource-description">Docker containers for integration testing</div>
+                </div>
+              </li>
+
+              <li class="resource-item">
+                <div class="resource-icon" style="background: #f97316;">
+                  <i class="fas fa-mobile-alt"></i>
+                </div>
+                <div>
+                  <a href="https://appium.io/docs/en/latest/" target="_blank" class="resource-link">
+                    Appium Mobile Testing
+                    <i class="fas fa-external-link-alt external-link-icon"></i>
+                  </a>
+                  <div class="resource-description">Cross-platform mobile test automation</div>
+                </div>
+              </li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- Industry Standards -->
+        <div class="learning-section">
+          <div class="section-header">
+            <div class="section-icon">
+              <i class="fas fa-certificate"></i>
+            </div>
+            <h2 class="section-title">Industry Standards</h2>
+          </div>
+          <div class="section-content">
+            <p>Stay updated with industry standards and best practices.</p>
+
+            <ul class="resource-list">
+              <li class="resource-item">
+                <div class="resource-icon" style="background: #1d4ed8;">
+                  <i class="fas fa-award"></i>
+                </div>
+                <div>
+                  <a href="https://www.istqb.org/" target="_blank" class="resource-link">
+                    ISTQB Standards
+                    <i class="fas fa-external-link-alt external-link-icon"></i>
+                  </a>
+                  <div class="resource-description">International Software Testing Qualifications Board</div>
+                </div>
+              </li>
+
+              <li class="resource-item">
+                <div class="resource-icon" style="background: #0891b2;">
+                  <i class="fas fa-sync-alt"></i>
+                </div>
+                <div>
+                  <a href="https://agilemanifesto.org/" target="_blank" class="resource-link">
+                    Agile Testing Practices
+                    <i class="fas fa-external-link-alt external-link-icon"></i>
+                  </a>
+                  <div class="resource-description">Agile methodology and testing principles</div>
+                </div>
+              </li>
+
+              <li class="resource-item">
+                <div class="resource-icon" style="background: #be185d;">
+                  <i class="fas fa-infinity"></i>
+                </div>
+                <div>
+                  <a href="https://learn.microsoft.com/en-us/devops/deliver/what-is-continuous-testing" target="_blank"
+                    class="resource-link">
+                    CI/CD Testing
+                    <i class="fas fa-external-link-alt external-link-icon"></i>
+                  </a>
+                  <div class="resource-description">Continuous Integration and Deployment testing</div>
+                </div>
+              </li>
+
+              <li class="resource-item">
+                <div class="resource-icon" style="background: #10b981;">
+                  <i class="fas fa-code-branch"></i>
+                </div>
+                <div>
+                  <a href="https://martinfowler.com/testing/" target="_blank"
+                    class="resource-link">
+                    Testing Best Practices
+                    <i class="fas fa-external-link-alt external-link-icon"></i>
+                  </a>
+                  <div class="resource-description">Martin Fowler's comprehensive testing guides</div>
+                </div>
+              </li>
+
+              <li class="resource-item">
+                <div class="resource-icon" style="background: #059669;">
+                  <i class="fas fa-shield-alt"></i>
+                </div>
+                <div>
+                  <a href="https://owasp.org/www-project-web-security-testing-guide/" target="_blank"
+                    class="resource-link">
+                    Security Testing Guide
+                    <i class="fas fa-external-link-alt external-link-icon"></i>
+                  </a>
+                  <div class="resource-description">OWASP security testing methodology</div>
+                </div>
+              </li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- Recommended Books -->
+        <div class="learning-section">
+          <div class="section-header">
+            <div class="section-icon">
+              <i class="fas fa-book-open"></i>
+            </div>
+            <h2 class="section-title">Recommended Books</h2>
+          </div>
+          <div class="section-content">
+            <p>Essential reading for QA professionals and testers.</p>
+
+            <ul class="resource-list">
+              <li class="resource-item">
+                <div class="resource-icon" style="background: #dc2626;">
+                  <i class="fas fa-book"></i>
+                </div>
+                <div>
+                  <a href="https://www.amazon.com/Art-Software-Testing-Glenford-Myers/dp/1118031962" target="_blank"
+                    class="resource-link">
+                    The Art of Software Testing
+                    <i class="fas fa-external-link-alt external-link-icon"></i>
+                  </a>
+                  <div class="resource-description">By Glenford J. Myers - Classic testing fundamentals</div>
+                </div>
+              </li>
+
+              <li class="resource-item">
+                <div class="resource-icon" style="background: #7c3aed;">
+                  <i class="fas fa-book"></i>
+                </div>
+                <div>
+                  <a href="https://www.amazon.com/Agile-Testing-Practical-Guide-Testers/dp/0321534468" target="_blank"
+                    class="resource-link">
+                    Agile Testing
+                    <i class="fas fa-external-link-alt external-link-icon"></i>
+                  </a>
+                  <div class="resource-description">By Lisa Crispin & Janet Gregory</div>
+                </div>
+              </li>
+
+              <li class="resource-item">
+                <div class="resource-icon" style="background: #0891b2;">
+                  <i class="fas fa-book"></i>
+                </div>
+                <div>
+                  <a href="https://www.amazon.com/Lessons-Learned-Software-Testing-Approach/dp/0471081124"
+                    target="_blank" class="resource-link">
+                    Lessons Learned in Software Testing
+                    <i class="fas fa-external-link-alt external-link-icon"></i>
+                  </a>
+                  <div class="resource-description">By Cem Kaner, James Bach, Bret Pettichord</div>
+                </div>
+              </li>
+
+              <li class="resource-item">
+                <div class="resource-icon" style="background: #059669;">
+                  <i class="fas fa-book"></i>
+                </div>
+                <div>
+                  <a href="https://www.amazon.com/Google-Tests-Software-James-Whittaker/dp/0321803027" target="_blank"
+                    class="resource-link">
+                    How Google Tests Software
+                    <i class="fas fa-external-link-alt external-link-icon"></i>
+                  </a>
+                  <div class="resource-description">By James A. Whittaker</div>
+                </div>
+              </li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- Online Courses & Certifications -->
+        <div class="learning-section certification-path">
+          <div class="section-header">
+            <div class="section-icon">
+              <i class="fas fa-graduation-cap"></i>
+            </div>
+            <h2 class="section-title">Courses & Certifications</h2>
+          </div>
+          <div class="section-content">
+            <p>Structured learning paths and professional certifications.</p>
+
+            <ul class="resource-list">
+              <li class="resource-item">
+                <div class="resource-icon" style="background: #1d4ed8;">
+                  <i class="fas fa-university"></i>
+                </div>
+                <div>
+                  <a href="https://www.coursera.org/specializations/software-testing-automation" target="_blank"
+                    class="resource-link">
+                    Software Testing & Automation
+                    <i class="fas fa-external-link-alt external-link-icon"></i>
+                  </a>
+                  <div class="resource-description">University of Minnesota - Coursera Specialization</div>
+                </div>
+              </li>
+
+              <li class="resource-item">
+                <div class="resource-icon" style="background: #059669;">
+                  <i class="fas fa-certificate"></i>
+                </div>
+                <div>
+                  <a href="https://www.udemy.com/topic/software-testing/" target="_blank" class="resource-link">
+                    Software Testing Courses
+                    <i class="fas fa-external-link-alt external-link-icon"></i>
+                  </a>
+                  <div class="resource-description">Udemy comprehensive testing courses</div>
+                </div>
+              </li>
+
+              <li class="resource-item">
+                <div class="resource-icon" style="background: #f59e0b;">
+                  <i class="fas fa-graduation-cap"></i>
+                </div>
+                <div>
+                  <a href="https://www.linkedin.com/learning/topics/software-testing" target="_blank" class="resource-link">
+                    LinkedIn Learning - Testing
+                    <i class="fas fa-external-link-alt external-link-icon"></i>
+                  </a>
+                  <div class="resource-description">Professional development courses</div>
+                </div>
+              </li>
+
+              <li class="resource-item">
+                <div class="resource-icon" style="background: #8b5cf6;">
+                  <i class="fas fa-video"></i>
+                </div>
+                <div>
+                  <a href="https://www.youtube.com/@AutomationStepByStep" target="_blank" class="resource-link">
+                    Automation Step by Step
+                    <i class="fas fa-external-link-alt external-link-icon"></i>
+                  </a>
+                  <div class="resource-description">Free YouTube tutorials on test automation</div>
+                </div>
+              </li>
+
+              <li class="resource-item">
+                <div class="resource-icon" style="background: #ea580c;">
+                  <i class="fas fa-trophy"></i>
+                </div>
+                <div>
+                  <a href="https://www.istqb.org/certifications" target="_blank" class="resource-link">
+                    ISTQB Certification Path
+                    <i class="fas fa-external-link-alt external-link-icon"></i>
+                  </a>
+                  <div class="resource-description">Foundation, Advanced, Expert levels</div>
+                </div>
+              </li>
+
+              <li class="resource-item">
+                <div class="resource-icon" style="background: #7c3aed;">
+                  <i class="fas fa-code"></i>
+                </div>
+                <div>
+                  <a href="https://testautomationu.applitools.com/" target="_blank" class="resource-link">
+                    Test Automation University
+                    <i class="fas fa-external-link-alt external-link-icon"></i>
+                  </a>
+                  <div class="resource-description">Free automation testing courses</div>
+                </div>
+              </li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- Co-Tester Tutorials -->
+        <div class="learning-section co-tester-tutorials">
+          <div class="section-header">
+            <div class="section-icon">
+              <i class="fas fa-play-circle"></i>
+            </div>
+            <h2 class="section-title">Co-Tester Tutorials</h2>
+          </div>
+          <div class="section-content">
+            <p>Learn how to maximize your productivity with Co-Tester features.</p>
+
+            <ul class="resource-list">
+              <li class="resource-item">
+                <div class="resource-icon" style="background: #10b981;">
+                  <i class="fas fa-magic"></i>
+                </div>
+                <div>
+                  <a href="#" data-href="/test-generator" class="resource-link">
+                    AI Test Generator Tutorial
+                    <span class="progress-indicator">Feature Guide</span>
+                  </a>
+                  <div class="resource-description">Generate comprehensive test cases with AI</div>
+                </div>
+              </li>
+
+              <li class="resource-item">
+                <div class="resource-icon" style="background: #667eea;">
+                  <i class="fas fa-video"></i>
+                </div>
+                <div>
+                  <a href="#" data-href="/automation-test-creator" class="resource-link">
+                    Automation Test Creator
+                    <span class="progress-indicator">NEW</span>
+                  </a>
+                  <div class="resource-description">Record, AI-enhance, and execute Playwright tests</div>
+                </div>
+              </li>
+
+              <li class="resource-item">
+                <div class="resource-icon" style="background: #3b82f6;">
+                  <i class="fas fa-search-plus"></i>
+                </div>
+                <div>
+                  <a href="#" data-href="/ui-analyzer" class="resource-link">
+                    UI Analysis Best Practices
+                    <span class="progress-indicator">Feature Guide</span>
+                  </a>
+                  <div class="resource-description">Analyze UI components and generate tests</div>
+                </div>
+              </li>
+
+              <li class="resource-item">
+                <div class="resource-icon" style="background: #f59e0b;">
+                  <i class="fas fa-code"></i>
+                </div>
+                <div>
+                  <a href="#" data-href="/api-co-test" class="resource-link">
+                    API Testing Workflows
+                    <span class="progress-indicator">Feature Guide</span>
+                  </a>
+                  <div class="resource-description">Master API testing with cURL runner</div>
+                </div>
+              </li>
+
+              <li class="resource-item">
+                <div class="resource-icon" style="background: #8b5cf6;">
+                  <i class="fas fa-cubes"></i>
+                </div>
+                <div>
+                  <a href="#" data-href="/pom-builder" class="resource-link">
+                    POM Builder Guide
+                    <span class="progress-indicator">Feature Guide</span>
+                  </a>
+                  <div class="resource-description">Build maintainable Page Object Models</div>
+                </div>
+              </li>
+
+              <li class="resource-item">
+                <div class="resource-icon" style="background: #ec4899;">
+                  <i class="fas fa-bug"></i>
+                </div>
+                <div>
+                  <a href="#" data-href="/bug-builder" class="resource-link">
+                    Bug Builder Workflow
+                    <span class="progress-indicator">Feature Guide</span>
+                  </a>
+                  <div class="resource-description">Create detailed bug reports with video evidence</div>
+                </div>
+              </li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- AI & Modern Testing -->
+        <div class="learning-section" style="background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border: 1px solid #f59e0b;">
+          <div class="section-header">
+            <div class="section-icon" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);">
+              <i class="fas fa-brain"></i>
+            </div>
+            <h2 class="section-title">AI & Modern Testing</h2>
+          </div>
+          <div class="section-content">
+            <p>Leverage AI and modern tools to enhance testing efficiency.</p>
+
+            <ul class="resource-list">
+              <li class="resource-item">
+                <div class="resource-icon" style="background: #10b981;">
+                  <i class="fas fa-robot"></i>
+                </div>
+                <div>
+                  <a href="https://www.selenium.dev/documentation/test_practices/encouraged/page_object_models/" target="_blank" class="resource-link">
+                    AI-Powered Test Generation
+                    <i class="fas fa-external-link-alt external-link-icon"></i>
+                  </a>
+                  <div class="resource-description">Automated test case generation with AI</div>
+                </div>
+              </li>
+
+              <li class="resource-item">
+                <div class="resource-icon" style="background: #6366f1;">
+                  <i class="fas fa-magic"></i>
+                </div>
+                <div>
+                  <a href="https://github.com/features/copilot" target="_blank" class="resource-link">
+                    GitHub Copilot for Testing
+                    <i class="fas fa-external-link-alt external-link-icon"></i>
+                  </a>
+                  <div class="resource-description">AI pair programmer for test automation</div>
+                </div>
+              </li>
+
+              <li class="resource-item">
+                <div class="resource-icon" style="background: #8b5cf6;">
+                  <i class="fas fa-eye"></i>
+                </div>
+                <div>
+                  <a href="https://applitools.com/platform/eyes/" target="_blank" class="resource-link">
+                    Visual AI Testing
+                    <i class="fas fa-external-link-alt external-link-icon"></i>
+                  </a>
+                  <div class="resource-description">AI-powered visual regression testing</div>
+                </div>
+              </li>
+
+              <li class="resource-item">
+                <div class="resource-icon" style="background: #ec4899;">
+                  <i class="fas fa-search"></i>
+                </div>
+                <div>
+                  <a href="https://www.mabl.com/" target="_blank" class="resource-link">
+                    Intelligent Test Automation
+                    <i class="fas fa-external-link-alt external-link-icon"></i>
+                  </a>
+                  <div class="resource-description">ML-driven test automation platform</div>
+                </div>
+              </li>
+
+              <li class="resource-item">
+                <div class="resource-icon" style="background: #14b8a6;">
+                  <i class="fas fa-bolt"></i>
+                </div>
+                <div>
+                  <a href="https://www.lambdatest.com/" target="_blank" class="resource-link">
+                    Cloud Testing Platform
+                    <i class="fas fa-external-link-alt external-link-icon"></i>
+                  </a>
+                  <div class="resource-description">Cross-browser testing on cloud infrastructure</div>
+                </div>
+              </li>
+
+              <li class="resource-item">
+                <div class="resource-icon" style="background: #f97316;">
+                  <i class="fas fa-code"></i>
+                </div>
+                <div>
+                  <a href="https://docs.github.com/en/actions/automating-builds-and-tests" target="_blank" class="resource-link">
+                    GitHub Actions for Testing
+                    <i class="fas fa-external-link-alt external-link-icon"></i>
+                  </a>
+                  <div class="resource-description">CI/CD automation for test workflows</div>
+                </div>
+              </li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- Community & Forums -->
+        <div class="learning-section">
+          <div class="section-header">
+            <div class="section-icon">
+              <i class="fas fa-users"></i>
+            </div>
+            <h2 class="section-title">Community & Forums</h2>
+          </div>
+          <div class="section-content">
+            <p>Connect with the testing community and stay updated.</p>
+
+            <ul class="resource-list">
+              <li class="resource-item">
+                <div class="resource-icon" style="background: #dc2626;">
+                  <i class="fab fa-reddit"></i>
+                </div>
+                <div>
+                  <a href="https://www.reddit.com/r/QualityAssurance/" target="_blank" class="resource-link">
+                    r/QualityAssurance
+                    <i class="fas fa-external-link-alt external-link-icon"></i>
+                  </a>
+                  <div class="resource-description">Reddit community for QA professionals</div>
+                </div>
+              </li>
+
+              <li class="resource-item">
+                <div class="resource-icon" style="background: #0891b2;">
+                  <i class="fab fa-linkedin"></i>
+                </div>
+                <div>
+                  <a href="https://www.linkedin.com/groups/55636/" target="_blank" class="resource-link">
+                    Software Testing & QA
+                    <i class="fas fa-external-link-alt external-link-icon"></i>
+                  </a>
+                  <div class="resource-description">LinkedIn professional testing group</div>
+                </div>
+              </li>
+
+              <li class="resource-item">
+                <div class="resource-icon" style="background: #7c3aed;">
+                  <i class="fas fa-comments"></i>
+                </div>
+                <div>
+                  <a href="https://club.ministryoftesting.com/" target="_blank" class="resource-link">
+                    Ministry of Testing
+                    <i class="fas fa-external-link-alt external-link-icon"></i>
+                  </a>
+                  <div class="resource-description">Global testing community and resources</div>
+                </div>
+              </li>
+
+              <li class="resource-item">
+                <div class="resource-icon" style="background: #059669;">
+                  <i class="fab fa-slack"></i>
+                </div>
+                <div>
+                  <a href="https://www.ministryoftesting.com/slack_invite" target="_blank" class="resource-link">
+                    Ministry of Testing Slack
+                    <i class="fas fa-external-link-alt external-link-icon"></i>
+                  </a>
+                  <div class="resource-description">Active testing community with 30k+ members</div>
+                </div>
+              </li>
+
+              <li class="resource-item">
+                <div class="resource-icon" style="background: #f97316;">
+                  <i class="fab fa-stack-overflow"></i>
+                </div>
+                <div>
+                  <a href="https://sqa.stackexchange.com/" target="_blank" class="resource-link">
+                    Software QA Stack Exchange
+                    <i class="fas fa-external-link-alt external-link-icon"></i>
+                  </a>
+                  <div class="resource-description">Q&A community for testing professionals</div>
+                </div>
+              </li>
+
+              <li class="resource-item">
+                <div class="resource-icon" style="background: #1d4ed8;">
+                  <i class="fab fa-discord"></i>
+                </div>
+                <div>
+                  <a href="https://discord.gg/playwright-807756831384403968" target="_blank" class="resource-link">
+                    Playwright Discord
+                    <i class="fas fa-external-link-alt external-link-icon"></i>
+                  </a>
+                  <div class="resource-description">Official Playwright community support</div>
+                </div>
+              </li>
+
+              <li class="resource-item">
+                <div class="resource-icon" style="background: #10b981;">
+                  <i class="fab fa-github"></i>
+                </div>
+                <div>
+                  <a href="https://github.com/topics/test-automation" target="_blank" class="resource-link">
+                    Test Automation on GitHub
+                    <i class="fas fa-external-link-alt external-link-icon"></i>
+                  </a>
+                  <div class="resource-description">Open source test automation projects</div>
+                </div>
+              </li>
+            </ul>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <script src="/static/auth-utils.js"></script>
+  <script>
+    // Handle internal navigation links
+    document.addEventListener('DOMContentLoaded', function () {
+      const internalLinks = document.querySelectorAll('a[data-href]');
+      internalLinks.forEach(link => {
+        link.addEventListener('click', function (e) {
+          e.preventDefault();
+          const targetUrl = this.getAttribute('data-href');
+          if (targetUrl && targetUrl !== '#') {
+            window.location.href = targetUrl;
+          }
+        });
+      });
+    });
+  </script>
+</body>
+
+</html>

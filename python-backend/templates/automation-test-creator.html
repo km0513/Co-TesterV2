@@ -1,0 +1,995 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Automation Test Creator - Co-Tester</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none'><defs><linearGradient id='favGradient' x1='0%' y1='0%' x2='100%' y2='100%'><stop offset='0%' style='stop-color:%23f59e0b;stop-opacity:1' /><stop offset='100%' style='stop-color:%23d97706;stop-opacity:1' /></linearGradient></defs><path d='M12 2L13.09 8.26L20 9L13.09 9.74L12 16L10.91 9.74L4 9L10.91 8.26L12 2Z' fill='url(%23favGradient)'/><circle cx='12' cy='12' r='3' fill='none' stroke='url(%23favGradient)' stroke-width='1.8'/></svg>">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='left-sidebar.css') }}">
+  <!-- Prism.js for Syntax Highlighting -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css">
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+    
+    body {
+      background: #f8fafc;
+      min-height: 100vh;
+      margin: 0;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      color: #1f2937;
+      line-height: 1.6;
+    }
+    
+    .test-creator-container {
+      max-width: 1600px;
+      margin: 0 auto;
+    }
+    
+    /* Compact Workflow Tabs */
+    .workflow-tabs {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 20px;
+      background: linear-gradient(135deg, #2d3748 0%, #1a202c 100%);
+      padding: 12px;
+      border-radius: 12px;
+      backdrop-filter: blur(10px);
+      box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.3);
+    }
+
+    .workflow-tab {
+      flex: 1;
+      padding: 12px 16px;
+      background: rgba(255, 255, 255, 0.2);
+      border: 2px solid transparent;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 600;
+      color: #cbd5e0;
+      transition: all 0.3s ease;
+      position: relative;
+      font-size: 13px;
+      text-align: center;
+    }
+
+    .workflow-tab:hover {
+      background: rgba(255, 255, 255, 0.3);
+      color: #e2e8f0;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    }
+
+    .workflow-tab.active {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border-color: #ffffff40;
+      box-shadow: 0 6px 20px rgba(102, 126, 234, 0.5), 0 0 0 3px rgba(102, 126, 234, 0.2);
+      transform: translateY(-2px);
+    }
+    
+    .workflow-tab.active:hover {
+      box-shadow: 0 8px 25px rgba(102, 126, 234, 0.6), 0 0 0 3px rgba(102, 126, 234, 0.3);
+      transform: translateY(-3px);
+    }
+
+    .workflow-tab.completed::before {
+      content: "✓";
+      position: absolute;
+      top: -6px;
+      right: -6px;
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      color: white;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      font-weight: bold;
+      box-shadow: 0 2px 8px rgba(16, 185, 129, 0.5), 0 0 0 2px #1a202c;
+      border: 2px solid white;
+    }
+
+    .workflow-content {
+      display: none;
+    }
+
+    .workflow-content.active {
+      display: block;
+      animation: slideIn 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    @keyframes slideIn {
+      from { 
+        opacity: 0; 
+        transform: translateY(20px) scale(0.98);
+      }
+      to { 
+        opacity: 1; 
+        transform: translateY(0) scale(1);
+      }
+    }
+
+    /* Compact Cards */
+    .section-card {
+      background: white;
+      padding: 24px;
+      border-radius: 12px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+      margin-bottom: 16px;
+    }
+
+    .section-card h3 {
+      margin: 0 0 16px 0;
+      font-size: 18px;
+      color: #1f2937;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    /* Compact Buttons */
+    .btn {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+    }
+
+    .btn-secondary {
+      background: #f5f7fa;
+      color: #667eea;
+      border: 2px solid #667eea;
+      transition: all 0.3s;
+    }
+    
+    .btn-secondary:hover {
+      background: #667eea;
+      color: white;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+    }
+
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none !important;
+    }
+    
+    /* Code Editor Styles */
+    #codeEditor {
+      font-family: 'Consolas', 'Monaco', 'Courier New', monospace !important;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+    
+    #codeEditor:focus {
+      outline: none;
+      border-color: #764ba2;
+      box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    }
+    
+    /* Warning Banner Animation */
+    #editWarningBanner {
+      animation: slideInDown 0.3s ease-out;
+    }
+    
+    @keyframes slideInDown {
+      from {
+        opacity: 0;
+        transform: translateY(-10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .code-display {
+      background: #1e1e1e;
+      color: #d4d4d4;
+      padding: 20px;
+      border-radius: 8px;
+      font-family: 'Courier New', monospace;
+      font-size: 14px;
+      line-height: 1.6;
+      max-height: 500px;
+      overflow-y: auto;
+      margin-top: 20px;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    .form-group label {
+      display: block;
+      font-weight: 600;
+      margin-bottom: 8px;
+      color: #333;
+    }
+
+    .form-group input,
+    .form-group textarea {
+      width: 100%;
+      padding: 12px;
+      border: 2px solid #e1e8ed;
+      border-radius: 8px;
+      font-size: 14px;
+      font-family: inherit;
+    }
+
+    .form-group textarea {
+      min-height: 120px;
+      resize: vertical;
+    }
+
+    .notification {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      padding: 16px 24px;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      z-index: 10000;
+      display: none;
+    }
+
+    .notification.success {
+      background: #28a745;
+      color: white;
+    }
+
+    .notification.error {
+      background: #dc3545;
+      color: white;
+    }
+    
+    .notification.info {
+      background: #17a2b8;
+      color: white;
+    }
+
+    .notification.visible {
+      display: block;
+      animation: slideInRight 0.3s ease;
+    }
+
+    @keyframes slideInRight {
+      from { transform: translateX(400px); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+
+    .loading-spinner {
+      display: inline-block;
+      width: 16px;
+      height: 16px;
+      border: 3px solid rgba(255,255,255,0.3);
+      border-radius: 50%;
+      border-top-color: white;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
+    .export-tab.active {
+      color: #667eea !important;
+      border-bottom-color: #667eea !important;
+    }
+
+    .export-section {
+      animation: fadeIn 0.3s ease;
+    }
+    
+    /* Modern Code Block Styling - VS Code Inspired */
+    .code-block-wrapper {
+      background: #1e1e1e;
+      border-radius: 12px;
+      overflow: hidden;
+      margin: 1rem 0;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+      border: 1px solid #333;
+    }
+    
+    .code-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 16px;
+      background: linear-gradient(180deg, #2d2d30 0%, #252526 100%);
+      border-bottom: 1px solid #1e1e1e;
+    }
+    
+    .code-language {
+      color: #4ec9b0;
+      font-weight: 600;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    .code-language::before {
+      content: "●";
+      color: #10b981;
+      font-size: 16px;
+      animation: pulse 2s ease-in-out infinite;
+    }
+    
+    .copy-code-btn {
+      background: rgba(102, 126, 234, 0.1);
+      color: #667eea;
+      border: 1px solid rgba(102, 126, 234, 0.3);
+      padding: 5px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 11px;
+      font-weight: 600;
+      transition: all 0.2s;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    
+    .copy-code-btn:hover {
+      background: rgba(102, 126, 234, 0.2);
+      border-color: #667eea;
+      transform: translateY(-1px);
+      box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+    }
+    
+    .code-block-wrapper pre {
+      margin: 0;
+      padding: 20px;
+      overflow-x: auto;
+      background: #1e1e1e;
+      max-height: 500px;
+      font-size: 13px;
+      line-height: 1.6;
+    }
+    
+    .code-block-wrapper pre::-webkit-scrollbar {
+      height: 8px;
+      width: 8px;
+    }
+    
+    .code-block-wrapper pre::-webkit-scrollbar-track {
+      background: #2d2d30;
+    }
+    
+    .code-block-wrapper pre::-webkit-scrollbar-thumb {
+      background: #424242;
+      border-radius: 4px;
+    }
+    
+    .code-block-wrapper pre::-webkit-scrollbar-thumb:hover {
+      background: #4e4e4e;
+    }
+    
+    .code-block-wrapper code {
+      font-family: 'Fira Code', 'Consolas', 'Monaco', 'Courier New', monospace;
+      font-size: 13px;
+      line-height: 1.6;
+      color: #d4d4d4;
+    }
+    
+    /* Line numbers styling */
+    .code-block-wrapper .line-numbers-rows {
+      border-right: 1px solid #333;
+    }
+    
+    /* Modern Manual Steps Styling */
+    .manual-steps-list {
+      display: grid;
+      gap: 10px;
+      padding: 0.5rem 0;
+    }
+    
+    .manual-step-item {
+      display: grid;
+      grid-template-columns: 32px 1fr;
+      gap: 12px;
+      padding: 14px 16px;
+      background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+      border-left: 3px solid #667eea;
+      border-radius: 8px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    
+    .manual-step-item:hover {
+      transform: translateX(3px);
+      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
+      border-left-color: #764ba2;
+    }
+    
+    .step-number {
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border-radius: 8px;
+      font-weight: 700;
+      font-size: 14px;
+      box-shadow: 0 2px 8px rgba(102, 126, 234, 0.25);
+    }
+    
+    .step-content {
+      color: #334155;
+      font-size: 14px;
+      line-height: 1.6;
+      padding-top: 4px;
+    }
+    
+    /* Compact Input/Textarea Styling */
+    input[type="text"],
+    input[type="url"],
+    textarea {
+      width: 100%;
+      padding: 10px 14px;
+      border: 2px solid #e2e8f0;
+      border-radius: 8px;
+      font-size: 14px;
+      transition: all 0.2s;
+      font-family: 'Inter', sans-serif;
+    }
+    
+    input[type="text"]:focus,
+    input[type="url"]:focus,
+    textarea:focus {
+      outline: none;
+      border-color: #667eea;
+      box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    }
+    
+    textarea {
+      resize: vertical;
+      min-height: 80px;
+      max-height: 200px;
+    }
+    
+    /* Compact Preview Sections */
+    .preview-section {
+      background: #f8fafc;
+      padding: 12px;
+      border-radius: 8px;
+      margin: 8px 0;
+      max-height: 300px;
+      overflow-y: auto;
+    }
+    
+    .preview-section::-webkit-scrollbar {
+      width: 6px;
+    }
+    
+    .preview-section::-webkit-scrollbar-track {
+      background: #e2e8f0;
+      border-radius: 3px;
+    }
+    
+    .preview-section::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 3px;
+    }
+    
+    .preview-section::-webkit-scrollbar-thumb:hover {
+      background: #94a3b8;
+    }
+    
+    /* Grid Layout for Compact View */
+    .two-column-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin: 16px 0;
+    }
+    
+    @media (max-width: 1024px) {
+      .two-column-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+    
+    /* Status Indicators */
+    .status-indicator {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+    
+    .status-indicator.success {
+      background: #d1fae5;
+      color: #065f46;
+    }
+    
+    .status-indicator.info {
+      background: #dbeafe;
+      color: #1e40af;
+    }
+    
+    .status-indicator.warning {
+      background: #fef3c7;
+      color: #92400e;
+    }
+    
+    /* Export Tabs - Compact */
+    .export-tabs {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 16px;
+      border-bottom: 2px solid #e2e8f0;
+    }
+    
+    .export-tab {
+      padding: 8px 16px;
+      background: none;
+      border: none;
+      border-bottom: 3px solid transparent;
+      cursor: pointer;
+      font-weight: 600;
+      color: #64748b;
+      transition: all 0.2s;
+      font-size: 13px;
+    }
+    
+    .export-tab:hover {
+      color: #667eea;
+      background: rgba(102, 126, 234, 0.05);
+    }
+    
+    .export-tab.active {
+      color: #667eea;
+      border-bottom-color: #667eea;
+    }
+    
+    /* Compact Form Labels */
+    label {
+      display: block;
+      font-weight: 600;
+      font-size: 13px;
+      color: #475569;
+      margin-bottom: 6px;
+    }
+    
+    /* Compact Spacing */
+    .form-group {
+      margin-bottom: 16px;
+    }
+    
+    .form-group:last-child {
+      margin-bottom: 0;
+    }
+  </style>
+</head>
+<body>
+  {% set active_tab = 'ui-automation' %}
+  {% include 'left-sidebar.html' %}
+  
+  <div class="main-content">
+    {% set page_title = '<i class="fas fa-vial"></i> Automation Test Creator <span class="ai-badge">AI</span>' %}
+    {% set allow_html = true %}
+    {% set page_subtitle = 'Record tests with Playwright → Generate details with AI → Export to Jira → Import & Execute' %}
+    {% include 'page-header.html' %}
+    
+    <div class="test-creator-container">
+      <!-- Workflow Tabs -->
+      <div class="workflow-tabs">
+        <button class="workflow-tab active" data-tab="record">1️⃣ Record Test</button>
+        <button class="workflow-tab" data-tab="generate">2️⃣ Generate Details</button>
+        <button class="workflow-tab" data-tab="export">3️⃣ Export to Jira</button>
+        <button class="workflow-tab" data-tab="execute">4️⃣ Import & Execute</button>
+      </div>
+
+      <!-- Step 1: Record -->
+      <div class="workflow-content active" id="record-content">
+        <div class="section-card">
+          <h2>🔴 Record Your Test</h2>
+          <p style="color: #666; margin-bottom: 20px;">Start Playwright Codegen to record automation test steps and optional video</p>
+          
+          <div style="display: flex; gap: 15px; margin-bottom: 20px; flex-wrap: wrap;">
+            <button class="btn btn-primary" id="startRecordBtn"><i class="fas fa-robot"></i> Start Playwright Browser</button>
+            <input type="url" id="recordUrl" placeholder="Enter URL to test (e.g., https://example.com)" style="flex: 1; min-width: 300px; padding: 12px; border: 2px solid #e1e8ed; border-radius: 8px;">
+          </div>
+
+          <!-- Launching Indicator -->
+          <div id="launchingIndicator" style="display: none; margin-bottom: 20px; padding: 15px; background: #fff3cd; border-radius: 8px;">
+            <i class="fas fa-spinner fa-spin"></i>
+            <strong>Launching Playwright Browser...</strong>
+            <p style="margin: 5px 0 0 0;">This may take a few seconds. Please wait...</p>
+          </div>
+
+          <!-- Browser Confirmation -->
+          <div id="browserConfirm" style="display: none;"></div>
+
+          <!-- Video Recording Section -->
+          <div id="videoRecordingSection" style="display: none; margin-bottom: 20px;">
+            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 20px; border-radius: 12px; color: white;">
+              <h3 style="margin-top: 0; color: white;"><i class="fas fa-video"></i> Video Recording (Optional)</h3>
+              <p style="margin-bottom: 15px;">Record a video of the Playwright browser to help AI generate better manual test steps</p>
+              <div style="display: flex; gap: 10px;">
+                <button class="btn btn-primary" id="startVideoBtn" style="background: white; color: #667eea;"><i class="fas fa-video"></i> Start Video Recording</button>
+                <button class="btn btn-secondary" id="skipVideoBtn" style="background: rgba(255,255,255,0.2); color: white; border: 2px solid white;"><i class="fas fa-forward"></i> Skip Video (Code Only)</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Recording Status -->
+          <div id="recordingStatus" style="display: none; padding: 15px; background: #fff3cd; border-radius: 8px; margin-bottom: 20px;">
+            <div style="display: flex; align-items: center; gap: 15px;">
+              <i class="fas fa-circle" style="color: #dc3545; animation: pulse 1.5s infinite;"></i>
+              <div>
+                <strong>Recording Active</strong>
+                <p style="margin: 5px 0 0 0;">Playwright is recording your actions. Video recording: <span id="videoStatusText">Not started</span></p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Finish Recording -->
+          <div id="finishRecordingSection" style="display: none; margin-bottom: 20px;">
+            <button class="btn btn-primary" id="stopRecordBtn"><i class="fas fa-stop"></i> Finish Recording</button>
+          </div>
+
+          <!-- Processing -->
+          <div id="processingIndicator" style="display: none; padding: 20px; background: #f8f9fa; border-radius: 8px; margin-bottom: 20px; text-align: center;">
+            <i class="fas fa-cog fa-spin" style="font-size: 2rem; color: #667eea; margin-bottom: 10px;"></i>
+            <h3 style="margin: 10px 0;">Processing Recording...</h3>
+            <p style="color: #666;">Extracting code and preparing for AI analysis</p>
+          </div>
+
+          <!-- Recorded Code Preview -->
+          <div id="codePreviewSection" style="display: none; margin-bottom: 20px;">
+            <h3><i class="fas fa-code"></i> Recorded Automation Code</h3>
+            <div class="code-display" id="recordedCode"></div>
+          </div>
+
+          <!-- Video Preview -->
+          <div id="videoPreviewSection" style="display: none; margin-bottom: 20px;">
+            <h3><i class="fas fa-video"></i> Recorded Video</h3>
+            <video id="videoPreview" controls style="max-width: 100%; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);"></video>
+          </div>
+          
+          <div style="margin-top: 20px; display: none;" id="nextStepSection">
+            <button class="btn btn-primary" onclick="goToTab('generate')">Next: Generate Test Details with AI →</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 2: Generate -->
+      <div class="workflow-content" id="generate-content">
+        <div class="section-card">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <h3 style="margin: 0;"><i class="fas fa-magic"></i> AI Test Generation</h3>
+            <button class="btn btn-primary" id="aiGenerateBtn">
+              <i class="fas fa-sparkles"></i> Generate with AI
+              <span id="videoGenIndicator" style="display: none; font-size: 11px;">(+Video)</span>
+            </button>
+          </div>
+
+          <div class="two-column-grid">
+            <div class="form-group">
+              <label for="testSummary">📝 Test Summary</label>
+              <input type="text" id="testSummary" placeholder="e.g., Verify user login functionality" />
+            </div>
+
+            <div class="form-group">
+              <label for="testDescription">📄 Description</label>
+              <textarea id="testDescription" placeholder="Describe what this test validates..." style="min-height: 60px;"></textarea>
+            </div>
+          </div>
+
+          <!-- Automated Code Preview -->
+          <div id="automatedStepsPreview" style="display: none; margin-top: 16px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+              <h4 style="margin: 0; font-size: 15px; color: #1f2937;">
+                <i class="fas fa-code"></i> Automated Test Code
+              </h4>
+              <div style="display: flex; gap: 10px;">
+                <button id="editCodeBtn" class="btn btn-secondary" style="padding: 8px 16px; font-size: 13px;" onclick="toggleCodeEditor()">
+                  <i class="fas fa-edit"></i> Edit Code
+                </button>
+                <button id="saveCodeBtn" class="btn btn-primary" style="padding: 8px 16px; font-size: 13px; display: none;" onclick="saveEditedCode()">
+                  <i class="fas fa-save"></i> Save Changes
+                </button>
+                <button id="cancelEditBtn" class="btn btn-secondary" style="padding: 8px 16px; font-size: 13px; display: none;" onclick="cancelCodeEdit()">
+                  <i class="fas fa-times"></i> Cancel
+                </button>
+              </div>
+            </div>
+            
+            <!-- Warning Banner (shown when editing) -->
+            <div id="editWarningBanner" style="display: none; background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%); border-left: 4px solid #ffc107; padding: 15px; border-radius: 8px; margin-bottom: 15px;">
+              <div style="display: flex; align-items: start; gap: 12px;">
+                <i class="fas fa-exclamation-triangle" style="color: #f59e0b; font-size: 20px; margin-top: 2px;"></i>
+                <div>
+                  <div style="font-weight: 600; color: #92400e; margin-bottom: 5px;">
+                    ⚠️ Manual Edit Mode - Advanced Feature
+                  </div>
+                  <div style="color: #78350f; font-size: 13px; line-height: 1.5;">
+                    You're editing raw Python code. <strong>Syntax checking is not yet integrated.</strong> 
+                    Please ensure:
+                    <ul style="margin: 8px 0 0 20px; padding: 0;">
+                      <li>Proper Python indentation (4 spaces)</li>
+                      <li>Correct Playwright API syntax</li>
+                      <li>Matching quotes and parentheses</li>
+                      <li>Valid function/variable names</li>
+                    </ul>
+                    <strong>Tip:</strong> Test your changes in the Execute tab to catch errors.
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Read-only view (default) -->
+            <div id="automatedStepsContent"></div>
+            
+            <!-- Editable textarea (hidden by default) -->
+            <div id="codeEditorContainer" style="display: none;">
+              <textarea id="codeEditor" style="width: 100%; min-height: 500px; font-family: 'Consolas', 'Monaco', 'Courier New', monospace; font-size: 13px; line-height: 1.6; padding: 15px; background: #282c34; color: #abb2bf; border: 2px solid #667eea; border-radius: 8px; resize: vertical; tab-size: 4;"></textarea>
+              <div style="margin-top: 10px; display: flex; justify-content: space-between; align-items: center;">
+                <div style="font-size: 12px; color: #6c757d;">
+                  <i class="fas fa-info-circle"></i> Use Tab for indentation • Ctrl+Z to undo
+                </div>
+                <div id="lineCounter" style="font-size: 12px; color: #6c757d; font-weight: 600;">
+                  Lines: 0 | Characters: 0
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Manual Steps Preview -->
+          <div id="manualStepsPreview" style="display: none; margin-top: 16px;">
+            <h4 style="margin: 0 0 12px 0; font-size: 15px; color: #1f2937;">
+              <i class="fas fa-list-check"></i> Manual Test Steps
+            </h4>
+            <div id="manualStepsContent"></div>
+          </div>
+
+          <div style="margin-top: 20px; display: flex; gap: 10px; justify-content: flex-end;">
+            <button class="btn btn-secondary" onclick="goToTab('record')">
+              <i class="fas fa-arrow-left"></i> Back
+            </button>
+            <button class="btn btn-primary" onclick="goToTab('export')">
+              Next <i class="fas fa-arrow-right"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 3: Export -->
+      <div class="workflow-content" id="export-content">
+        <div class="section-card">
+          <h2>📤 Export Options</h2>
+          <p style="color: #666; margin-bottom: 25px;">Export your test to Jira or download as a complete package</p>
+
+          <!-- Export Tabs -->
+          <div style="display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 2px solid #e1e8ed;">
+            <button class="export-tab active" data-export="jira" style="padding: 12px 24px; border: none; background: none; cursor: pointer; font-weight: 600; border-bottom: 3px solid #667eea;">
+              <i class="fas fa-jira"></i> Export to Jira
+            </button>
+            <button class="export-tab" data-export="download" style="padding: 12px 24px; border: none; background: none; cursor: pointer; font-weight: 600; color: #666;">
+              <i class="fas fa-download"></i> Download ZIP Package
+            </button>
+          </div>
+
+          <!-- Jira Export Section -->
+          <div id="jiraExportSection" class="export-section">
+            <div style="background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); padding: 25px; border-radius: 10px; margin-bottom: 25px; border: 1px solid #dee2e6;">
+              <h4 style="margin: 0 0 20px 0; color: #495057; font-size: 16px; display: flex; align-items: center; gap: 10px;">
+                <i class="fas fa-eye" style="color: #667eea;"></i> Jira Task Preview
+              </h4>
+              
+              <div style="display: grid; gap: 15px;">
+                <!-- Summary Preview -->
+                <div style="background: white; padding: 15px; border-radius: 8px; border-left: 4px solid #667eea; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                  <div style="font-weight: 600; color: #667eea; font-size: 13px; margin-bottom: 8px;">
+                    <i class="fas fa-heading"></i> Summary
+                  </div>
+                  <div id="previewSummary" style="color: #333; line-height: 1.6;">Not specified</div>
+                </div>
+                
+                <!-- Description Preview -->
+                <div style="background: white; padding: 15px; border-radius: 8px; border-left: 4px solid #28a745; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                  <div style="font-weight: 600; color: #28a745; font-size: 13px; margin-bottom: 8px;">
+                    <i class="fas fa-align-left"></i> Description
+                  </div>
+                  <div id="previewDescription" style="color: #333; line-height: 1.6;">Not specified</div>
+                </div>
+                
+                <!-- Automated Steps Preview -->
+                <div style="background: white; padding: 15px; border-radius: 8px; border-left: 4px solid #17a2b8; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                  <div style="font-weight: 600; color: #17a2b8; font-size: 13px; margin-bottom: 8px;">
+                    <i class="fas fa-robot"></i> Automated Test Code
+                  </div>
+                  <div id="previewAutomatedSteps" style="color: #333; line-height: 1.6;">Not available</div>
+                </div>
+                
+                <!-- Manual Steps Preview -->
+                <div style="background: white; padding: 15px; border-radius: 8px; border-left: 4px solid #ffc107; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                  <div style="font-weight: 600; color: #ffc107; font-size: 13px; margin-bottom: 8px;">
+                    <i class="fas fa-list-ol"></i> Manual Test Steps
+                  </div>
+                  <div id="previewManualSteps" style="color: #333; line-height: 1.6;">Not available</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="jiraProject" style="font-weight: 600; color: #495057; margin-bottom: 8px; display: block;">
+                <i class="fas fa-project-diagram"></i> Jira Project
+              </label>
+              <input type="text" id="jiraProject" placeholder="e.g., IRA" value="IRA" style="width: 100%; padding: 12px; border: 2px solid #e1e8ed; border-radius: 8px; font-size: 14px;" />
+            </div>
+
+            <button class="btn btn-primary" id="exportToJiraBtn" style="width: 100%; padding: 15px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; transition: all 0.3s; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);">
+              <i class="fas fa-cloud-upload-alt"></i> Create Jira Task
+            </button>
+
+            <div id="exportSuccess" style="display: none; margin-top: 20px; padding: 20px; background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%); border-radius: 8px; border-left: 4px solid #28a745;">
+              <strong style="color: #155724;"><i class="fas fa-check-circle"></i> Successfully created!</strong>
+              <div id="createdTaskInfo" style="margin-top: 10px; color: #155724;"></div>
+            </div>
+          </div>
+
+          <!-- Download ZIP Section -->
+          <div id="downloadExportSection" class="export-section" style="display: none;">
+            <div style="background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); padding: 25px; border-radius: 10px; margin-bottom: 25px; border: 1px solid #dee2e6;">
+              <h4 style="margin: 0 0 15px 0; color: #495057; font-size: 16px; display: flex; align-items: center; gap: 10px;">
+                <i class="fas fa-file-archive" style="color: #667eea;"></i> Complete Test Package
+              </h4>
+              <p style="margin-bottom: 20px; color: #6c757d; font-size: 14px;">Your ZIP package will include:</p>
+              
+              <div style="display: grid; gap: 12px; margin-bottom: 20px;">
+                <!-- Test Code -->
+                <div style="background: white; padding: 15px; border-radius: 8px; display: flex; align-items: center; gap: 15px; border-left: 4px solid #667eea; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                  <div style="width: 40px; height: 40px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                    <i class="fas fa-code" style="color: white; font-size: 18px;"></i>
+                  </div>
+                  <div style="flex: 1;">
+                    <div style="font-weight: 600; color: #333; margin-bottom: 3px;">Playwright Test Code</div>
+                    <div style="font-size: 13px; color: #6c757d;">Ready-to-run Python automation script</div>
+                  </div>
+                </div>
+                
+                <!-- Manual Doc -->
+                <div style="background: white; padding: 15px; border-radius: 8px; display: flex; align-items: center; gap: 15px; border-left: 4px solid #28a745; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                  <div style="width: 40px; height: 40px; background: linear-gradient(135deg, #28a745 0%, #20c997 100%); border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                    <i class="fas fa-file-alt" style="color: white; font-size: 18px;"></i>
+                  </div>
+                  <div style="flex: 1;">
+                    <div style="font-weight: 600; color: #333; margin-bottom: 3px;">Manual Test Document</div>
+                    <div style="font-size: 13px; color: #6c757d;">Step-by-step testing instructions</div>
+                  </div>
+                </div>
+                
+                <!-- Video -->
+                <div style="background: white; padding: 15px; border-radius: 8px; display: flex; align-items: center; gap: 15px; border-left: 4px solid #dc3545; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                  <div style="width: 40px; height: 40px; background: linear-gradient(135deg, #dc3545 0%, #c82333 100%); border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                    <i class="fas fa-video" style="color: white; font-size: 18px;"></i>
+                  </div>
+                  <div style="flex: 1;">
+                    <div style="font-weight: 600; color: #333; margin-bottom: 3px;">Test Video Recording</div>
+                    <div style="font-size: 13px; color: #6c757d;">Visual recording of test execution (if captured)</div>
+                  </div>
+                </div>
+                
+                <!-- Package JSON -->
+                <div style="background: white; padding: 15px; border-radius: 8px; display: flex; align-items: center; gap: 15px; border-left: 4px solid #17a2b8; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                  <div style="width: 40px; height: 40px; background: linear-gradient(135deg, #17a2b8 0%, #138496 100%); border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                    <i class="fas fa-cog" style="color: white; font-size: 18px;"></i>
+                  </div>
+                  <div style="flex: 1;">
+                    <div style="font-weight: 600; color: #333; margin-bottom: 3px;">Configuration Files</div>
+                    <div style="font-size: 13px; color: #6c757d;">package.json and README.md with setup instructions</div>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="form-group" style="margin-bottom: 0;">
+                <label for="testName" style="font-weight: 600; color: #495057; margin-bottom: 8px; display: block;">
+                  <i class="fas fa-tag"></i> Test Name (for file naming)
+                </label>
+                <input type="text" id="testName" placeholder="e.g., login_test" style="width: 100%; padding: 12px; border: 2px solid #e1e8ed; border-radius: 8px; font-size: 14px; background: white;" />
+              </div>
+            </div>
+
+            <button class="btn btn-primary" id="downloadZipBtn" style="width: 100%; padding: 15px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; transition: all 0.3s; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);">
+              <i class="fas fa-download"></i> Download Test Package (.zip)
+            </button>
+
+            <div id="downloadSuccess" style="display: none; margin-top: 20px; padding: 20px; background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%); border-radius: 8px; border-left: 4px solid #28a745; text-align: center;">
+              <i class="fas fa-check-circle" style="color: #28a745; font-size: 2.5rem; margin-bottom: 10px;"></i>
+              <h3 style="margin: 10px 0; color: #155724;">Package Ready!</h3>
+              <p style="margin: 0; color: #155724;">Your test package has been downloaded. Check your downloads folder.</p>
+            </div>
+          </div>
+
+          <div style="margin-top: 25px; display: flex; gap: 15px;">
+            <button class="btn btn-secondary" onclick="goToTab('generate')">← Back</button>
+            <button class="btn btn-primary" onclick="goToTab('execute')">Next: Import & Execute →</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 4: Execute -->
+      <div class="workflow-content" id="execute-content">
+        <div class="section-card">
+          <h2>🚀 Import & Execute</h2>
+          <p style="color: #666; margin-bottom: 25px;">Import test from Jira, execute it, and report results</p>
+
+          <div style="background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%); padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+            <h3 style="margin-top: 0;">📥 Import from Jira</h3>
+            <div style="display: flex; gap: 10px;">
+              <input type="text" id="importTicketId" placeholder="Enter Jira ticket ID (e.g., IRA-12345)" style="flex: 1; padding: 12px; border: 2px solid #e1e8ed; border-radius: 8px;" />
+              <button class="btn btn-primary" id="importFromJiraBtn"><i class="fas fa-download"></i> Import</button>
+            </div>
+          </div>
+
+          <div id="importedTestPreview" style="display: none; margin-bottom: 20px;">
+            <h3 style="margin-bottom: 15px; font-size: 18px; font-weight: 600;">📋 Imported Test</h3>
+            <div id="importedTestContent"></div>
+          </div>
+
+          <div id="executionResults" style="display: none; background: #f8f9fa; padding: 20px; border-radius: 8px; margin-top: 20px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+              <h3 style="margin: 0;">Test Results</h3>
+              <div id="executionStatus" style="padding: 8px 16px; border-radius: 20px; font-weight: 600;">Running...</div>
+            </div>
+            <div id="executionSteps"></div>
+            <button class="btn btn-primary" id="exportResultsBtn" style="margin-top: 20px; display: none;"><i class="fas fa-file-export"></i> Export Results to Jira</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Notification -->
+  <div class="notification" id="notification"></div>
+
+  <script src="{{ url_for('static', filename='auth-utils.js') }}"></script>
+  <script src="{{ url_for('static', filename='shared-utils.js') }}"></script>
+  <!-- Prism.js for Syntax Highlighting -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-python.min.js"></script>
+  <script src="{{ url_for('static', filename='automation-test-creator.js') }}"></script>
+</body>
+</html>

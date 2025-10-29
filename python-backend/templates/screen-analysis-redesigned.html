@@ -1,0 +1,1601 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <title>AI UI Analyzer - Co-Tester</title>
+    <link rel="icon"
+        href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='0.9em' font-size='90'>🚀</text></svg>">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="/static/styles.css">
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-hover: #4f46e5;
+            --secondary: #f97316;
+            --success: #10b981;
+            --error: #ef4444;
+            --warning: #f59e0b;
+            --text-dark: #1e293b;
+            --text-light: #64748b;
+            --bg-light: #f8fafc;
+            --border: #e2e8f0;
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            --shadow-lg: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+            --transition: all 0.3s ease;
+        }
+
+        .ai-badge {
+            font-size: 0.8rem;
+            color: white;
+            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 50%, #ffa726 100%);
+            border-radius: 12px;
+            padding: 4px 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            animation: glow 2s ease-in-out infinite alternate;
+        }
+
+        @keyframes glow {
+            0% {
+                box-shadow: 0 2px 8px rgba(255, 107, 107, 0.4);
+            }
+
+            100% {
+                box-shadow: 0 4px 16px rgba(255, 107, 107, 0.6);
+            }
+        }
+
+        .main-content {
+            background: transparent;
+            min-height: 100vh;
+            padding: 2rem 2rem 2rem 2rem;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0;
+        }
+
+        .analyzer-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .upload-card {
+            background: white;
+            backdrop-filter: blur(20px);
+            border-radius: 20px;
+            padding: 2rem;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(99, 102, 241, 0.1);
+        }
+
+        .card-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #1e293b;
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .card-icon {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, var(--primary), var(--primary-hover));
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.2rem;
+        }
+
+        .upload-area {
+            border: 3px dashed var(--border);
+            border-radius: 16px;
+            padding: 3rem 2rem;
+            text-align: center;
+            background: var(--bg-light);
+            transition: var(--transition);
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .upload-area:hover {
+            border-color: var(--primary);
+            background: rgba(99, 102, 241, 0.05);
+            transform: translateY(-2px);
+        }
+
+        .upload-area.dragover {
+            border-color: var(--primary);
+            background: rgba(99, 102, 241, 0.1);
+            transform: scale(1.02);
+        }
+
+        .upload-icon {
+            font-size: 3rem;
+            color: var(--primary);
+            margin-bottom: 1rem;
+        }
+
+        .upload-text {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: var(--text-dark);
+            margin-bottom: 0.5rem;
+        }
+
+        .upload-subtext {
+            color: var(--text-light);
+            margin-bottom: 1.5rem;
+        }
+
+        .browse-btn {
+            background: linear-gradient(135deg, var(--primary), var(--primary-hover));
+            color: white;
+            border: none;
+            border-radius: 12px;
+            padding: 0.75rem 1.5rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .browse-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(99, 102, 241, 0.3);
+        }
+
+        .file-input {
+            display: none;
+        }
+
+        /* URL Input Styling */
+        .url-input-area {
+            margin-bottom: 1.5rem;
+        }
+
+        .url-input-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            background: white;
+            border: 2px solid var(--border);
+            border-radius: 12px;
+            padding: 0.75rem;
+            transition: border-color 0.3s ease, box-shadow 0.3s ease;
+            margin-bottom: 0.75rem;
+        }
+
+        .url-input-wrapper:focus-within {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+        }
+
+        .url-icon {
+            color: var(--text-light);
+            font-size: 1.2rem;
+            width: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .url-input {
+            flex: 1;
+            border: none;
+            outline: none;
+            font-size: 1rem;
+            color: var(--text-dark);
+            background: transparent;
+        }
+
+        .url-input::placeholder {
+            color: var(--text-light);
+        }
+
+        .capture-btn {
+            background: linear-gradient(135deg, var(--primary), var(--primary-hover));
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 0.75rem 1.5rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            white-space: nowrap;
+        }
+
+        .capture-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px -4px rgba(99, 102, 241, 0.4);
+        }
+
+        .capture-btn:disabled {
+            background: #e5e7eb;
+            color: #9ca3af;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .url-help {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: var(--text-light);
+            font-size: 0.875rem;
+            background: var(--bg-light);
+            padding: 0.75rem;
+            border-radius: 8px;
+        }
+
+        .url-preview {
+            background: var(--bg-light);
+            border-radius: 12px;
+            padding: 1.5rem;
+            border: 1px solid var(--border);
+        }
+
+        .url-info {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid var(--border);
+        }
+
+        .captured-url {
+            font-size: 0.875rem;
+            color: var(--text-light);
+            font-family: monospace;
+            background: white;
+            padding: 0.5rem;
+            border-radius: 6px;
+            border: 1px solid var(--border);
+            flex: 1;
+            margin-right: 1rem;
+        }
+
+        .remove-url-btn {
+            background: var(--error);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            padding: 0.5rem 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .remove-url-btn:hover {
+            background: #dc2626;
+            transform: translateY(-1px);
+        }
+
+        .image-preview {
+            margin-top: 1.5rem;
+            display: none;
+        }
+
+        .image-preview.show {
+            display: block;
+        }
+
+        .preview-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .preview-item {
+            position: relative;
+            border-radius: 12px;
+            overflow: hidden;
+            background: var(--bg-light);
+            aspect-ratio: 1;
+        }
+
+        .preview-image {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: var(--transition);
+        }
+
+        .preview-item:hover .preview-image {
+            transform: scale(1.05);
+        }
+
+        .preview-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: var(--transition);
+            color: white;
+            font-weight: 600;
+        }
+
+        .preview-item:hover .preview-overlay {
+            opacity: 1;
+        }
+
+        .remove-btn {
+            position: absolute;
+            top: 0.5rem;
+            right: 0.5rem;
+            background: var(--error);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 0.8rem;
+            opacity: 0;
+            transition: var(--transition);
+        }
+
+        .preview-item:hover .remove-btn {
+            opacity: 1;
+        }
+
+        .analysis-options {
+            background: white;
+            backdrop-filter: blur(20px);
+            border-radius: 20px;
+            padding: 2rem;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(99, 102, 241, 0.1);
+            margin-bottom: 2rem;
+        }
+
+        .options-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1rem;
+        }
+
+        .option-card {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 1.5rem;
+            border: 2px solid var(--border);
+            border-radius: 16px;
+            background: var(--bg-light);
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .option-card:hover {
+            border-color: var(--primary);
+            transform: translateY(-2px);
+            box-shadow: var(--shadow);
+        }
+
+        .option-card.selected {
+            border-color: var(--primary);
+            background: rgba(99, 102, 241, 0.1);
+        }
+
+        .option-checkbox {
+            width: 20px;
+            height: 20px;
+            accent-color: var(--primary);
+            cursor: pointer;
+            margin-right: 0.75rem;
+        }
+
+        .option-checkbox:disabled {
+            cursor: not-allowed;
+            opacity: 0.5;
+        }
+
+        .option-info {
+            flex: 1;
+        }
+
+        .option-name {
+            font-weight: 600;
+            color: var(--text-dark);
+            margin-bottom: 0.25rem;
+        }
+
+        .option-description {
+            font-size: 0.9rem;
+            color: var(--text-light);
+        }
+
+        .figma-card .card-icon {
+            background: linear-gradient(135deg, var(--secondary), #ea580c);
+        }
+
+        .analyze-btn {
+            width: 100%;
+            background: linear-gradient(135deg, var(--success), #059669);
+            color: white;
+            border: none;
+            border-radius: 16px;
+            padding: 1.5rem 2rem;
+            font-size: 1.2rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.75rem;
+            box-shadow: 0 8px 25px rgba(16, 185, 129, 0.3);
+            margin-top: 2rem;
+        }
+
+        .analyze-btn:hover:not(:disabled) {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 35px rgba(16, 185, 129, 0.4);
+        }
+
+        .analyze-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .results-container {
+            background: white;
+            border-radius: 20px;
+            padding: 2rem;
+            box-shadow: var(--shadow-lg);
+            border: 1px solid var(--border);
+            display: none;
+        }
+
+        .results-container.show {
+            display: block;
+            animation: slideInUp 0.6s ease-out;
+        }
+
+        @keyframes slideInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .results-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+        }
+
+        @media (max-width: 768px) {
+            .results-grid {
+                grid-template-columns: 1fr;
+                gap: 1.5rem;
+            }
+        }
+
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            display: none;
+            /* Changed from flex to none to hide by default */
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            color: white;
+            backdrop-filter: blur(5px);
+        }
+
+        /* Class to show the loading overlay when needed */
+        .loading-overlay.show {
+            display: flex;
+        }
+
+        /* Dark mode support for loading overlay */
+        body.dark-mode .loading-overlay {
+            background-color: rgba(0, 0, 0, 0.8);
+        }
+
+        .loading-content {
+            background: var(--bg-light, white);
+            border-radius: 20px;
+            padding: 3rem;
+            text-align: center;
+            max-width: 400px;
+            margin: 0 auto;
+            color: var(--text-dark);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .loading-spinner {
+            width: 60px;
+            height: 60px;
+            border: 5px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: #fff;
+            animation: spin 1s ease-in-out infinite;
+            margin-bottom: 20px;
+        }
+
+        /* Dark mode support for loading spinner */
+        body.dark-mode .loading-spinner {
+            border-color: rgba(255, 255, 255, 0.15);
+            border-top-color: var(--primary, #D32F2F);
+        }
+
+        .loading-text {
+            font-size: 18px;
+            font-weight: 500;
+            text-align: center;
+            max-width: 80%;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+        }
+
+        /* Dark mode support for loading text */
+        body.dark-mode .loading-text {
+            color: #e0e0e0;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.7);
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        .loading-text {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: var(--text-dark);
+        }
+
+        .error-message {
+            background: #fef2f2;
+            border: 1px solid #fecaca;
+            color: #dc2626;
+            padding: 1rem;
+            border-radius: 12px;
+            margin: 1rem 0;
+            display: none;
+        }
+
+        .error-message.show {
+            display: block;
+        }
+
+        @media (max-width: 768px) {
+            .analyzer-container {
+                grid-template-columns: 1fr;
+            }
+
+            .container {
+                padding: 0 1rem;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    {% set active_tab = 'screen-analysis' %}
+    {% include 'left-sidebar.html' %}
+
+    <div class="main-content">
+        {% set page_title = 'UI Analyzer <span class="ai-badge">AI</span>' %}
+        {% set page_subtitle = 'Upload screenshots for intelligent analysis, element detection, and comprehensive UI
+        health scoring using advanced AI technology.' %}
+        {% set allow_html = true %}
+        {% include 'page-header.html' %}
+
+        <div class="container" style="padding-left: 0; margin-left: 0;">
+
+            <!-- Upload Section -->
+            <div class="analyzer-container">
+                <!-- Screenshots Upload -->
+                <div class="upload-card">
+                    <div class="card-title">
+                        <div class="card-icon">
+                            <i class="fas fa-images"></i>
+                        </div>
+                        Screenshots
+                    </div>
+                    <div class="upload-area" id="screenshotUpload">
+                        <div class="upload-icon">
+                            <i class="fas fa-cloud-upload-alt"></i>
+                        </div>
+                        <div class="upload-text">Drop screenshots here</div>
+                        <div class="upload-subtext">or click to browse (PNG, JPG, JPEG, WebP, GIF)</div>
+                        <button class="browse-btn" type="button">
+                            <i class="fas fa-folder-open"></i>
+                            Browse Files
+                        </button>
+                        <input type="file" class="file-input" id="screenshotInput" accept="image/*" multiple>
+                    </div>
+                    <div class="image-preview" id="screenshotPreview">
+                        <h4>Selected Screenshots:</h4>
+                        <div class="preview-grid" id="screenshotGrid"></div>
+                    </div>
+                </div>
+
+                <!-- URL Input -->
+                <div class="upload-card">
+                    <div class="card-title">
+                        <div class="card-icon">
+                            <i class="fas fa-globe"></i>
+                        </div>
+                        Website URL
+                    </div>
+                    <div class="url-input-area">
+                        <div class="url-input-wrapper">
+                            <div class="url-icon">
+                                <i class="fas fa-link"></i>
+                            </div>
+                            <input type="url" class="url-input" id="urlInput"
+                                placeholder="Enter website URL (e.g., google.com or https://example.com)">
+                            <button class="capture-btn" type="button" id="captureBtn">
+                                <i class="fas fa-camera"></i>
+                                Capture
+                            </button>
+                        </div>
+                        <div class="url-help">
+                            <i class="fas fa-info-circle"></i>
+                            <span>Takes a screenshot of the live website for analysis. Just enter the domain name - no
+                                need for https://</span>
+                        </div>
+                    </div>
+                    <div class="url-preview" id="urlPreview" style="display: none;">
+                        <h4>Captured Screenshot:</h4>
+                        <div class="preview-grid" id="urlGrid"></div>
+                        <div class="url-info">
+                            <div class="captured-url" id="capturedUrl"></div>
+                            <button class="remove-url-btn" id="removeUrlBtn">
+                                <i class="fas fa-times"></i>
+                                Remove
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Figma Upload -->
+                <div class="upload-card" style="position: relative; opacity: 0.6;">
+                    <div class="card-title">
+                        <div class="card-icon" style="background: linear-gradient(135deg, #6b7280, #9ca3af);">
+                            <i class="fab fa-figma"></i>
+                        </div>
+                        Figma Design
+                        <div
+                            style="background: linear-gradient(135deg, var(--warning), #f59e0b); color: white; padding: 0.25rem 0.75rem; border-radius: 20px; font-size: 0.75rem; font-weight: 600; margin-left: auto;">
+                            Coming Soon
+                        </div>
+                    </div>
+                    <div class="upload-area" id="figmaUpload"
+                        style="pointer-events: none; background: #f8fafc; border-color: #e2e8f0;">
+                        <div class="upload-icon" style="color: #9ca3af;">
+                            <i class="fab fa-figma"></i>
+                        </div>
+                        <div class="upload-text" style="color: #9ca3af;">Figma comparison coming soon</div>
+                        <div class="upload-subtext" style="color: #9ca3af;">Feature in development</div>
+                        <button class="browse-btn" type="button"
+                            style="background: #e5e7eb; color: #9ca3af; cursor: not-allowed;" disabled>
+                            <i class="fas fa-clock"></i>
+                            Coming Soon
+                        </button>
+                        <input type="file" class="file-input" id="figmaInput" accept="image/*,.json,.svg" disabled>
+                    </div>
+                    <div class="image-preview" id="figmaPreview" style="display: none;">
+                        <h4>Selected Design:</h4>
+                        <div class="preview-grid" id="figmaGrid"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Analysis Options -->
+            <div class="analysis-options">
+                <div class="card-title">
+                    <div class="card-icon">
+                        <i class="fas fa-cogs"></i>
+                    </div>
+                    Analysis Options
+                </div>
+                <div class="options-grid">
+                    <div class="option-card selected" data-option="elements">
+                        <input type="checkbox" class="option-checkbox" checked>
+                        <div class="option-info">
+                            <div class="option-name">UI Elements Detection</div>
+                            <div class="option-description">Identify buttons, inputs, links, and interactive components
+                            </div>
+                        </div>
+                    </div>
+                    <div class="option-card selected" data-option="layout">
+                        <input type="checkbox" class="option-checkbox" checked>
+                        <div class="option-info">
+                            <div class="option-name">Layout Analysis</div>
+                            <div class="option-description">Analyze page structure, spacing, and visual hierarchy</div>
+                        </div>
+                    </div>
+                    <div class="option-card" data-option="accessibility">
+                        <input type="checkbox" class="option-checkbox">
+                        <div class="option-info">
+                            <div class="option-name">Accessibility Check</div>
+                            <div class="option-description">Check for accessibility issues and WCAG compliance</div>
+                        </div>
+                    </div>
+                    <div class="option-card selected" data-option="suggestions">
+                        <input type="checkbox" class="option-checkbox" checked>
+                        <div class="option-info">
+                            <div class="option-name">Test Suggestions</div>
+                            <div class="option-description">Generate testing recommendations and scenarios</div>
+                        </div>
+                    </div>
+                    <div class="option-card" data-option="figma"
+                        style="opacity: 0.6; pointer-events: none; position: relative;">
+                        <input type="checkbox" class="option-checkbox" disabled>
+                        <div class="option-info">
+                            <div class="option-name" style="color: #9ca3af;">Figma Comparison</div>
+                            <div class="option-description" style="color: #9ca3af;">Compare implementation with Figma
+                                design accuracy</div>
+                        </div>
+                        <div
+                            style="position: absolute; top: 0.75rem; right: 0.75rem; background: linear-gradient(135deg, var(--warning), #f59e0b); color: white; padding: 0.25rem 0.5rem; border-radius: 12px; font-size: 0.75rem; font-weight: 600;">
+                            Coming Soon
+                        </div>
+                    </div>
+                    <div class="option-card selected" data-option="ocr">
+                        <input type="checkbox" class="option-checkbox" checked>
+                        <div class="option-info">
+                            <div class="option-name">Text Recognition</div>
+                            <div class="option-description">Extract and analyze text content from images</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Error Message -->
+            <div class="error-message" id="errorMessage"></div>
+
+            <!-- Analyze Button -->
+            <button class="analyze-btn" id="analyzeBtn" disabled>
+                <i class="fas fa-brain"></i>
+                <span> Analyze </span>
+            </button>
+
+            <!-- Results Container -->
+            <div class="results-container" id="resultsContainer">
+                <div class="card-title">
+                    <div class="card-icon">
+                        <i class="fas fa-chart-line"></i>
+                    </div>
+                    Analysis Results
+                </div>
+                <div id="resultsContent">
+                    <!-- Results will be populated here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% include 'footer.html' %}
+
+    <!-- Loading Overlay -->
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="loading-content">
+            <div class="loading-spinner"></div>
+            <div class="loading-text">Analyzing your screens..</div>
+        </div>
+    </div>
+
+    <script>
+        // Modern UI Analyzer - Clean Implementation
+        class UIAnalyzer {
+            constructor() {
+                this.screenshots = [];
+                this.figmaFile = null;
+                this.urlScreenshot = null;
+                this.isAnalyzing = false;
+                this.isCapturingUrl = false;
+
+                this.init();
+            }
+
+            init() {
+                this.setupFileUploads();
+                this.setupUrlInput();
+                this.setupOptions();
+                this.setupAnalyzeButton();
+            }
+
+            setupFileUploads() {
+                // Screenshot upload
+                const screenshotUpload = document.getElementById('screenshotUpload');
+                const screenshotInput = document.getElementById('screenshotInput');
+                const browseBtn = screenshotUpload.querySelector('.browse-btn');
+
+                browseBtn.addEventListener('click', () => screenshotInput.click());
+
+                screenshotUpload.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                    screenshotUpload.classList.add('dragover');
+                });
+
+                screenshotUpload.addEventListener('dragleave', () => {
+                    screenshotUpload.classList.remove('dragover');
+                });
+
+                screenshotUpload.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    screenshotUpload.classList.remove('dragover');
+                    this.handleScreenshotFiles(e.dataTransfer.files);
+                });
+
+                screenshotInput.addEventListener('change', (e) => {
+                    this.handleScreenshotFiles(e.target.files);
+                });
+
+                // Figma upload (disabled for now)
+                const figmaUpload = document.getElementById('figmaUpload');
+                const figmaInput = document.getElementById('figmaInput');
+                const figmaBrowseBtn = figmaUpload.querySelector('.browse-btn');
+
+                // Only set up event listeners if figma is not disabled
+                if (!figmaInput.disabled) {
+                    figmaBrowseBtn.addEventListener('click', () => figmaInput.click());
+
+                    figmaUpload.addEventListener('dragover', (e) => {
+                        e.preventDefault();
+                        figmaUpload.classList.add('dragover');
+                    });
+
+                    figmaUpload.addEventListener('dragleave', () => {
+                        figmaUpload.classList.remove('dragover');
+                    });
+
+                    figmaUpload.addEventListener('drop', (e) => {
+                        e.preventDefault();
+                        figmaUpload.classList.remove('dragover');
+                        this.handleFigmaFile(e.dataTransfer.files);
+                    });
+
+                    figmaInput.addEventListener('change', (e) => {
+                        this.handleFigmaFile(e.target.files);
+                    });
+                }
+            }
+
+            handleScreenshotFiles(files) {
+                const validFiles = Array.from(files).filter(file => file.type.startsWith('image/'));
+
+                if (validFiles.length === 0) {
+                    this.showError('Please select valid image files.');
+                    return;
+                }
+
+                this.screenshots = validFiles;
+                this.displayScreenshots();
+                this.updateAnalyzeButton();
+                this.hideError();
+            }
+
+            handleFigmaFile(files) {
+                if (files.length === 0) return;
+
+                const file = files[0];
+                const validTypes = ['image/', '.json', '.svg'];
+                const isValid = validTypes.some(type =>
+                    file.type.startsWith(type) || file.name.toLowerCase().endsWith(type.replace('.', ''))
+                );
+
+                if (!isValid) {
+                    this.showError('Please select a valid Figma file (PNG, JPG, JSON, or SVG).');
+                    return;
+                }
+
+                this.figmaFile = file;
+                this.displayFigmaFile();
+                this.hideError();
+            }
+
+            displayScreenshots() {
+                const preview = document.getElementById('screenshotPreview');
+                const grid = document.getElementById('screenshotGrid');
+
+                grid.innerHTML = '';
+
+                this.screenshots.forEach((file, index) => {
+                    const item = document.createElement('div');
+                    item.className = 'preview-item';
+
+                    const img = document.createElement('img');
+                    img.className = 'preview-image';
+                    img.src = URL.createObjectURL(file);
+                    img.alt = file.name;
+
+                    const overlay = document.createElement('div');
+                    overlay.className = 'preview-overlay';
+                    overlay.textContent = file.name;
+
+                    const removeBtn = document.createElement('button');
+                    removeBtn.className = 'remove-btn';
+                    removeBtn.innerHTML = '<i class="fas fa-times"></i>';
+                    removeBtn.addEventListener('click', () => this.removeScreenshot(index));
+
+                    item.appendChild(img);
+                    item.appendChild(overlay);
+                    item.appendChild(removeBtn);
+                    grid.appendChild(item);
+                });
+
+                preview.classList.add('show');
+            }
+
+            displayFigmaFile() {
+                const preview = document.getElementById('figmaPreview');
+                const grid = document.getElementById('figmaGrid');
+
+                grid.innerHTML = '';
+
+                const item = document.createElement('div');
+                item.className = 'preview-item';
+
+                if (this.figmaFile.type.startsWith('image/')) {
+                    const img = document.createElement('img');
+                    img.className = 'preview-image';
+                    img.src = URL.createObjectURL(this.figmaFile);
+                    img.alt = this.figmaFile.name;
+                    item.appendChild(img);
+                } else {
+                    const icon = document.createElement('div');
+                    icon.style.cssText = 'display: flex; align-items: center; justify-content: center; height: 100%; color: var(--secondary); font-size: 2rem;';
+                    icon.innerHTML = '<i class="fab fa-figma"></i>';
+                    item.appendChild(icon);
+                }
+
+                const overlay = document.createElement('div');
+                overlay.className = 'preview-overlay';
+                overlay.textContent = this.figmaFile.name;
+
+                const removeBtn = document.createElement('button');
+                removeBtn.className = 'remove-btn';
+                removeBtn.innerHTML = '<i class="fas fa-times"></i>';
+                removeBtn.addEventListener('click', () => this.removeFigmaFile());
+
+                item.appendChild(overlay);
+                item.appendChild(removeBtn);
+                grid.appendChild(item);
+
+                preview.classList.add('show');
+            }
+
+            removeScreenshot(index) {
+                this.screenshots.splice(index, 1);
+
+                if (this.screenshots.length === 0) {
+                    document.getElementById('screenshotPreview').classList.remove('show');
+                } else {
+                    this.displayScreenshots();
+                }
+
+                this.updateAnalyzeButton();
+            }
+
+            removeFigmaFile() {
+                this.figmaFile = null;
+                document.getElementById('figmaPreview').classList.remove('show');
+
+                // Uncheck figma comparison option
+                const figmaOption = document.querySelector('[data-option="figma"]');
+                const checkbox = figmaOption.querySelector('.option-checkbox');
+                checkbox.checked = false;
+                figmaOption.classList.remove('selected');
+            }
+
+            setupUrlInput() {
+                const urlInput = document.getElementById('urlInput');
+                const captureBtn = document.getElementById('captureBtn');
+                const removeUrlBtn = document.getElementById('removeUrlBtn');
+                const urlPreview = document.getElementById('urlPreview');
+                const urlGrid = document.getElementById('urlGrid');
+                const capturedUrl = document.getElementById('capturedUrl');
+
+                // Handle capture button click
+                captureBtn.addEventListener('click', () => this.captureUrlScreenshot());
+
+                // Handle Enter key in URL input
+                urlInput.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') {
+                        this.captureUrlScreenshot();
+                    }
+                });
+
+                // Handle remove URL button
+                removeUrlBtn.addEventListener('click', () => this.removeUrlScreenshot());
+
+                // Enable/disable capture button based on URL validity
+                urlInput.addEventListener('input', () => {
+                    const url = urlInput.value.trim();
+                    const isValid = this.isValidUrl(url);
+                    captureBtn.disabled = !isValid || this.isCapturingUrl;
+                });
+            }
+
+            isValidUrl(string) {
+                if (!string || string.trim() === '') {
+                    return false;
+                }
+
+                // Remove whitespace
+                string = string.trim();
+
+                // If it already has a protocol, validate it
+                if (string.includes('://')) {
+                    try {
+                        const url = new URL(string);
+                        return url.protocol === 'http:' || url.protocol === 'https:';
+                    } catch (_) {
+                        return false;
+                    }
+                }
+
+                // If no protocol, check if it looks like a valid domain
+                // Basic domain validation (allows subdomains, TLDs, etc.)
+                const domainRegex = /^[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
+
+                // Handle ports (like localhost:3000)
+                const domainWithPortRegex = /^[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*:\d+$/;
+
+                return domainRegex.test(string) || domainWithPortRegex.test(string) || string === 'localhost';
+            }
+
+            resolveUrl(input) {
+                if (!input || input.trim() === '') {
+                    return input;
+                }
+
+                input = input.trim();
+
+                // If it already has a protocol, return as is
+                if (input.includes('://')) {
+                    return input;
+                }
+
+                // Add https:// by default
+                return 'https://' + input;
+            }
+
+            async captureUrlScreenshot() {
+                const urlInput = document.getElementById('urlInput');
+                const captureBtn = document.getElementById('captureBtn');
+                const inputUrl = urlInput.value.trim();
+
+                if (!this.isValidUrl(inputUrl) || this.isCapturingUrl) {
+                    return;
+                }
+
+                // Resolve URL (add https:// if needed)
+                const resolvedUrl = this.resolveUrl(inputUrl);
+
+                this.isCapturingUrl = true;
+                captureBtn.disabled = true;
+                captureBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Capturing...';
+
+                try {
+                    const response = await fetch('/api/capture-url', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ url: resolvedUrl })
+                    });
+
+                    if (!response.ok) {
+                        throw new Error(`Failed to capture screenshot: ${response.statusText}`);
+                    }
+
+                    const data = await response.json();
+
+                    if (data.success) {
+                        this.urlScreenshot = {
+                            url: resolvedUrl,
+                            image: data.image,
+                            timestamp: new Date()
+                        };
+                        this.displayUrlPreview();
+                        urlInput.value = '';
+                    } else {
+                        throw new Error(data.error || 'Failed to capture screenshot');
+                    }
+                } catch (error) {
+                    console.error('URL capture error:', error);
+                    alert('Failed to capture screenshot: ' + error.message);
+                } finally {
+                    this.isCapturingUrl = false;
+                    captureBtn.disabled = false;
+                    captureBtn.innerHTML = '<i class="fas fa-camera"></i> Capture';
+                }
+            }
+
+            displayUrlPreview() {
+                const urlPreview = document.getElementById('urlPreview');
+                const urlGrid = document.getElementById('urlGrid');
+                const capturedUrl = document.getElementById('capturedUrl');
+
+                if (this.urlScreenshot) {
+                    const imgElement = document.createElement('img');
+                    imgElement.src = `data:image/png;base64,${this.urlScreenshot.image}`;
+                    imgElement.style.cssText = 'max-width: 200px; max-height: 150px; border-radius: 8px; border: 2px solid var(--border);';
+
+                    urlGrid.innerHTML = '';
+                    urlGrid.appendChild(imgElement);
+
+                    capturedUrl.textContent = this.urlScreenshot.url;
+                    urlPreview.style.display = 'block';
+                } else {
+                    urlPreview.style.display = 'none';
+                }
+
+                this.updateAnalyzeButton();
+            }
+
+            removeUrlScreenshot() {
+                this.urlScreenshot = null;
+                document.getElementById('urlPreview').style.display = 'none';
+                document.getElementById('urlGrid').innerHTML = '';
+                document.getElementById('capturedUrl').textContent = '';
+                this.updateAnalyzeButton();
+            }
+
+            setupOptions() {
+                const optionCards = document.querySelectorAll('.option-card');
+
+                optionCards.forEach(card => {
+                    const checkbox = card.querySelector('.option-checkbox');
+
+                    // Handle card clicks (but not when clicking directly on checkbox)
+                    card.addEventListener('click', (e) => {
+                        // Skip if checkbox is disabled (like figma option)
+                        if (checkbox.disabled) {
+                            return;
+                        }
+
+                        // If click target is the checkbox itself, let checkbox handle it
+                        if (e.target === checkbox) {
+                            return;
+                        }
+
+                        checkbox.checked = !checkbox.checked;
+                        this.updateCardSelection(card, checkbox);
+                    });
+
+                    // Handle direct checkbox clicks
+                    checkbox.addEventListener('change', (e) => {
+                        // Skip if checkbox is disabled
+                        if (checkbox.disabled) {
+                            return;
+                        }
+
+                        this.updateCardSelection(card, checkbox);
+                    });
+                });
+            }
+
+            updateCardSelection(card, checkbox) {
+                if (checkbox.checked) {
+                    card.classList.add('selected');
+                } else {
+                    card.classList.remove('selected');
+                }
+            }
+
+            setupAnalyzeButton() {
+                const analyzeBtn = document.getElementById('analyzeBtn');
+                analyzeBtn.addEventListener('click', () => this.analyzeScreenshots());
+            }
+
+            updateAnalyzeButton() {
+                const analyzeBtn = document.getElementById('analyzeBtn');
+                const hasImages = this.screenshots.length > 0 || this.urlScreenshot !== null;
+                analyzeBtn.disabled = !hasImages || this.isAnalyzing;
+            }
+
+            // Show loading overlay
+            showLoading() {
+                const loadingOverlay = document.getElementById('loadingOverlay');
+                if (loadingOverlay) {
+                    loadingOverlay.classList.add('show');
+                }
+            }
+
+            // Hide loading overlay
+            hideLoading() {
+                const loadingOverlay = document.getElementById('loadingOverlay');
+                if (loadingOverlay) {
+                    loadingOverlay.classList.remove('show');
+                }
+            }
+
+            async analyzeScreenshots() {
+                const hasImages = this.screenshots.length > 0 || this.urlScreenshot !== null;
+                if (!hasImages) {
+                    this.showError('Please upload at least one screenshot or capture a URL.');
+                    return;
+                }
+
+                // Show loading overlay immediately after validation passes
+                this.isAnalyzing = true;
+                this.showLoading();
+                this.updateAnalyzeButton();
+
+                // Small delay to ensure the loading overlay is visible before any heavy processing begins
+                await new Promise(resolve => setTimeout(resolve, 50));
+
+                try {
+                    const formData = new FormData();
+
+                    // Add screenshots
+                    this.screenshots.forEach((file, index) => {
+                        formData.append(`screenshot_${index}`, file);
+                    });
+
+                    // Add URL screenshot if exists
+                    if (this.urlScreenshot) {
+                        // Convert base64 to blob
+                        const base64Data = this.urlScreenshot.image;
+                        const byteCharacters = atob(base64Data);
+                        const byteNumbers = new Array(byteCharacters.length);
+                        for (let i = 0; i < byteCharacters.length; i++) {
+                            byteNumbers[i] = byteCharacters.charCodeAt(i);
+                        }
+                        const byteArray = new Uint8Array(byteNumbers);
+                        const blob = new Blob([byteArray], { type: 'image/png' });
+
+                        formData.append(`url_screenshot`, blob, `url_capture_${Date.now()}.png`);
+                        formData.append('url_source', this.urlScreenshot.url);
+                    }
+
+                    // Add figma file if exists
+                    if (this.figmaFile) {
+                        formData.append('figma_design', this.figmaFile);
+                    }
+
+                    // Add analysis options
+                    const options = {};
+                    document.querySelectorAll('.option-card').forEach(card => {
+                        const option = card.dataset.option;
+                        const checked = card.querySelector('.option-checkbox').checked;
+                        options[option] = checked;
+                    });
+                    formData.append('options', JSON.stringify(options));
+
+                    const response = await fetch('/api/analyze-screen', {
+                        method: 'POST',
+                        body: formData
+                    });
+
+                    if (!response.ok) {
+                        throw new Error('Analysis failed. Please try again.');
+                    }
+
+                    const results = await response.json();
+                    this.displayResults(results);
+
+                } catch (error) {
+                    console.error('Analysis error:', error);
+                    this.showError(error.message || 'Analysis failed. Please try again.');
+                } finally {
+                    this.isAnalyzing = false;
+                    this.hideLoading();
+                    this.updateAnalyzeButton();
+                }
+            }
+
+            displayResults(results) {
+                console.log('Displaying results:', results);
+                const container = document.getElementById('resultsContainer');
+                const content = document.getElementById('resultsContent');
+
+                if (!container || !content) {
+                    console.error('Results container or content not found');
+                    this.showError('Error displaying results. Please try again.');
+                    return;
+                }
+
+                // Ensure results has the expected structure
+                if (!results || typeof results !== 'object') {
+                    console.error('Invalid results structure:', results);
+                    this.showError('Invalid results received from analysis.');
+                    return;
+                }
+
+                // Format issues with enhanced display
+                const issuesHtml = results.issues && results.issues.length > 0 ?
+                    results.issues.map(issue => `
+                        <div style="background: white; border-radius: 12px; padding: 1.5rem; margin-bottom: 1rem; border-left: 4px solid ${this.getSeverityColor(issue.severity)}; box-shadow: var(--shadow);">
+                            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem;">
+                                <h5 style="color: var(--text-dark); margin: 0; flex: 1;">${issue.title || issue.summary}</h5>
+                                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                    ${issue.impact ? `<div style="background: #f3f4f6; color: var(--text-dark); padding: 0.25rem 0.5rem; border-radius: 12px; font-size: 0.75rem; font-weight: 500;">Impact: ${issue.impact}/10</div>` : ''}
+                                    <span style="background: ${this.getSeverityColor(issue.severity)}; color: white; padding: 0.25rem 0.75rem; border-radius: 20px; font-size: 0.75rem; font-weight: 600;">
+                                        ${issue.severity}
+                                    </span>
+                                </div>
+                            </div>
+                            <p style="color: var(--text-light); margin: 0.75rem 0; line-height: 1.5;">${issue.description}</p>
+                            ${issue.location || issue.element ? `
+                                <div style="display: flex; align-items: center; color: var(--text-light); font-size: 0.875rem; margin-bottom: 0.5rem;">
+                                    <i class="fas fa-map-marker-alt" style="margin-right: 0.5rem;"></i>
+                                    ${issue.location || issue.element}
+                                </div>
+                            ` : ''}
+                            ${issue.expected && issue.actual ? `
+                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #e5e7eb;">
+                                    <div>
+                                        <div style="font-size: 0.75rem; font-weight: 600; color: var(--text-light); margin-bottom: 0.25rem; text-transform: uppercase;">Expected</div>
+                                        <div style="font-size: 0.875rem; color: var(--text-dark);">${issue.expected}</div>
+                                    </div>
+                                    <div>
+                                        <div style="font-size: 0.75rem; font-weight: 600; color: var(--text-light); margin-bottom: 0.25rem; text-transform: uppercase;">Actual</div>
+                                        <div style="font-size: 0.875rem; color: var(--text-dark);">${issue.actual}</div>
+                                    </div>
+                                </div>
+                            ` : ''}
+                        </div>
+                    `).join('') :
+                    '<div style="text-align: center; color: var(--text-light); padding: 2rem;">No issues found in the analysis.</div>';
+
+                // Format recommendations with enhanced display
+                const recommendationsHtml = results.recommendations && results.recommendations.length > 0 ?
+                    results.recommendations.map((rec, index) => {
+                        const isObject = typeof rec === 'object';
+                        const title = isObject ? rec.title : `Recommendation ${index + 1}`;
+                        const description = isObject ? rec.description : rec;
+                        const priority = isObject ? rec.priority : 'Medium';
+                        const improvement = isObject ? rec.expectedImprovement : null;
+                        const effort = isObject ? rec.effort : null;
+
+                        return `
+                            <div style="background: white; border-radius: 12px; padding: 1.5rem; margin-bottom: 1rem; box-shadow: var(--shadow);">
+                                <div style="display: flex; align-items: flex-start; margin-bottom: 1rem;">
+                                    <div style="background: var(--success); color: white; border-radius: 50%; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; font-size: 0.875rem; font-weight: bold; margin-right: 1rem; flex-shrink: 0;">
+                                        ${index + 1}
+                                    </div>
+                                    <div style="flex: 1;">
+                                        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.5rem;">
+                                            <h6 style="color: var(--text-dark); margin: 0; font-weight: 600;">${title}</h6>
+                                            <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                                ${improvement ? `<div style="background: #ecfdf5; color: #059669; padding: 0.25rem 0.5rem; border-radius: 12px; font-size: 0.75rem; font-weight: 500;">+${improvement}/10</div>` : ''}
+                                                ${effort ? `<div style="background: #fef3c7; color: #d97706; padding: 0.25rem 0.5rem; border-radius: 12px; font-size: 0.75rem; font-weight: 500;">${effort} effort</div>` : ''}
+                                                <span style="background: ${this.getPriorityColor(priority)}; color: white; padding: 0.25rem 0.75rem; border-radius: 20px; font-size: 0.75rem; font-weight: 600;">
+                                                    ${priority}
+                                                </span>
+                                            </div>
+                                        </div>
+                                        <p style="color: var(--text-light); margin: 0; line-height: 1.5;">${description}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    }).join('') :
+                    '<div style="text-align: center; color: var(--text-light); padding: 2rem;">No recommendations available.</div>';
+
+                // Create results HTML with scoring
+                const isComparison = this.figmaFile && results.comparisonMetrics;
+                const scoreColor = this.getScoreColor(results.overallScore || 0);
+
+                content.innerHTML = `
+                    <div style="padding: 2rem; background: linear-gradient(135deg, ${scoreColor}, #059669); border-radius: 16px; margin-bottom: 2rem; color: white;">
+                        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem;">
+                            <h3 style="margin: 0; display: flex; align-items: center;">
+                                <i class="fas fa-chart-line" style="margin-right: 0.75rem; font-size: 1.5rem;"></i>
+                                ${isComparison ? 'Design Comparison' : 'Screen Health Analysis'}
+                            </h3>
+                            <div style="text-align: right;">
+                                <div style="font-size: 2.5rem; font-weight: bold; line-height: 1;">${results.overallScore || 0}</div>
+                                <div style="font-size: 0.875rem; opacity: 0.9;">Overall Score</div>
+                            </div>
+                        </div>
+                        <p style="margin: 0; opacity: 0.9;">
+                            ${results.summary || `Successfully analyzed ${this.screenshots.length} screenshot${this.screenshots.length > 1 ? 's' : ''}.`}
+                            ${this.figmaFile ? ' Design fidelity comparison included.' : ''}
+                        </p>
+                    </div>
+                    
+                    ${this.renderScoreCards(results)}
+                    
+                    <div class="results-grid" style="margin-bottom: 2rem;">
+                        <div>
+                            <h4 style="color: var(--text-dark); margin-bottom: 1.5rem; display: flex; align-items: center;">
+                                <i class="fas fa-exclamation-triangle" style="margin-right: 0.75rem; color: var(--warning);"></i>
+                                Issues Found (${results.issues ? results.issues.length : 0})
+                            </h4>
+                            <div style="max-height: 600px; overflow-y: auto;">
+                                ${issuesHtml}
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <h4 style="color: var(--text-dark); margin-bottom: 1.5rem; display: flex; align-items: center;">
+                                <i class="fas fa-lightbulb" style="margin-right: 0.75rem; color: var(--warning);"></i>
+                                Recommendations (${results.recommendations ? results.recommendations.length : 0})
+                            </h4>
+                            <div style="max-height: 600px; overflow-y: auto;">
+                                ${recommendationsHtml}
+                            </div>
+                        </div>
+                    </div>
+                `;
+
+                container.classList.add('show');
+                container.scrollIntoView({ behavior: 'smooth' });
+            }
+
+            renderScoreCards(results) {
+                const isComparison = this.figmaFile && results.comparisonMetrics;
+
+                if (isComparison) {
+                    // Render comparison metrics
+                    const metrics = results.comparisonMetrics;
+                    return `
+                        <div style="margin-bottom: 2rem;">
+                            <h4 style="color: var(--text-dark); margin-bottom: 1.5rem; display: flex; align-items: center;">
+                                <i class="fas fa-balance-scale" style="margin-right: 0.75rem; color: var(--primary);"></i>
+                                Design Fidelity Scores
+                            </h4>
+                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+                                ${this.renderScoreCard('Design Fidelity', metrics.designFidelity || 0, 'fas fa-paint-brush')}
+                                ${this.renderScoreCard('Element Accuracy', metrics.elementAccuracy || 0, 'fas fa-puzzle-piece')}
+                                ${this.renderScoreCard('Text Accuracy', metrics.textAccuracy || 0, 'fas fa-font')}
+                                ${this.renderScoreCard('Layout Accuracy', metrics.layoutAccuracy || 0, 'fas fa-th-large')}
+                                ${this.renderScoreCard('Style Accuracy', metrics.styleAccuracy || 0, 'fas fa-palette')}
+                                ${this.renderScoreCard('Interaction Fidelity', metrics.interactionFidelity || 0, 'fas fa-mouse-pointer')}
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    // Render factor scores for health analysis
+                    const factors = results.factorScores;
+                    if (!factors) return '';
+
+                    return `
+                        <div style="margin-bottom: 2rem;">
+                            <h4 style="color: var(--text-dark); margin-bottom: 1.5rem; display: flex; align-items: center;">
+                                <i class="fas fa-heartbeat" style="margin-right: 0.75rem; color: var(--primary);"></i>
+                                Health Factor Scores
+                            </h4>
+                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+                                ${this.renderScoreCard('Accessibility', factors.accessibility || 0, 'fas fa-universal-access')}
+                                ${this.renderScoreCard('Design Consistency', factors.designConsistency || 0, 'fas fa-layer-group')}
+                                ${this.renderScoreCard('Usability', factors.usability || 0, 'fas fa-user-check')}
+                                ${this.renderScoreCard('Visual Hierarchy', factors.visualHierarchy || 0, 'fas fa-sitemap')}
+                                ${this.renderScoreCard('Responsiveness', factors.responsiveness || 0, 'fas fa-mobile-alt')}
+                            </div>
+                        </div>
+                    `;
+                }
+            }
+
+            renderScoreCard(title, score, icon) {
+                const scoreColor = this.getScoreColor(score);
+                const percentage = Math.round(score);
+
+                return `
+                    <div style="background: white; border-radius: 12px; padding: 1.5rem; box-shadow: var(--shadow); text-align: center;">
+                        <div style="color: ${scoreColor}; font-size: 2rem; margin-bottom: 0.5rem;">
+                            <i class="${icon}"></i>
+                        </div>
+                        <div style="font-size: 2rem; font-weight: bold; color: ${scoreColor}; margin-bottom: 0.25rem;">
+                            ${percentage}
+                        </div>
+                        <div style="color: var(--text-light); font-size: 0.875rem; font-weight: 500;">
+                            ${title}
+                        </div>
+                        <div style="margin-top: 0.75rem; height: 4px; background: #e5e7eb; border-radius: 2px; overflow: hidden;">
+                            <div style="width: ${percentage}%; height: 100%; background: ${scoreColor}; transition: width 0.6s ease;"></div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            getScoreColor(score) {
+                if (score >= 90) return '#10b981'; // Excellent - Green
+                if (score >= 80) return '#059669'; // Good - Dark Green  
+                if (score >= 70) return '#f59e0b'; // Fair - Orange
+                if (score >= 60) return '#f97316'; // Poor - Dark Orange
+                return '#ef4444'; // Critical - Red
+            }
+
+            getSeverityColor(severity) {
+                switch (severity?.toLowerCase()) {
+                    case 'high':
+                    case 'critical': return '#ef4444';
+                    case 'medium':
+                    case 'major': return '#f59e0b';
+                    case 'low':
+                    case 'minor': return '#10b981';
+                    default: return '#6b7280';
+                }
+            }
+
+            getPriorityColor(priority) {
+                switch (priority?.toLowerCase()) {
+                    case 'high': return '#ef4444';
+                    case 'medium': return '#f59e0b';
+                    case 'low': return '#10b981';
+                    default: return '#6b7280';
+                }
+            }
+
+            showLoading() {
+                document.getElementById('loadingOverlay').classList.add('show');
+            }
+
+            hideLoading() {
+                document.getElementById('loadingOverlay').classList.remove('show');
+            }
+
+            showError(message) {
+                const errorElement = document.getElementById('errorMessage');
+                errorElement.textContent = message;
+                errorElement.classList.add('show');
+            }
+
+            hideError() {
+                document.getElementById('errorMessage').classList.remove('show');
+            }
+        }
+
+        // Initialize the analyzer when DOM is loaded
+        document.addEventListener('DOMContentLoaded', () => {
+            new UIAnalyzer();
+        });
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Auto-Healing Test Recorder V2 - Co-Test</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='left-sidebar.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* Auto-Healing Recorder V2 Specific Styles */
+        .recorder-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .recorder-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        .recorder-header h1 {
+            margin: 0 0 10px 0;
+            font-size: 2.5rem;
+        }
+
+        .recorder-header p {
+            margin: 0;
+            opacity: 0.9;
+            font-size: 1.1rem;
+        }
+
+        .control-panel {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 25px;
+        }
+
+        .control-row {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .control-row:last-child {
+            margin-bottom: 0;
+        }
+
+        .url-input {
+            flex: 1;
+            padding: 12px 15px;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            font-size: 16px;
+        }
+
+        .url-input::placeholder {
+            color: rgba(255, 255, 255, 0.6);
+        }
+
+        .btn {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .btn-secondary:hover:not(:disabled) {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+            color: white;
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, #f44336 0%, #da190b 100%);
+            color: white;
+        }
+
+        .status-message {
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-weight: 500;
+            display: none;
+        }
+
+        .status-message.info {
+            background: rgba(33, 150, 243, 0.1);
+            border: 1px solid rgba(33, 150, 243, 0.3);
+            color: #2196F3;
+            display: block;
+        }
+
+        .status-message.success {
+            background: rgba(76, 175, 80, 0.1);
+            border: 1px solid rgba(76, 175, 80, 0.3);
+            color: #4CAF50;
+            display: block;
+        }
+
+        .status-message.error {
+            background: rgba(244, 67, 54, 0.1);
+            border: 1px solid rgba(244, 67, 54, 0.3);
+            color: #f44336;
+            display: block;
+        }
+
+        .session-info {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+
+        .session-active {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: #4CAF50;
+            font-weight: 600;
+        }
+
+        .session-inactive {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: rgba(255, 255, 255, 0.6);
+        }
+
+        .status-indicator {
+            font-size: 12px;
+        }
+
+        .actions-count {
+            background: rgba(76, 175, 80, 0.2);
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+        }
+
+        .display-panel {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 25px;
+            min-height: 200px;
+        }
+
+        .mcp-commands h4,
+        .recorded-actions h4,
+        .test-code-container h4,
+        .instructions h4 {
+            margin: 0 0 20px 0;
+            color: #667eea;
+            font-size: 1.3rem;
+        }
+
+        .command-item {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 10px;
+        }
+
+        .command-name {
+            font-weight: 600;
+            color: #667eea;
+            margin-bottom: 8px;
+        }
+
+        .command-code {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .command-code code {
+            flex: 1;
+            background: rgba(0, 0, 0, 0.3);
+            padding: 8px 12px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            color: #e0e0e0;
+        }
+
+        .copy-btn {
+            background: rgba(102, 126, 234, 0.2);
+            border: 1px solid rgba(102, 126, 234, 0.3);
+            color: #667eea;
+            padding: 6px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+
+        .copy-btn:hover {
+            background: rgba(102, 126, 234, 0.3);
+        }
+
+        .action-item {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+
+        .action-header {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 10px;
+        }
+
+        .action-number {
+            background: #667eea;
+            color: white;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .action-type {
+            background: rgba(76, 175, 80, 0.2);
+            color: #4CAF50;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .action-time {
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 12px;
+        }
+
+        .action-locators {
+            margin-top: 10px;
+        }
+
+        .locator-item {
+            background: rgba(0, 0, 0, 0.2);
+            padding: 6px 10px;
+            border-radius: 4px;
+            margin: 5px 0;
+            font-size: 13px;
+        }
+
+        .locator-item.priority-1 {
+            border-left: 3px solid #4CAF50;
+        }
+
+        .locator-item.priority-2 {
+            border-left: 3px solid #2196F3;
+        }
+
+        .locator-item.priority-3 {
+            border-left: 3px solid #FF9800;
+        }
+
+        /* Code block styling */
+        .test-code-container {
+            background: #f8fafc;
+            border-radius: 12px;
+            padding: 16px;
+            color: #1e293b;
+            overflow: hidden;
+            border: 1px solid #e2e8f0;
+        }
+        .test-code-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        .test-code-container pre {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 12px;
+            overflow-x: auto;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+            font-size: 13px;
+            line-height: 1.5;
+            color: #e0e0e0;
+        }
+        code { white-space: pre; }
+
+        .instructions ul {
+            list-style: none;
+            padding: 0;
+        }
+
+        .instructions li {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 10px 15px;
+            border-radius: 6px;
+            margin-bottom: 8px;
+            border-left: 3px solid #667eea;
+        }
+
+        .no-actions {
+            text-align: center;
+            color: rgba(255, 255, 255, 0.5);
+            font-style: italic;
+            padding: 40px;
+        }
+
+        /* Responsive design */
+        @media (max-width: 768px) {
+            .control-row {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .recorder-header h1 {
+                font-size: 2rem;
+            }
+
+            .command-code {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .action-header {
+                flex-wrap: wrap;
+            }
+        }
+    </style>
+</head>
+<body>
+    {% include 'left-sidebar.html' %}
+
+    <div class="main-content" style="padding: 0; padding-top: 0;">
+        {% include 'page-header.html' %}
+        
+        <div class="recorder-container">
+            <!-- Header -->
+            <div class="recorder-header">
+                <h1><i class="fas fa-robot"></i> Auto-Healing Test Recorder V2</h1>
+                <p>Production-ready test recording with intelligent auto-healing locators and MCP Playwright integration</p>
+            </div>
+
+            <!-- Status Message -->
+            <div id="statusMessage" class="status-message"></div>
+
+            <!-- Session Info -->
+            <div id="sessionInfo" class="session-info">
+                <div class="session-inactive">
+                    <span class="status-indicator">🔴</span>
+                    <span>No active session</span>
+                </div>
+            </div>
+
+            <!-- Control Panel -->
+            <div class="control-panel">
+                <div class="control-row">
+                    <input type="url" id="targetUrl" class="url-input" placeholder="Enter target URL (e.g., https://example.com)" value="https://example.com">
+                    <button id="startSession" class="btn btn-primary">
+                        <i class="fas fa-play"></i> Start Session
+                    </button>
+                </div>
+
+                <div class="control-row">
+                    <button id="recordAction" class="btn btn-secondary" disabled>
+                        <i class="fas fa-circle-dot"></i> Record Sample Action
+                    </button>
+                    <button id="generateTest" class="btn btn-success" disabled>
+                        <i class="fas fa-code"></i> Generate Test
+                    </button>
+                    <button id="closeSession" class="btn btn-danger" disabled>
+                        <i class="fas fa-stop"></i> Close Session
+                    </button>
+                    <button id="launchCodegen" class="btn btn-secondary" disabled>
+                        <i class="fas fa-bolt"></i> Launch Codegen
+                    </button>
+                    <button id="stopCodegen" class="btn btn-secondary" disabled>
+                        <i class="fas fa-square"></i> Stop Codegen
+                    </button>
+                    <button id="showMcpCommands" class="btn btn-secondary">
+                        <i class="fas fa-terminal"></i> Show MCP Commands
+                    </button>
+                </div>
+            </div>
+
+            <!-- Instructions Display -->
+            <div id="instructionsDisplay" class="display-panel"></div>
+
+            <!-- MCP Commands Display -->
+            <div id="mcpCommandsDisplay" class="display-panel"></div>
+
+            <!-- Recorded Actions Display -->
+            <div id="actionsDisplay" class="display-panel">
+                <p class="no-actions">No actions recorded yet</p>
+            </div>
+
+            <!-- Codegen Output Display -->
+            <div id="codegenOutputDisplay" class="display-panel"></div>
+
+            <!-- Import Codegen -->
+            <div class="display-panel">
+                <h4>📥 Import Codegen Script</h4>
+                <p class="small text-muted">Paste the script from Playwright codegen to convert into auto-healing actions.</p>
+                <textarea id="codegenImportText" rows="10" style="width:100%;font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace;"></textarea>
+                <div style="margin-top:8px">
+                    <button id="importCodegenBtn" class="btn btn-primary">Import Codegen</button>
+                    <button id="enrichLocatorsBtn" class="btn btn-secondary" style="margin-left:8px">
+                        Enrich Locators from Page
+                    </button>
+                </div>
+                <div id="importCodegenStatus" class="small text-muted" style="margin-top:6px"></div>
+                <div id="enrichLocatorsStatus" class="small text-muted" style="margin-top:4px"></div>
+            </div>
+
+
+            <!-- Test Code Display -->
+            <div id="testCodeDisplay" class="display-panel"></div>
+
+        </div>
+    </div>
+
+    {% include 'footer.html' %}
+
+    <script src="{{ url_for('static', filename='auto-healing-recorder-v2.js') }}"></script>
+</body>
+</html>

@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>UI Recorder</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+      color: #333;
+      line-height: 1.5;
+      margin: 0;
+      padding: 20px;
+    }
+    h1 {
+      color: #2c3e50;
+      margin-bottom: 20px;
+    }
+    .recorder-controls {
+      margin-bottom: 20px;
+      display: flex;
+      gap: 8px;
+    }
+    button {
+      cursor: pointer;
+      padding: 8px 16px;
+      border-radius: 4px;
+      border: none;
+      font-weight: 500;
+    }
+    .btn-primary {
+      background-color: #D32F2F;
+      color: white;
+    }
+    .btn-secondary {
+      background-color: #f5f5f5;
+      border: 1px solid #ddd;
+    }
+    button:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+    .recording-panel, .code-panel {
+      margin-bottom: 20px;
+    }
+    .panel-content {
+      background-color: #f5f5f5;
+      padding: 15px;
+      border-radius: 6px;
+      min-height: 300px;
+      max-height: 500px;
+      overflow-y: auto;
+    }
+    .code {
+      background-color: #222;
+      color: #f8f8f2;
+      font-family: 'Fira Mono', 'Consolas', monospace;
+    }
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+    .empty-message {
+      color: #666;
+      text-align: center;
+      margin-top: 2rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>UI Recorder</h1>
+    <p>Record your UI interactions and convert them to Java test code!</p>
+    
+    <div class="recorder-controls">
+      <button id="startRecordingBtn" class="btn-primary">Start Recording</button>
+      <button id="stopRecordingBtn" class="btn-secondary" disabled>Stop Recording</button>
+      <button id="clearRecordingBtn" class="btn-secondary">Clear Recording</button>
+      <button id="generateCodeBtn" class="btn-primary" disabled>Generate Java Code</button>
+    </div>
+
+    <div class="grid">
+      <div class="recording-panel">
+        <h3>Recorded Actions</h3>
+        <div id="recordedActions" class="panel-content">
+          <div class="empty-message">No actions recorded yet</div>
+        </div>
+      </div>
+
+      <div class="code-panel">
+        <h3>Generated Java Code</h3>
+        <div id="generatedCode" class="panel-content code">
+          <div class="empty-message">Generated code will appear here</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <script>
+    // UI Recorder functionality
+    (function() {
+      // Variables for recorder
+      var recordedActions = [];
+      var isRecording = false;
+      
+      // Get UI elements
+      var startBtn = document.getElementById('startRecordingBtn');
+      var stopBtn = document.getElementById('stopRecordingBtn');
+      var clearBtn = document.getElementById('clearRecordingBtn');
+      var generateBtn = document.getElementById('generateCodeBtn');
+      
+      // Helper functions for recorder
+      function updateRecordedActions() {
+        var actionsDiv = document.getElementById('recordedActions');
+        if (!recordedActions.length) {
+          actionsDiv.innerHTML = '<div class="empty-message">No actions recorded yet</div>';
+          return;
+        }
+        
+        actionsDiv.innerHTML = recordedActions.map(function(a, i) {
+          return '<div style="margin-bottom:0.6rem;padding:0.5rem 0.7rem;background:#fff;border-radius:5px;border:1px solid #eee;font-size:0.98em;">' +
+            '<b>' + (i+1) + '.</b> ' + a.type + ' - ' + a.selector + (a.value !== undefined ? ' = <code>' + a.value + '</code>' : '') +
+          '</div>';
+        }).join('');
+      }
+      
+      function getSelector(el) {
+        if (!el) return '';
+        if (el.id) return '#' + el.id;
+        if (el.className && typeof el.className === 'string') 
+          return el.tagName.toLowerCase() + '.' + el.className.split(' ').join('.');
+        return el.tagName.toLowerCase();
+      }
+      
+      function recordClick(e) {
+        if (!isRecording) return;
+        var sel = getSelector(e.target);
+        recordedActions.push({ type: 'click', selector: sel });
+        updateRecordedActions();
+      }
+      
+      function recordInput(e) {
+        if (!isRecording) return;
+        var sel = getSelector(e.target);
+        recordedActions.push({ type: 'input', selector: sel, value: e.target.value });
+        updateRecordedActions();
+      }
+      
+      function recordSelect(e) {
+        if (!isRecording) return;
+        var sel = getSelector(e.target);
+        recordedActions.push({ type: 'change', selector: sel, value: e.target.value });
+        updateRecordedActions();
+      }
+      
+      function generateJavaCode() {
+        if (!recordedActions.length) return;
+        
+        var codeDiv = document.getElementById('generatedCode');
+        var code = 'import org.openqa.selenium.*;\n';
+        code += 'import org.openqa.selenium.chrome.ChromeDriver;\n\n';
+        code += 'public class UiTest {\n';
+        code += '    public static void main(String[] args) {\n';
+        code += '        WebDriver driver = new ChromeDriver();\n';
+        
+        recordedActions.forEach(function(a) {
+          if (a.type === 'click') {
+            code += '        driver.findElement(By.cssSelector("' + a.selector + '")).click();\n';
+          } else if (a.type === 'input' || a.type === 'change') {
+            code += '        driver.findElement(By.cssSelector("' + a.selector + '")).sendKeys("' + (a.value || '') + '");\n';
+          }
+        });
+        
+        code += '        driver.quit();\n';
+        code += '    }\n';
+        code += '}';
+        
+        codeDiv.innerHTML = '<pre style="margin:0;">' + code + '</pre>';
+      }
+      
+      // Set up UI Recorder buttons
+      startBtn.onclick = function() {
+        console.log('Start recording clicked');
+        isRecording = true;
+        startBtn.disabled = true;
+        stopBtn.disabled = false;
+        generateBtn.disabled = true;
+        
+        document.getElementById('recordedActions').innerHTML = '<div class="empty-message">Recording started...</div>';
+        
+        document.addEventListener('click', recordClick);
+        document.addEventListener('input', recordInput);
+        document.addEventListener('change', recordSelect);
+      };
+      
+      stopBtn.onclick = function() {
+        console.log('Stop recording clicked');
+        isRecording = false;
+        startBtn.disabled = false;
+        stopBtn.disabled = true;
+        generateBtn.disabled = false;
+        
+        document.removeEventListener('click', recordClick);
+        document.removeEventListener('input', recordInput);
+        document.removeEventListener('change', recordSelect);
+      };
+      
+      clearBtn.onclick = function() {
+        console.log('Clear recording clicked');
+        recordedActions = [];
+        updateRecordedActions();
+        document.getElementById('generatedCode').innerHTML = '<div class="empty-message">Generated code will appear here</div>';
+      };
+      
+      generateBtn.onclick = function() {
+        console.log('Generate code clicked');
+        generateJavaCode();
+      };
+    })();
+  </script>
+</body>
+</html> 

@@ -1,0 +1,1267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Playwright MCP Automation - Co-Tester</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='navbar-tabs.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='left-sidebar-clean.css') }}">
+    <style>
+        .playwright-container {
+            max-width: 1400px;
+            margin: 2rem auto;
+            padding: 0 2rem;
+        }
+
+        .main-card {
+            background: white;
+            border-radius: 16px;
+            padding: 2rem;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            margin-bottom: 2rem;
+        }
+
+        .input-section {
+            margin-bottom: 2rem;
+        }
+
+        .input-section label {
+            display: block;
+            font-weight: 600;
+            color: #1f2937;
+            margin-bottom: 0.75rem;
+            font-size: 1rem;
+        }
+
+        .instruction-input {
+            width: 100%;
+            min-height: 120px;
+            padding: 1rem;
+            border: 2px solid #e5e7eb;
+            border-radius: 12px;
+            font-size: 1rem;
+            font-family: inherit;
+            resize: vertical;
+            transition: all 0.2s;
+        }
+
+        .instruction-input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .instruction-examples {
+            background: #f0f9ff;
+            border-left: 4px solid #0284c7;
+            padding: 1rem;
+            border-radius: 8px;
+            margin-top: 1rem;
+        }
+
+        .instruction-examples h4 {
+            margin: 0 0 0.75rem 0;
+            color: #0369a1;
+            font-size: 0.9rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .instruction-examples ul {
+            margin: 0;
+            padding-left: 1.5rem;
+        }
+
+        .instruction-examples li {
+            margin: 0.5rem 0;
+            color: #0c4a6e;
+            font-size: 0.9rem;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1.5rem;
+        }
+
+        .btn {
+            padding: 0.875rem 2rem;
+            border: none;
+            border-radius: 10px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.5);
+        }
+
+        .btn-primary:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .btn-secondary {
+            background: #f3f4f6;
+            color: #4b5563;
+        }
+
+        .btn-secondary:hover {
+            background: #e5e7eb;
+        }
+
+        .btn-jira {
+            background: linear-gradient(135deg, #0052CC, #0065FF);
+            color: white;
+            box-shadow: 0 4px 12px rgba(0, 82, 204, 0.3);
+        }
+
+        .btn-jira:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 82, 204, 0.4);
+        }
+
+        .btn-jira:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        /* Jira Section Styles */
+        .jira-section {
+            margin-bottom: 1.5rem;
+            padding-bottom: 1.5rem;
+            border-bottom: 2px solid #e5e7eb;
+        }
+
+        .jira-section label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: #1f2937;
+            font-weight: 600;
+            font-size: 0.95rem;
+        }
+
+        .jira-input-group {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        .jira-input {
+            flex: 1;
+            padding: 0.75rem 1rem;
+            border: 2px solid #e5e7eb;
+            border-radius: 10px;
+            font-size: 1rem;
+            font-family: 'Courier New', monospace;
+            transition: all 0.2s;
+        }
+
+        .jira-input:focus {
+            outline: none;
+            border-color: #0052CC;
+            box-shadow: 0 0 0 3px rgba(0, 82, 204, 0.1);
+        }
+
+        .results-actions {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        .loading-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 9999;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .loading-content {
+            background: white;
+            padding: 2rem;
+            border-radius: 16px;
+            text-align: center;
+            max-width: 400px;
+        }
+
+        .loading-spinner {
+            width: 50px;
+            height: 50px;
+            border: 4px solid #f3f4f6;
+            border-top-color: #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 1rem;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .loading-text {
+            color: #1f2937;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+
+        .loading-subtext {
+            color: #6b7280;
+            font-size: 0.9rem;
+        }
+
+        .results-section {
+            display: none;
+        }
+
+        .results-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 2px solid #e5e7eb;
+        }
+
+        .results-header h2 {
+            margin: 0;
+            color: #1f2937;
+            font-size: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.25rem;
+            margin-bottom: 2rem;
+        }
+
+        .summary-card {
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+        }
+
+        .summary-card-label {
+            color: #6b7280;
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 0.5rem;
+        }
+
+        .summary-card-value {
+            color: #1f2937;
+            font-size: 1.8rem;
+            font-weight: 700;
+        }
+
+        .steps-timeline {
+            margin-top: 2rem;
+        }
+
+        .step-card {
+            background: white;
+            border: 2px solid #e5e7eb;
+            border-radius: 12px;
+            padding: 1.25rem;
+            margin-bottom: 1rem;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        }
+
+        .step-card.success {
+            border-color: #a7f3d0;
+        }
+
+        .step-card.error {
+            border-color: #fecaca;
+            background: #fef2f2;
+        }
+
+        .step-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: start;
+            margin-bottom: 1rem;
+        }
+
+        .step-title {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex: 1;
+        }
+
+        .step-number {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 1rem;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        .step-info h3 {
+            margin: 0 0 4px 0;
+            color: #1f2937;
+            font-size: 1rem;
+            font-weight: 700;
+        }
+
+        .step-meta {
+            color: #6b7280;
+            font-size: 0.85rem;
+            display: flex;
+            gap: 12px;
+        }
+
+        .status-badge {
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            white-space: nowrap;
+        }
+
+        .status-badge.success {
+            background: #d1fae5;
+            color: #10b981;
+        }
+
+        .status-badge.error {
+            background: #fee2e2;
+            color: #ef4444;
+        }
+
+        .step-details {
+            margin: 1rem 0;
+            padding: 1rem;
+            background: #f8fafc;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+        }
+
+        .detail-row {
+            display: flex;
+            margin: 0.5rem 0;
+            font-size: 0.9rem;
+        }
+
+        .detail-label {
+            font-weight: 600;
+            color: #4b5563;
+            min-width: 100px;
+        }
+
+        .detail-value {
+            color: #1f2937;
+            font-family: 'Courier New', monospace;
+        }
+
+        .error-message {
+            background: white;
+            border: 1px solid #fecaca;
+            padding: 0.75rem;
+            border-radius: 6px;
+            color: #dc2626;
+            margin-top: 0.75rem;
+            font-size: 0.9rem;
+        }
+
+        .screenshot-section {
+            margin-top: 1rem;
+        }
+
+        .screenshot-btn {
+            padding: 0.75rem 1.25rem;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+            transition: all 0.2s;
+        }
+
+        .screenshot-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.9);
+            z-index: 10000;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+        }
+
+        .modal-content {
+            max-width: 90vw;
+            max-height: 90vh;
+            position: relative;
+        }
+
+        .modal-image {
+            max-width: 100%;
+            max-height: 85vh;
+            border-radius: 8px;
+        }
+
+        .modal-close {
+            position: absolute;
+            top: -40px;
+            right: 0;
+            background: white;
+            border: none;
+            color: #1f2937;
+            font-size: 1.5rem;
+            cursor: pointer;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-download {
+            position: absolute;
+            top: -40px;
+            right: 50px;
+            background: white;
+            border: none;
+            color: #1f2937;
+            font-size: 1.2rem;
+            cursor: pointer;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* Export Modal Styles */
+        .export-modal {
+            background: white;
+            border-radius: 12px;
+            max-width: 450px;
+            width: 90%;
+            padding: 0;
+            overflow: hidden;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        }
+
+        .export-modal-header {
+            background: linear-gradient(135deg, #0052CC, #0065FF);
+            color: white;
+            padding: 1rem 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .export-modal-header i {
+            font-size: 1.5rem;
+        }
+
+        .export-modal-header h3 {
+            margin: 0;
+            font-size: 1.25rem;
+            font-weight: 600;
+        }
+
+        .export-modal-body {
+            padding: 1.5rem;
+        }
+
+        .export-modal-body > p {
+            margin: 0 0 1rem 0;
+            color: #64748b;
+            font-size: 0.9rem;
+        }
+
+        .export-option {
+            display: flex;
+            align-items: center;
+            margin-bottom: 0.75rem;
+            padding: 0.875rem;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .export-option:hover {
+            border-color: #0052CC;
+            background: #f0f9ff;
+        }
+
+        .export-option input[type="radio"] {
+            margin: 0 0.75rem 0 0;
+            cursor: pointer;
+            width: 18px;
+            height: 18px;
+            flex-shrink: 0;
+        }
+
+        .export-option label {
+            flex: 1;
+            cursor: pointer;
+            margin: 0;
+        }
+
+        .export-option label strong {
+            display: block;
+            color: #1f2937;
+            font-size: 0.95rem;
+            margin-bottom: 0.25rem;
+        }
+
+        .export-option-desc {
+            display: block;
+            font-size: 0.8rem;
+            color: #64748b;
+            line-height: 1.3;
+        }
+
+        #sameTicketId {
+            font-weight: 600;
+            color: #0052CC;
+            font-family: 'Courier New', monospace;
+        }
+
+        #differentTicketInput {
+            margin-top: 0.75rem;
+            padding-left: 2rem;
+        }
+
+        #differentTicketInput label {
+            display: block;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: #1f2937;
+            margin-bottom: 0.5rem;
+        }
+
+        .export-modal-footer {
+            padding: 1rem 1.5rem;
+            background: #f8fafc;
+            display: flex;
+            justify-content: flex-end;
+            gap: 0.75rem;
+            border-top: 1px solid #e5e7eb;
+        }
+
+        .export-modal-footer .btn {
+            padding: 0.625rem 1.25rem;
+            font-size: 0.9rem;
+        }
+
+        .export-modal .modal-close {
+            top: 0.875rem;
+            right: 0.875rem;
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            width: 32px;
+            height: 32px;
+            font-size: 1.25rem;
+        }
+
+        .export-modal .modal-close:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+    </style>
+</head>
+<body>
+    {% include 'navbar.html' %}
+    {% include 'left-sidebar.html' %}
+
+    <div class="main-content">
+        {% set page_title = 'Playwright MCP Automation <span class="ai-badge">AI</span>' %}
+        {% set page_subtitle = 'Powered by Gemini 2.0 Flash - Selector-based browser automation with AI code generation!' %}
+        {% set allow_html = true %}
+        {% include 'page-header.html' %}
+        
+        <div class="playwright-container">
+            <!-- Input Section -->
+            <div class="main-card">
+                <div class="input-section">
+                    <!-- Jira Integration Section -->
+                    <div class="jira-section">
+                        <label for="jiraTicketId">
+                            <i class="fab fa-jira"></i>
+                            Jira Ticket ID (Optional)
+                        </label>
+                        <div class="jira-input-group">
+                            <input 
+                                type="text" 
+                                id="jiraTicketId" 
+                                class="jira-input"
+                                placeholder="e.g., PROJ-123"
+                            >
+                            <button id="importJiraBtn" class="btn btn-jira">
+                                <i class="fas fa-download"></i>
+                                Import from Jira
+                            </button>
+                        </div>
+                    </div>
+
+                    <label for="instructionInput">
+                        <i class="fas fa-keyboard"></i>
+                        Enter Your Automation Instructions
+                    </label>
+                    <textarea 
+                        id="instructionInput" 
+                        class="instruction-input"
+                        placeholder="Example: Go to google.com, search for 'playwright automation', click on the first result, and take a screenshot"
+                    ></textarea>
+
+                    <div class="instruction-examples">
+                        <h4><i class="fas fa-lightbulb"></i> Example Instructions</h4>
+                        <ul>
+                            <li>Go to amazon.com, search for 'laptop', and take a screenshot of the results</li>
+                            <li>Navigate to github.com, click on 'Sign in', and capture the login page</li>
+                            <li>Open youtube.com, search for 'playwright tutorial', and click the first video</li>
+                            <li>Go to reddit.com, click on 'Popular', and scroll down</li>
+                        </ul>
+                    </div>
+
+                    <div class="action-buttons">
+                        <button id="executeBtn" class="btn btn-primary">
+                            <i class="fas fa-play"></i>
+                            Execute Automation
+                        </button>
+                        <button id="clearBtn" class="btn btn-secondary">
+                            <i class="fas fa-eraser"></i>
+                            Clear
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Results Section -->
+            <div id="resultsSection" class="results-section main-card">
+                <div class="results-header">
+                    <h2>
+                        <i class="fas fa-chart-line"></i>
+                        Execution Results
+                    </h2>
+                    <div class="results-actions">
+                        <button id="exportJiraBtn" class="btn btn-jira" style="display:none;">
+                            <i class="fas fa-upload"></i>
+                            Export to Jira
+                        </button>
+                        <button id="newAutomationBtn" class="btn btn-secondary">
+                            <i class="fas fa-plus"></i>
+                            New Automation
+                        </button>
+                    </div>
+                </div>
+
+                <div id="resultsContent"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" class="loading-overlay">
+        <div class="loading-content">
+            <div class="loading-spinner"></div>
+            <div class="loading-text">Running Automation...</div>
+            <div class="loading-subtext">AI is interpreting instructions and executing browser actions</div>
+        </div>
+    </div>
+
+    <!-- Screenshot Modal -->
+    <div id="screenshotModal" class="modal">
+        <div class="modal-content">
+            <button class="modal-close" onclick="closeModal()">
+                <i class="fas fa-times"></i>
+            </button>
+            <button class="modal-download" onclick="downloadScreenshot()">
+                <i class="fas fa-download"></i>
+            </button>
+            <img id="modalImage" class="modal-image" src="" alt="Screenshot">
+        </div>
+    </div>
+
+    <!-- Export to Jira Modal -->
+    <div id="exportJiraModal" class="modal" style="display: none;">
+        <div class="modal-content export-modal">
+            <button class="modal-close" onclick="closeExportModal()">
+                <i class="fas fa-times"></i>
+            </button>
+            <div class="export-modal-header">
+                <i class="fab fa-jira"></i>
+                <h3>Export to Jira</h3>
+            </div>
+            <div class="export-modal-body">
+                <p>Choose where to export your results:</p>
+                
+                <div class="export-option">
+                    <input type="radio" id="exportSameTicket" name="exportOption" value="same" checked>
+                    <label for="exportSameTicket">
+                        <strong>Same Ticket</strong>
+                        <span class="export-option-desc">Original ticket: <span id="sameTicketId">N/A</span></span>
+                    </label>
+                </div>
+                
+                <div class="export-option">
+                    <input type="radio" id="exportDifferentTicket" name="exportOption" value="different">
+                    <label for="exportDifferentTicket">
+                        <strong>Different Ticket</strong>
+                        <span class="export-option-desc">Specify another Jira ticket</span>
+                    </label>
+                </div>
+                
+                <div id="differentTicketInput" style="display: none;">
+                    <label for="exportTicketId">Ticket ID:</label>
+                    <input 
+                        type="text" 
+                        id="exportTicketId" 
+                        class="jira-input"
+                        placeholder="e.g., PROJ-456"
+                    >
+                </div>
+            </div>
+            <div class="export-modal-footer">
+                <button class="btn btn-secondary" onclick="closeExportModal()">
+                    Cancel
+                </button>
+                <button class="btn btn-jira" onclick="confirmExportToJira()">
+                    <i class="fas fa-upload"></i>
+                    Export
+                </button>
+            </div>
+        </div>
+    </div>
+    {% raw %}
+    <script>
+        let currentReport = null;
+        let currentJiraTicketId = null;
+
+        document.getElementById('executeBtn').addEventListener('click', executeAutomation);
+        document.getElementById('clearBtn').addEventListener('click', clearInput);
+        document.getElementById('newAutomationBtn').addEventListener('click', startNewAutomation);
+        document.getElementById('importJiraBtn').addEventListener('click', importFromJira);
+        document.getElementById('exportJiraBtn').addEventListener('click', exportToJira);
+
+        // Allow Enter+Shift to submit
+        document.getElementById('instructionInput').addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && e.shiftKey) {
+                e.preventDefault();
+                executeAutomation();
+            }
+        });
+
+        async function executeAutomation() {
+            const instruction = document.getElementById('instructionInput').value.trim();
+            
+            if (!instruction) {
+                alert('Please enter automation instructions');
+                return;
+            }
+
+            // Show loading
+            document.getElementById('loadingOverlay').style.display = 'flex';
+            document.getElementById('executeBtn').disabled = true;
+
+            try {
+                const response = await fetch('/api/playwright-mcp/execute', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ instruction })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    currentReport = data.execution_report;
+                    displayResults(currentReport);
+                } else {
+                    alert('Error: ' + (data.error || 'Unknown error'));
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Failed to execute automation: ' + error.message);
+            } finally {
+                // Hide loading
+                document.getElementById('loadingOverlay').style.display = 'none';
+                document.getElementById('executeBtn').disabled = false;
+            }
+        }
+
+        function displayResults(report) {
+            const resultsSection = document.getElementById('resultsSection');
+            const resultsContent = document.getElementById('resultsContent');
+
+            // Build summary
+            const totalSteps = report.steps.length;
+            const successSteps = report.steps.filter(s => s.success).length;
+            const errorSteps = totalSteps - successSteps;
+            const duration = report.duration_seconds;
+
+            let html = `
+                <div class="summary-grid">
+                    <div class="summary-card">
+                        <div class="summary-card-label">Status</div>
+                        <div class="summary-card-value" style="color: ${report.success ? '#10b981' : '#ef4444'}">
+                            ${report.success ? '✓ Success' : '✗ Failed'}
+                        </div>
+                    </div>
+                    <div class="summary-card">
+                        <div class="summary-card-label">Total Steps</div>
+                        <div class="summary-card-value">${totalSteps}</div>
+                    </div>
+                    <div class="summary-card">
+                        <div class="summary-card-label">Success / Failed</div>
+                        <div class="summary-card-value">${successSteps} / ${errorSteps}</div>
+                    </div>
+                    <div class="summary-card">
+                        <div class="summary-card-label">Duration</div>
+                        <div class="summary-card-value">${duration}s</div>
+                    </div>
+                </div>
+
+                <div class="steps-timeline">
+                    <h3 style="margin-bottom: 1.5rem; color: #1f2937; display: flex; align-items: center; gap: 10px;">
+                        <i class="fas fa-list-ol"></i>
+                        Execution Timeline
+                    </h3>
+            `;
+
+            // Build steps
+            report.steps.forEach((step, index) => {
+                const statusClass = step.success ? 'success' : 'error';
+                const statusText = step.success ? 'PASS' : 'FAIL';
+                const statusIcon = step.success ? 'fa-check-circle' : 'fa-times-circle';
+
+                html += `
+                    <div class="step-card ${statusClass}">
+                        <div class="step-header">
+                            <div class="step-title">
+                                <div class="step-number">${step.step_number}</div>
+                                <div class="step-info">
+                                    <h3>${step.description}</h3>
+                                    <div class="step-meta">
+                                        <span><i class="fas fa-clock"></i> ${step.duration_ms}ms</span>
+                                        <span><i class="fas fa-bolt"></i> ${step.action}</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="status-badge ${statusClass}">
+                                <i class="fas ${statusIcon}"></i>
+                                ${statusText}
+                            </div>
+                        </div>
+
+                        <div class="step-details">
+                            ${step.selector ? `
+                                <div class="detail-row">
+                                    <div class="detail-label">Selector:</div>
+                                    <div class="detail-value">${step.selector}</div>
+                                </div>
+                            ` : ''}
+                            ${step.value ? `
+                                <div class="detail-row">
+                                    <div class="detail-label">Value:</div>
+                                    <div class="detail-value">${step.value}</div>
+                                </div>
+                            ` : ''}
+                            ${step.url ? `
+                                <div class="detail-row">
+                                    <div class="detail-label">URL:</div>
+                                    <div class="detail-value">${step.url}</div>
+                                </div>
+                            ` : ''}
+                            ${step.result ? `
+                                <div class="detail-row">
+                                    <div class="detail-label">Result:</div>
+                                    <div class="detail-value">${step.result}</div>
+                                </div>
+                            ` : ''}
+                        </div>
+
+                        ${step.error ? `
+                            <div class="error-message">
+                                <i class="fas fa-exclamation-triangle"></i>
+                                <strong>Error:</strong> ${step.error}
+                            </div>
+                        ` : ''}
+
+                        ${step.screenshot ? `
+                            <div class="screenshot-section">
+                                <button class="screenshot-btn" onclick="showScreenshot(${index})">
+                                    <i class="fas fa-image"></i>
+                                    View Screenshot
+                                </button>
+                            </div>
+                        ` : ''}
+                    </div>
+                `;
+            });
+
+            // Final screenshot
+            if (report.final_screenshot) {
+                html += `
+                    <div class="step-card">
+                        <div class="step-header">
+                            <div class="step-title">
+                                <div class="step-number"><i class="fas fa-flag-checkered"></i></div>
+                                <div class="step-info">
+                                    <h3>Final Result</h3>
+                                    <div class="step-meta">
+                                        <span><i class="fas fa-globe"></i> ${report.final_url}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="screenshot-section">
+                            <button class="screenshot-btn" onclick="showFinalScreenshot()">
+                                <i class="fas fa-image"></i>
+                                View Final Screenshot
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }
+
+            html += '</div>';
+
+            resultsContent.innerHTML = html;
+            resultsSection.style.display = 'block';
+
+            // Always show Export to Jira button after execution
+            const exportBtn = document.getElementById('exportJiraBtn');
+            exportBtn.style.display = 'inline-flex';
+
+            // Scroll to results
+            resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+        function showScreenshot(index) {
+            const step = currentReport.steps[index];
+            if (step && step.screenshot) {
+                showImageModal(`data:image/png;base64,${step.screenshot}`);
+            }
+        }
+
+        function showFinalScreenshot() {
+            if (currentReport && currentReport.final_screenshot) {
+                showImageModal(`data:image/png;base64,${currentReport.final_screenshot}`);
+            }
+        }
+
+        function showImageModal(src) {
+            const modal = document.getElementById('screenshotModal');
+            const img = document.getElementById('modalImage');
+            img.src = src;
+            modal.style.display = 'flex';
+        }
+
+        function closeModal() {
+            document.getElementById('screenshotModal').style.display = 'none';
+        }
+
+        function downloadScreenshot() {
+            const img = document.getElementById('modalImage');
+            const link = document.createElement('a');
+            link.href = img.src;
+            link.download = `playwright-screenshot-${Date.now()}.png`;
+            link.click();
+        }
+
+        function clearInput() {
+            document.getElementById('instructionInput').value = '';
+            document.getElementById('jiraTicketId').value = '';
+            document.getElementById('exportJiraBtn').style.display = 'none';
+            currentJiraTicketId = null;
+            document.getElementById('instructionInput').focus();
+        }
+
+        // Jira Integration Functions
+        async function importFromJira() {
+            const jiraTicketId = document.getElementById('jiraTicketId').value.trim();
+            
+            if (!jiraTicketId) {
+                alert('Please enter a Jira ticket ID');
+                return;
+            }
+
+            const importBtn = document.getElementById('importJiraBtn');
+            importBtn.disabled = true;
+            importBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Importing...';
+
+            try {
+                const response = await fetch(`/api/playwright-mcp/import-jira/${encodeURIComponent(jiraTicketId)}`, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    document.getElementById('instructionInput').value = data.description;
+                    currentJiraTicketId = jiraTicketId;
+                    alert(`Successfully imported description from ${jiraTicketId}`);
+                } else {
+                    alert('Error: ' + (data.error || 'Failed to import from Jira'));
+                }
+            } catch (error) {
+                console.error('Error importing from Jira:', error);
+                alert('Failed to connect to Jira. Please check your configuration.');
+            } finally {
+                importBtn.disabled = false;
+                importBtn.innerHTML = '<i class="fas fa-download"></i> Import from Jira';
+            }
+        }
+
+        function exportToJira() {
+            if (!currentReport) {
+                alert('No execution results to export');
+                return;
+            }
+
+            // Show the export modal
+            const modal = document.getElementById('exportJiraModal');
+            const jiraTicketId = document.getElementById('jiraTicketId').value.trim() || currentJiraTicketId;
+            
+            // Update the "same ticket" option
+            const sameTicketIdSpan = document.getElementById('sameTicketId');
+            const sameTicketRadio = document.getElementById('exportSameTicket');
+            
+            if (jiraTicketId) {
+                sameTicketIdSpan.textContent = jiraTicketId;
+                sameTicketRadio.disabled = false;
+                sameTicketRadio.parentElement.style.opacity = '1';
+            } else {
+                sameTicketIdSpan.textContent = 'N/A - No ticket imported';
+                sameTicketRadio.disabled = true;
+                sameTicketRadio.parentElement.style.opacity = '0.5';
+                // Auto-select "different ticket" option
+                document.getElementById('exportDifferentTicket').checked = true;
+                document.getElementById('differentTicketInput').style.display = 'block';
+            }
+            
+            modal.style.display = 'flex';
+        }
+
+        function closeExportModal() {
+            document.getElementById('exportJiraModal').style.display = 'none';
+        }
+
+        async function confirmExportToJira() {
+            const exportOption = document.querySelector('input[name="exportOption"]:checked').value;
+            let targetTicketId;
+            
+            if (exportOption === 'same') {
+                targetTicketId = document.getElementById('jiraTicketId').value.trim() || currentJiraTicketId;
+            } else {
+                targetTicketId = document.getElementById('exportTicketId').value.trim();
+            }
+            
+            if (!targetTicketId) {
+                alert('Please enter a Jira ticket ID');
+                return;
+            }
+
+            // Close modal
+            closeExportModal();
+
+            // Show loading state
+            const exportBtn = document.getElementById('exportJiraBtn');
+            const originalHtml = exportBtn.innerHTML;
+            exportBtn.disabled = true;
+            exportBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Exporting...';
+
+            try {
+                // Format the results for Jira comment
+                const formattedResults = formatResultsForJira(currentReport);
+
+                // Prepare ONLY the final screenshot (complete automation result)
+                const screenshots = {
+                    final_screenshot: currentReport.final_screenshot
+                };
+
+                const response = await fetch(`/api/playwright-mcp/export-jira/${encodeURIComponent(targetTicketId)}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        results: formattedResults,
+                        report: currentReport,
+                        screenshots: screenshots
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    let attachmentInfo = '';
+                    if (data.attachments_uploaded > 0) {
+                        const attachmentNames = data.attachment_names || [];
+                        const reportCount = attachmentNames.filter(name => name.includes('report')).length;
+                        const screenshotCount = attachmentNames.filter(name => name.includes('.png')).length;
+                        
+                        let parts = [];
+                        if (reportCount > 0) parts.push(`${reportCount} test report(s)`);
+                        if (screenshotCount > 0) parts.push(`${screenshotCount} screenshot(s)`);
+                        
+                        attachmentInfo = `\n📎 Attached: ${parts.join(' and ')}`;
+                    }
+                    alert(`✅ Successfully exported results to ${targetTicketId}${attachmentInfo}`);
+                } else {
+                    alert('Error: ' + (data.error || 'Failed to export to Jira'));
+                }
+            } catch (error) {
+                console.error('Error exporting to Jira:', error);
+                alert('Failed to connect to Jira. Please check your configuration.');
+            } finally {
+                exportBtn.disabled = false;
+                exportBtn.innerHTML = originalHtml;
+            }
+        }
+
+        // Toggle different ticket input visibility
+        document.addEventListener('DOMContentLoaded', () => {
+            const exportOptions = document.querySelectorAll('input[name="exportOption"]');
+            exportOptions.forEach(option => {
+                option.addEventListener('change', (e) => {
+                    const differentInput = document.getElementById('differentTicketInput');
+                    if (e.target.value === 'different') {
+                        differentInput.style.display = 'block';
+                        document.getElementById('exportTicketId').focus();
+                    } else {
+                        differentInput.style.display = 'none';
+                    }
+                });
+            });
+        });
+
+        function formatResultsForJira(report) {
+            let markdown = `h3. Playwright MCP Automation Results\n\n`;
+            markdown += `*Instruction:* ${report.instruction}\n`;
+            markdown += `*Overall Status:* ${report.success ? '{color:green}✓ SUCCESS{color}' : '{color:red}✗ FAILED{color}'}\n`;
+            markdown += `*Total Duration:* ${report.duration_seconds ? (report.duration_seconds * 1000).toFixed(0) : 'N/A'}ms\n`;
+            markdown += `*Steps Executed:* ${report.steps.length}\n\n`;
+            
+            markdown += `h4. Execution Steps\n\n`;
+            
+            // Create Jira table with headers
+            markdown += `||Step||Status||Description||Action||Duration||Details||\n`;
+            
+            report.steps.forEach((step, index) => {
+                const status = step.success ? '{color:green}✓ PASS{color}' : '{color:red}✗ FAIL{color}';
+                const description = (step.description || 'N/A').replace(/\|/g, '\\|');
+                const action = (step.action || 'N/A').replace(/\|/g, '\\|');
+                const duration = `${step.duration_ms || 0}ms`;
+                
+                // Build details column - one detail per line using line breaks
+                let details = [];
+                if (step.selector) details.push(`Selector: {{${step.selector.replace(/\|/g, '\\|')}}}`);
+                if (step.value) details.push(`Value: ${step.value.replace(/\|/g, '\\|')}`);
+                if (step.url) details.push(`URL: ${step.url.replace(/\|/g, '\\|')}`);
+                if (step.result) details.push(`${step.result.replace(/\|/g, '\\|')}`);
+                if (step.error) {
+                    // Truncate long errors
+                    const errorMsg = step.error.length > 100 ? step.error.substring(0, 100) + '...' : step.error;
+                    details.push(`{color:red}${errorMsg.replace(/\|/g, '\\|')}{color}`);
+                }
+                
+                const detailsText = details.length > 0 ? details.join('\\\\') : 'N/A';
+                
+                // Add table row - escape pipe characters
+                markdown += `|${step.step_number}|${status}|${description}|${action}|${duration}|${detailsText}|\n`;
+            });
+            
+            markdown += `\n`;
+            
+            // Add summary statistics
+            const passCount = report.steps.filter(s => s.success).length;
+            const failCount = report.steps.length - passCount;
+            
+            markdown += `h4. Summary\n\n`;
+            markdown += `*Total Steps:* ${report.steps.length}\n`;
+            markdown += `*Passed:* {color:green}${passCount}{color}\n`;
+            markdown += `*Failed:* {color:red}${failCount}{color}\n`;
+            markdown += `*Success Rate:* ${((passCount / report.steps.length) * 100).toFixed(1)}%\n`;
+            
+            return markdown;
+        }
+
+        function startNewAutomation() {
+            document.getElementById('resultsSection').style.display = 'none';
+            clearInput();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        // Close modal on click outside
+        document.getElementById('screenshotModal').addEventListener('click', (e) => {
+            if (e.target.id === 'screenshotModal') {
+                closeModal();
+            }
+        });
+
+        // Close modal on Escape key
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                closeModal();
+            }
+        });
+    </script>
+    {% endraw %}
+</body>
+</html>

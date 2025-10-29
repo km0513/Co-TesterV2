@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Automation Test Creator - Co-Tester</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none'><defs><linearGradient id='favGradient' x1='0%' y1='0%' x2='100%' y2='100%'><stop offset='0%' style='stop-color:%23f59e0b;stop-opacity:1' /><stop offset='100%' style='stop-color:%23d97706;stop-opacity:1' /></linearGradient></defs><path d='M12 2L13.09 8.26L20 9L13.09 9.74L12 16L10.91 9.74L4 9L10.91 8.26L12 2Z' fill='url(%23favGradient)'/><circle cx='12' cy='12' r='3' fill='none' stroke='url(%23favGradient)' stroke-width='1.8'/></svg>">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='left-sidebar.css') }}">
+  <style>
+    .test-creator-container {
+      max-width: 1400px;
+      margin: 2rem auto;
+      padding: 20px;
+    }
+
+    .workflow-tabs {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 30px;
+      border-bottom: 2px solid #e1e8ed;
+      padding-bottom: 5px;
+    }
+
+    .workflow-tab {
+      padding: 12px 24px;
+      background: #f5f7fa;
+      border: none;
+      border-radius: 8px 8px 0 0;
+      cursor: pointer;
+      font-weight: 600;
+      color: #666;
+      transition: all 0.3s ease;
+      position: relative;
+    }
+
+    .workflow-tab:hover {
+      background: #e1e8ed;
+      color: #333;
+    }
+
+    .workflow-tab.active {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+    }
+
+    .workflow-tab.completed::after {
+      content: "✓";
+      position: absolute;
+      top: -8px;
+      right: -8px;
+      background: #28a745;
+      color: white;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      font-weight: bold;
+    }
+
+    .workflow-content {
+      display: none;
+    }
+
+    .workflow-content.active {
+      display: block;
+      animation: fadeIn 0.3s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .section-card {
+      background: white;
+      padding: 30px;
+      border-radius: 12px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+
+    .btn {
+      padding: 12px 24px;
+      border: none;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 14px;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+    }
+
+    .btn-secondary {
+      background: #f5f7fa;
+      color: #667eea;
+      border: 2px solid #667eea;
+    }
+
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none !important;
+    }
+
+    .code-display {
+      background: #1e1e1e;
+      color: #d4d4d4;
+      padding: 20px;
+      border-radius: 8px;
+      font-family: 'Courier New', monospace;
+      font-size: 14px;
+      line-height: 1.6;
+      max-height: 500px;
+      overflow-y: auto;
+      margin-top: 20px;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    .form-group label {
+      display: block;
+      font-weight: 600;
+      margin-bottom: 8px;
+      color: #333;
+    }
+
+    .form-group input,
+    .form-group textarea {
+      width: 100%;
+      padding: 12px;
+      border: 2px solid #e1e8ed;
+      border-radius: 8px;
+      font-size: 14px;
+      font-family: inherit;
+    }
+
+    .form-group textarea {
+      min-height: 120px;
+      resize: vertical;
+    }
+
+    .notification {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      padding: 16px 24px;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      z-index: 10000;
+      display: none;
+    }
+
+    .notification.success {
+      background: #28a745;
+      color: white;
+    }
+
+    .notification.error {
+      background: #dc3545;
+      color: white;
+    }
+
+    .notification.visible {
+      display: block;
+      animation: slideInRight 0.3s ease;
+    }
+
+    @keyframes slideInRight {
+      from { transform: translateX(400px); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+
+    .loading-spinner {
+      display: inline-block;
+      width: 16px;
+      height: 16px;
+      border: 3px solid rgba(255,255,255,0.3);
+      border-radius: 50%;
+      border-top-color: white;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
+    .export-tab.active {
+      color: #667eea !important;
+      border-bottom-color: #667eea !important;
+    }
+
+    .export-section {
+      animation: fadeIn 0.3s ease;
+    }
+  </style>
+</head>
+<body>
+  {% set active_tab = 'ui-automation' %}
+  {% include 'left-sidebar.html' %}
+  
+  <div class="main-content">
+    {% set page_title = '<i class="fas fa-vial"></i> Automation Test Creator <span class="ai-badge">AI</span>' %}
+    {% set allow_html = true %}
+    {% set page_subtitle = 'Record tests with Playwright → Generate details with AI → Export to Jira → Import & Execute' %}
+    {% include 'page-header.html' %}
+    
+    <div class="test-creator-container">
+      <!-- Workflow Tabs -->
+      <div class="workflow-tabs">
+        <button class="workflow-tab active" data-tab="record">1️⃣ Record Test</button>
+        <button class="workflow-tab" data-tab="generate">2️⃣ Generate Details</button>
+        <button class="workflow-tab" data-tab="export">3️⃣ Export to Jira</button>
+        <button class="workflow-tab" data-tab="execute">4️⃣ Import & Execute</button>
+      </div>
+
+      <!-- Step 1: Record -->
+      <div class="workflow-content active" id="record-content">
+        <div class="section-card">
+          <h2>🔴 Record Your Test</h2>
+          <p style="color: #666; margin-bottom: 20px;">Start Playwright Codegen to record automation test steps and optional video</p>
+          
+          <div style="display: flex; gap: 15px; margin-bottom: 20px; flex-wrap: wrap;">
+            <button class="btn btn-primary" id="startRecordBtn"><i class="fas fa-robot"></i> Start Playwright Browser</button>
+            <input type="url" id="recordUrl" placeholder="Enter URL to test (e.g., https://example.com)" style="flex: 1; min-width: 300px; padding: 12px; border: 2px solid #e1e8ed; border-radius: 8px;">
+          </div>
+
+          <!-- Launching Indicator -->
+          <div id="launchingIndicator" style="display: none; margin-bottom: 20px; padding: 15px; background: #fff3cd; border-radius: 8px;">
+            <i class="fas fa-spinner fa-spin"></i>
+            <strong>Launching Playwright Browser...</strong>
+            <p style="margin: 5px 0 0 0;">This may take a few seconds. Please wait...</p>
+          </div>
+
+          <!-- Browser Confirmation -->
+          <div id="browserConfirm" style="display: none;"></div>
+
+          <!-- Video Recording Section -->
+          <div id="videoRecordingSection" style="display: none; margin-bottom: 20px;">
+            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 20px; border-radius: 12px; color: white;">
+              <h3 style="margin-top: 0; color: white;"><i class="fas fa-video"></i> Video Recording (Optional)</h3>
+              <p style="margin-bottom: 15px;">Record a video of the Playwright browser to help AI generate better manual test steps</p>
+              <div style="display: flex; gap: 10px;">
+                <button class="btn btn-primary" id="startVideoBtn" style="background: white; color: #667eea;"><i class="fas fa-video"></i> Start Video Recording</button>
+                <button class="btn btn-secondary" id="skipVideoBtn" style="background: rgba(255,255,255,0.2); color: white; border: 2px solid white;"><i class="fas fa-forward"></i> Skip Video (Code Only)</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Recording Status -->
+          <div id="recordingStatus" style="display: none; padding: 15px; background: #fff3cd; border-radius: 8px; margin-bottom: 20px;">
+            <div style="display: flex; align-items: center; gap: 15px;">
+              <i class="fas fa-circle" style="color: #dc3545; animation: pulse 1.5s infinite;"></i>
+              <div>
+                <strong>Recording Active</strong>
+                <p style="margin: 5px 0 0 0;">Playwright is recording your actions. Video recording: <span id="videoStatusText">Not started</span></p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Finish Recording -->
+          <div id="finishRecordingSection" style="display: none; margin-bottom: 20px;">
+            <button class="btn btn-primary" id="stopRecordBtn"><i class="fas fa-stop"></i> Finish Recording</button>
+          </div>
+
+          <!-- Processing -->
+          <div id="processingIndicator" style="display: none; padding: 20px; background: #f8f9fa; border-radius: 8px; margin-bottom: 20px; text-align: center;">
+            <i class="fas fa-cog fa-spin" style="font-size: 2rem; color: #667eea; margin-bottom: 10px;"></i>
+            <h3 style="margin: 10px 0;">Processing Recording...</h3>
+            <p style="color: #666;">Extracting code and preparing for AI analysis</p>
+          </div>
+
+          <!-- Recorded Code Preview -->
+          <div id="codePreviewSection" style="display: none; margin-bottom: 20px;">
+            <h3><i class="fas fa-code"></i> Recorded Automation Code</h3>
+            <div class="code-display" id="recordedCode"></div>
+          </div>
+
+          <!-- Video Preview -->
+          <div id="videoPreviewSection" style="display: none; margin-bottom: 20px;">
+            <h3><i class="fas fa-video"></i> Recorded Video</h3>
+            <video id="videoPreview" controls style="max-width: 100%; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);"></video>
+          </div>
+          
+          <div style="margin-top: 20px; display: none;" id="nextStepSection">
+            <button class="btn btn-primary" onclick="goToTab('generate')">Next: Generate Test Details with AI →</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 2: Generate -->
+      <div class="workflow-content" id="generate-content">
+        <div class="section-card">
+          <h2>✨ Generate Test Details with AI</h2>
+          <p style="color: #666; margin-bottom: 25px;">Use AI to analyze your recording and generate comprehensive test documentation</p>
+
+          <div class="ai-generate-section" style="background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%); padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+            <h3 style="margin-top: 0;">🤖 AI-Powered Test Analysis</h3>
+            <p style="margin-bottom: 15px; font-size: 14px;">
+              AI will analyze your <strong>Playwright code</strong><span id="videoAnalysisText" style="display: none;"> and <strong>recorded video</strong></span> to generate:
+            </p>
+            <ul style="margin-bottom: 15px; padding-left: 20px;">
+              <li>Test Summary (Jira title)</li>
+              <li>Test Description</li>
+              <li>Automated Test Steps (from code)</li>
+              <li>Manual Test Steps (human-readable)<span id="videoStepsText" style="display: none;"> based on video</span></li>
+            </ul>
+            <button class="btn btn-primary" id="aiGenerateBtn">
+              <i class="fas fa-magic"></i> Generate with AI
+              <span id="videoGenIndicator" style="display: none;">(with Video Analysis)</span>
+            </button>
+          </div>
+
+          <div class="form-group">
+            <label for="testSummary">Test Summary (Jira Task Title)</label>
+            <input type="text" id="testSummary" placeholder="e.g., Verify user login functionality" />
+          </div>
+
+          <div class="form-group">
+            <label for="testDescription">Test Description</label>
+            <textarea id="testDescription" placeholder="Describe what this test validates..."></textarea>
+          </div>
+
+          <!-- Automated Steps Preview -->
+          <div id="automatedStepsPreview" style="display: none; background: #f8f9fa; padding: 20px; border-radius: 8px; margin-top: 15px;">
+            <h4 style="color: #667eea;"><i class="fas fa-robot"></i> Automated Test Steps</h4>
+            <div id="automatedStepsContent"></div>
+          </div>
+
+          <!-- Manual Steps Preview -->
+          <div id="manualStepsPreview" style="display: none; background: #f8f9fa; padding: 20px; border-radius: 8px; margin-top: 15px;">
+            <h4 style="color: #667eea;"><i class="fas fa-clipboard-list"></i> Manual Test Steps</h4>
+            <div id="manualStepsContent"></div>
+          </div>
+
+          <div style="margin-top: 25px; display: flex; gap: 15px;">
+            <button class="btn btn-secondary" onclick="goToTab('record')">← Back</button>
+            <button class="btn btn-primary" onclick="goToTab('export')">Next: Export Options →</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 3: Export -->
+      <div class="workflow-content" id="export-content">
+        <div class="section-card">
+          <h2>📤 Export Options</h2>
+          <p style="color: #666; margin-bottom: 25px;">Export your test to Jira or download as a complete package</p>
+
+          <!-- Export Tabs -->
+          <div style="display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 2px solid #e1e8ed;">
+            <button class="export-tab active" data-export="jira" style="padding: 12px 24px; border: none; background: none; cursor: pointer; font-weight: 600; border-bottom: 3px solid #667eea;">
+              <i class="fas fa-jira"></i> Export to Jira
+            </button>
+            <button class="export-tab" data-export="download" style="padding: 12px 24px; border: none; background: none; cursor: pointer; font-weight: 600; color: #666;">
+              <i class="fas fa-download"></i> Download ZIP Package
+            </button>
+          </div>
+
+          <!-- Jira Export Section -->
+          <div id="jiraExportSection" class="export-section">
+            <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+              <h4><i class="fas fa-eye"></i> Jira Task Preview</h4>
+              <div style="margin-bottom: 15px;">
+                <strong>Summary:</strong>
+                <div id="previewSummary" style="margin-top: 5px; padding: 10px; background: white; border-radius: 4px;"></div>
+              </div>
+              <div style="margin-bottom: 15px;">
+                <strong>Description:</strong>
+                <div id="previewDescription" style="margin-top: 5px; padding: 10px; background: white; border-radius: 4px;"></div>
+              </div>
+              <div style="margin-bottom: 15px;">
+                <strong>Automated Steps:</strong>
+                <div id="previewAutomatedSteps" style="margin-top: 5px; padding: 10px; background: white; border-radius: 4px;"></div>
+              </div>
+              <div>
+                <strong>Manual Steps:</strong>
+                <div id="previewManualSteps" style="margin-top: 5px; padding: 10px; background: white; border-radius: 4px;"></div>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="jiraProject">Jira Project</label>
+              <input type="text" id="jiraProject" placeholder="e.g., IRA" value="IRA" />
+            </div>
+
+            <button class="btn btn-primary" id="exportToJiraBtn">
+              <i class="fas fa-cloud-upload-alt"></i> Create Jira Task
+            </button>
+
+            <div id="exportSuccess" style="display: none; margin-top: 20px; padding: 20px; background: #d4edda; border-radius: 8px;">
+              <strong>✅ Successfully created!</strong>
+              <div id="createdTaskInfo" style="margin-top: 10px;"></div>
+            </div>
+          </div>
+
+          <!-- Download ZIP Section -->
+          <div id="downloadExportSection" class="export-section" style="display: none;">
+            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 25px; border-radius: 12px; color: white; margin-bottom: 20px;">
+              <h3 style="margin-top: 0; color: white;"><i class="fas fa-file-archive"></i> Complete Test Package</h3>
+              <p style="margin-bottom: 15px;">Download a ZIP file containing:</p>
+              <ul style="margin-bottom: 20px; padding-left: 20px;">
+                <li><strong>Playwright Test Code</strong> - Ready-to-run automation script</li>
+                <li><strong>Manual Test Document</strong> - Step-by-step testing instructions</li>
+                <li><strong>Test Video</strong> - Recording of test execution (if captured)</li>
+                <li><strong>package.json</strong> - Dependencies and run scripts</li>
+                <li><strong>README.md</strong> - Setup and execution instructions</li>
+              </ul>
+              
+              <div class="form-group" style="margin-bottom: 15px;">
+                <label for="testName" style="color: white;">Test Name (for file naming)</label>
+                <input type="text" id="testName" placeholder="e.g., login_test" style="background: white; color: #333;" />
+              </div>
+
+              <button class="btn btn-primary" id="downloadZipBtn" style="background: white; color: #667eea;">
+                <i class="fas fa-download"></i> Download Test Package (.zip)
+              </button>
+            </div>
+
+            <div id="downloadSuccess" style="display: none; padding: 20px; background: #d4edda; border-radius: 8px;">
+              <i class="fas fa-check-circle" style="color: #28a745; font-size: 2rem;"></i>
+              <h3 style="margin: 10px 0;">Package Ready!</h3>
+              <p style="margin: 0;">Your test package has been downloaded. Check your downloads folder.</p>
+            </div>
+          </div>
+
+          <div style="margin-top: 25px; display: flex; gap: 15px;">
+            <button class="btn btn-secondary" onclick="goToTab('generate')">← Back</button>
+            <button class="btn btn-primary" onclick="goToTab('execute')">Next: Import & Execute →</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 4: Execute -->
+      <div class="workflow-content" id="execute-content">
+        <div class="section-card">
+          <h2>🚀 Import & Execute</h2>
+          <p style="color: #666; margin-bottom: 25px;">Import test from Jira, execute it, and report results</p>
+
+          <div style="background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%); padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+            <h3 style="margin-top: 0;">📥 Import from Jira</h3>
+            <div style="display: flex; gap: 10px;">
+              <input type="text" id="importTicketId" placeholder="Enter Jira ticket ID (e.g., IRA-12345)" style="flex: 1; padding: 12px; border: 2px solid #e1e8ed; border-radius: 8px;" />
+              <button class="btn btn-primary" id="importFromJiraBtn"><i class="fas fa-download"></i> Import</button>
+            </div>
+          </div>
+
+          <div id="importedTestPreview" style="display: none; background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; border: 2px solid #e1e8ed;">
+            <h3>📋 Imported Test</h3>
+            <div id="importedTestContent"></div>
+            <button class="btn btn-primary" id="executeTestBtn" style="margin-top: 15px;"><i class="fas fa-play"></i> Execute Test</button>
+          </div>
+
+          <div id="executionResults" style="display: none; background: #f8f9fa; padding: 20px; border-radius: 8px; margin-top: 20px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+              <h3 style="margin: 0;">Test Results</h3>
+              <div id="executionStatus" style="padding: 8px 16px; border-radius: 20px; font-weight: 600;">Running...</div>
+            </div>
+            <div id="executionSteps"></div>
+            <button class="btn btn-primary" id="exportResultsBtn" style="margin-top: 20px; display: none;"><i class="fas fa-file-export"></i> Export Results to Jira</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Notification -->
+  <div class="notification" id="notification"></div>
+
+  <script src="{{ url_for('static', filename='auth-utils.js') }}"></script>
+  <script src="{{ url_for('static', filename='shared-utils.js') }}"></script>
+  <script src="{{ url_for('static', filename='automation-test-creator.js') }}"></script>
+

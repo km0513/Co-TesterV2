@@ -1,0 +1,139 @@
+<!-- Co-Tester Footer -->
+<footer style="
+    background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+    border-top: 1px solid #e2e8f0;
+    padding: 1rem;
+    margin-top: 2rem;
+    text-align: center;
+    color: #64748b;
+    font-family: 'Inter', sans-serif;
+    box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.05);
+">
+    <div style="
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 1.5rem;
+        flex-wrap: wrap;
+        max-width: 1200px;
+        margin: 0 auto;
+    ">
+        <!-- Version Info -->
+        <div style="
+            background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+            color: white;
+            padding: 4px 12px;
+            border: 1px solid rgba(245, 158, 11, 0.2);
+            border-radius: 16px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            box-shadow: 0 2px 8px rgba(245, 158, 11, 0.2);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        ">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <defs>
+                    <linearGradient id="footerLogoGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" style="stop-color:#f59e0b;stop-opacity:1" />
+                        <stop offset="100%" style="stop-color:#d97706;stop-opacity:1" />
+                    </linearGradient>
+                </defs>
+                <path d="M12 2L13.09 8.26L20 9L13.09 9.74L12 16L10.91 9.74L4 9L10.91 8.26L12 2Z" fill="url(#footerLogoGradient)"/>
+                <circle cx="12" cy="12" r="3" fill="none" stroke="url(#footerLogoGradient)" stroke-width="2"/>
+                <path d="M8.5 4.5L9.5 7.5" stroke="url(#footerLogoGradient)" stroke-width="1.5" stroke-linecap="round"/>
+                <path d="M15.5 4.5L14.5 7.5" stroke="url(#footerLogoGradient)" stroke-width="1.5" stroke-linecap="round"/>
+                <path d="M4.5 8.5L7.5 9.5" stroke="url(#footerLogoGradient)" stroke-width="1.5" stroke-linecap="round"/>
+                <path d="M19.5 8.5L16.5 9.5" stroke="url(#footerLogoGradient)" stroke-width="1.5" stroke-linecap="round"/>
+            </svg>
+            Co-Tester v2.1.0
+        </div>
+        
+        <!-- Love Message -->
+        <div style="
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: #475569;
+        ">
+            <span>Made with</span>
+            <div style="
+                color: #ef4444;
+                font-size: 1rem;
+                animation: heartbeat 1.5s ease-in-out infinite;
+                display: inline-block;
+            ">❤️
+            </div>
+            <span>by <strong style="color: #6366f1;">LXP QA Builders</strong></span>
+        </div>
+        
+        <!-- Quick Info -->
+        <div style="
+            font-size: 0.75rem;
+            color: #94a3b8;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        ">
+            <span style="display: flex; align-items: center; gap: 0.25rem;">
+                <i class="fas fa-code" style="color: #6366f1;"></i>
+                AI-Powered
+            </span>
+            <span style="display: flex; align-items: center; gap: 0.25rem;">
+                <i class="fas fa-shield-alt" style="color: #10b981;"></i>
+                Secure
+            </span>
+            <span>© 2025</span>
+        </div>
+    </div>
+</footer>
+
+<style>
+@keyframes heartbeat {
+    0% { transform: scale(1); }
+    25% { transform: scale(1.1); }
+    50% { transform: scale(1); }
+    75% { transform: scale(1.05); }
+    100% { transform: scale(1); }
+}
+
+/* Responsive adjustments for mobile */
+@media (max-width: 768px) {
+    footer {
+        padding: 0.75rem !important;
+    }
+    
+    footer > div {
+        gap: 1rem !important;
+    }
+    
+    footer div[style*="gap: 1.5rem"] {
+        gap: 1rem !important;
+    }
+    
+    /* Adjust version badge for mobile */
+    footer div[style*="background: linear-gradient(135deg, #6366f1"] {
+        font-size: 0.75rem !important;
+        padding: 3px 10px !important;
+    }
+    
+    /* Adjust love message for mobile */
+    footer div[style*="font-size: 0.875rem"] {
+        font-size: 0.8rem !important;
+    }
+    
+    /* Hide some quick info on very small screens */
+    footer div[style*="font-size: 0.75rem"] span:nth-child(2) {
+        display: none;
+    }
+}
+
+@media (max-width: 480px) {
+    /* Hide quick info section on very small screens */
+    footer div[style*="font-size: 0.75rem"] {
+        display: none !important;
+    }
+}
+</style>

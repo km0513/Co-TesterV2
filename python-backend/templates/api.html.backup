@@ -1,0 +1,1458 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>API Co-Test</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="/static/styles.css">
+  <link rel="stylesheet" href="/static/left-sidebar.css">
+  <style>
+    * { box-sizing: border-box; }
+    
+    /* Text Selection */
+    ::selection { background: #6366f1 !important; color: white !important; }
+    ::-moz-selection { background: #6366f1 !important; color: white !important; }
+    
+    body { 
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; 
+      margin: 0; 
+      background: #f8f9fa;
+      color: #1f2937;
+      line-height: 1.6;
+    }
+    
+    .main-content { 
+      margin-left: 280px; 
+      padding: 30px; 
+      min-height: 100vh; 
+    }
+    
+    .container { 
+      max-width: 100%; 
+      background: white; 
+      padding: 0; 
+      border-radius: 8px; 
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      overflow: hidden;
+    }
+    
+    h3 {
+      font-size: 16px;
+      font-weight: 700;
+      color: #111827;
+      margin: 0 0 16px 0;
+    }
+    
+    /* Tabs - Fixed */
+    .tabs { 
+      display: flex; 
+      gap: 0; 
+      margin: 0;
+      padding: 0 24px;
+      border-bottom: 1px solid #e5e7eb;
+      background: #fafafa;
+    }
+    
+    .tab { 
+      padding: 14px 20px; 
+      background: transparent; 
+      border: none; 
+      cursor: pointer; 
+      font-size: 14px; 
+      font-weight: 600; 
+      color: #6b7280; 
+      border-bottom: 2px solid transparent; 
+      margin-bottom: -1px;
+      transition: all 0.15s ease;
+      position: relative;
+      font-family: 'Inter', sans-serif;
+    }
+    
+    .tab.active { 
+      color: #6366f1 !important; 
+      border-bottom: 2px solid #6366f1 !important;
+      background: white !important;
+    }
+    
+    .tab:hover:not(.active) { 
+      color: #4b5563;
+      background: #f3f4f6;
+    }
+    
+    /* Tab content wrapper */
+    .tab-content {
+      padding: 24px;
+    }
+    
+    /* Tab Content */
+    .tab-content { 
+      display: none;
+    }
+    
+    .tab-content.active { 
+      display: block; 
+      animation: fadeIn 0.2s ease;
+    }
+    
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    
+    /* Form Elements */
+    .form-group { 
+      margin-bottom: 18px; 
+    }
+    
+    .form-group label { 
+      display: flex;
+      align-items: center;
+      margin-bottom: 8px; 
+      font-weight: 600; 
+      color: #374151;
+      font-size: 13px;
+    }
+    
+    .url-row { 
+      display: flex; 
+      gap: 10px; 
+      margin-bottom: 18px; 
+      align-items: stretch;
+    }
+    
+    .method-select { 
+      padding: 11px 14px; 
+      border: 1px solid #d1d5db; 
+      border-radius: 6px; 
+      font-size: 14px; 
+      font-weight: 600; 
+      width: 120px;
+      background: white;
+      color: #374151;
+      cursor: pointer;
+      transition: border-color 0.2s;
+      font-family: 'Inter', sans-serif;
+    }
+    
+    .method-select:hover { border-color: #6366f1; }
+    .method-select:focus { outline: none; border-color: #6366f1; box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1); }
+    
+    .url-input { 
+      flex: 1; 
+      padding: 11px 14px; 
+      border: 1px solid #d1d5db; 
+      border-radius: 6px; 
+      font-size: 14px;
+      transition: border-color 0.2s;
+      font-family: 'Inter', sans-serif;
+    }
+    
+    .url-input:hover { border-color: #9ca3af; }
+    .url-input:focus { outline: none; border-color: #6366f1; box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1); }
+    
+    .btn-primary { 
+      padding: 11px 24px; 
+      background: #6366f1;
+      color: white; 
+      border: none; 
+      border-radius: 6px; 
+      cursor: pointer; 
+      font-weight: 600; 
+      font-size: 14px;
+      transition: background-color 0.2s;
+      font-family: 'Inter', sans-serif;
+      white-space: nowrap;
+    }
+    
+    .btn-primary:hover { 
+      background: #4f46e5;
+    }
+    
+    .btn-primary:active { 
+      background: #4338ca;
+    }
+    
+    .btn-secondary { 
+      padding: 6px 12px; 
+      background: #10b981; 
+      color: white; 
+      border: none; 
+      border-radius: 5px; 
+      cursor: pointer; 
+      font-size: 12px;
+      font-weight: 600;
+      transition: background-color 0.2s;
+      font-family: 'Inter', sans-serif;
+      margin-left: 8px;
+    }
+    
+    .btn-secondary:hover { 
+      background: #059669;
+    }
+    
+    /* Params/Headers */
+    .row { 
+      display: grid; 
+      grid-template-columns: 1fr 1fr auto; 
+      gap: 10px; 
+      margin-bottom: 10px; 
+    }
+    
+    .row input { 
+      padding: 9px 12px; 
+      border: 1px solid #d1d5db; 
+      border-radius: 5px;
+      font-size: 13px;
+      transition: border-color 0.2s;
+      font-family: 'Inter', sans-serif;
+    }
+    
+    .row input:hover { border-color: #9ca3af; }
+    .row input:focus { outline: none; border-color: #6366f1; box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1); }
+    
+    .btn-remove { 
+      padding: 9px 12px; 
+      background: #ef4444; 
+      color: white; 
+      border: none; 
+      border-radius: 5px; 
+      cursor: pointer;
+      font-weight: 600;
+      transition: background-color 0.2s;
+      font-family: 'Inter', sans-serif;
+      font-size: 16px;
+      line-height: 1;
+    }
+    
+    .btn-remove:hover { 
+      background: #dc2626;
+    }
+    
+    /* Textarea */
+    textarea { 
+      width: 100%; 
+      min-height: 180px; 
+      padding: 12px; 
+      border: 1px solid #d1d5db; 
+      border-radius: 6px; 
+      font-family: 'Consolas', 'Monaco', 'Courier New', monospace; 
+      font-size: 13px;
+      line-height: 1.5;
+      transition: border-color 0.2s;
+      resize: vertical;
+    }
+    
+    textarea:hover { border-color: #9ca3af; }
+    textarea:focus { outline: none; border-color: #6366f1; box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1); }
+    
+    /* Response */
+    .response { 
+      margin-top: 20px; 
+      padding: 16px;
+      background: #f9fafb;
+      border-radius: 6px;
+      border: 1px solid #e5e7eb;
+    }
+    
+    .response h4 {
+      font-size: 14px;
+      font-weight: 700;
+      color: #111827;
+      margin: 0 0 10px 0;
+    }
+    
+    .response-meta { 
+      padding: 10px 14px; 
+      background: #eff6ff;
+      border-radius: 5px; 
+      margin-bottom: 10px; 
+      font-size: 12px;
+      font-weight: 500;
+      color: #1e40af;
+      border: 1px solid #dbeafe;
+    }
+    
+    .response-body { 
+      padding: 14px; 
+      background: #ffffff;
+      border: 1px solid #e5e7eb; 
+      border-radius: 5px; 
+      min-height: 200px; 
+      max-height: 400px; 
+      overflow: auto; 
+      font-family: 'Consolas', 'Monaco', 'Courier New', monospace; 
+      font-size: 12px; 
+      white-space: pre-wrap;
+      line-height: 1.5;
+      color: #1f2937;
+    }
+    
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-track { background: #f3f4f6; }
+    ::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: #9ca3af; }
+    
+    
+    
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+    
+    .modal-header h3 {
+      margin: 0;
+      font-size: 18px;
+      color: #111827;
+    }
+    
+    .modal-close {
+      background: none;
+      border: none;
+      font-size: 24px;
+      color: #6b7280;
+      cursor: pointer;
+      padding: 0;
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 4px;
+      transition: background-color 0.2s;
+    }
+    
+    .modal-close:hover {
+      background: #f3f4f6;
+      color: #111827;
+    }
+    
+    .modal-footer {
+      display: flex;
+      gap: 10px;
+      justify-content: flex-end;
+      margin-top: 16px;
+    }
+    
+    .btn-cancel {
+      padding: 10px 20px;
+      background: #e5e7eb;
+      color: #374151;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 14px;
+      transition: background-color 0.2s;
+      font-family: 'Inter', sans-serif;
+    }
+    
+    .btn-cancel:hover {
+      background: #d1d5db;
+    }
+  </style>
+</head>
+<body>
+  {% include 'quotes-header.html' %}
+  {% set active_tab = 'api' %}
+  {% include 'left-sidebar.html' %}
+  
+  <div class="main-content">
+    {% set page_title = 'API Co-Test' %}
+    {% set page_subtitle = 'Test REST APIs, GraphQL, cURL commands, and Postman collections' %}
+    {% include 'page-header.html' %}
+    
+    <div class="container">
+      <div style="display: flex; justify-content: space-between; align-items: center; padding: 16px 24px; background: white; border-bottom: 1px solid #e5e7eb;">
+        <div class="tabs" style="margin: 0; padding: 0; border: none; flex: 1;">
+          <button class="tab active" onclick="switchTab('rest', this)">REST API</button>
+          <button class="tab" onclick="switchTab('graphql', this)">GraphQL</button>
+          <button class="tab" onclick="switchTab('curl', this)">cURL</button>
+          <button class="tab" onclick="switchTab('collections', this)">Collections</button>
+        </div>
+
+      </div>
+
+      <!-- REST API Tab -->
+      <div id="rest-tab" class="tab-content active">
+        <h3>REST API Request</h3>
+        
+        <div class="url-row">
+          <select id="rest-method" class="method-select">
+            <option>GET</option>
+            <option>POST</option>
+            <option>PUT</option>
+            <option>DELETE</option>
+            <option>PATCH</option>
+          </select>
+          <input type="text" id="rest-url" class="url-input" placeholder="https://api.example.com/endpoint">
+          <button class="btn-primary" onclick="sendRest()">Send</button>
+        </div>
+        
+        <div class="form-group">
+          <label>Query Parameters <button class="btn-secondary" onclick="addRow('rest-params')">+ Add</button></label>
+          <div id="rest-params"></div>
+        </div>
+        
+        <div class="form-group">
+          <label>Headers <button class="btn-secondary" onclick="addRow('rest-headers')">+ Add</button></label>
+          <div id="rest-headers"></div>
+        </div>
+        
+        <div class="form-group">
+          <label>Body (JSON)</label>
+          <textarea id="rest-body" placeholder='{"key": "value"}'></textarea>
+        </div>
+        
+        <!-- AI Test Suite Section -->
+        <div style="margin-top: 30px; padding: 20px; background: #f9fafb; border-radius: 8px; border: 2px solid #e5e7eb;">
+          <h4 style="margin: 0 0 16px 0; font-size: 16px; font-weight: 700; color: #111827;">🤖 AI Test Suite</h4>
+          
+          <div style="display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap;">
+            <button class="btn-primary" onclick="generateInlineTests('rest')" style="flex: 1; min-width: 140px;">🤖 Generate Tests</button>
+            <button class="btn-secondary" onclick="document.getElementById('import-rest-tests').click()" style="flex: 1; min-width: 120px; margin: 0; background: #8b5cf6;">📤 Import</button>
+            <button class="btn-secondary" onclick="exportInlineTests('rest')" style="flex: 1; min-width: 120px; margin: 0; background: #f59e0b;">📥 Export</button>
+            <button class="btn-secondary" onclick="clearInlineTests('rest')" style="flex: 1; min-width: 120px; margin: 0; background: #ef4444;">🗑️ Clear</button>
+          </div>
+          <input type="file" id="import-rest-tests" accept=".json" style="display: none;" onchange="importInlineTests(event, 'rest')">
+          
+          <div id="rest-test-selector-container" style="display: none;">
+            <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #374151; font-size: 13px;">
+              Test Cases (<span id="rest-test-count">0</span>)
+            </label>
+            <select id="rest-test-selector" style="width: 100%; padding: 10px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; margin-bottom: 16px;">
+              <option value="">-- Select a test case --</option>
+            </select>
+            
+            <div id="rest-original-request" style="padding: 12px; background: #eff6ff; border-radius: 6px; margin-bottom: 16px; border-left: 4px solid #3b82f6; display: none;">
+              <p style="margin: 0 0 4px 0; font-size: 12px; font-weight: 600; color: #1e40af;">Original Request:</p>
+              <p id="rest-original-request-text" style="margin: 0; font-size: 12px; color: #1e40af; font-family: 'Consolas', monospace;"></p>
+            </div>
+            
+            <div id="rest-test-details" style="display: none; padding: 16px; background: white; border: 1px solid #e5e7eb; border-radius: 6px; margin-bottom: 16px;">
+              <h5 style="margin: 0 0 8px 0; font-size: 14px; font-weight: 700;" id="rest-test-detail-name"></h5>
+              <p style="margin: 0 0 8px 0; color: #6b7280; font-size: 13px;" id="rest-test-detail-desc"></p>
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; font-size: 12px;">
+                <div><strong>Method:</strong> <span id="rest-test-detail-method"></span></div>
+                <div><strong>Expected Status:</strong> <span id="rest-test-detail-status"></span></div>
+              </div>
+              <div style="display: flex; gap: 8px;">
+                <button class="btn-primary" onclick="runInlineTest('rest')" style="flex: 1;">▶ Run This Test</button>
+                <button class="btn-primary" onclick="runAllInlineTests('rest')" style="flex: 1; background: #10b981;">▶ Run All Tests</button>
+              </div>
+            </div>
+            
+            <div id="rest-test-result" style="display: none;">
+              <h5 style="margin: 0 0 8px 0; font-size: 14px; font-weight: 700;">Test Result:</h5>
+              <div id="rest-test-result-meta" style="padding: 10px 14px; background: #eff6ff; border-radius: 5px; margin-bottom: 10px; font-size: 12px; font-weight: 500; color: #1e40af; border: 1px solid #dbeafe;"></div>
+              <div id="rest-test-result-body" style="padding: 14px; background: #ffffff; border: 1px solid #e5e7eb; border-radius: 5px; max-height: 300px; overflow: auto; font-family: 'Consolas', monospace; font-size: 12px; white-space: pre-wrap;"></div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- AI Test Generator Section -->
+        <div style="margin-top: 24px; padding: 16px; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+            <h4 style="margin: 0; font-size: 15px; font-weight: 700; color: #111827;">🤖 AI Test Generator</h4>
+            <button onclick="toggleAIPanel('rest')" style="background: none; border: none; cursor: pointer; font-size: 20px; color: #6b7280;">▼</button>
+          </div>
+          
+          <div id="rest-ai-panel" style="display: none;">
+            <!-- Action Buttons -->
+            <div style="display: flex; gap: 8px; margin-bottom: 12px;">
+              <button class="btn-primary" onclick="generateAITestsInline('rest')" style="flex: 1; padding: 10px; font-size: 13px;">
+                🤖 Generate Tests
+              </button>
+              <button class="btn-secondary" onclick="importTestsInline('rest')" style="padding: 10px; font-size: 13px; margin: 0;">
+                📤 Import
+              </button>
+              <button class="btn-secondary" onclick="exportTestsInline('rest')" style="padding: 10px; font-size: 13px; margin: 0; background: #f59e0b;">
+                📥 Export
+              </button>
+              <button class="btn-secondary" onclick="clearTestsInline('rest')" style="padding: 10px; font-size: 13px; margin: 0; background: #ef4444;">
+                🗑️ Clear
+              </button>
+            </div>
+            <input type="file" id="rest-import-file" accept=".json" style="display: none;" onchange="handleImport(event, 'rest')">
+            
+            <!-- Test Selector -->
+            <div id="rest-test-selector-container" style="display: none;">
+              <label style="display: block; margin-bottom: 6px; font-weight: 600; color: #374151; font-size: 12px;">
+                Select Test Case (<span id="rest-test-count">0</span> tests loaded):
+              </label>
+              <select id="rest-test-selector" onchange="loadTestToForm('rest')" style="width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 5px; font-size: 13px; margin-bottom: 12px;">
+                <option value="">-- Select a test case --</option>
+              </select>
+              
+              <!-- Original Request Info -->
+              <div id="rest-original-request" style="padding: 10px; background: #eff6ff; border-radius: 5px; margin-bottom: 12px; font-size: 12px; color: #1e40af; display: none;">
+                <strong>📋 Base Request:</strong> <span id="rest-base-request-info"></span>
+              </div>
+              
+              <!-- Test Info -->
+              <div id="rest-test-info" style="display: none; padding: 10px; background: white; border: 1px solid #e5e7eb; border-radius: 5px; margin-bottom: 12px; font-size: 12px;">
+                <div style="margin-bottom: 4px;"><strong>Test:</strong> <span id="rest-test-name"></span></div>
+                <div style="margin-bottom: 4px;"><strong>Category:</strong> <span id="rest-test-category"></span></div>
+                <div><strong>Expected Status:</strong> <span id="rest-test-status"></span></div>
+              </div>
+              
+              <!-- Run Buttons -->
+              <div style="display: flex; gap: 8px;">
+                <button class="btn-primary" onclick="runSelectedTestInline('rest')" style="flex: 1; padding: 10px; font-size: 13px;">
+                  ▶ Run Selected Test
+                </button>
+                <button class="btn-primary" onclick="runAllTestsInline('rest')" style="flex: 1; padding: 10px; font-size: 13px; background: #10b981;">
+                  ▶ Run All Tests
+                </button>
+              </div>
+            </div>
+            
+            <!-- Loading State -->
+            <div id="rest-ai-loading" style="display: none; text-align: center; padding: 20px;">
+              <div style="display: inline-block; width: 30px; height: 30px; border: 3px solid #e5e7eb; border-top-color: #8b5cf6; border-radius: 50%; animation: spin 1s linear infinite;"></div>
+              <p style="margin-top: 12px; color: #6b7280; font-size: 13px;">Generating tests with AI...</p>
+            </div>
+          </div>
+        </div>
+        
+        <div class="response">
+          <h4>Response</h4>
+          <div id="rest-meta" class="response-meta">Ready to send request...</div>
+          <div id="rest-response" class="response-body">Response will appear here...</div>
+        </div>
+      </div>
+      
+      <!-- GraphQL Tab -->
+      <div id="graphql-tab" class="tab-content">
+        <h3>GraphQL Request</h3>
+        
+        <div class="form-group">
+          <label>GraphQL Endpoint</label>
+          <input type="text" id="graphql-url" class="url-input" placeholder="https://api.example.com/graphql">
+        </div>
+        
+        <div class="form-group">
+          <label>Query</label>
+          <textarea id="graphql-query" placeholder="query { users { id name } }"></textarea>
+        </div>
+        
+        <div class="form-group">
+          <label>Variables (JSON)</label>
+          <textarea id="graphql-vars" style="min-height: 100px;" placeholder='{"limit": 10}'></textarea>
+        </div>
+        
+        <div class="form-group">
+          <label>Headers <button class="btn-secondary" onclick="addRow('graphql-headers')">+ Add</button></label>
+          <div id="graphql-headers"></div>
+        </div>
+        
+        <button class="btn-primary" onclick="sendGraphQL()">Send Query</button>
+        
+        <!-- AI Test Suite Section -->
+        <div style="margin-top: 30px; padding: 20px; background: #f9fafb; border-radius: 8px; border: 2px solid #e5e7eb;">
+          <h4 style="margin: 0 0 16px 0; font-size: 16px; font-weight: 700; color: #111827;">🤖 AI Test Suite</h4>
+          
+          <div style="display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap;">
+            <button class="btn-primary" onclick="generateInlineTests('graphql')" style="flex: 1; min-width: 140px;">🤖 Generate Tests</button>
+            <button class="btn-secondary" onclick="document.getElementById('import-graphql-tests').click()" style="flex: 1; min-width: 120px; margin: 0; background: #8b5cf6;">📤 Import</button>
+            <button class="btn-secondary" onclick="exportInlineTests('graphql')" style="flex: 1; min-width: 120px; margin: 0; background: #f59e0b;">📥 Export</button>
+            <button class="btn-secondary" onclick="clearInlineTests('graphql')" style="flex: 1; min-width: 120px; margin: 0; background: #ef4444;">🗑️ Clear</button>
+          </div>
+          <input type="file" id="import-graphql-tests" accept=".json" style="display: none;" onchange="importInlineTests(event, 'graphql')">
+          
+          <div id="graphql-test-selector-container" style="display: none;">
+            <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #374151; font-size: 13px;">
+              Test Cases (<span id="graphql-test-count">0</span>)
+            </label>
+            <select id="graphql-test-selector" style="width: 100%; padding: 10px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; margin-bottom: 16px;">
+              <option value="">-- Select a test case --</option>
+            </select>
+            
+            <div id="graphql-original-request" style="padding: 12px; background: #eff6ff; border-radius: 6px; margin-bottom: 16px; border-left: 4px solid #3b82f6; display: none;">
+              <p style="margin: 0 0 4px 0; font-size: 12px; font-weight: 600; color: #1e40af;">Original Request:</p>
+              <p id="graphql-original-request-text" style="margin: 0; font-size: 12px; color: #1e40af; font-family: 'Consolas', monospace;"></p>
+            </div>
+            
+            <div id="graphql-test-details" style="display: none; padding: 16px; background: white; border: 1px solid #e5e7eb; border-radius: 6px; margin-bottom: 16px;">
+              <h5 style="margin: 0 0 8px 0; font-size: 14px; font-weight: 700;" id="graphql-test-detail-name"></h5>
+              <p style="margin: 0 0 8px 0; color: #6b7280; font-size: 13px;" id="graphql-test-detail-desc"></p>
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; font-size: 12px;">
+                <div><strong>Method:</strong> <span id="graphql-test-detail-method"></span></div>
+                <div><strong>Expected Status:</strong> <span id="graphql-test-detail-status"></span></div>
+              </div>
+              <div style="display: flex; gap: 8px;">
+                <button class="btn-primary" onclick="runInlineTest('graphql')" style="flex: 1;">▶ Run This Test</button>
+                <button class="btn-primary" onclick="runAllInlineTests('graphql')" style="flex: 1; background: #10b981;">▶ Run All Tests</button>
+              </div>
+            </div>
+            
+            <div id="graphql-test-result" style="display: none;">
+              <h5 style="margin: 0 0 8px 0; font-size: 14px; font-weight: 700;">Test Result:</h5>
+              <div id="graphql-test-result-meta" style="padding: 10px 14px; background: #eff6ff; border-radius: 5px; margin-bottom: 10px; font-size: 12px; font-weight: 500; color: #1e40af; border: 1px solid #dbeafe;"></div>
+              <div id="graphql-test-result-body" style="padding: 14px; background: #ffffff; border: 1px solid #e5e7eb; border-radius: 5px; max-height: 300px; overflow: auto; font-family: 'Consolas', monospace; font-size: 12px; white-space: pre-wrap;"></div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- AI Test Generator Section -->
+        <div style="margin-top: 24px; padding: 16px; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+            <h4 style="margin: 0; font-size: 15px; font-weight: 700; color: #111827;">🤖 AI Test Generator</h4>
+            <button onclick="toggleAIPanel('graphql')" style="background: none; border: none; cursor: pointer; font-size: 20px; color: #6b7280;">▼</button>
+          </div>
+          
+          <div id="graphql-ai-panel" style="display: none;">
+            <!-- Action Buttons -->
+            <div style="display: flex; gap: 8px; margin-bottom: 12px;">
+              <button class="btn-primary" onclick="generateAITestsInline('graphql')" style="flex: 1; padding: 10px; font-size: 13px;">
+                🤖 Generate Tests
+              </button>
+              <button class="btn-secondary" onclick="importTestsInline('graphql')" style="padding: 10px; font-size: 13px; margin: 0;">
+                📤 Import
+              </button>
+              <button class="btn-secondary" onclick="exportTestsInline('graphql')" style="padding: 10px; font-size: 13px; margin: 0; background: #f59e0b;">
+                📥 Export
+              </button>
+              <button class="btn-secondary" onclick="clearTestsInline('graphql')" style="padding: 10px; font-size: 13px; margin: 0; background: #ef4444;">
+                🗑️ Clear
+              </button>
+            </div>
+            <input type="file" id="graphql-import-file" accept=".json" style="display: none;" onchange="handleImport(event, 'graphql')">
+            
+            <!-- Test Selector -->
+            <div id="graphql-test-selector-container" style="display: none;">
+              <label style="display: block; margin-bottom: 6px; font-weight: 600; color: #374151; font-size: 12px;">
+                Select Test Case (<span id="graphql-test-count">0</span> tests loaded):
+              </label>
+              <select id="graphql-test-selector" onchange="loadTestToForm('graphql')" style="width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 5px; font-size: 13px; margin-bottom: 12px;">
+                <option value="">-- Select a test case --</option>
+              </select>
+              
+              <!-- Original Request Info -->
+              <div id="graphql-original-request" style="padding: 10px; background: #eff6ff; border-radius: 5px; margin-bottom: 12px; font-size: 12px; color: #1e40af; display: none;">
+                <strong>📋 Base Request:</strong> <span id="graphql-base-request-info"></span>
+              </div>
+              
+              <!-- Test Info -->
+              <div id="graphql-test-info" style="display: none; padding: 10px; background: white; border: 1px solid #e5e7eb; border-radius: 5px; margin-bottom: 12px; font-size: 12px;">
+                <div style="margin-bottom: 4px;"><strong>Test:</strong> <span id="graphql-test-name"></span></div>
+                <div style="margin-bottom: 4px;"><strong>Category:</strong> <span id="graphql-test-category"></span></div>
+                <div><strong>Expected Status:</strong> <span id="graphql-test-status"></span></div>
+              </div>
+              
+              <!-- Run Buttons -->
+              <div style="display: flex; gap: 8px;">
+                <button class="btn-primary" onclick="runSelectedTestInline('graphql')" style="flex: 1; padding: 10px; font-size: 13px;">
+                  ▶ Run Selected Test
+                </button>
+                <button class="btn-primary" onclick="runAllTestsInline('graphql')" style="flex: 1; padding: 10px; font-size: 13px; background: #10b981;">
+                  ▶ Run All Tests
+                </button>
+              </div>
+            </div>
+            
+            <!-- Loading State -->
+            <div id="graphql-ai-loading" style="display: none; text-align: center; padding: 20px;">
+              <div style="display: inline-block; width: 30px; height: 30px; border: 3px solid #e5e7eb; border-top-color: #8b5cf6; border-radius: 50%; animation: spin 1s linear infinite;"></div>
+              <p style="margin-top: 12px; color: #6b7280; font-size: 13px;">Generating tests with AI...</p>
+            </div>
+          </div>
+        </div>
+        
+        <div class="response">
+          <h4>Response</h4>
+          <div id="graphql-meta" class="response-meta">Ready to send query...</div>
+          <div id="graphql-response" class="response-body">Response will appear here...</div>
+        </div>
+      </div>
+
+      <!-- cURL Tab -->
+      <div id="curl-tab" class="tab-content">
+        <h3>cURL Command Runner</h3>
+        
+        <div class="form-group">
+          <label>Paste cURL Command</label>
+          <textarea id="curl-command" placeholder="curl -X GET 'https://api.example.com/users' -H 'Authorization: Bearer token'"></textarea>
+        </div>
+        
+        <button class="btn-primary" onclick="sendCurl()">Execute</button>
+        
+        <div class="response">
+          <h4>Response</h4>
+          <div id="curl-meta" class="response-meta">Ready to execute...</div>
+          <div id="curl-response" class="response-body">Response will appear here...</div>
+        </div>
+      </div>
+      
+      <!-- Collections Tab -->
+      <div id="collections-tab" class="tab-content">
+        <h3>Postman Collections</h3>
+        
+        <div class="form-group">
+          <label>Import Collection</label>
+          <input type="file" id="collection-file" accept=".json" onchange="loadCollection(event)">
+        </div>
+        
+        <div id="collection-info"></div>
+        
+        <div class="response">
+          <h4>Results</h4>
+          <div id="collection-meta" class="response-meta">Import a collection to start...</div>
+          <div id="collection-response" class="response-body">Results will appear here...</div>
+        </div>
+      </div>
+      
+    </div>
+  </div>
+  
+  {% include 'footer.html' %}
+  
+  
+      </div>
+      <div class="modal-footer">
+        <button id="export-tests-btn" class="btn-secondary" onclick="exportTests()" style="display: none; margin: 0; background: #f59e0b;">
+          📥 Export Tests
+        </button>
+        <button id="import-tests-btn" class="btn-secondary" onclick="document.getElementById('import-tests-file').click()" style="display: none; margin: 0; background: #8b5cf6;">
+          📤 Import Tests
+        </button>
+        <input type="file" id="import-tests-file" accept=".json" style="display: none;" onchange="importTests(event)">
+        <button id="run-all-tests-btn" class="btn-primary" onclick="runAllTests()" style="display: none; background: #10b981;">
+          ▶ Run All Tests
+        </button>
+      </div>
+    </div>
+  </div>
+  
+  <style>
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+  </style>
+  
+  <!-- Smart cURL Import Modal -->
+  <div id="curl-modal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Import cURL Command</h3>
+        <button class="modal-close" onclick="closeCurlModal()">×</button>
+      </div>
+      <div>
+        <div style="padding: 12px; background: #eff6ff; border-radius: 6px; margin-bottom: 12px; border-left: 4px solid #3b82f6;">
+          <p style="margin: 0; font-size: 13px; color: #1e40af; line-height: 1.5;">
+            <strong>💡 Smart Import:</strong> Paste any cURL command below. We'll automatically detect if it's a REST API or GraphQL request, populate the correct tab, and switch to it for you.
+          </p>
+        </div>
+        <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #374151; font-size: 13px;">
+          Paste your cURL command:
+        </label>
+        <textarea id="curl-import-input" placeholder="curl -X POST 'https://api.example.com/endpoint' -H 'Content-Type: application/json' -d '{&quot;key&quot;: &quot;value&quot;}'" style="min-height: 200px; width: 100%;"></textarea>
+        <div id="curl-detection-info" style="margin-top: 8px; padding: 8px; background: #f3f4f6; border-radius: 4px; font-size: 12px; color: #6b7280; display: none;">
+          <span id="curl-detection-text"></span>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-cancel" onclick="closeCurlModal()">Cancel</button>
+        <button class="btn-primary" onclick="parseSmartCurlCommand()">Auto-Import</button>
+      </div>
+    </div>
+  </div>
+  
+  <script src="/static/shared-utils.js"></script>
+  
+</body>
+</html>
+
+</content>
+      // Validate request data first
+      let validationError = null;
+      
+        const url = document.getElementById('rest-url').value;
+        
+        if (!url || url.trim() === '') {
+          validationError = 'Please enter a URL for the REST API request';
+        } else if (!url.startsWith('http://') && !url.startsWith('https://')) {
+          validationError = 'URL must start with http:// or https://';
+        }
+        const url = document.getElementById('graphql-url').value;
+        const query = document.getElementById('graphql-query').value;
+        
+        if (!url || url.trim() === '') {
+          validationError = 'Please enter a GraphQL endpoint URL';
+        } else if (!url.startsWith('http://') && !url.startsWith('https://')) {
+          validationError = 'URL must start with http:// or https://';
+        } else if (!query || query.trim() === '') {
+          validationError = 'Please enter a GraphQL query or mutation';
+        }
+      }
+      
+      // Show validation error if any
+      if (validationError) {
+        alert('❌ Cannot Generate Tests\n\n' + validationError);
+        return;
+      }
+      
+      // Hide actions, show loading
+      document.getElementById('ai-test-actions').style.display = 'none';
+      document.getElementById('ai-test-loading').style.display = 'block';
+      document.getElementById('ai-test-results').style.display = 'none';
+      document.getElementById('ai-test-result').style.display = 'none';
+      
+      // Collect request data based on type
+      let requestData = {};
+      
+        requestData = {
+          type: 'REST',
+          method: document.getElementById('rest-method').value,
+          url: document.getElementById('rest-url').value,
+          body: document.getElementById('rest-body').value,
+          headers: []
+        };
+        
+        document.querySelectorAll('#rest-headers .row').forEach(row => {
+          const inputs = row.querySelectorAll('input');
+          if (inputs[0].value) {
+            requestData.headers.push({
+              key: inputs[0].value,
+              value: inputs[1].value
+            });
+          }
+        });
+      } else if (type === 'graphql') {
+        requestData = {
+          type: 'GraphQL',
+          url: document.getElementById('graphql-url').value,
+          query: document.getElementById('graphql-query').value,
+          variables: document.getElementById('graphql-vars').value,
+          headers: []
+        };
+        
+        document.querySelectorAll('#graphql-headers .row').forEach(row => {
+          const inputs = row.querySelectorAll('input');
+          if (inputs[0].value) {
+            requestData.headers.push({
+              key: inputs[0].value,
+              value: inputs[1].value
+            });
+          }
+        });
+      }
+      
+      // Call AI test generation endpoint
+      fetch('/generate-api-tests', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(requestData)
+      })
+      .then(res => res.json())
+      .then(data => {
+        console.log('AI Test Response:', data);
+        document.getElementById('ai-test-loading').style.display = 'none';
+        
+        if (data.success && data.tests) {
+          // Handle both direct tests array and nested structure
+          const tests = Array.isArray(data.tests) ? data.tests : (data.tests.tests || []);
+          
+          if (tests.length === 0) {
+            alert('No tests were generated. Please try again.');
+            document.getElementById('ai-test-actions').style.display = 'block';
+            return;
+          }
+          
+          populateTestSelector(tests);
+          document.getElementById('ai-test-results').style.display = 'block';
+          document.getElementById('run-all-tests-btn').style.display = 'block';
+          document.getElementById('export-tests-btn').style.display = 'block';
+          document.getElementById('import-tests-btn').style.display = 'block';
+          updateTestCount();
+          
+          // Show if AI-powered or fallback
+          if (data.ai_powered) {
+            console.log('✓ Tests generated by Google Gemini AI');
+          } else if (data.fallback) {
+            console.log('⚠ Using fallback tests (AI unavailable)');
+          }
+        } else {
+          alert('Error generating tests: ' + (data.error || 'Unknown error'));
+          document.getElementById('ai-test-actions').style.display = 'block';
+        }
+      })
+      .catch(err => {
+        document.getElementById('ai-test-loading').style.display = 'none';
+        document.getElementById('ai-test-actions').style.display = 'block';
+        alert('Error generating tests: ' + err.message);
+      });
+    }
+    
+    function updateTestCount() {
+      const countInfo = document.getElementById('test-count-info');
+      const countNumber = document.getElementById('test-count-number');
+      
+        countInfo.style.display = 'block';
+      } else {
+        countInfo.style.display = 'none';
+      }
+    }
+    
+    function clearTests() {
+        alert('No tests to clear');
+        return;
+      }
+      
+        document.getElementById('ai-test-results').style.display = 'none';
+        document.getElementById('ai-test-result').style.display = 'none';
+        updateTestCount();
+        alert('✓ All tests cleared');
+      }
+    }
+    
+    function populateTestSelector(tests) {
+      const selector = document.getElementById('ai-test-selector');
+      selector.innerHTML = '<option value="">-- Select a test case --</option>';
+      
+      tests.forEach((test, index) => {
+        const option = document.createElement('option');
+        option.value = index;
+        option.textContent = `${index + 1}. ${test.name}`;
+        selector.appendChild(option);
+      });
+      
+      selector.onchange = function() {
+        if (this.value !== '') {
+          showTestDetails(parseInt(this.value));
+        } else {
+          document.getElementById('ai-test-details').style.display = 'none';
+          document.getElementById('ai-test-result').style.display = 'none';
+        }
+      };
+    }
+    
+    function showTestDetails(index) {
+      document.getElementById('test-detail-name').textContent = `${test.testCaseId}: ${test.name}`;
+      document.getElementById('test-detail-desc').textContent = `${test.description} (Category: ${test.category})`;
+      document.getElementById('test-detail-method').textContent = test.method || 'POST';
+      document.getElementById('test-detail-url').textContent = test.url || (test.requestBody?.query ? test.requestBody.query.substring(0, 50) + '...' : 'N/A');
+      document.getElementById('test-detail-status').textContent = test.expectedStatusCode || test.expectedStatus || 200;
+      
+      // Handle validations - new format doesn't have validations array
+      const validations = test.validations || [`Expected status: ${test.expectedStatusCode}`, `Category: ${test.category}`];
+      document.getElementById('test-detail-validations').textContent = Array.isArray(validations) ? validations.join(', ') : validations;
+      
+      document.getElementById('ai-test-details').style.display = 'block';
+      document.getElementById('ai-test-result').style.display = 'none';
+    }
+    
+    async function runSelectedTest() {
+      const index = document.getElementById('ai-test-selector').value;
+      if (index === '') {
+        alert('Please select a test case');
+        return;
+      }
+      
+      document.getElementById('ai-test-result').style.display = 'block';
+      document.getElementById('ai-test-result-meta').textContent = 'Running test...';
+      document.getElementById('ai-test-result-body').textContent = '';
+      
+      try {
+        let response;
+        const expectedStatus = test.expectedStatusCode || test.expectedStatus || 200;
+        
+          // Handle new structure with requestBody
+          const bodyData = test.requestBody || test.body;
+          const bodyString = typeof bodyData === 'string' ? bodyData : JSON.stringify(bodyData);
+          
+          response = await fetch('/send-request', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+              method: test.method,
+              url: test.url,
+              headers: test.headers || {},
+              body: bodyString
+            })
+          });
+        } else {
+          // GraphQL
+          const requestBody = test.requestBody || {
+            query: test.query,
+            variables: test.variables
+          };
+          
+          response = await fetch('/send-request', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+              method: 'POST',
+              url: test.url,
+              headers: test.headers || {'Content-Type': 'application/json'},
+              body: JSON.stringify(requestBody)
+            })
+          });
+        }
+        
+        const data = await response.json();
+        const status = data.status_code || data.status;
+        const time = data.request_time ? (data.request_time * 1000).toFixed(2) : 0;
+        
+        // Check if test passed
+        const passed = status === expectedStatus;
+        
+        document.getElementById('ai-test-result-meta').textContent = 
+          `${test.testCaseId} | ${passed ? '✓ PASSED' : '✗ FAILED'} | Status: ${status} (Expected: ${expectedStatus}) | Time: ${time}ms`;
+        document.getElementById('ai-test-result-meta').style.background = passed ? '#d1fae5' : '#fee2e2';
+        document.getElementById('ai-test-result-meta').style.color = passed ? '#065f46' : '#991b1b';
+        
+        const responseBody = typeof data.body === 'string' ? data.body : JSON.stringify(data.body, null, 2);
+        document.getElementById('ai-test-result-body').textContent = responseBody;
+        
+      } catch (err) {
+        document.getElementById('ai-test-result-meta').textContent = '✗ ERROR: ' + err.message;
+        document.getElementById('ai-test-result-meta').style.background = '#fee2e2';
+        document.getElementById('ai-test-result-meta').style.color = '#991b1b';
+        document.getElementById('ai-test-result-body').textContent = err.stack || err.message;
+      }
+    }
+    
+    async function runAllTests() {
+      
+      document.getElementById('ai-test-result').style.display = 'block';
+      document.getElementById('ai-test-result-body').textContent = '';
+      
+      let passed = 0;
+      let failed = 0;
+      
+        results += `${test.testCaseId || `TC${i+1}`}. ${test.name} (${test.category})\n`;
+        
+        try {
+          const expectedStatus = test.expectedStatusCode || test.expectedStatus || 200;
+          const bodyData = test.requestBody || test.body;
+          const bodyString = typeof bodyData === 'string' ? bodyData : JSON.stringify(bodyData);
+          
+          const response = await fetch('/send-request', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+              method: test.method || 'POST',
+              url: test.url,
+              headers: test.headers || {},
+              body: bodyString
+            })
+          });
+          
+          const data = await response.json();
+          const status = data.status_code || data.status;
+          const testPassed = status === expectedStatus;
+          
+          if (testPassed) {
+            passed++;
+            results += `   ✓ PASSED - Status: ${status}\n\n`;
+          } else {
+            failed++;
+            results += `   ✗ FAILED - Status: ${status} (Expected: ${expectedStatus})\n\n`;
+          }
+        } catch (err) {
+          failed++;
+          results += `   ✗ ERROR - ${err.message}\n\n`;
+        }
+        
+        document.getElementById('ai-test-result-body').textContent = results;
+      }
+      
+      results += `${'='.repeat(60)}\n`;
+      
+      document.getElementById('ai-test-result-meta').textContent = 
+      document.getElementById('ai-test-result-meta').style.background = failed === 0 ? '#d1fae5' : '#fee2e2';
+      document.getElementById('ai-test-result-meta').style.color = failed === 0 ? '#065f46' : '#991b1b';
+      document.getElementById('ai-test-result-body').textContent = results;
+    }
+    
+    function exportTests() {
+        alert('No tests to export');
+        return;
+      }
+      
+      const exportData = {
+        version: '1.0',
+        generated_at: new Date().toISOString(),
+      };
+      
+      const dataStr = JSON.stringify(exportData, null, 2);
+      const dataBlob = new Blob([dataStr], { type: 'application/json' });
+      const url = URL.createObjectURL(dataBlob);
+      
+      const link = document.createElement('a');
+      link.href = url;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      
+    }
+    
+    function importTests(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        try {
+          const importData = JSON.parse(e.target.result);
+          
+          // Validate import data
+          if (!importData.tests || !Array.isArray(importData.tests)) {
+            alert('Invalid test file format');
+            return;
+          }
+          
+          if (importData.tests.length === 0) {
+            alert('No tests found in file');
+            return;
+          }
+          
+          // Load the tests
+          
+          // Populate the selector
+          
+          // Show results section
+          document.getElementById('ai-test-actions').style.display = 'block';
+          document.getElementById('ai-test-loading').style.display = 'none';
+          document.getElementById('ai-test-results').style.display = 'block';
+          document.getElementById('run-all-tests-btn').style.display = 'block';
+          document.getElementById('export-tests-btn').style.display = 'block';
+          document.getElementById('import-tests-btn').style.display = 'block';
+          updateTestCount();
+          
+          
+        } catch (err) {
+          alert('Error importing tests: ' + err.message);
+          console.error('Import error:', err);
+        }
+      };
+      reader.readAsText(file);
+      
+      // Reset file input
+      event.target.value = '';
+    }
+    
+    }
+    
+    // Close AI modal on background click
+    document.addEventListener('click', function(e) {
+      if (e.target === aiModal) {
+      }
+    });
+    
+    // Initialize
+    addRow('rest-params');
+    addRow('rest-headers');
+    addRow('graphql-headers');
+  </script>
+</body>
+</html>
+
+<script>
+// AI Test Generator - Inline Version
+let restOriginalRequest = null;
+let graphqlOriginalRequest = null;
+
+function toggleAIPanel(type) {
+  const panel = document.getElementById(`${type}-ai-panel`);
+  const isVisible = panel.style.display !== 'none';
+  panel.style.display = isVisible ? 'none' : 'block';
+}
+
+async function generateAITestsInline(type) {
+  const url = document.getElementById(`${type}-url`).value;
+  if (!url || !url.trim() || (!url.startsWith('http://') && !url.startsWith('https://'))) {
+    alert('Please enter a valid URL starting with http:// or https://');
+    return;
+  }
+  
+  if (type === 'graphql') {
+    const query = document.getElementById('graphql-query').value;
+    if (!query || !query.trim()) {
+      alert('Please enter a GraphQL query');
+      return;
+    }
+  }
+  
+  document.getElementById(`${type}-ai-loading`).style.display = 'block';
+  document.getElementById(`${type}-test-selector-container`).style.display = 'none';
+  
+  let requestData = { type: type.toUpperCase() };
+  
+  if (type === 'rest') {
+    requestData.method = document.getElementById('rest-method').value;
+    requestData.url = url;
+    requestData.body = document.getElementById('rest-body').value;
+    requestData.headers = [];
+    document.querySelectorAll('#rest-headers .row').forEach(row => {
+      const inputs = row.querySelectorAll('input');
+      if (inputs[0].value) requestData.headers.push({ key: inputs[0].value, value: inputs[1].value });
+    });
+    restOriginalRequest = { ...requestData };
+  } else {
+    requestData.url = url;
+    requestData.query = document.getElementById('graphql-query').value;
+    requestData.variables = document.getElementById('graphql-vars').value;
+    requestData.headers = [];
+    document.querySelectorAll('#graphql-headers .row').forEach(row => {
+      const inputs = row.querySelectorAll('input');
+      if (inputs[0].value) requestData.headers.push({ key: inputs[0].value, value: inputs[1].value });
+    });
+    graphqlOriginalRequest = { ...requestData };
+  }
+  
+  try {
+    const res = await fetch('/generate-api-tests', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(requestData)
+    });
+    const data = await res.json();
+    
+    if (data.success && data.tests) {
+      const tests = Array.isArray(data.tests) ? data.tests : (data.tests.tests || []);
+      if (type === 'rest') restTests = tests;
+      else graphqlTests = tests;
+      
+      const selector = document.getElementById(`${type}-test-selector`);
+      selector.innerHTML = '<option value="">-- Select a test case --</option>';
+      tests.forEach((test, index) => {
+        const option = document.createElement('option');
+        option.value = index;
+        option.textContent = `${test.testCaseId || `TC${index+1}`}: ${test.name}`;
+        selector.appendChild(option);
+      });
+      document.getElementById(`${type}-test-count`).textContent = tests.length;
+      
+      const originalReq = type === 'rest' ? restOriginalRequest : graphqlOriginalRequest;
+      if (originalReq) {
+        const info = type === 'rest' ? `${originalReq.method} ${originalReq.url}` : `GraphQL → ${originalReq.url}`;
+        document.getElementById(`${type}-base-request-info`).textContent = info;
+        document.getElementById(`${type}-original-request`).style.display = 'block';
+      }
+      
+      document.getElementById(`${type}-test-selector-container`).style.display = 'block';
+    } else {
+      alert('Error generating tests: ' + (data.error || 'Unknown error'));
+    }
+  } catch (err) {
+    alert('Error: ' + err.message);
+  } finally {
+    document.getElementById(`${type}-ai-loading`).style.display = 'none';
+  }
+}
+
+function loadTestToForm(type) {
+  const selector = document.getElementById(`${type}-test-selector`);
+  const index = selector.value;
+  
+  if (index === '') {
+    document.getElementById(`${type}-test-info`).style.display = 'none';
+    return;
+  }
+  
+  const tests = type === 'rest' ? restTests : graphqlTests;
+  const test = tests[parseInt(index)];
+  
+  document.getElementById(`${type}-test-name`).textContent = test.name;
+  document.getElementById(`${type}-test-category`).textContent = test.category || 'N/A';
+  document.getElementById(`${type}-test-status`).textContent = test.expectedStatusCode || test.expectedStatus || 200;
+  document.getElementById(`${type}-test-info`).style.display = 'block';
+  
+  if (type === 'rest') {
+    document.getElementById('rest-method').value = test.method;
+    document.getElementById('rest-url').value = test.url;
+    const bodyData = test.requestBody || test.body;
+    document.getElementById('rest-body').value = typeof bodyData === 'string' ? bodyData : JSON.stringify(bodyData, null, 2);
+  } else {
+    document.getElementById('graphql-url').value = test.url;
+    if (test.requestBody) {
+      document.getElementById('graphql-query').value = test.requestBody.query || '';
+      document.getElementById('graphql-vars').value = test.requestBody.variables ? JSON.stringify(test.requestBody.variables, null, 2) : '';
+    }
+  }
+}
+
+async function runSelectedTestInline(type) {
+  const selector = document.getElementById(`${type}-test-selector`);
+  if (selector.value === '') {
+    alert('Please select a test case');
+    return;
+  }
+  if (type === 'rest') await sendRest();
+  else await sendGraphQL();
+}
+
+async function runAllTestsInline(type) {
+  const tests = type === 'rest' ? restTests : graphqlTests;
+  if (tests.length === 0) {
+    alert('No tests to run');
+    return;
+  }
+  
+  const metaId = `${type}-meta`;
+  const responseId = `${type}-response`;
+  
+  document.getElementById(metaId).textContent = `Running ${tests.length} tests...`;
+  let results = `Running ${tests.length} test cases...\n${'='.repeat(60)}\n\n`;
+  let passed = 0, failed = 0;
+  
+  for (let i = 0; i < tests.length; i++) {
+    const test = tests[i];
+    results += `${test.testCaseId || `TC${i+1}`}. ${test.name}\n`;
+    
+    try {
+      const bodyData = test.requestBody || test.body;
+      const bodyString = typeof bodyData === 'string' ? bodyData : JSON.stringify(bodyData);
+      
+      const res = await fetch('/send-request', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+          method: test.method || 'POST',
+          url: test.url,
+          headers: test.headers || {},
+          body: bodyString
+        })
+      });
+      
+      const data = await res.json();
+      const status = data.status_code || data.status;
+      const expectedStatus = test.expectedStatusCode || test.expectedStatus || 200;
+      
+      if (status === expectedStatus) {
+        passed++;
+        results += `   ✓ PASSED - Status: ${status}\n\n`;
+      } else {
+        failed++;
+        results += `   ✗ FAILED - Status: ${status} (Expected: ${expectedStatus})\n\n`;
+      }
+    } catch (err) {
+      failed++;
+      results += `   ✗ ERROR - ${err.message}\n\n`;
+    }
+    
+    document.getElementById(responseId).textContent = results;
+  }
+  
+  results += `${'='.repeat(60)}\nTotal: ${tests.length} | Passed: ${passed} | Failed: ${failed}\n`;
+  document.getElementById(metaId).textContent = `Completed | Passed: ${passed}/${tests.length}`;
+  document.getElementById(metaId).style.background = failed === 0 ? '#d1fae5' : '#fee2e2';
+  document.getElementById(metaId).style.color = failed === 0 ? '#065f46' : '#991b1b';
+  document.getElementById(responseId).textContent = results;
+}
+
+function exportTestsInline(type) {
+  const tests = type === 'rest' ? restTests : graphqlTests;
+  if (tests.length === 0) {
+    alert('No tests to export');
+    return;
+  }
+  
+  const exportData = {
+    version: '1.0',
+    type: type.toUpperCase(),
+    generated_at: new Date().toISOString(),
+    test_count: tests.length,
+    original_request: type === 'rest' ? restOriginalRequest : graphqlOriginalRequest,
+    tests: tests
+  };
+  
+  const dataStr = JSON.stringify(exportData, null, 2);
+  const dataBlob = new Blob([dataStr], { type: 'application/json' });
+  const url = URL.createObjectURL(dataBlob);
+  
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `api-tests-${type}-${Date.now()}.json`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+  
+  alert(`✓ Exported ${tests.length} tests`);
+}
+
+function importTestsInline(type) {
+  document.getElementById(`${type}-import-file`).click();
+}
+
+function handleImport(event, type) {
+  const file = event.target.files[0];
+  if (!file) return;
+  
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const importData = JSON.parse(e.target.result);
+      
+      if (!importData.tests || !Array.isArray(importData.tests) || importData.tests.length === 0) {
+        alert('Invalid or empty test file');
+        return;
+      }
+      
+      if (type === 'rest') {
+        restTests = importData.tests;
+        restOriginalRequest = importData.original_request;
+      } else {
+        graphqlTests = importData.tests;
+        graphqlOriginalRequest = importData.original_request;
+      }
+      
+      const selector = document.getElementById(`${type}-test-selector`);
+      selector.innerHTML = '<option value="">-- Select a test case --</option>';
+      importData.tests.forEach((test, index) => {
+        const option = document.createElement('option');
+        option.value = index;
+        option.textContent = `${test.testCaseId || `TC${index+1}`}: ${test.name}`;
+        selector.appendChild(option);
+      });
+      document.getElementById(`${type}-test-count`).textContent = importData.tests.length;
+      
+      if (importData.original_request) {
+        const info = type === 'rest' 
+          ? `${importData.original_request.method} ${importData.original_request.url}`
+          : `GraphQL → ${importData.original_request.url}`;
+        document.getElementById(`${type}-base-request-info`).textContent = info;
+        document.getElementById(`${type}-original-request`).style.display = 'block';
+      }
+      
+      document.getElementById(`${type}-test-selector-container`).style.display = 'block';
+      document.getElementById(`${type}-ai-panel`).style.display = 'block';
+      
+      alert(`✓ Imported ${importData.tests.length} tests`);
+    } catch (err) {
+      alert('Error importing: ' + err.message);
+    }
+  };
+  reader.readAsText(file);
+  event.target.value = '';
+}
+
+function clearTestsInline(type) {
+  const tests = type === 'rest' ? restTests : graphqlTests;
+  if (tests.length === 0) {
+    alert('No tests to clear');
+    return;
+  }
+  
+  if (confirm(`Clear all ${tests.length} tests?`)) {
+    if (type === 'rest') {
+      restTests = [];
+      restOriginalRequest = null;
+    } else {
+      graphqlTests = [];
+      graphqlOriginalRequest = null;
+    }
+    document.getElementById(`${type}-test-selector-container`).style.display = 'none';
+    document.getElementById(`${type}-original-request`).style.display = 'none';
+    alert('✓ Tests cleared');
+  }
+}
+</script>

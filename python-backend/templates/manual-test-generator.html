@@ -1,0 +1,3408 @@
+<!-- Manual Test Scenario Generator (with AI integration UI) -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Generation - Co-Tester</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='0.9em' font-size='90'>🚀</text></svg>"> 
+
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/styles.css">
+    <link rel="stylesheet" href="/static/navbar-tabs.css">
+    <script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.9/dist/purify.min.js"></script>
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-hover: #4f46e5;
+            --primary-light: #a5b4fc;
+            --accent: #7c3aed;
+            --accent-hover: #6d28d9;
+            --secondary: #1f2937;
+            --secondary-light: #374151;
+            --bg-light: #f8fafc;
+            --bg-dark: #0f172a;
+            --text-light: #64748b;
+            --text-dark: #0f172a;
+            --text-white: #ffffff;
+            --border: #e2e8f0;
+            --success: #10b981;
+            --error: #ef4444;
+            --warning: #f59e0b;
+            --info: #3b82f6;
+            --glass-bg: rgba(255, 255, 255, 0.7);
+            --glass-border: rgba(255, 255, 255, 0.2);
+            --shadow-xl: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+            --transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        body { 
+            background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 50%, #cbd5e1 100%);
+            font-family: 'Inter', sans-serif;
+            min-height: 100vh;
+            color: var(--text-dark);
+            position: relative;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: radial-gradient(circle at 30% 20%, rgba(99, 102, 241, 0.05) 0%, transparent 50%),
+                        radial-gradient(circle at 70% 80%, rgba(139, 92, 246, 0.05) 0%, transparent 50%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .content-area {
+            position: relative;
+            z-index: 1;
+        }
+
+        .container {
+          max-width: 1200px;
+          margin: 0 auto;
+          padding: 2rem;
+          position: relative;
+          z-index: 1;
+        }
+
+        .ai-badge { 
+            font-size: 0.8rem; 
+            color: white; 
+            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 50%, #ffa726 100%);
+            border-radius: 12px; 
+            padding: 4px 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            animation: glow 2s ease-in-out infinite alternate;
+        }
+
+        @keyframes glow {
+            0% { box-shadow: 0 2px 8px rgba(255, 107, 107, 0.4); }
+            100% { box-shadow: 0 4px 16px rgba(255, 107, 107, 0.6); }
+        }
+
+        .testcase-table { 
+            width: 100%; 
+            border-collapse: separate; 
+            border-spacing: 0;
+            background: white;
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+        }
+        .testcase-table td, .testcase-table th { 
+            padding: 12px 16px; 
+            border-bottom: 1px solid var(--border); 
+            vertical-align: top; 
+        }
+        .testcase-table th { 
+            background: linear-gradient(135deg, var(--bg-light) 0%, #e2e8f0 100%);
+            font-weight: 600;
+            color: var(--text-dark);
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .testcase-table tr:hover {
+            background: rgba(99, 102, 241, 0.02);
+        }
+        .testcase-table td[contenteditable="true"] { 
+            min-height: 24px; 
+            word-break: break-word; 
+            transition: var(--transition);
+        }
+        .testcase-table td[contenteditable="true"]:focus { 
+            outline: 2px solid var(--primary);
+            background-color: rgba(99, 102, 241, 0.05);
+            border-radius: 8px;
+        }
+        #fullscreenLoader {
+          display: none;
+          position: fixed;
+          top: 0; left: 0; width: 100vw; height: 100vh;
+          z-index: 9999;
+          background: rgba(0, 0, 0, 0.7);
+          backdrop-filter: blur(8px);
+          align-items: center;
+          justify-content: center;
+        }
+        #fullscreenLoader.active { display: flex; }
+        
+        .loader-content {
+            background: white;
+            border-radius: 20px;
+            padding: 3rem;
+            text-align: center;
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.3);
+            max-width: 400px;
+            margin: 0 1rem;
+        }
+        
+        .loader-spinner {
+            width: 50px;
+            height: 50px;
+            border: 4px solid var(--border);
+            border-top: 4px solid var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 1rem;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Modern Button Styling */
+        .btn {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-hover) 100%);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            padding: 0.75rem 1.5rem;
+            font-weight: 600;
+            transition: var(--transition);
+            box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3);
+        }
+        
+        .btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(99, 102, 241, 0.4);
+        }
+        
+        .btn-secondary {
+            background: var(--bg-light) !important;
+            color: var(--text-dark) !important;
+            border: 2px solid var(--border) !important;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1) !important;
+        }
+        
+        .btn-secondary:hover:not(:disabled) {
+            border-color: var(--primary) !important;
+            color: var(--primary) !important;
+        }
+        
+        .btn-success {
+            background: linear-gradient(135deg, var(--success) 0%, #059669 100%) !important;
+            box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3) !important;
+        }
+        
+        .btn-danger {
+            background: linear-gradient(135deg, var(--error) 0%, #dc2626 100%) !important;
+            box-shadow: 0 4px 15px rgba(239, 68, 68, 0.3) !important;
+        }
+
+        /* Small Button Styling for Edit/Delete */
+        .btn-sm {
+            padding: 0.4rem 0.8rem !important;
+            font-size: 0.85rem !important;
+            border-radius: 8px !important;
+            font-weight: 500 !important;
+            min-width: auto !important;
+            display: inline-flex !important;
+            align-items: center !important;
+            gap: 0.3rem !important;
+        }
+
+        .btn-sm:hover:not(:disabled) {
+            transform: translateY(-1px) !important;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+        }
+
+        /* Table Action Buttons */
+        .testcase-table .btn-sm {
+            margin: 0 0.2rem !important;
+        }
+
+        /* Pagination Styling */
+        #testcasePagination {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 0.5rem;
+            margin: 2rem 0;
+            padding: 1rem;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        #testcasePagination button {
+            min-width: 2.5rem !important;
+            height: 2.5rem !important;
+            padding: 0 !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            border-radius: 8px !important;
+            font-size: 0.9rem !important;
+            font-weight: 600 !important;
+        }
+
+        #testcasePagination .current-page {
+            background: var(--primary) !important;
+            color: white !important;
+            box-shadow: 0 2px 8px rgba(99, 102, 241, 0.3) !important;
+        }
+
+        /* Bottom Action Buttons */
+        .bottom-actions {
+            position: fixed;
+            bottom: 2rem;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 1rem;
+            z-index: 1000;
+            background: white;
+            padding: 1rem 2rem;
+            border-radius: 20px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+            border: 1px solid var(--border);
+        }
+
+        .bottom-actions .btn {
+            padding: 0.75rem 1.5rem !important;
+            font-size: 1rem !important;
+            border-radius: 12px !important;
+            display: flex !important;
+            align-items: center !important;
+            gap: 0.5rem !important;
+        }
+
+        /* PRD Section Styling */
+        .prd-upload-container {
+            padding: 2rem;
+            background: white;
+            border-radius: 20px;
+            border: 1px solid var(--border);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        .prd-upload-header {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+            padding-bottom: 1.5rem;
+            border-bottom: 2px solid var(--border);
+        }
+
+        .prd-icon {
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, var(--warning) 0%, #f59e0b 100%);
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.5rem;
+            flex-shrink: 0;
+        }
+
+        .prd-title h3 {
+            margin: 0 0 0.5rem 0;
+            color: var(--text-dark);
+            font-weight: 700;
+            font-size: 1.5rem;
+        }
+
+        .prd-title p {
+            margin: 0;
+            color: var(--text-light);
+            font-size: 1rem;
+        }
+
+        .prd-upload-area {
+            margin-bottom: 2rem;
+        }
+
+        .upload-zone {
+            border: 3px dashed var(--border);
+            border-radius: 16px;
+            padding: 3rem 2rem;
+            text-align: center;
+            background: var(--bg-light);
+            transition: var(--transition);
+            cursor: pointer;
+            position: relative;
+        }
+
+        .upload-zone:hover,
+        .upload-zone.dragover {
+            border-color: var(--warning);
+            background: rgba(245, 158, 11, 0.05);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(245, 158, 11, 0.1);
+        }
+
+        .upload-zone .upload-icon {
+            font-size: 3rem;
+            color: var(--warning);
+            margin-bottom: 1rem;
+        }
+
+        .upload-zone .upload-text h4 {
+            margin: 0 0 0.5rem 0;
+            color: var(--text-dark);
+            font-weight: 600;
+            font-size: 1.25rem;
+        }
+
+        .upload-zone .upload-text p {
+            margin: 0 0 1.5rem 0;
+            color: var(--text-light);
+        }
+
+        .upload-formats {
+            display: flex;
+            justify-content: center;
+            gap: 0.5rem;
+            margin-top: 1rem;
+        }
+
+        .format-badge {
+            background: var(--warning);
+            color: white;
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .file-input {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0;
+            cursor: pointer;
+        }
+
+        .prd-uploaded-file {
+            background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
+            border: 2px solid var(--success);
+            border-radius: 16px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .uploaded-file-info {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .file-icon {
+            width: 50px;
+            height: 50px;
+            background: var(--success);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.25rem;
+            flex-shrink: 0;
+        }
+
+        .file-details {
+            flex: 1;
+        }
+
+        .file-name {
+            font-weight: 600;
+            color: var(--text-dark);
+            font-size: 1.1rem;
+            margin-bottom: 0.25rem;
+        }
+
+        .file-status {
+            color: var(--text-light);
+            font-size: 0.9rem;
+        }
+
+        .clear-file-btn {
+            background: rgba(239, 68, 68, 0.1);
+            border: 2px solid var(--error);
+            color: var(--error);
+            border-radius: 8px;
+            padding: 0.5rem;
+            cursor: pointer;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 40px;
+            height: 40px;
+        }
+
+        .clear-file-btn:hover {
+            background: var(--error);
+            color: white;
+            transform: scale(1.1);
+        }
+
+        .prd-features {
+            border-top: 2px solid var(--border);
+            padding-top: 2rem;
+        }
+
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .feature-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 1rem;
+            padding: 1.5rem;
+            background: var(--bg-light);
+            border-radius: 16px;
+            border: 1px solid var(--border);
+            transition: var(--transition);
+        }
+
+        .feature-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+            border-color: var(--primary);
+        }
+
+        .feature-item .feature-icon {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-hover) 100%);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1rem;
+            flex-shrink: 0;
+        }
+
+        .feature-text h5 {
+            margin: 0 0 0.5rem 0;
+            color: var(--text-dark);
+            font-weight: 600;
+            font-size: 1rem;
+        }
+
+        .feature-text p {
+            margin: 0;
+            color: var(--text-light);
+            font-size: 0.9rem;
+            line-height: 1.4;
+        }
+
+        /* Jira Section Styling */
+        .jira-container {
+            padding: 2rem;
+            background: white;
+            border-radius: 20px;
+            border: 1px solid var(--border);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        .jira-header {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+            padding-bottom: 1.5rem;
+            border-bottom: 2px solid var(--border);
+        }
+
+        .jira-icon {
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, #0052CC 0%, #2684FF 100%);
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.5rem;
+            flex-shrink: 0;
+        }
+
+        .jira-title h3 {
+            margin: 0 0 0.5rem 0;
+            color: var(--text-dark);
+            font-weight: 700;
+            font-size: 1.5rem;
+        }
+
+        .jira-title p {
+            margin: 0;
+            color: var(--text-light);
+            font-size: 1rem;
+        }
+
+
+
+        /* Compact Jira Section */
+        .jira-container-compact {
+            margin-bottom: 1.5rem;
+        }
+
+        .jira-input-compact {
+            background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+            border-radius: 16px;
+            padding: 1.5rem;
+            border: 1px solid var(--border);
+        }
+
+        .input-group-compact {
+            display: flex;
+            align-items: center;
+            background: white;
+            border: 2px solid var(--border);
+            border-radius: 12px;
+            padding: 0.75rem;
+            gap: 0.75rem;
+            transition: var(--transition);
+            margin-bottom: 1rem;
+        }
+
+        .input-group-compact:focus-within {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+        }
+
+        .input-icon-compact {
+            color: #2684FF;
+            font-size: 1.2rem;
+            width: 24px;
+            display: flex;
+            justify-content: center;
+        }
+
+        .jira-input-compact {
+            flex: 1;
+            border: none;
+            outline: none;
+            font-size: 1rem;
+            padding: 0.5rem 0;
+            background: transparent;
+        }
+
+        .jira-input-compact::placeholder {
+            color: var(--text-light);
+        }
+
+        .fetch-btn-compact {
+            background: linear-gradient(135deg, #2684FF 0%, #0052CC 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 0.6rem 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            font-size: 0.9rem;
+        }
+
+        .fetch-btn-compact:hover:not(:disabled) {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 15px rgba(38, 132, 255, 0.3);
+        }
+
+        .clear-btn-compact {
+            background: rgba(239, 68, 68, 0.1);
+            color: var(--error);
+            border: 1px solid var(--error);
+            border-radius: 8px;
+            padding: 0.6rem;
+            cursor: pointer;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 36px;
+            height: 36px;
+        }
+
+        .clear-btn-compact:hover {
+            background: var(--error);
+            color: white;
+        }
+
+        .input-help-compact {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: var(--text-light);
+            font-size: 0.85rem;
+            margin-left: 1rem;
+        }
+
+        .input-help-compact i {
+            color: var(--info);
+        }
+
+        /* Compact PRD Section */
+        .prd-container-compact {
+            margin-bottom: 1.5rem;
+        }
+
+        .prd-upload-compact {
+            background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+            border: 2px dashed var(--success);
+            border-radius: 16px;
+            padding: 1.5rem;
+            cursor: pointer;
+            transition: var(--transition);
+            position: relative;
+        }
+
+        .prd-upload-compact:hover {
+            border-color: var(--primary);
+            background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+        }
+
+        .upload-group-compact {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .upload-icon-compact {
+            color: var(--success);
+            font-size: 2rem;
+            transition: var(--transition);
+        }
+
+        .prd-upload-compact:hover .upload-icon-compact {
+            color: var(--primary);
+        }
+
+        .upload-content-compact {
+            flex: 1;
+        }
+
+        .upload-text-compact {
+            font-weight: 600;
+            color: var(--text-dark);
+            margin-bottom: 0.5rem;
+        }
+
+        .upload-formats-compact {
+            color: var(--text-light);
+            font-size: 0.85rem;
+        }
+
+        .file-input-compact {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0;
+            cursor: pointer;
+        }
+
+        .prd-uploaded-compact {
+            background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+            border: 2px solid var(--success);
+            border-radius: 16px;
+            padding: 1.5rem;
+        }
+
+        .uploaded-info-compact {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .file-icon-compact {
+            color: var(--success);
+            font-size: 1.5rem;
+        }
+
+        .file-details-compact {
+            flex: 1;
+        }
+
+        .file-name-compact {
+            font-weight: 600;
+            color: var(--text-dark);
+            margin-bottom: 0.25rem;
+        }
+
+        .file-status-compact {
+            color: var(--text-light);
+            font-size: 0.85rem;
+        }
+
+        .clear-file-compact {
+            background: rgba(239, 68, 68, 0.1);
+            color: var(--error);
+            border: 1px solid var(--error);
+            border-radius: 8px;
+            padding: 0.5rem;
+            cursor: pointer;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 32px;
+            height: 32px;
+        }
+
+        .clear-file-compact:hover {
+            background: var(--error);
+            color: white;
+        }
+
+        .prd-help-compact {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: var(--text-light);
+            font-size: 0.85rem;
+        }
+
+        .prd-help-compact i {
+            color: var(--info);
+        }
+
+        /* Enhanced Description Section */
+        .description-section {
+            margin-top: 2rem;
+        }
+
+        .description-header {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .description-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.5rem;
+        }
+
+        .description-title h3 {
+            margin: 0 0 0.5rem 0;
+            color: var(--text-dark);
+            font-weight: 700;
+            font-size: 1.5rem;
+        }
+
+        .description-title p {
+            margin: 0;
+            color: var(--text-light);
+            font-size: 1rem;
+        }
+
+        .description-content {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .description-card {
+            background: linear-gradient(135deg, #fefefe 0%, #f8fafc 100%);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
+            transition: var(--transition);
+        }
+
+        .description-card:hover {
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            transform: translateY(-1px);
+        }
+
+        .card-header {
+            background: linear-gradient(135deg, var(--bg-light) 0%, #e2e8f0 100%);
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .card-header i {
+            color: var(--primary);
+            font-size: 1.1rem;
+        }
+
+        .card-header span {
+            font-weight: 600;
+            color: var(--text-dark);
+            font-size: 1rem;
+        }
+
+        .card-content {
+            padding: 1.5rem;
+        }
+
+        .enhanced-input {
+            width: 100%;
+            border: 2px solid var(--border);
+            border-radius: 12px;
+            padding: 1rem;
+            font-size: 1rem;
+            transition: var(--transition);
+            background: #fafbfc;
+        }
+
+        .enhanced-input:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+            outline: none;
+        }
+
+        .enhanced-textarea {
+            min-height: 120px;
+            max-height: 300px;
+            overflow-y: auto;
+            border: 2px solid var(--border);
+            border-radius: 12px;
+            padding: 1rem;
+            background: #fafbfc;
+            transition: var(--transition);
+            cursor: text;
+        }
+
+        .enhanced-textarea:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+            outline: none;
+        }
+
+        .placeholder-content {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 2rem;
+            color: var(--text-light);
+        }
+
+        .placeholder-content i {
+            font-size: 3rem;
+            color: var(--border);
+            margin-bottom: 1rem;
+        }
+
+        .placeholder-content p {
+            margin: 0;
+            font-style: italic;
+        }
+
+        .config-cards-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+        }
+
+        .config-card {
+            background: linear-gradient(135deg, #fefefe 0%, #f8fafc 100%);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
+            transition: var(--transition);
+        }
+
+        .config-card:hover {
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            transform: translateY(-1px);
+        }
+
+        .config-header {
+            background: linear-gradient(135deg, var(--bg-light) 0%, #e2e8f0 100%);
+            padding: 0.75rem 1rem;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .config-header i {
+            color: var(--primary);
+            font-size: 1rem;
+        }
+
+        .config-header span {
+            font-weight: 600;
+            color: var(--text-dark);
+            font-size: 0.95rem;
+        }
+
+        .config-content {
+            padding: 1rem;
+        }
+
+        .enhanced-select {
+            width: 100%;
+            border: 2px solid var(--border);
+            border-radius: 12px;
+            padding: 0.75rem;
+            font-size: 1rem;
+            transition: var(--transition);
+            background: white;
+            margin-bottom: 0.75rem;
+        }
+
+        .enhanced-select:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+            outline: none;
+        }
+
+        .attachment-area {
+            border: 2px dashed var(--border);
+            border-radius: 12px;
+            padding: 1rem;
+            text-align: center;
+            transition: var(--transition);
+            cursor: pointer;
+            position: relative;
+            margin-bottom: 0.75rem;
+        }
+
+        .attachment-area:hover {
+            border-color: var(--primary);
+            background: rgba(99, 102, 241, 0.02);
+        }
+
+        .enhanced-file-input {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0;
+            cursor: pointer;
+        }
+
+        .attachment-text {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            color: var(--text-light);
+            font-weight: 500;
+        }
+
+        .attachment-text i {
+            color: var(--primary);
+        }
+
+        .config-help {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: var(--text-light);
+            font-size: 0.8rem;
+        }
+
+        .config-help i {
+            color: var(--info);
+        }
+
+        /* File Preview Styles */
+        .files-preview {
+            margin-top: 1rem;
+            display: none;
+        }
+
+        .files-preview.show {
+            display: block;
+        }
+
+        .files-preview h4 {
+            font-size: 0.9rem;
+            color: var(--text-dark);
+            margin-bottom: 0.75rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .files-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+            gap: 0.75rem;
+        }
+
+        .file-item {
+            background: white;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 0.75rem;
+            text-align: center;
+            position: relative;
+            transition: var(--transition);
+        }
+
+        .file-item:hover {
+            border-color: var(--primary);
+            box-shadow: 0 2px 8px rgba(99, 102, 241, 0.1);
+        }
+
+        .file-icon {
+            font-size: 1.5rem;
+            color: var(--primary);
+            margin-bottom: 0.5rem;
+        }
+
+        .file-name {
+            font-size: 0.75rem;
+            color: var(--text-dark);
+            font-weight: 500;
+            word-break: break-word;
+            line-height: 1.2;
+        }
+
+        .file-size {
+            font-size: 0.65rem;
+            color: var(--text-light);
+            margin-top: 0.25rem;
+        }
+
+        .file-remove {
+            position: absolute;
+            top: -6px;
+            right: -6px;
+            background: var(--error);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 0.75rem;
+            transition: var(--transition);
+        }
+
+        .file-remove:hover {
+            background: #dc2626;
+            transform: scale(1.1);
+        }
+
+        .attachment-area.has-files {
+            border-color: var(--success);
+            background: rgba(16, 185, 129, 0.02);
+        }
+
+        .attachment-area.has-files .attachment-text {
+            color: var(--success);
+        }
+
+        .attachment-area.has-files .attachment-text i {
+            color: var(--success);
+        }
+
+        .generate-section {
+            margin-top: 1rem;
+        }
+
+        .generate-card {
+            background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+            border: 2px solid var(--primary);
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 8px 32px rgba(99, 102, 241, 0.15);
+        }
+
+        .generate-content {
+            padding: 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 2rem;
+        }
+
+        .generate-info {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+            flex: 1;
+        }
+
+        .generate-icon {
+            width: 64px;
+            height: 64px;
+            border-radius: 16px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 2rem;
+        }
+
+        .generate-text h4 {
+            margin: 0 0 0.5rem 0;
+            color: var(--text-dark);
+            font-weight: 700;
+            font-size: 1.25rem;
+        }
+
+        .generate-text p {
+            margin: 0;
+            color: var(--text-light);
+            font-size: 1rem;
+        }
+
+        .generate-button {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
+            color: #ffffff;
+            border: none;
+            border-radius: 16px;
+            padding: 1rem 2rem;
+            font-weight: 700;
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            box-shadow: 0 4px 20px rgba(99, 102, 241, 0.3);
+            text-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+        }
+
+        .generate-button:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 32px rgba(99, 102, 241, 0.4);
+        }
+
+        .generate-button:disabled {
+            opacity: 0.7 !important;
+            cursor: not-allowed !important;
+            transform: none !important;
+            box-shadow: 0 4px 20px rgba(99, 102, 241, 0.2) !important;
+            background: linear-gradient(135deg, #8b94db 0%, #9ca6e8 100%) !important;
+            color: rgba(255, 255, 255, 0.8) !important;
+            border: none !important;
+            text-shadow: none !important;
+            font-weight: 700 !important;
+        }
+
+        .generate-button:not(:disabled) {
+            background: linear-gradient(135deg, #059669 0%, #0d9488 100%) !important;
+            color: #ffffff !important;
+            opacity: 1 !important;
+            cursor: pointer !important;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.4) !important;
+            box-shadow: 0 4px 20px rgba(5, 150, 105, 0.4) !important;
+            font-weight: 800 !important;
+            border: 2px solid rgba(255, 255, 255, 0.3) !important;
+        }
+
+        @media (max-width: 768px) {
+            .config-cards-row {
+                grid-template-columns: 1fr;
+            }
+            
+            .generate-content {
+                flex-direction: column;
+                text-align: center;
+            }
+            
+            .generate-info {
+                flex-direction: column;
+                text-align: center;
+            }
+        }
+
+        /* Make disabled buttons visually greyed out and unclickable - except generate button */
+        button:disabled:not(.generate-button),
+        .btn:disabled:not(.generate-button),
+        button[disabled]:not(.generate-button),
+        .btn[disabled]:not(.generate-button) {
+          opacity: 0.6 !important;
+          cursor: not-allowed !important;
+          pointer-events: none;
+          background-color: #adb5bd !important;
+          color: #fff !important;
+          border-color: #adb5bd !important;
+          transform: none !important;
+          box-shadow: none !important;
+        }
+        @media (max-width: 767px) {
+          .container {
+            padding: 0.5rem 0.2rem;
+          }
+          .instructions {
+            padding: 0.7em 0.5em;
+            font-size: 0.95em;
+            max-width: 100%;
+          }
+          .mb-3.d-flex, .mb-3.d-flex.gap-2, .mb-3.d-flex.gap-2.align-items-end, .mb-3.d-flex.gap-2.align-items-center {
+            flex-direction: column !important;
+            align-items: stretch !important;
+            gap: 0.7em !important;
+          }
+          .form-control, .form-label, select, input, textarea {
+            width: 100% !important;
+            max-width: 100% !important;
+            font-size: 1em;
+          }
+          #testcasesSection {
+            padding: 0.5em 0.2em;
+          }
+          .panel, .table, .testcase-table {
+            font-size: 0.98em;
+          }
+          .testcase-table, .table {
+            display: block;
+            width: 100%;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+          }
+          .testcase-table thead, .testcase-table tbody, .testcase-table tr {
+            display: table;
+            width: 100%;
+            table-layout: fixed;
+          }
+          .testcase-table td, .testcase-table th {
+            font-size: 0.97em;
+            padding: 0.5em 0.3em;
+          }
+          button, .btn {
+            font-size: 1em;
+            padding: 0.7em 1.1em;
+            width: 100%;
+            margin-bottom: 0.5em;
+          }
+        }
+        .btn.active, .btn:active {
+          background-color: #0d6efd !important;
+          color: #fff !important;
+          border-color: #0d6efd !important;
+        }
+    </style>
+</head>
+<body>
+  {% set active_tab = 'manual' %}
+  {% include 'left-sidebar.html' %}
+  <div class="main-content">
+    {% set page_title = 'Test Generator <span class="ai-badge">AI</span>' %}
+    {% set page_subtitle = 'Generate comprehensive tests from Jira stories or PRD documents' %}
+    {% set allow_html = true %}
+    {% include 'page-header.html' %}
+    
+    <div class="content-area" style="width:100%; padding:1.5rem; padding-left: 0; margin-left: 0;">
+
+    <!-- Instructions Panel -->
+    <div style="background-color: #fff9e6; border: 1px solid #ffe066; border-radius: 6px; padding: 1rem 1.5rem; margin-bottom: 1.5rem;">
+        <h5 style="color: #856404; margin-top: 0; margin-bottom: 0.75rem; font-weight: 600;">Instructions:</h5>
+        <ol style="margin-bottom: 0; padding-left: 1.5rem;">
+            <li><strong>Jira Story</strong>: Connect to Jira, enter a Jira ID, and fetch the story details.</li>
+            <li><strong>PRD Document</strong>: Upload a PDF, Word, or text document containing product requirements.</li>
+            <li>Add context or screenshots if needed to enhance test generation.</li>
+            <li>Click <strong>Generate Tests</strong> to create tests based on the provided information.</li>
+            <li>Edit, delete, or add tests as needed before saving or creating Jira subtasks.</li>
+        </ol>
+    </div>
+    
+    <!-- Jira Connect moved inside Jira tab -->
+   <!-- Toggle Buttons -->
+    <!-- <div class="d-flex gap-2 mb-3" style="margin-top:1em;">
+    </div> -->
+
+    <style>
+        /* Modern Tab Styling */
+        .custom-tabs {
+            border-bottom: none;
+            margin-bottom: 2rem;
+            display: flex;
+            gap: 1rem;
+            background: none;
+        }
+        .custom-tabs .nav-link {
+            padding: 1rem 2rem;
+            font-weight: 600;
+            border-radius: 16px;
+            border: 2px solid var(--border);
+            cursor: pointer;
+            color: var(--text-dark);
+            background: white;
+            transition: all 0.3s ease;
+            position: relative;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            text-decoration: none;
+            min-width: 180px;
+            justify-content: center;
+        }
+        .custom-tabs .nav-link:hover {
+            background: var(--bg-light);
+            border-color: var(--primary);
+            color: var(--primary);
+            box-shadow: 0 8px 12px -4px rgba(0, 0, 0, 0.15);
+            transform: translateY(-2px);
+        }
+        .custom-tabs .nav-link.active {
+            color: white;
+            background: linear-gradient(135deg, var(--primary), var(--primary-hover));
+            border-color: var(--primary);
+            box-shadow: 0 8px 16px -4px rgba(99, 102, 241, 0.4);
+        }
+        .custom-tabs .nav-link i {
+            font-size: 1.2rem;
+        }
+
+        /* Tab content styling */
+        .tab-content {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+            border: 1px solid var(--border);
+            padding: 2rem;
+            margin-bottom: 2rem;
+        }
+        
+        /* Modern Card Components */
+        .input-card, .upload-card {
+            background: white;
+            border-radius: 16px;
+            padding: 2rem;
+            border: 1px solid var(--border);
+            box-shadow: var(--shadow);
+        }
+        
+        .card-title {
+            display: flex;
+            align-items: center;
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--text-dark);
+            margin-bottom: 1.5rem;
+        }
+        
+        .card-icon {
+            background: linear-gradient(135deg, var(--primary), var(--primary-hover));
+            color: white;
+            width: 40px;
+            height: 40px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 1rem;
+            font-size: 1.2rem;
+        }
+        
+        /* Modern Input Styling */
+        .input-group-modern {
+            margin-bottom: 1rem;
+        }
+        
+        .input-wrapper {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+        
+        .input-modern {
+            flex: 1;
+            padding: 0.875rem 1rem;
+            border: 2px solid var(--border);
+            border-radius: 12px;
+            font-size: 1rem;
+            transition: border-color 0.3s ease, box-shadow 0.3s ease;
+            background: white;
+        }
+        
+        .input-modern:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+        }
+        
+        .input-buttons {
+            display: flex;
+            gap: 0.5rem;
+        }
+        
+        .btn-primary-modern {
+            background: linear-gradient(135deg, var(--primary), var(--primary-hover));
+            color: white;
+            border: none;
+            border-radius: 12px;
+            padding: 0.875rem 1.5rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .btn-primary-modern:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px -4px rgba(99, 102, 241, 0.4);
+        }
+        
+        .btn-clear-modern {
+            background: #f1f5f9;
+            color: var(--text-light);
+            border: 2px solid var(--border);
+            border-radius: 12px;
+            padding: 0.875rem 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-clear-modern:hover {
+            background: #e2e8f0;
+            color: var(--text-dark);
+        }
+        
+        /* Modern Upload Area */
+        .upload-area-modern {
+            border: 2px dashed var(--border);
+            border-radius: 16px;
+            padding: 3rem 2rem;
+            text-align: center;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            position: relative;
+            margin-bottom: 1rem;
+        }
+        
+        .upload-area-modern:hover {
+            border-color: var(--primary);
+            background: rgba(99, 102, 241, 0.02);
+        }
+        
+        .upload-area-modern.dragover {
+            border-color: var(--primary);
+            background: rgba(99, 102, 241, 0.05);
+        }
+        
+        .upload-content {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1rem;
+        }
+        
+        .upload-icon {
+            color: var(--primary);
+            font-size: 3rem;
+        }
+        
+        .upload-text {
+            font-size: 1.125rem;
+            font-weight: 600;
+            color: var(--text-dark);
+        }
+        
+        .upload-subtext {
+            color: var(--text-light);
+            font-size: 0.875rem;
+        }
+        
+        .upload-formats {
+            display: flex;
+            gap: 0.5rem;
+            margin: 0.5rem 0;
+        }
+        
+        .format-badge {
+            background: var(--bg-light);
+            color: var(--text-dark);
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+        
+        .browse-btn {
+            background: linear-gradient(135deg, var(--primary), var(--primary-hover));
+            color: white;
+            border: none;
+            border-radius: 12px;
+            padding: 0.75rem 1.5rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-top: 1rem;
+        }
+        
+        .browse-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px -4px rgba(99, 102, 241, 0.4);
+        }
+        
+        .file-input {
+            display: none;
+        }
+        
+        /* Uploaded File Card */
+        .uploaded-file-card {
+            background: var(--bg-light);
+            border-radius: 12px;
+            padding: 1.5rem;
+            border: 1px solid var(--border);
+        }
+        
+        .file-info {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+        
+        .file-icon {
+            background: var(--success);
+            color: white;
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+        }
+        
+        .file-details {
+            flex: 1;
+        }
+        
+        .file-name {
+            font-weight: 600;
+            color: var(--text-dark);
+            margin-bottom: 0.25rem;
+        }
+        
+        .file-status {
+            color: var(--text-light);
+            font-size: 0.875rem;
+        }
+        
+        .ai-features {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: var(--primary);
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+        
+        .help-text {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: var(--text-light);
+            font-size: 0.875rem;
+            background: var(--bg-light);
+            padding: 1rem;
+            border-radius: 12px;
+        }
+        
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .custom-tabs {
+                flex-direction: column;
+                gap: 0.5rem;
+            }
+            
+            .custom-tabs .nav-link {
+                min-width: auto;
+                width: 100%;
+                justify-content: flex-start;
+            }
+            
+            .input-wrapper {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 1rem;
+            }
+            
+            .input-buttons {
+                justify-content: center;
+            }
+            
+            .upload-area-modern {
+                padding: 2rem 1rem;
+            }
+            
+        .tab-content {
+            padding: 1.5rem;
+            }
+            
+            .input-card, .upload-card {
+                padding: 1.5rem;
+            }
+        }
+        
+        /* Loading Overlay Styles */
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            backdrop-filter: blur(5px);
+        }
+
+        /* Dark mode support for loading overlay */
+        body.dark-mode .loading-overlay {
+            background: rgba(0, 0, 0, 0.8);
+        }
+
+        .loading-overlay.show {
+            display: flex;
+        }
+
+        .loading-content {
+            background: var(--bg-light, white);
+            border-radius: 20px;
+            padding: 3rem;
+            text-align: center;
+            max-width: 400px;
+            margin: 0 auto;
+            color: var(--text-dark);
+            box-shadow: var(--shadow-xl);
+        }
+        
+        /* Dark mode support for loading content */
+        body.dark-mode .loading-content {
+            background: var(--bg-dark, #23272B);
+            color: var(--text-white, #ffffff);
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5);
+        }
+
+        .loading-spinner {
+            width: 60px;
+            height: 60px;
+            border: 4px solid var(--border);
+            border-top: 4px solid var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 1.5rem;
+        }
+        
+        /* Dark mode support for loading spinner */
+        body.dark-mode .loading-spinner {
+            border-color: rgba(255, 255, 255, 0.15);
+            border-top-color: var(--primary, #D32F2F);
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .loading-text {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: var(--text-dark);
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+        }
+        
+        /* Dark mode support for loading text */
+        body.dark-mode .loading-text {
+            color: var(--text-white, #ffffff);
+            text-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+        }
+    </style>
+    
+    <!-- Tab Navigation -->
+    <div class="nav nav-tabs custom-tabs" id="testGenTabs" role="tablist">
+        <button class="nav-link active" id="jira-tab" data-bs-toggle="tab" data-bs-target="#jira-content" type="button" role="tab" aria-controls="jira-content" aria-selected="true">
+            <i class="fab fa-jira"></i>
+            Jira Story
+        </button>
+        <button class="nav-link" id="prd-tab" data-bs-toggle="tab" data-bs-target="#prd-content" type="button" role="tab" aria-controls="prd-content" aria-selected="false">
+            <i class="fas fa-file-alt"></i>
+            PRD Document
+        </button>
+    </div>
+
+    <style>
+        .tab-content-custom {
+            padding: 1.5rem 0;
+        }
+        .tab-pane {
+            display: none;
+        }
+        .tab-pane.show.active {
+            display: block;
+        }
+        .input-group-custom {
+            display: flex;
+            gap: 0.5rem;
+            align-items: flex-end;
+            margin-bottom: 1rem;
+        }
+        .form-control-custom {
+            border: 1px solid #ced4da;
+            border-radius: 0.25rem;
+            padding: 0.375rem 0.75rem;
+            transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+        }
+        .form-control-custom:focus {
+            border-color: #86b7fe;
+            box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+            outline: 0;
+        }
+        .btn-custom {
+            display: inline-block;
+            font-weight: 400;
+            text-align: center;
+            vertical-align: middle;
+            user-select: none;
+            border: 1px solid transparent;
+            padding: 0.375rem 0.75rem;
+            font-size: 1rem;
+            border-radius: 0.25rem;
+            transition: color 0.15s ease-in-out, background-color 0.15s ease-in-out, border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+        }
+    </style>
+    
+    <!-- Tab Content -->
+    <div class="tab-content tab-content-custom" id="testGenTabContent">
+        <!-- Jira Tab -->
+        <div class="tab-pane fade show active" id="jira-content" role="tabpanel" aria-labelledby="jira-tab">
+            <div class="input-card">
+                <div class="card-title">
+                    <div class="card-icon">
+                            <i class="fab fa-jira"></i>
+            </div>
+                    Jira Story Integration
+                </div>
+                <div class="input-group-modern">
+                    <div class="input-wrapper">
+                        <input type="text" id="jiraIdInput" class="input-modern" placeholder="Enter Jira Story ID (e.g., PROJ-123 or full URL)">
+                        <div class="input-buttons">
+                            <button type="button" id="fetchJiraBtn" class="btn-primary-modern">
+                            <i class="fas fa-download"></i>
+                                Fetch Story
+                        </button>
+                            <button type="button" id="clearJiraBtn" class="btn-clear-modern">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    </div>
+                </div>
+                <div class="help-text">
+                    <i class="fas fa-info-circle"></i>
+                    Connected to Jira • Supports story keys and URLs • Auto-extracts requirements
+                </div>
+            </div>
+        </div>
+
+        <!-- PRD Tab -->
+        <div class="tab-pane fade" id="prd-content" role="tabpanel" aria-labelledby="prd-tab">
+            <div class="upload-card">
+                <div class="card-title">
+                    <div class="card-icon">
+                            <i class="fas fa-file-alt"></i>
+                        </div>
+                    PRD Document Upload
+                            </div>
+                <div class="upload-area-modern" id="prdUploadArea">
+                    <div class="upload-content">
+                        <div class="upload-icon">
+                            <i class="fas fa-cloud-upload-alt"></i>
+                        </div>
+                        <div class="upload-text">Drop PRD document here</div>
+                        <div class="upload-subtext">or click to browse</div>
+                        <div class="upload-formats">
+                            <span class="format-badge">PDF</span>
+                            <span class="format-badge">DOC</span>
+                            <span class="format-badge">DOCX</span>
+                            <span class="format-badge">TXT</span>
+                    </div>
+                        <button type="button" class="browse-btn">
+                            <i class="fas fa-folder-open"></i>
+                            Browse Files
+                        </button>
+                    </div>
+                    <input type="file" id="prdUpload" class="file-input" accept=".pdf,.doc,.docx,.txt">
+                </div>
+                
+                <div class="uploaded-file-card" id="prdUploadedFile" style="display: none;">
+                    <div class="file-info">
+                        <div class="file-icon">
+                            <i class="fas fa-file-check"></i>
+                        </div>
+                        <div class="file-details">
+                            <div class="file-name" id="prdFileName"></div>
+                            <div class="file-status" id="prdFileStatus">Processing document...</div>
+                        </div>
+                        <button type="button" id="clearPrdBtn" class="btn-clear-modern">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    <div class="ai-features">
+                        <i class="fas fa-magic"></i>
+                        <span>AI analysis • Smart test generation • Time estimation</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <form id="scenarioForm">
+        <!-- Enhanced Description Section -->
+        <div id="enhancedDescriptionSection" class="description-section">
+            <div class="description-header">
+                <div class="description-icon">
+                    <i class="fas fa-file-text"></i>
+            </div>
+                <div class="description-title">
+                    <h3>Requirements Details</h3>
+                    <p>Review and enhance the extracted information before generating tests</p>
+            </div>
+            </div>
+
+            <div class="description-content">
+                <!-- Summary Card - only shown for Jira -->
+                <div class="description-card" id="summarySection">
+                    <div class="card-header">
+                        <i class="fas fa-tag"></i>
+                        <span>Story Summary</span>
+                    </div>
+                    <div class="card-content">
+                        <input type="text" class="enhanced-input" id="summaryInput" placeholder="Story summary will appear here after fetching from Jira" readonly>
+                    </div>
+                </div>
+
+                <!-- Description Card -->
+                <div class="description-card">
+                    <div class="card-header">
+                        <i class="fas fa-align-left"></i>
+                        <span>Requirements & Description</span>
+                    </div>
+                    <div class="card-content">
+                        <div class="enhanced-textarea" id="scenarioInput" tabindex="0">
+                            <div class="placeholder-content">
+                                <i class="fas fa-lightbulb"></i>
+                                <p>Detailed requirements and acceptance criteria will appear here after fetching from Jira or uploading a PRD document.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Configuration Cards Row -->
+                <div class="config-cards-row">
+                    <!-- Context Card -->
+                    <div class="config-card">
+                        <div class="config-header">
+                            <i class="fas fa-layer-group"></i>
+                            <span>Test Context</span>
+                        </div>
+                        <div class="config-content">
+                            <select id="contextSelect" class="enhanced-select">
+                                <option value="">Select Context</option>
+                                <option value="lxp">LXP Platform</option>
+                </select>
+                            <div class="config-help">
+                                <i class="fas fa-info-circle"></i>
+                                <span>Optional: Choose platform context for targeted test generation</span>
+            </div>
+            </div>
+                    </div>
+
+                    <!-- Attachments Card -->
+                    <div class="config-card">
+                        <div class="config-header">
+                            <i class="fas fa-paperclip"></i>
+                            <span>Visual Assets</span>
+                        </div>
+                        <div class="config-content">
+                            <div class="attachment-area" id="attachmentArea">
+                                <input type="file" id="attachmentInput" class="enhanced-file-input" multiple accept="image/*,application/pdf">
+                                <div class="attachment-text">
+                                    <i class="fas fa-images"></i>
+                                    <span>Upload screenshots or UI mockups</span>
+                                </div>
+                            </div>
+                            <div class="files-preview" id="filesPreview">
+                                <h4>
+                                    <i class="fas fa-file-check"></i>
+                                    Selected Files
+                                </h4>
+                                <div class="files-grid" id="filesGrid"></div>
+                            </div>
+                            <div class="config-help">
+                                <i class="fas fa-camera"></i>
+                                <span>Supports PNG, JPG, PDF • Enhances test case accuracy</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Generate Section -->
+                <div class="generate-section">
+                    <div class="generate-card">
+                        <div class="generate-content">
+                            <div class="generate-info">
+                                <div class="generate-icon">
+                                    <i class="fas fa-magic"></i>
+                                </div>
+                                <div class="generate-text">
+                                    <h4>Ready to Generate</h4>
+                                    <p>AI will analyze the requirements and create comprehensive tests with time estimates</p>
+                                </div>
+                            </div>
+                            <button type="button" id="generateBtn" class="generate-button" disabled>
+                                <i class="fas fa-rocket"></i>
+                                Generate Tests
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            </div>
+        </form>
+        <div id="loading" class="my-3" style="display:none;">
+            <div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div>
+            <span class="ms-2">Generating tests...</span>
+        </div>
+        <div id="testcasesSection" style="display:none; margin-top: 2.5rem;">
+            <h4 id="generatedTestsHeading" style="margin-bottom: 1.2rem;">Generated Tests</h4>
+            <div id="totalEstimatedTime" style="font-size:1.1em; font-weight:500; color:#6f42c1; margin-bottom:0.8em; display:none;">Total Estimated Time: <span id="totalEstimatedTimeValue">0</span> minutes</div>
+            <div style="background: #f9f9f9; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); padding: 1.5rem 1.2rem;">
+                <table class="table table-bordered testcase-table mt-3" style="margin-bottom: 1.5rem; width: 100%; border: 1px solid #dee2e6;">
+                    <thead class="table-light">
+                        <tr>
+                            <th style="width:5%; text-align: left;">#</th>
+                            <th style="width:35%; text-align: left;">Test Step</th>
+                            <th style="width:35%; text-align: left;">Expected Result</th>
+                            <th style="width:15%; text-align: left;">Estimate (minutes)</th>
+                            <th style="width:10%; text-align: left;">Edit</th>
+                        </tr>
+                    </thead>
+                    <tbody id="testcasesTableBody">
+                        <!-- Tests will be inserted here -->
+                    </tbody>
+                </table>
+                <div id="testcasePagination" style="margin-top:1em;text-align:center;"></div>
+        </div>
+        
+        <div class="bottom-actions" id="bottomActions" style="display: none;">
+            <button class="btn btn-success" id="saveBtn">
+                <i class="fas fa-save"></i>
+                Save Tests
+            </button>
+            {% if is_development %}
+            <button class="btn btn-primary" id="createJiraSubtasksBtn">
+                <i class="fab fa-jira"></i>
+                Create Jira Subtasks
+            </button>
+            {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+{% include 'footer.html' %}
+
+<!-- Loading Overlay -->
+<div class="loading-overlay" id="loadingOverlay">
+    <div class="loading-content">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">Generating tests...</div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+// Assign all DOM elements FIRST
+const descriptionInput = document.getElementById('scenarioInput');
+const generateBtn = document.getElementById('generateBtn');
+const summaryInput = document.getElementById('summaryInput');
+const jiraIdInput = document.getElementById('jiraIdInput');
+const fetchJiraBtn = document.getElementById('fetchJiraBtn');
+const clearJiraBtn = document.getElementById('clearJiraBtn');
+const clearPrdBtn = document.getElementById('clearPrdBtn');
+// Jira connection is handled at the application level
+const prdUpload = document.getElementById('prdUpload');
+const summarySection = document.getElementById('summarySection');
+const jiraTab = document.getElementById('jira-tab');
+const prdTab = document.getElementById('prd-tab');
+const createJiraSubtasksBtn = document.getElementById('createJiraSubtasksBtn');
+const attachmentInput = document.getElementById('attachmentInput');
+const attachmentArea = document.getElementById('attachmentArea');
+const filesPreview = document.getElementById('filesPreview');
+const filesGrid = document.getElementById('filesGrid');
+
+// Initialize UI state
+let activeTab = 'jira'; // Default tab is Jira
+let jiraFetched = false;
+let prdUploaded = false;
+let testsGeneratedFrom = null; // Track which tab generated the current tests ('jira' or 'prd')
+
+// Helper function to check if user has entered data (excludes auto-fetched content)
+function hasUserData() {
+    const jiraInput = document.getElementById('jiraIdInput').value.trim();
+    const summaryInput = document.getElementById('summaryInput').value.trim();
+    const scenarioInput = document.getElementById('scenarioInput');
+    const scenarioText = scenarioInput.textContent || scenarioInput.innerText || '';
+    const contextSelected = document.getElementById('contextSelect').value;
+    const attachments = document.getElementById('attachmentInput').files.length;
+    
+    // Only check for manually entered data, not auto-fetched content
+    // Exclude placeholder content when checking scenario text
+    const hasScenarioText = scenarioText.trim() && 
+                          !scenarioText.includes('Detailed requirements and acceptance criteria will appear here');
+    
+    return jiraInput || summaryInput || hasScenarioText || contextSelected || attachments;
+}
+
+// Helper function to check if there are generated tests
+function hasGeneratedTests() {
+    return currentTestCases && currentTestCases.length > 0;
+}
+
+// Helper function to check if user has any data or generated tests that would be lost
+function hasDataToLose() {
+    return hasUserData() || hasGeneratedTests();
+}
+
+// Helper function to clear all data
+function clearAllData() {
+    // Clear Jira data
+    document.getElementById('jiraIdInput').value = '';
+    document.getElementById('summaryInput').value = '';
+    const scenarioInput = document.getElementById('scenarioInput');
+    scenarioInput.innerHTML = `
+        <div class="placeholder-content">
+            <i class="fas fa-lightbulb"></i>
+            <p>Detailed requirements and acceptance criteria will appear here after fetching from Jira or uploading a PRD document.</p>
+        </div>
+    `;
+    
+    // Clear context and attachments
+    document.getElementById('contextSelect').value = '';
+    clearAttachments();
+    
+    // Clear PRD data
+    window.currentPrdFile = null;
+    window.currentPrdContent = null;
+    const prdUploadArea = document.getElementById('prdUploadArea');
+    const prdUploadedFile = document.getElementById('prdUploadedFile');
+    if (prdUploadArea && prdUploadedFile) {
+        prdUploadArea.style.display = 'block';
+        prdUploadedFile.style.display = 'none';
+    }
+    
+    // Clear generated tests
+    clearGeneratedTests();
+    
+    // Reset flags
+    jiraFetched = false;
+    prdUploaded = false;
+    
+    updateGenerateBtnState();
+}
+
+// Helper function to clear generated tests section
+function clearGeneratedTests() {
+    // Clear the tests data
+    currentTestCases = [];
+    window.currentTestCases = [];
+    testsGeneratedFrom = null; // Reset the source tracking
+    
+    // Clear the table body
+    const tbody = document.getElementById('testcasesTableBody');
+    if (tbody) {
+        tbody.innerHTML = '';
+    }
+    
+    // Hide the entire test section
+    const testcasesSection = document.getElementById('testcasesSection');
+    if (testcasesSection) {
+        testcasesSection.style.display = 'none';
+    }
+    
+    // Hide bottom actions
+    const bottomActions = document.getElementById('bottomActions');
+    if (bottomActions) {
+        bottomActions.style.display = 'none';
+    }
+    
+    // Clear pagination
+    const pagination = document.getElementById('testcasePagination');
+    if (pagination) {
+        pagination.innerHTML = '';
+    }
+    
+    // Hide total estimated time
+    const totalTimeDiv = document.getElementById('totalEstimatedTime');
+    if (totalTimeDiv) {
+        totalTimeDiv.style.display = 'none';
+    }
+    
+    // Reset any test generation status
+    const generateBtn = document.getElementById('generateBtn');
+    if (generateBtn) {
+        generateBtn.innerHTML = '<i class="fas fa-magic"></i> Generate Tests';
+        generateBtn.disabled = true;
+    }
+    
+    // Reset the generated tests heading to generic title
+    const heading = document.getElementById('generatedTestsHeading');
+    if (heading) {
+        heading.textContent = 'Generated Tests';
+    }
+}
+
+// Tab switching logic with confirmation
+jiraTab.addEventListener('click', function(e) {
+    e.preventDefault();
+    
+    // If switching from PRD to Jira and user has data or tests, ask for confirmation
+    if (activeTab === 'prd' && hasDataToLose()) {
+        const confirmed = confirm('Switching tabs will clear all entered data and any generated tests. Are you sure you want to continue?');
+        if (!confirmed) {
+            return; // Don't switch tabs
+        }
+        clearAllData();
+    }
+    
+    activeTab = 'jira';
+    
+    // Safety measure: Clear tests when switching tabs (in case confirmation was bypassed)
+    if (hasGeneratedTests()) {
+        clearGeneratedTests();
+    }
+    
+    // Update tab UI
+    jiraTab.classList.add('active');
+    jiraTab.setAttribute('aria-selected', 'true');
+    prdTab.classList.remove('active');
+    prdTab.setAttribute('aria-selected', 'false');
+    
+    // Update content panes
+    document.getElementById('jira-content').classList.add('show', 'active');
+    document.getElementById('prd-content').classList.remove('show', 'active');
+    
+    // Show/hide elements specific to Jira tab
+    summarySection.style.display = 'block';
+    
+    // Only show Create Jira Subtasks button if there are Jira-generated tests
+    if (createJiraSubtasksBtn) {
+        if (hasGeneratedTests() && testsGeneratedFrom === 'jira') {
+    createJiraSubtasksBtn.style.display = 'inline-block';
+        } else {
+            createJiraSubtasksBtn.style.display = 'none';
+        }
+    }
+    
+    updateGenerateBtnState();
+});
+
+prdTab.addEventListener('click', function(e) {
+    e.preventDefault();
+    
+    // If switching from Jira to PRD and user has data or tests, ask for confirmation
+    if (activeTab === 'jira' && hasDataToLose()) {
+        const confirmed = confirm('Switching tabs will clear all entered data and any generated tests. Are you sure you want to continue?');
+        if (!confirmed) {
+            return; // Don't switch tabs
+        }
+        clearAllData();
+    }
+    
+    activeTab = 'prd';
+    
+    // Safety measure: Clear tests when switching tabs (in case confirmation was bypassed)
+    if (hasGeneratedTests()) {
+        clearGeneratedTests();
+    }
+    
+    // Update tab UI
+    prdTab.classList.add('active');
+    prdTab.setAttribute('aria-selected', 'true');
+    jiraTab.classList.remove('active');
+    jiraTab.setAttribute('aria-selected', 'false');
+    
+    // Update content panes
+    document.getElementById('prd-content').classList.add('show', 'active');
+    document.getElementById('jira-content').classList.remove('show', 'active');
+    
+    // Show/hide elements specific to PRD tab
+    summarySection.style.display = 'none';
+    if (createJiraSubtasksBtn) {
+    createJiraSubtasksBtn.style.display = 'none';
+    }
+    
+    // Restore PRD state if file was previously uploaded
+    if (window.currentPrdFile && window.currentPrdContent) {
+        const prdUploadArea = document.getElementById('prdUploadArea');
+        const prdUploadedFile = document.getElementById('prdUploadedFile');
+        const prdFileName = document.getElementById('prdFileName');
+        const prdFileStatus = document.getElementById('prdFileStatus');
+        
+        if (prdUploadArea && prdUploadedFile && prdFileName && prdFileStatus) {
+            prdUploadArea.style.display = 'none';
+            prdUploadedFile.style.display = 'block';
+            prdFileName.textContent = window.currentPrdFile.name;
+            prdFileStatus.textContent = '✓ Document processed successfully';
+            prdFileStatus.style.color = 'var(--success)';
+            prdUploaded = true;
+        }
+    }
+    
+    updateGenerateBtnState();
+});
+
+// Initialize the UI based on active tab on page load
+if (activeTab === 'prd') {
+    summarySection.style.display = 'none';
+    if (createJiraSubtasksBtn) {
+    createJiraSubtasksBtn.style.display = 'none';
+    }
+}
+
+// Update generate button state based on active tab
+function updateGenerateBtnState() {
+    if (activeTab === 'jira') {
+        generateBtn.disabled = !jiraFetched;
+    } else { // PRD tab
+        generateBtn.disabled = !prdUploaded;
+    }
+}
+
+// Handle PRD document upload
+if (prdUpload) {
+    const prdUploadArea = document.getElementById('prdUploadArea');
+    const prdUploadedFile = document.getElementById('prdUploadedFile');
+    const prdFileName = document.getElementById('prdFileName');
+    const prdFileStatus = document.getElementById('prdFileStatus');
+    
+    // Flag to prevent duplicate processing - declare BEFORE event handlers
+    let isProcessingPrd = false;
+    
+    // Drag and drop functionality
+    prdUploadArea.addEventListener('dragover', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        this.classList.add('dragover');
+    });
+    
+    prdUploadArea.addEventListener('dragleave', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        this.classList.remove('dragover');
+    });
+    
+    prdUploadArea.addEventListener('drop', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        this.classList.remove('dragover');
+        const files = e.dataTransfer.files;
+        if (files.length > 0 && !isProcessingPrd) {
+            handlePrdFile(files[0]);
+        }
+    });
+    
+    // Click to upload
+    // Handle both upload area and browse button clicks
+    prdUploadArea.addEventListener('click', function(e) {
+        if (!isProcessingPrd) {
+            // If clicking the browse button specifically, let it handle the click
+            if (e.target.closest('.browse-btn')) {
+                return;
+            }
+        prdUpload.click();
+        }
+    });
+    
+    // Handle browse button clicks specifically
+    const browseBtnPrd = prdUploadArea.querySelector('.browse-btn');
+    if (browseBtnPrd) {
+        browseBtnPrd.addEventListener('click', function(e) {
+            e.stopPropagation();
+            if (!isProcessingPrd) {
+                prdUpload.click();
+            }
+        });
+    }
+    
+    prdUpload.addEventListener('change', function(e) {
+        if (e.target.files.length > 0 && !isProcessingPrd) {
+            const file = e.target.files[0];
+            console.log('PRD file selected:', file.name);
+            
+            // Don't clear the input immediately, let handlePrdFile do it after processing starts
+            handlePrdFile(file);
+        }
+    });
+    
+    async function handlePrdFile(file) {
+        // Prevent duplicate processing
+        if (isProcessingPrd) {
+            console.log('PRD file already being processed, ignoring duplicate request');
+            return;
+        }
+        
+        console.log('Starting PRD file processing for:', file.name);
+        isProcessingPrd = true;
+        
+        // Clear the file input to prevent re-triggering
+        prdUpload.value = '';
+        
+        const descriptionInput = document.getElementById('scenarioInput');
+        
+        // Disable the upload area to prevent additional clicks
+        prdUploadArea.style.pointerEvents = 'none';
+        prdUploadArea.style.opacity = '0.7';
+        
+        // Store the file reference globally to maintain state
+        window.currentPrdFile = file;
+        
+        // Show uploaded file info
+        prdFileName.textContent = file.name;
+        prdFileStatus.textContent = 'Processing document...';
+        prdFileStatus.style.color = 'var(--text-light)';
+        prdUploadArea.style.display = 'none';
+        prdUploadedFile.style.display = 'block';
+        
+        try {
+            // For text files, read directly
+            if (file.type === 'text/plain') {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const prdContent = e.target.result;
+                    // Auto-populate the description field
+                    descriptionInput.textContent = prdContent;
+                    prdUploaded = true;
+                    updateGenerateBtnState();
+                    prdFileStatus.textContent = '✓ Document processed successfully';
+                    prdFileStatus.style.color = 'var(--success)';
+                    
+                    // Store content for persistence
+                    window.currentPrdContent = prdContent;
+                    
+                    // Reset processing flag and re-enable upload area
+                    isProcessingPrd = false;
+                    prdUploadArea.style.pointerEvents = 'auto';
+                    prdUploadArea.style.opacity = '1';
+                };
+                reader.readAsText(file);
+            } else {
+                // For PDF and Word docs, upload to server for processing
+                const formData = new FormData();
+                formData.append('file', file);
+                
+                const response = await fetch('/api/extract-text', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                if (!response.ok) {
+                    throw new Error('Failed to process document');
+                }
+                
+                const data = await response.json();
+                const prdContent = data.text || 'Failed to extract text from document.';
+                
+                // Auto-populate the description field
+                descriptionInput.textContent = prdContent;
+                prdUploaded = true;
+                updateGenerateBtnState();
+                prdFileStatus.textContent = '✓ Document processed successfully';
+                prdFileStatus.style.color = 'var(--success)';
+                
+                // Store content for persistence
+                window.currentPrdContent = prdContent;
+                
+                // Reset processing flag and re-enable upload area
+                isProcessingPrd = false;
+                prdUploadArea.style.pointerEvents = 'auto';
+                prdUploadArea.style.opacity = '1';
+            }
+        } catch (error) {
+            console.error('Error processing PRD document:', error);
+            prdFileStatus.textContent = '❌ Error processing document: ' + error.message;
+            prdFileStatus.style.color = 'var(--error)';
+            
+            // Reset on error
+            prdUploaded = false;
+            updateGenerateBtnState();
+            
+            // Reset processing flag and re-enable upload area
+            isProcessingPrd = false;
+            prdUploadArea.style.pointerEvents = 'auto';
+            prdUploadArea.style.opacity = '1';
+            
+            // Show upload area again on error
+            prdUploadArea.style.display = 'block';
+            prdUploadedFile.style.display = 'none';
+        }
+    }
+}
+
+// Handle Visual Assets Upload
+if (attachmentInput) {
+    // Store selected files array
+    let selectedFiles = [];
+    
+    // Handle file selection
+    attachmentInput.addEventListener('change', function(e) {
+        const files = Array.from(e.target.files);
+        selectedFiles = files;
+        updateFilesPreview();
+    });
+    
+    // Handle drag and drop
+    attachmentArea.addEventListener('dragover', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        attachmentArea.style.borderColor = 'var(--primary)';
+        attachmentArea.style.background = 'rgba(99, 102, 241, 0.05)';
+    });
+    
+    attachmentArea.addEventListener('dragleave', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        attachmentArea.style.borderColor = 'var(--border)';
+        attachmentArea.style.background = 'transparent';
+    });
+    
+    attachmentArea.addEventListener('drop', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        attachmentArea.style.borderColor = 'var(--border)';
+        attachmentArea.style.background = 'transparent';
+        
+        const files = Array.from(e.dataTransfer.files);
+        // Filter for accepted file types
+        const acceptedFiles = files.filter(file => 
+            file.type.startsWith('image/') || file.type === 'application/pdf'
+        );
+        
+        if (acceptedFiles.length > 0) {
+            selectedFiles = acceptedFiles;
+            updateAttachmentInput();
+            updateFilesPreview();
+        }
+    });
+    
+    function updateAttachmentInput() {
+        // Create new FileList-like object
+        const dt = new DataTransfer();
+        selectedFiles.forEach(file => dt.items.add(file));
+        attachmentInput.files = dt.files;
+    }
+    
+    function updateFilesPreview() {
+        if (selectedFiles.length === 0) {
+            filesPreview.classList.remove('show');
+            attachmentArea.classList.remove('has-files');
+            // Reset attachment area text
+            const attachmentText = attachmentArea.querySelector('.attachment-text span');
+            attachmentText.textContent = 'Upload screenshots or UI mockups';
+            return;
+        }
+        
+        filesPreview.classList.add('show');
+        attachmentArea.classList.add('has-files');
+        
+        // Update attachment area text
+        const attachmentText = attachmentArea.querySelector('.attachment-text span');
+        attachmentText.textContent = `${selectedFiles.length} file${selectedFiles.length > 1 ? 's' : ''} selected`;
+        
+        // Generate files grid
+        filesGrid.innerHTML = '';
+        selectedFiles.forEach((file, index) => {
+            const fileItem = createFileItem(file, index);
+            filesGrid.appendChild(fileItem);
+        });
+    }
+    
+    function createFileItem(file, index) {
+        const item = document.createElement('div');
+        item.className = 'file-item';
+
+        const isImage = file.type.startsWith('image/');
+        const isPdf = file.type === 'application/pdf';
+
+        let icon = 'fas fa-file';
+        if (isImage) icon = 'fas fa-image';
+        else if (isPdf) icon = 'fas fa-file-pdf';
+
+        const size = formatFileSize(file.size);
+        const fileName = file.name.length > 15 ? file.name.substring(0, 15) + '...' : file.name;
+
+        const iconDiv = document.createElement('div');
+        iconDiv.className = 'file-icon';
+        const iconEl = document.createElement('i');
+        iconEl.className = icon;
+        iconDiv.appendChild(iconEl);
+
+        const nameDiv = document.createElement('div');
+        nameDiv.className = 'file-name';
+        nameDiv.textContent = fileName;
+
+        const sizeDiv = document.createElement('div');
+        sizeDiv.className = 'file-size';
+        sizeDiv.textContent = size;
+
+        const removeBtn = document.createElement('button');
+        removeBtn.className = 'file-remove';
+        removeBtn.title = 'Remove file';
+        const xIcon = document.createElement('i');
+        xIcon.className = 'fas fa-times';
+        removeBtn.appendChild(xIcon);
+        removeBtn.addEventListener('click', () => removeFile(index));
+
+        item.appendChild(iconDiv);
+        item.appendChild(nameDiv);
+        item.appendChild(sizeDiv);
+        item.appendChild(removeBtn);
+
+        return item;
+    }
+    
+    function formatFileSize(bytes) {
+        if (bytes === 0) return '0 B';
+        const k = 1024;
+        const sizes = ['B', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+    }
+    
+    // Global function for remove button
+    window.removeFile = function(index) {
+        selectedFiles.splice(index, 1);
+        updateAttachmentInput();
+        updateFilesPreview();
+    };
+    
+    // Global function to clear all attachments
+    window.clearAttachments = function() {
+        selectedFiles = [];
+        attachmentInput.value = '';
+        updateFilesPreview();
+    };
+}
+
+// Fallback clearAttachments function if not defined above
+if (typeof window.clearAttachments === 'undefined') {
+    window.clearAttachments = function() {
+        document.getElementById('attachmentInput').value = '';
+    };
+}
+
+// Clear buttons functionality
+clearJiraBtn.onclick = function() {
+    if (confirm('Are you sure you want to clear the Jira ID, Summary, Description fields, and any generated tests?')) {
+        jiraIdInput.value = '';
+        summaryInput.value = '';
+        descriptionInput.textContent = '';
+        jiraFetched = false;
+        clearGeneratedTests();
+        updateGenerateBtnState();
+    }
+    isDirty = false;
+};
+
+clearPrdBtn.onclick = function() {
+    if (confirm('Are you sure you want to clear the uploaded PRD, Description field, and any generated tests?')) {
+        prdUpload.value = '';
+        descriptionInput.textContent = '';
+        prdUploaded = false;
+        clearGeneratedTests();
+        updateGenerateBtnState();
+    }
+    isDirty = false;
+        
+        // Clear stored file references
+        window.currentPrdFile = null;
+        window.currentPrdContent = null;
+        
+        // Reset the upload interface
+        const prdUploadArea = document.getElementById('prdUploadArea');
+        const prdUploadedFile = document.getElementById('prdUploadedFile');
+        if (prdUploadArea && prdUploadedFile) {
+            prdUploadArea.style.display = 'block';
+            prdUploadedFile.style.display = 'none';
+        }
+        
+        // Remove any existing loading indicator
+        const loadingSpan = document.getElementById('prdLoadingIndicator');
+        if (loadingSpan) loadingSpan.remove();
+    }
+
+function renderTestCases(testcases, page = 1) {
+    const tbody = document.getElementById('testcasesTableBody');
+    const perPage = 10;
+    const totalPages = Math.ceil(testcases.length / perPage);
+    const start = (page - 1) * perPage;
+    const end = start + perPage;
+    const pageCases = testcases.slice(start, end);
+
+    // Render rows safely using DOM APIs (no innerHTML with untrusted data)
+    tbody.innerHTML = '';
+    pageCases.forEach((tc, idx) => {
+        const tr = document.createElement('tr');
+
+        const tdIndex = document.createElement('td');
+        tdIndex.textContent = String(start + idx + 1);
+        tr.appendChild(tdIndex);
+
+        const tdStep = document.createElement('td');
+        tdStep.setAttribute('contenteditable', 'true');
+        tdStep.textContent = (tc && typeof tc.step === 'string') ? tc.step : '';
+        tr.appendChild(tdStep);
+
+        const tdExpected = document.createElement('td');
+        tdExpected.setAttribute('contenteditable', 'true');
+        tdExpected.textContent = (tc && typeof tc.expected === 'string') ? tc.expected : '';
+        tr.appendChild(tdExpected);
+
+        const tdEstimate = document.createElement('td');
+        tdEstimate.setAttribute('contenteditable', 'true');
+        tdEstimate.textContent = (tc && tc.estimate_minutes !== undefined) ? String(tc.estimate_minutes) : '';
+        tr.appendChild(tdEstimate);
+
+        const tdActions = document.createElement('td');
+        tdActions.style.whiteSpace = 'nowrap';
+
+        const editBtn = document.createElement('button');
+        editBtn.className = 'btn btn-sm btn-primary';
+        editBtn.title = 'Edit';
+        editBtn.style.padding = '0.25rem 0.5rem';
+        editBtn.style.marginRight = '5px';
+        editBtn.innerHTML = `
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                <path d="M12.146.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1 0 .708l-10 10a.5.5 0 0 1-.168.11l-5 2a.5.5 0 0 1-.65-.65l2-5a.5.5 0 0 1 .11-.168l10-10zM11.207 2.5 13.5 4.793 14.793 3.5 12.5 1.207 11.207 2.5zm1.586 3L10.5 3.207 4 9.707V10h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.293l6.5-6.5zm-9.761 5.175-.106.106-1.528 3.821 3.821-1.528.106-.106A.5.5 0 0 1 5 12.5V12h-.5a.5.5 0 0 1-.5-.5V11h-.5a.5.5 0 0 1-.468-.325z"/>
+            </svg>`;
+        editBtn.addEventListener('click', () => {
+            if (typeof editTestCase === 'function') editTestCase(start + idx);
+        });
+
+        const delBtn = document.createElement('button');
+        delBtn.className = 'btn btn-sm btn-danger';
+        delBtn.title = 'Delete';
+        delBtn.style.padding = '0.25rem 0.5rem';
+        delBtn.innerHTML = `
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                <path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z"/>
+                <path fill-rule="evenodd" d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z"/>
+            </svg>`;
+        delBtn.addEventListener('click', () => {
+            if (typeof removeTestCase === 'function') removeTestCase(start + idx);
+        });
+
+        tdActions.appendChild(editBtn);
+        tdActions.appendChild(delBtn);
+        tr.appendChild(tdActions);
+
+        tbody.appendChild(tr);
+    });
+
+    // Total Estimated Time
+    const totalTimeDiv = document.getElementById('totalEstimatedTime');
+    const totalTimeValue = document.getElementById('totalEstimatedTimeValue');
+    if (testcases && testcases.length > 0) {
+        let total = 0;
+        for (const tc of testcases) {
+            if (typeof tc.estimate_minutes === 'number') {
+                total += tc.estimate_minutes;
+            } else if (typeof tc.estimate_minutes === 'string' && tc.estimate_minutes.trim() !== '') {
+                const parsed = parseInt(tc.estimate_minutes);
+                if (!isNaN(parsed)) total += parsed;
+            }
+        }
+        totalTimeValue.textContent = total;
+        totalTimeDiv.style.display = '';
+    } else {
+        totalTimeDiv.style.display = 'none';
+        totalTimeValue.textContent = '0';
+    }
+
+    // Pagination controls
+    let pagination = document.getElementById('testcasePagination');
+    if (!pagination) {
+        pagination = document.createElement('div');
+        pagination.id = 'testcasePagination';
+        pagination.style = 'margin-top:1em;text-align:center;';
+        tbody.parentElement.parentElement.after(pagination);
+    }
+    let html = '';
+    for (let i = 1; i <= totalPages; i++) {
+        html += `<button class="btn btn-sm${i === page ? ' btn-primary' : ''}" style="margin:0 2px;" onclick="renderTestCases(currentTestCases,${i})">${i}</button>`;
+    }
+    pagination.innerHTML = html;
+    isDirty = true;
+    
+    // Show/hide bottom actions based on whether there are tests
+    const bottomActions = document.getElementById('bottomActions');
+    const createJiraSubtasksBtn = document.getElementById('createJiraSubtasksBtn');
+    
+    if (testcases && testcases.length > 0) {
+        bottomActions.style.display = 'flex';
+        
+        // Only show Create Jira Subtasks button for Jira-generated tests
+        if (createJiraSubtasksBtn) {
+            if (activeTab === 'jira' && testsGeneratedFrom === 'jira') {
+                createJiraSubtasksBtn.style.display = 'inline-block';
+            } else {
+                createJiraSubtasksBtn.style.display = 'none';
+            }
+        }
+    } else {
+        bottomActions.style.display = 'none';
+    }
+}
+
+let currentTestCases = [];
+
+function removeTestCase(idx) {
+    if (confirm('Are you sure you want to delete this test case? This action cannot be undone.')) {
+    currentTestCases.splice(idx, 1);
+    window.currentTestCases = currentTestCases;
+    renderTestCases(currentTestCases, 1);
+    }
+}
+
+function editTestCase(idx) {
+    const testCase = currentTestCases[idx];
+    if (!testCase) return;
+    
+    // Create a modal for editing the test case
+    const modal = document.createElement('div');
+    modal.style.position = 'fixed';
+    modal.style.top = '0';
+    modal.style.left = '0';
+    modal.style.width = '100%';
+    modal.style.height = '100%';
+    modal.style.backgroundColor = 'rgba(0,0,0,0.5)';
+    modal.style.display = 'flex';
+    modal.style.alignItems = 'center';
+    modal.style.justifyContent = 'center';
+    modal.style.zIndex = '1000';
+    
+    const modalContent = document.createElement('div');
+    modalContent.style.backgroundColor = 'white';
+    modalContent.style.padding = '20px';
+    modalContent.style.borderRadius = '5px';
+    modalContent.style.width = '80%';
+    modalContent.style.maxWidth = '800px';
+    modalContent.style.maxHeight = '80vh';
+    modalContent.style.overflowY = 'auto';
+    
+    modalContent.innerHTML = `
+        <h4>Edit Test Case</h4>
+        <div class="mb-3">
+            <label for="editStep" class="form-label">Test Step</label>
+            <textarea id="editStep" class="form-control" rows="3"></textarea>
+        </div>
+        <div class="mb-3">
+            <label for="editExpected" class="form-label">Expected Result</label>
+            <textarea id="editExpected" class="form-control" rows="3"></textarea>
+        </div>
+        <div class="mb-3">
+            <label for="editEstimate" class="form-label">Estimate (minutes)</label>
+            <input type="number" id="editEstimate" class="form-control">
+        </div>
+        <div class="d-flex justify-content-end gap-2">
+            <button id="cancelEdit" class="btn btn-secondary">Cancel</button>
+            <button id="saveEdit" class="btn btn-primary">Save Changes</button>
+        </div>
+    `;
+    
+    modal.appendChild(modalContent);
+    document.body.appendChild(modal);
+    // Populate values safely after insertion
+    const stepField = document.getElementById('editStep');
+    const expectedField = document.getElementById('editExpected');
+    const estimateField = document.getElementById('editEstimate');
+    if (stepField) stepField.value = (testCase && typeof testCase.step === 'string') ? testCase.step : '';
+    if (expectedField) expectedField.value = (testCase && typeof testCase.expected === 'string') ? testCase.expected : '';
+    if (estimateField) estimateField.value = (testCase && testCase.estimate_minutes !== undefined) ? testCase.estimate_minutes : '';
+    
+    // Add event listeners
+    document.getElementById('cancelEdit').addEventListener('click', () => {
+        document.body.removeChild(modal);
+    });
+    
+    document.getElementById('saveEdit').addEventListener('click', () => {
+        const step = document.getElementById('editStep').value;
+        const expected = document.getElementById('editExpected').value;
+        const estimate = document.getElementById('editEstimate').value;
+        
+        // Update the test case
+        currentTestCases[idx].step = step;
+        currentTestCases[idx].expected = expected;
+        currentTestCases[idx].estimate_minutes = estimate ? parseInt(estimate) : '';
+        
+        // Re-render the table
+        renderTestCases(currentTestCases, Math.floor(idx / 10) + 1);
+        
+        // Close the modal
+        document.body.removeChild(modal);
+    });
+}
+
+// Handle Clear Jira button
+clearJiraBtn.onclick = function() {
+    if (confirm('Are you sure you want to clear the Jira ID, Summary, and Description fields?')) {
+        jiraIdInput.value = '';
+        document.getElementById('summaryInput').value = '';
+        document.getElementById('scenarioInput').textContent = '';
+        jiraFetched = false;
+        updateGenerateBtnState();
+        isDirty = false;
+    }
+};
+
+
+
+// Loading overlay functions
+function showLoading() {
+    document.getElementById('loadingOverlay').classList.add('show');
+}
+
+function hideLoading() {
+    document.getElementById('loadingOverlay').classList.remove('show');
+}
+
+// Spinner HTML
+const spinnerHtml = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true" style="margin-right:0.5em;"></span>';
+
+// Jira connection is now handled at the application level via the sidebar
+
+// Helper: Normalize Jira ID input
+function normalizeJiraId(input) {
+    input = input.trim();
+    // If it's a URL, extract the key
+    const urlMatch = input.match(/browse\/([A-Z]+-\d+)/i);
+    if (urlMatch) return urlMatch[1];
+    // If it's just digits, prepend IRA-
+    if (/^\d+$/.test(input)) return 'IRA-' + input;
+    // If it's already in KEY-12345 format, use as is
+    if (/^[A-Z]+-\d+$/i.test(input)) return input.toUpperCase();
+    // Fallback: return as is
+    return input;
+}
+
+let currentJiraKey = '';
+
+// --- Fetch Button ---
+fetchJiraBtn.onclick = async function() {
+    // First validate Jira connection
+    try {
+        const statusResponse = await fetch('/api/jira/status');
+        const statusData = await statusResponse.json();
+        if (!statusData.connected) {
+            alert('Please authenticate first using the sidebar to fetch story details.');
+            return;
+        }
+    } catch (error) {
+        console.error('Error checking Jira status:', error);
+        alert('Unable to verify authentication. Please ensure you are authenticated.');
+        return;
+    }
+    
+    jiraFetched = false;
+    updateGenerateBtnState();
+    validationMsg.style.display = 'none';
+    validationMsg.textContent = '';
+    const rawInput = document.getElementById('jiraIdInput').value;
+    const jiraId = normalizeJiraId(rawInput);
+    currentJiraKey = jiraId;
+    if (!jiraId) {
+        alert('Please enter a Jira Story ID.');
+        return;
+    }
+    fetchJiraBtn.disabled = true;
+    const original = fetchJiraBtn.innerHTML;
+    fetchJiraBtn.innerHTML = spinnerHtml + 'Fetching...';
+    document.getElementById('generateBtn').disabled = true;
+    document.getElementById('saveBtn').disabled = true;
+    try {
+        // Use GET and pass jiraId as search param
+        const response = await fetch(`/api/jira/issues?search=${encodeURIComponent(jiraId)}`);
+        const data = await response.json();
+        if (data.issues && data.issues.length > 0) {
+            // Use the summary and description to populate the fields
+            const issue = data.issues[0];
+            document.getElementById('summaryInput').value = issue.summary || '';
+            // --- Render HTML description ---
+            let descHtml = issue.description_html || '';
+            // Sanitize Jira HTML description before inserting into DOM
+            const cleanDesc = DOMPurify.sanitize(descHtml);
+            document.getElementById('scenarioInput').innerHTML = cleanDesc;
+            // Ensure all links open in a new tab
+            const descLinks = document.getElementById('scenarioInput').querySelectorAll('a');
+            descLinks.forEach(link => {
+                link.setAttribute('target', '_blank');
+                link.setAttribute('rel', 'noopener noreferrer');
+            });
+            jiraFetched = true;
+            updateGenerateBtnState();
+            isDirty = true;
+        } else {
+            alert(data.error || 'No Jira story found for this ID.');
+            jiraFetched = false;
+            updateGenerateBtnState();
+        }
+    } catch (err) {
+        alert('Error fetching Jira story: ' + err);
+        jiraFetched = false;
+        updateGenerateBtnState();
+    } finally {
+        fetchJiraBtn.disabled = false;
+        fetchJiraBtn.innerHTML = original;
+        document.getElementById('saveBtn').disabled = false;
+        document.getElementById('fetchJiraBtn').innerHTML = 'Fetch';
+    }
+};
+
+// Helper: Extract all image URLs from HTML
+function extractImageUrlsFromHtml(html) {
+    const div = document.createElement('div');
+    div.innerHTML = html;
+    const imgs = div.querySelectorAll('img');
+    return Array.from(imgs).map(img => img.src);
+}
+
+// Helper: Call backend OCR+Vision endpoint
+async function getImageText(imageUrl) {
+    const resp = await fetch('/api/image-to-text', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({image_url: imageUrl})
+    });
+    const data = await resp.json();
+    return data.text || '';
+}
+
+// Update Generate button handler
+async function onGenerateTests() {
+    const descDiv = document.getElementById('scenarioInput');
+    const description = descDiv.innerText;
+    const html = descDiv.innerHTML;
+    const imageUrls = extractImageUrlsFromHtml(html);
+    let imageTexts = [];
+    for (const url of imageUrls) {
+        const text = await getImageText(url);
+        if (text) imageTexts.push(text);
+    }
+    // Extract tables and convert to markdown
+    function htmlTableToMarkdown(table) {
+        let md = '';
+        const rows = table.querySelectorAll('tr');
+        let headerCells = rows[0] ? rows[0].querySelectorAll('th,td') : [];
+        if (headerCells.length > 0) {
+            md += '| ' + Array.from(headerCells).map(cell => cell.innerText.trim()).join(' | ') + ' |\n';
+            md += '| ' + Array.from(headerCells).map(() => '---').join(' | ') + ' |\n';
+        }
+        for (let i = 1; i < rows.length; i++) {
+            const cells = rows[i].querySelectorAll('td,th');
+            md += '| ' + Array.from(cells).map(cell => cell.innerText.trim()).join(' | ') + ' |\n';
+        }
+        return md;
+    }
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = html;
+    const tables = tempDiv.querySelectorAll('table');
+    let tablesMarkdown = '';
+    tables.forEach(table => {
+        tablesMarkdown += '\n' + htmlTableToMarkdown(table) + '\n';
+    });
+    const fullPrompt = description + '\n' + imageTexts.join('\n') + (tablesMarkdown ? '\nTables from description:\n' + tablesMarkdown : '');
+    console.log('Prompt for test generation:', fullPrompt);
+    
+    // Check if we have content to generate tests from (either from Jira or PRD upload)
+    if (!description.trim()) {
+        validationMsg.textContent = 'Please provide content in the Description field by fetching from Jira or uploading a PRD.';
+        validationMsg.style.display = 'block';
+        return;
+    }
+    
+    // Set heading based on active tab and track test source
+    const heading = document.getElementById('generatedTestsHeading');
+    if (activeTab === 'jira' && currentJiraKey) {
+        heading.textContent = `Generated Tests for ${currentJiraKey}`;
+        testsGeneratedFrom = 'jira';
+    } else if (activeTab === 'prd') {
+        const prdFile = prdUpload.files[0];
+        heading.textContent = prdFile ? `Generated Tests for ${prdFile.name}` : 'Generated Tests from PRD';
+        testsGeneratedFrom = 'prd';
+    } else {
+        heading.textContent = 'Generated Tests';
+        testsGeneratedFrom = null;
+    }
+    validationMsg.textContent = '';
+    validationMsg.style.display = 'none';
+    setAllButtonsDisabled(true);
+    fetchJiraBtn.disabled = true;
+    const original = generateBtn.innerHTML;
+    generateBtn.innerHTML = spinnerHtml + 'Generating...';
+    document.getElementById('testcasesSection').style.display = 'none';
+    
+    // Show the loading overlay
+    showLoading();
+    
+    // Small delay to ensure the loading overlay is visible before any heavy processing begins
+    await new Promise(resolve => setTimeout(resolve, 50));
+    try {
+        // Collect attachment files and doc URL
+        const attachmentInput = document.getElementById('attachmentInput');
+        const docUrlInput = document.getElementById('docUrlInput');
+        let visual_image_urls = [];
+        let visual_doc_url = '';
+
+        // If a doc URL is provided, use it
+        if (docUrlInput && docUrlInput.value.trim()) {
+            visual_doc_url = docUrlInput.value.trim();
+        }
+
+        // If files are attached, upload them first
+        if (attachmentInput && attachmentInput.files.length > 0) {
+            const files = Array.from(attachmentInput.files);
+            const imageFiles = files.filter(f => f.type.startsWith('image/'));
+            const pdfFiles = files.filter(f => f.type === 'application/pdf');
+            // Upload images
+            for (const file of imageFiles) {
+                const formData = new FormData();
+                formData.append('file', file);
+                try {
+                    const resp = await fetch('/api/upload', { method: 'POST', body: formData });
+                    const result = await resp.json();
+                    if (resp.ok && result.url) {
+                        // Use absolute_url if available, otherwise fall back to relative url
+                        if (result.absolute_url) {
+                            console.log('Using absolute URL for image:', result.absolute_url);
+                            visual_image_urls.push({
+                                url: result.url,
+                                absolute_url: result.absolute_url,
+                                filename: result.filename
+                            });
+                        } else {
+                            console.log('Using relative URL for image:', result.url);
+                            visual_image_urls.push(result.url);
+                        }
+                    } else {
+                        alert('Failed to upload image: ' + (result.error || file.name));
+                        return;
+                    }
+                } catch (e) {
+                    alert('Error uploading image: ' + file.name);
+                    return;
+                }
+            }
+            // Upload PDF (only first PDF is supported)
+            if (pdfFiles.length > 0) {
+                const formData = new FormData();
+                formData.append('file', pdfFiles[0]);
+                try {
+                    const resp = await fetch('/api/upload', { method: 'POST', body: formData });
+                    const result = await resp.json();
+                    if (resp.ok && result.url) {
+                        // Use absolute_url if available, otherwise fall back to relative url
+                        if (result.absolute_url) {
+                            console.log('Using absolute URL for PDF:', result.absolute_url);
+                            visual_doc_url = {
+                                url: result.url,
+                                absolute_url: result.absolute_url,
+                                filename: result.filename
+                            };
+                        } else {
+                            console.log('Using relative URL for PDF:', result.url);
+                            visual_doc_url = result.url;
+                        }
+                    } else {
+                        alert('Failed to upload PDF: ' + (result.error || pdfFiles[0].name));
+                        return;
+                    }
+                } catch (e) {
+                    alert('Error uploading PDF: ' + pdfFiles[0].name);
+                    return;
+                }
+            }
+        }
+
+        // Build payload
+        const payload = { scenario: fullPrompt };
+        if (visual_image_urls.length > 0) payload.visual_image_urls = visual_image_urls;
+        if (visual_doc_url) payload.visual_doc_url = visual_doc_url;
+        // Send Jira description image URLs for Gemini multimodal
+        if (imageUrls.length > 0) payload.jira_image_urls = imageUrls;
+
+        const response = await fetch('/api/generate-testcases', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        const data = await response.json();
+        if (data.testcases) {
+            currentTestCases = data.testcases;
+            window.currentTestCases = currentTestCases;
+            renderTestCases(currentTestCases, 1);
+            document.getElementById('testcasesSection').style.display = 'block';
+            document.getElementById('testcasesSection').scrollIntoView({ behavior: 'smooth', block: 'start' });
+            const heading = document.getElementById('generatedTestsHeading');
+            if (activeTab === 'jira' && currentJiraKey) {
+                heading.textContent = `Generated Tests for ${currentJiraKey}`;
+                testsGeneratedFrom = 'jira';
+            } else if (activeTab === 'prd') {
+                const prdFile = window.currentPrdFile;
+                heading.textContent = prdFile ? `Generated Tests for ${prdFile.name}` : 'Generated Tests from PRD';
+                testsGeneratedFrom = 'prd';
+            } else {
+                heading.textContent = 'Generated Tests';
+                testsGeneratedFrom = null;
+            }
+        } else {
+            // Hide total estimated time if no testcases
+            document.getElementById('totalEstimatedTime').style.display = 'none';
+            document.getElementById('totalEstimatedTimeValue').textContent = '0';
+            alert(data.error || 'Failed to generate tests.');
+        }
+    } catch (err) {
+        alert('Error generating tests: ' + err);
+    } finally {
+        // Hide the loading overlay
+        hideLoading();
+        setButtonsForIdle();
+        generateBtn.innerHTML = original;
+    }
+}
+
+// Attach handler to Generate button
+generateBtn.onclick = onGenerateTests;
+
+// --- Save Button ---
+document.getElementById('saveBtn').onclick = function() {
+    if (!confirm('Save all tests as a CSV file? This will download the file to your computer.')) {
+        return;
+    }
+    const saveBtn = document.getElementById('saveBtn');
+    saveBtn.disabled = true;
+    const original = saveBtn.innerHTML;
+    saveBtn.innerHTML = spinnerHtml + 'Saving...';
+    setTimeout(() => {
+        // Save edits from current page to currentTestCases
+        const rows = document.querySelectorAll('#testcasesTableBody tr');
+        const perPage = 10;
+        const page = Array.from(document.querySelectorAll('#testcasePagination .btn-primary')).map(btn => parseInt(btn.textContent))[0] || 1;
+        const start = (page - 1) * perPage;
+        rows.forEach((row, idx) => {
+            const step = row.cells[1].innerText.trim();
+            const expected = row.cells[2].innerText.trim();
+            if (currentTestCases[start + idx]) {
+                currentTestCases[start + idx].step = step;
+                currentTestCases[start + idx].expected = expected;
+            }
+        });
+        if (!currentTestCases.length) {
+            alert('No tests to save!');
+            saveBtn.innerHTML = original;
+            saveBtn.disabled = false;
+            return;
+        }
+        let csv = 'Step,Expected Result\n';
+        currentTestCases.forEach(tc => {
+            const step = `"${(tc.step || '').replace(/"/g, '""')}"`;
+            const expected = `"${(tc.expected || '').replace(/"/g, '""')}"`;
+            csv += `${step},${expected}\n`;
+        });
+        const blob = new Blob([csv], { type: 'text/csv' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        let jiraId = currentJiraKey || '';
+        if (jiraId) {
+            jiraId = jiraId.replace(/[^a-zA-Z0-9_-]/g, '');
+            a.download = jiraId + '_testscenarios.csv';
+        } else {
+            a.download = 'testcases.csv';
+        }
+        document.body.appendChild(a);
+        a.click();
+        setTimeout(() => document.body.removeChild(a), 100);
+        isDirty = false;
+        saveBtn.innerHTML = original;
+        saveBtn.disabled = false;
+    }, 500);
+};
+
+// --- Create Jira Subtasks Button ---
+const createJiraSubtasksBtnElement = document.getElementById('createJiraSubtasksBtn');
+if (createJiraSubtasksBtnElement) {
+    createJiraSubtasksBtnElement.onclick = function() {
+    if (!confirm('Create Jira subtasks for all tests? This will create subtasks in your connected Jira project.')) {
+        return;
+    }
+    const createBtn = document.getElementById('createJiraSubtasksBtn');
+    createBtn.disabled = true;
+    const original = createBtn.innerHTML;
+    createBtn.innerHTML = spinnerHtml + 'Creating Subtasks...';
+    
+    // Save edits from current page to currentTestCases
+    const rows = document.querySelectorAll('#testcasesTableBody tr');
+    const perPage = 10;
+    const page = Array.from(document.querySelectorAll('#testcasePagination .btn-primary')).map(btn => parseInt(btn.textContent))[0] || 1;
+    const start = (page - 1) * perPage;
+    rows.forEach((row, idx) => {
+        const step = row.cells[1].innerText.trim();
+        const expected = row.cells[2].innerText.trim();
+        if (currentTestCases[start + idx]) {
+            currentTestCases[start + idx].step = step;
+            currentTestCases[start + idx].expected = expected;
+        }
+    });
+    
+    if (!currentTestCases.length) {
+        alert('No tests to create subtasks for!');
+        createBtn.innerHTML = original;
+        createBtn.disabled = false;
+        return;
+    }
+    
+    let jiraId = currentJiraKey || '';
+    if (!jiraId) {
+        alert('Please fetch a Jira issue first!');
+        createBtn.innerHTML = original;
+        createBtn.disabled = false;
+        return;
+    }
+    
+    // Send the tests to the server to create Jira subtasks
+    console.log('Creating subtasks for parent:', jiraId);
+    console.log('Number of tests:', currentTestCases.length);
+    
+    fetch('/api/jira/create-subtasks', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            parentIssueKey: jiraId,
+            testCases: currentTestCases
+        })
+    })
+    .then(response => {
+        if (!response.ok) {
+            return response.json().then(data => {
+                throw new Error(data.error || `HTTP error! status: ${response.status}`);
+            });
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (data.error) {
+            console.error('Server reported error:', data.error);
+            alert('Error creating subtasks: ' + data.error);
+        } else {
+            console.log('Subtasks creation result:', data);
+            if (data.createdCount === 0 && data.failedCount > 0) {
+                alert(`Failed to create ${data.failedCount} subtasks in Jira. Please check the console for details.`);
+            } else {
+                alert(`Successfully created ${data.createdCount} subtasks in Jira!${data.failedCount > 0 ? ` (${data.failedCount} failed)` : ''}`);
+            }
+        }
+    })
+    .catch(error => {
+        console.error('Error creating subtasks:', error);
+        alert('Error creating subtasks: ' + error.message);
+    })
+    .finally(() => {
+        createBtn.innerHTML = original;
+        createBtn.disabled = false;
+    });
+};
+}
+
+// Create validation message element
+const validationMsg = document.createElement('div');
+validationMsg.id = 'validationMsg';
+validationMsg.style.color = 'red';
+validationMsg.style.marginTop = '0.5em';
+validationMsg.style.display = 'none';
+generateBtn.parentNode.appendChild(validationMsg);
+
+descriptionInput.addEventListener('input', updateGenerateBtnState);
+// At the very end of DOMContentLoaded, ensure correct state
+updateGenerateBtnState();
+setTimeout(() => {
+    console.log('Final state, generateBtn.disabled:', generateBtn.disabled);
+}, 1000);
+
+// Utility to enable/disable all buttons
+function setAllButtonsDisabled(disabled) {
+    generateBtn.disabled = disabled;
+    fetchJiraBtn.disabled = disabled;
+    clearJiraBtn.disabled = disabled;
+    clearPrdBtn.disabled = disabled;
+    const saveBtn = document.getElementById('saveBtn');
+    if (saveBtn) saveBtn.disabled = disabled;
+}
+
+function setButtonsForIdle() {
+    fetchJiraBtn.disabled = false;
+    clearJiraBtn.disabled = false;
+    clearPrdBtn.disabled = false;
+    updateGenerateBtnState();
+    const saveBtn = document.getElementById('saveBtn');
+    if (saveBtn) saveBtn.disabled = false;
+}
+
+
+
+// Jira connection is managed at the application level
+window.renderTestCases = renderTestCases;
+window.currentTestCases = currentTestCases;
+window.removeTestCase = removeTestCase;
+
+// Add dirty page warning on navigation
+window.addEventListener('beforeunload', function(e) {
+    if (isDirty) {
+        e.preventDefault();
+        e.returnValue = '';
+        return '';
+    }
+});
+}); // End DOMContentLoaded
+</script>
+  </div>
+</body>
+</html>

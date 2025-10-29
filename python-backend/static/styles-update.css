@@ -1,0 +1,24 @@
+/* Main Content Layout for Left Sidebar */
+.main-content {
+  margin-left: var(--sidebar-width);
+  min-height: 100vh;
+  padding-top: 1rem;
+  transition: margin-left 0.3s ease;
+}
+
+@media (max-width: 768px) {
+  .main-content {
+    margin-left: 0;
+    padding-top: 4rem;
+  }
+}
+
+/* Adjust container margins for sidebar layout */
+.main-content .container {
+  margin-top: 1rem;
+}
+
+/* Hide the old navbar elements when using sidebar */
+.navbar-outer {
+  display: none;
+}

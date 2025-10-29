@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Download Co-Tester Logo</title>
+    <style>
+        body {
+            font-family: 'Inter', Arial, sans-serif;
+            background: #f8fafc;
+            margin: 0;
+            padding: 2rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+        .container {
+            background: white;
+            padding: 2rem;
+            border-radius: 16px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            max-width: 500px;
+        }
+        h1 {
+            color: #1f2937;
+            margin-bottom: 1rem;
+        }
+        .logo-preview {
+            margin: 2rem 0;
+            padding: 1rem;
+            background: #f1f5f9;
+            border-radius: 12px;
+        }
+        .download-section {
+            margin: 2rem 0;
+        }
+        .size-options {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            margin: 1rem 0;
+            flex-wrap: wrap;
+        }
+        .size-btn {
+            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        .size-btn:hover {
+            transform: translateY(-2px);
+        }
+        .info {
+            color: #64748b;
+            font-size: 0.9rem;
+            margin-top: 1rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 Co-Tester Logo Download</h1>
+        <p>Download the Co-Tester logo in PNG format for your Jira callback project.</p>
+        
+        <div class="logo-preview">
+            <svg id="logoSvg" xmlns="http://www.w3.org/2000/svg" width="300" height="100" viewBox="0 0 300 100">
+                <!-- Background with gradient -->
+                <defs>
+                    <linearGradient id="logoGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                        <stop offset="0%" style="stop-color:#1e293b;stop-opacity:1" />
+                        <stop offset="100%" style="stop-color:#334155;stop-opacity:1" />
+                    </linearGradient>
+                    <linearGradient id="iconGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" style="stop-color:#f59e0b;stop-opacity:1" />
+                        <stop offset="100%" style="stop-color:#d97706;stop-opacity:1" />
+                    </linearGradient>
+                </defs>
+                
+                <!-- Background rounded rectangle -->
+                <rect x="10" y="10" width="280" height="80" rx="20" ry="20" fill="url(#logoGradient)" />
+                
+                <!-- Co-Tester Logo Icon -->
+                <g transform="translate(25, 25) scale(2)">
+                    <path d="M12 2L13.09 8.26L20 9L13.09 9.74L12 16L10.91 9.74L4 9L10.91 8.26L12 2Z" fill="url(#iconGradient)"/>
+                    <circle cx="12" cy="12" r="3" fill="none" stroke="url(#iconGradient)" stroke-width="1.5"/>
+                    <path d="M8.5 4.5L9.5 7.5" stroke="url(#iconGradient)" stroke-width="1.5" stroke-linecap="round"/>
+                    <path d="M15.5 4.5L14.5 7.5" stroke="url(#iconGradient)" stroke-width="1.5" stroke-linecap="round"/>
+                    <path d="M4.5 8.5L7.5 9.5" stroke="url(#iconGradient)" stroke-width="1.5" stroke-linecap="round"/>
+                    <path d="M19.5 8.5L16.5 9.5" stroke="url(#iconGradient)" stroke-width="1.5" stroke-linecap="round"/>
+                </g>
+                
+                <!-- Co-Tester text -->
+                <text x="85" y="60" font-family="Inter, Arial, sans-serif" font-size="32" font-weight="800" fill="white" text-anchor="start">Co-Tester</text>
+            </svg>
+        </div>
+        
+        <div class="download-section">
+            <h3>Choose Size:</h3>
+            <div class="size-options">
+                <button class="size-btn" onclick="downloadLogo(150, 50)">150×50 (Small)</button>
+                <button class="size-btn" onclick="downloadLogo(600, 200)">600×200 (Medium)</button>
+                <button class="size-btn" onclick="downloadLogo(900, 300)">900×300 (Large)</button>
+                <button class="size-btn" onclick="downloadLogo(1200, 400)">1200×400 (XL)</button>
+            </div>
+            
+            <div class="info">
+                <p>The logo will be downloaded as a high-quality PNG file with transparent background around the logo shape.</p>
+                <p>Perfect for Jira app integrations and branding.</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function downloadLogo(width, height) {
+            // Create a canvas element
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            
+            // Set canvas size
+            canvas.width = width;
+            canvas.height = height;
+            
+            // Create SVG data URL
+            const svg = document.getElementById('logoSvg').cloneNode(true);
+            svg.setAttribute('width', width);
+            svg.setAttribute('height', height);
+            
+            const svgData = new XMLSerializer().serializeToString(svg);
+            const svgBlob = new Blob([svgData], {type: 'image/svg+xml;charset=utf-8'});
+            const svgUrl = URL.createObjectURL(svgBlob);
+            
+            // Create image and draw to canvas
+            const img = new Image();
+            img.onload = function() {
+                // Clear canvas with transparent background
+                ctx.clearRect(0, 0, width, height);
+                
+                // Draw the SVG image
+                ctx.drawImage(img, 0, 0, width, height);
+                
+                // Convert to PNG and download
+                canvas.toBlob(function(blob) {
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `co-tester-logo-${width}x${height}.png`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                }, 'image/png');
+                
+                URL.revokeObjectURL(svgUrl);
+            };
+            
+            img.src = svgUrl;
+        }
+    </script>
+</body>
+</html>

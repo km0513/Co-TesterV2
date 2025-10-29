@@ -22,6 +22,14 @@ coverage/
 node_modules/
 npm-debug.log*
 
+# Electron build artifacts
+electron/dist/
+electron/main.js
+electron/preload.js
+electron/package.json
+electron/package-lock.json
+releases/
+
 # Backup files
 *.bak
 

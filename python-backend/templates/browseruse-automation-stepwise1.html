@@ -1,0 +1,1170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='0.9em' font-size='90'>🚀</text></svg>">
+    <title>BrowserUse AI Automation - Co-Tester</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="/static/styles.css">
+    <link rel="stylesheet" href="/static/left-sidebar.css">
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-hover: #4f46e5;
+            --secondary: #8b5cf6;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --error: #ef4444;
+            --info: #3b82f6;
+            --bg-light: #f8fafc;
+            --bg-card: #ffffff;
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --border: #e2e8f0;
+            --border-focus: #6366f1;
+            --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+            --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+            --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1);
+            --radius: 8px;
+            --radius-lg: 12px;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--bg-light);
+            color: var(--text-primary);
+            line-height: 1.6;
+        }
+
+        .main-content {
+            margin-left: 280px;
+            padding: 2rem;
+            min-height: 100vh;
+        }
+
+        .page-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 2rem;
+        }
+
+        .page-title {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .page-icon {
+            width: 3rem;
+            height: 3rem;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            border-radius: var(--radius-lg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.5rem;
+        }
+
+        .ai-badge {
+            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 50%, #ffa726 100%);
+            color: white;
+            font-size: 0.75rem;
+            font-weight: 600;
+            border-radius: 1rem;
+            padding: 0.25rem 0.75rem;
+            margin-left: 0.5rem;
+        }
+
+        .container {
+            max-width: 100%;
+            background: var(--bg-card);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-lg);
+            padding: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .instructions-card {
+            background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+            border: 1px solid #fbbf24;
+            border-radius: var(--radius);
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .instructions-title {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-weight: 600;
+            color: #92400e;
+            margin-bottom: 1rem;
+        }
+
+        .instructions-list {
+            list-style: none;
+            counter-reset: step-counter;
+        }
+
+        .instructions-list li {
+            counter-increment: step-counter;
+            position: relative;
+            padding-left: 2rem;
+            margin-bottom: 0.75rem;
+            color: #92400e;
+        }
+
+        .instructions-list li::before {
+            content: counter(step-counter);
+            position: absolute;
+            left: 0;
+            top: 0;
+            background: #f59e0b;
+            color: white;
+            width: 1.5rem;
+            height: 1.5rem;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .workflow-container {
+            display: grid;
+            grid-template-columns: 1fr 400px;
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .steps-panel {
+            background: var(--bg-card);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-md);
+            padding: 1.5rem;
+        }
+
+        .panel-header {
+            display: flex;
+            align-items: center;
+            justify-content: between;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .panel-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .add-step-btn {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            color: white;
+            border: none;
+            border-radius: var(--radius);
+            padding: 0.75rem 1.5rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-left: auto;
+        }
+
+        .add-step-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .step-card {
+            background: white;
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            position: relative;
+            transition: all 0.2s ease;
+        }
+
+        .step-card:hover {
+            border-color: var(--primary);
+            box-shadow: var(--shadow-md);
+        }
+
+        .step-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1rem;
+        }
+
+        .step-number {
+            background: var(--primary);
+            color: white;
+            width: 2rem;
+            height: 2rem;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 0.875rem;
+        }
+
+        .step-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .step-btn {
+            width: 2rem;
+            height: 2rem;
+            border: none;
+            border-radius: var(--radius);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+        }
+
+        .step-btn.delete {
+            background: #fee2e2;
+            color: var(--error);
+        }
+
+        .step-btn.delete:hover {
+            background: var(--error);
+            color: white;
+        }
+
+        .step-btn.copy {
+            background: #e0f2fe;
+            color: var(--info);
+        }
+
+        .step-btn.copy:hover {
+            background: var(--info);
+            color: white;
+        }
+
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        .form-label {
+            display: block;
+            font-weight: 500;
+            color: var(--text-primary);
+            margin-bottom: 0.5rem;
+            font-size: 0.875rem;
+        }
+
+        .form-input, .form-select, .form-textarea {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            font-size: 0.875rem;
+            transition: all 0.2s ease;
+            background: white;
+        }
+
+        .form-input:focus, .form-select:focus, .form-textarea:focus {
+            outline: none;
+            border-color: var(--border-focus);
+            box-shadow: 0 0 0 3px rgb(99 102 241 / 0.1);
+        }
+
+        .form-textarea {
+            min-height: 120px;
+            resize: vertical;
+        }
+
+        .preview-panel {
+            background: var(--bg-card);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-md);
+            padding: 1.5rem;
+            height: fit-content;
+            position: sticky;
+            top: 2rem;
+        }
+
+        .preview-content {
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 1rem;
+            font-family: 'Monaco', 'Menlo', 'Consolas', monospace;
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            min-height: 200px;
+            white-space: pre-wrap;
+        }
+
+        .control-bar {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 1.5rem;
+            background: var(--bg-card);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-md);
+            position: sticky;
+            bottom: 2rem;
+            z-index: 10;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: var(--radius);
+            font-weight: 500;
+            font-size: 0.875rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-decoration: none;
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            color: white;
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            transform: translateY(-1px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .btn-success {
+            background: var(--success);
+            color: white;
+        }
+
+        .btn-warning {
+            background: var(--warning);
+            color: white;
+        }
+
+        .btn-secondary {
+            background: #e2e8f0;
+            color: var(--text-primary);
+        }
+
+        .btn-run {
+            background: linear-gradient(135deg, var(--success) 0%, #059669 100%);
+            color: white;
+            font-size: 1rem;
+            padding: 1rem 2rem;
+            min-width: 180px;
+            position: relative;
+        }
+
+        .btn-run:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(16, 185, 129, 0.25);
+        }
+
+        .spinner {
+            width: 1rem;
+            height: 1rem;
+            border: 2px solid transparent;
+            border-top: 2px solid currentColor;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .results-section {
+            margin-top: 2rem;
+        }
+
+        .result-card {
+            background: var(--bg-card);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-md);
+            padding: 2rem;
+            margin-bottom: 1rem;
+        }
+
+        .result-header {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .result-status {
+            padding: 0.5rem 1rem;
+            border-radius: var(--radius);
+            font-weight: 500;
+            font-size: 0.875rem;
+        }
+
+        .result-status.success {
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        .result-status.error {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .screenshot-container {
+            margin-top: 1rem;
+            text-align: center;
+        }
+
+        .screenshot-image {
+            max-width: 100%;
+            height: auto;
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow-md);
+        }
+
+        .fullscreen-loader {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(4px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+        }
+
+        .fullscreen-loader.active {
+            display: flex;
+        }
+
+        .loader-content {
+            text-align: center;
+            padding: 2rem;
+            background: white;
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .loader-spinner {
+            width: 3rem;
+            height: 3rem;
+            border: 4px solid #e2e8f0;
+            border-top: 4px solid var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 1rem;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 3rem 1rem;
+            color: var(--text-secondary);
+        }
+
+        .empty-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            opacity: 0.5;
+        }
+
+        @media (max-width: 1024px) {
+            .main-content {
+                margin-left: 0;
+                padding: 1rem;
+            }
+
+            .workflow-container {
+                grid-template-columns: 1fr;
+                gap: 1rem;
+            }
+
+            .preview-panel {
+                position: static;
+            }
+        }
+    </style>
+</head>
+<body>
+    {% set active_tab = 'browseruse' %}
+    {% include 'left-sidebar.html' %}
+
+    <div class="main-content">
+        <div class="page-header">
+            <div class="page-title">
+                <div class="page-icon">
+                    <i class="fas fa-robot"></i>
+                </div>
+                BrowserUse AI Automation
+                <span class="ai-badge">AI</span>
+            </div>
+        </div>
+
+        <div class="instructions-card">
+            <div class="instructions-title">
+                <i class="fas fa-info-circle"></i>
+                How to Use BrowserUse Automation
+            </div>
+            <ol class="instructions-list">
+                <li>Build your browser automation workflow by adding steps using the action selector</li>
+                <li>Configure each step with the required parameters (URLs, selectors, text, etc.)</li>
+                <li>Preview your automation scenario in the right panel</li>
+                <li>Save your scenario to lock in your changes before execution</li>
+                <li>Run the automation to execute all steps and view results</li>
+                <li>Export/Import scenarios to share or reuse your automation workflows</li>
+            </ol>
+        </div>
+
+        <div class="workflow-container">
+            <div class="steps-panel">
+                <div class="panel-header">
+                    <div class="panel-title">
+                        <i class="fas fa-list-ol"></i>
+                        Automation Steps
+                    </div>
+                    <button class="add-step-btn" id="addStepBtn">
+                        <i class="fas fa-plus"></i>
+                        Add Step
+                    </button>
+                </div>
+                
+                <div id="stepsList" class="steps-list">
+                    <div class="empty-state">
+                        <div class="empty-icon">
+                            <i class="fas fa-robot"></i>
+                        </div>
+                        <h3>No automation steps yet</h3>
+                        <p>Click "Add Step" to start building your browser automation workflow</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="preview-panel">
+                <div class="panel-header">
+                    <div class="panel-title">
+                        <i class="fas fa-eye"></i>
+                        Scenario Preview
+                    </div>
+                </div>
+                <div id="scenarioPreview" class="preview-content">
+                    Click "Add Step" to start building your automation scenario...
+                </div>
+            </div>
+        </div>
+
+        <div class="control-bar">
+            <button id="saveBtn" class="btn btn-success">
+                <i class="fas fa-save"></i>
+                Save Scenario
+            </button>
+            
+            <button id="exportBtn" class="btn btn-warning">
+                <i class="fas fa-download"></i>
+                Export
+            </button>
+            
+            <label for="importInput" class="btn btn-secondary">
+                <i class="fas fa-upload"></i>
+                Import
+            </label>
+            <input type="file" id="importInput" accept=".json" style="display: none;">
+            
+            <div style="flex: 1;"></div>
+            
+            <div id="savingStatus" style="color: var(--success); display: none;">
+                <i class="fas fa-check"></i>
+                Saved!
+            </div>
+            
+            <button id="runBtn" class="btn btn-run">
+                <span id="runBtnText">
+                    <i class="fas fa-play"></i>
+                    Run Automation
+                </span>
+                <span id="runBtnSpinner" class="spinner" style="display: none;"></span>
+            </button>
+        </div>
+
+        <div id="resultsSection" class="results-section" style="display: none;"></div>
+    </div>
+
+    <!-- Fullscreen Loader -->
+    <div id="fullscreenLoader" class="fullscreen-loader">
+        <div class="loader-content">
+            <div class="loader-spinner"></div>
+            <h3>Running Browser Automation</h3>
+            <p>Please wait while we execute your automation steps...</p>
+        </div>
+    </div>
+
+    <script>
+        // Action definitions with improved categorization
+        const ACTIONS = {
+            navigation: [
+                { value: 'navigate', label: '🌐 Navigate to URL', inputs: [{ name: 'url', type: 'text', placeholder: 'https://example.com', required: true }] },
+                { value: 'wait_for_navigation', label: '⏳ Wait for Navigation', inputs: [] },
+                { value: 'wait_for_url', label: '🔗 Wait for URL', inputs: [{ name: 'url', type: 'text', placeholder: 'https://...', required: true }] }
+            ],
+            interactions: [
+                { value: 'click', label: '👆 Click Element', inputs: [{ name: 'selector', type: 'text', placeholder: '#button, .btn, [data-id="submit"]', required: true }] },
+                { value: 'double_click', label: '👆👆 Double Click', inputs: [{ name: 'selector', type: 'text', placeholder: '#element', required: true }] },
+                { value: 'right_click', label: '🖱️ Right Click', inputs: [{ name: 'selector', type: 'text', placeholder: '#element', required: true }] },
+                { value: 'hover', label: '🔍 Hover Element', inputs: [{ name: 'selector', type: 'text', placeholder: '#menu', required: true }] },
+                { value: 'fill', label: '✍️ Fill Input', inputs: [
+                    { name: 'selector', type: 'text', placeholder: '#email, input[name="username"]', required: true },
+                    { name: 'value', type: 'text', placeholder: 'Value to enter', required: true }
+                ]},
+                { value: 'select', label: '📋 Select Option', inputs: [
+                    { name: 'selector', type: 'text', placeholder: 'select[name="country"]', required: true },
+                    { name: 'value', type: 'text', placeholder: 'Option value or text', required: true }
+                ]},
+                { value: 'check', label: '☑️ Check/Uncheck', inputs: [
+                    { name: 'selector', type: 'text', placeholder: '#agree-terms', required: true },
+                    { name: 'value', type: 'select', options: [{ value: 'check', label: 'Check' }, { value: 'uncheck', label: 'Uncheck' }], required: true }
+                ]}
+            ],
+            waits: [
+                { value: 'wait_for_element', label: '⏳ Wait for Element', inputs: [{ name: 'selector', type: 'text', placeholder: '#loading-complete', required: true }] },
+                { value: 'wait_for_timeout', label: '⏰ Wait Timeout', inputs: [{ name: 'timeout', type: 'number', placeholder: '3000', required: true }] }
+            ],
+            extraction: [
+                { value: 'extract_text', label: '📝 Extract Text', inputs: [{ name: 'selector', type: 'text', placeholder: '.result-text', required: true }] },
+                { value: 'extract_attribute', label: '🏷️ Extract Attribute', inputs: [
+                    { name: 'selector', type: 'text', placeholder: 'a.download-link', required: true },
+                    { name: 'attribute', type: 'text', placeholder: 'href, src, data-id', required: true }
+                ]},
+                { value: 'screenshot', label: '📸 Take Screenshot', inputs: [] },
+                { value: 'page_html', label: '📄 Extract Page HTML', inputs: [] }
+            ],
+            assertions: [
+                { value: 'assert_visible', label: '👁️ Assert Visible', inputs: [{ name: 'selector', type: 'text', placeholder: '#success-message', required: true }] },
+                { value: 'assert_text', label: '📝 Assert Text Contains', inputs: [
+                    { name: 'selector', type: 'text', placeholder: '.status', required: true },
+                    { name: 'text', type: 'text', placeholder: 'Expected text', required: true }
+                ]},
+                { value: 'assert_title', label: '📋 Assert Page Title', inputs: [{ name: 'title', type: 'text', placeholder: 'Expected title', required: true }] },
+                { value: 'assert_url', label: '🔗 Assert URL', inputs: [{ name: 'url', type: 'text', placeholder: 'https://...', required: true }] }
+            ],
+            advanced: [
+                { value: 'scroll', label: '📜 Scroll to Element', inputs: [{ name: 'selector', type: 'text', placeholder: '#footer', required: true }] },
+                { value: 'js', label: '⚡ Execute JavaScript', inputs: [{ name: 'script', type: 'textarea', placeholder: 'console.log("Hello World");', required: true }] },
+                { value: 'custom', label: '🤖 Custom AI Instruction', inputs: [{ name: 'instruction', type: 'textarea', placeholder: 'Describe what you want the AI to do...', required: true }] }
+            ]
+        };
+
+        // Application state
+        let steps = [];
+        let isSaved = false;
+        let isRunning = false;
+
+        // DOM elements
+        const addStepBtn = document.getElementById('addStepBtn');
+        const stepsList = document.getElementById('stepsList');
+        const scenarioPreview = document.getElementById('scenarioPreview');
+        const saveBtn = document.getElementById('saveBtn');
+        const exportBtn = document.getElementById('exportBtn');
+        const importInput = document.getElementById('importInput');
+        const runBtn = document.getElementById('runBtn');
+        const runBtnText = document.getElementById('runBtnText');
+        const runBtnSpinner = document.getElementById('runBtnSpinner');
+        const fullscreenLoader = document.getElementById('fullscreenLoader');
+        const resultsSection = document.getElementById('resultsSection');
+        const savingStatus = document.getElementById('savingStatus');
+
+        // Initialize the application
+        function init() {
+            addStepBtn.addEventListener('click', addStep);
+            saveBtn.addEventListener('click', saveScenario);
+            exportBtn.addEventListener('click', exportScenario);
+            importInput.addEventListener('change', importScenario);
+            runBtn.addEventListener('click', runAutomation);
+            
+            // Add initial step
+            addStep();
+        }
+
+        function addStep() {
+            const stepId = Date.now();
+            const step = {
+                id: stepId,
+                action: 'navigate',
+                parameters: {}
+            };
+            
+            steps.push(step);
+            renderSteps();
+            updatePreview();
+            markUnsaved();
+        }
+
+        function deleteStep(stepId) {
+            steps = steps.filter(step => step.id !== stepId);
+            renderSteps();
+            updatePreview();
+            markUnsaved();
+        }
+
+        function duplicateStep(stepId) {
+            const stepIndex = steps.findIndex(step => step.id === stepId);
+            if (stepIndex !== -1) {
+                const originalStep = steps[stepIndex];
+                const newStep = {
+                    id: Date.now(),
+                    action: originalStep.action,
+                    parameters: { ...originalStep.parameters }
+                };
+                steps.splice(stepIndex + 1, 0, newStep);
+                renderSteps();
+                updatePreview();
+                markUnsaved();
+            }
+        }
+
+        function renderSteps() {
+            if (steps.length === 0) {
+                stepsList.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-icon">
+                            <i class="fas fa-robot"></i>
+                        </div>
+                        <h3>No automation steps yet</h3>
+                        <p>Click "Add Step" to start building your browser automation workflow</p>
+                    </div>
+                `;
+                return;
+            }
+
+            stepsList.innerHTML = steps.map((step, index) => {
+                return createStepHTML(step, index);
+            }).join('');
+
+            // Add event listeners to the newly created elements
+            steps.forEach((step, index) => {
+                const stepElement = document.querySelector(`[data-step-id="${step.id}"]`);
+                if (stepElement) {
+                    addStepEventListeners(step, stepElement, index);
+                }
+            });
+        }
+
+        function createStepHTML(step, index) {
+            const action = findAction(step.action);
+            if (!action) return '';
+
+            const categoryEmoji = getCategoryEmoji(step.action);
+            
+            return `
+                <div class="step-card" data-step-id="${step.id}">
+                    <div class="step-header">
+                        <div class="step-number">${index + 1}</div>
+                        <div class="step-actions">
+                            <button class="step-btn copy" onclick="duplicateStep(${step.id})" title="Duplicate step">
+                                <i class="fas fa-copy"></i>
+                            </button>
+                            <button class="step-btn delete" onclick="deleteStep(${step.id})" title="Delete step">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Action Type</label>
+                        <select class="form-select action-select" data-step-id="${step.id}">
+                            ${Object.entries(ACTIONS).map(([category, actions]) => `
+                                <optgroup label="${category.charAt(0).toUpperCase() + category.slice(1)}">
+                                    ${actions.map(action => `
+                                        <option value="${action.value}" ${step.action === action.value ? 'selected' : ''}>
+                                            ${action.label}
+                                        </option>
+                                    `).join('')}
+                                </optgroup>
+                            `).join('')}
+                        </select>
+                    </div>
+                    
+                    ${action.inputs.map(input => createInputHTML(input, step)).join('')}
+                </div>
+            `;
+        }
+
+        function createInputHTML(input, step) {
+            const value = step.parameters[input.name] || '';
+            
+            if (input.type === 'textarea') {
+                return `
+                    <div class="form-group">
+                        <label class="form-label">${input.name.charAt(0).toUpperCase() + input.name.slice(1)}</label>
+                        <textarea class="form-textarea" 
+                                data-step-id="${step.id}" 
+                                data-param="${input.name}" 
+                                placeholder="${input.placeholder || ''}"
+                                ${input.required ? 'required' : ''}>${value}</textarea>
+                    </div>
+                `;
+            } else if (input.type === 'select') {
+                return `
+                    <div class="form-group">
+                        <label class="form-label">${input.name.charAt(0).toUpperCase() + input.name.slice(1)}</label>
+                        <select class="form-select" 
+                                data-step-id="${step.id}" 
+                                data-param="${input.name}"
+                                ${input.required ? 'required' : ''}>
+                            <option value="">Select an option...</option>
+                            ${input.options.map(option => `
+                                <option value="${option.value}" ${value === option.value ? 'selected' : ''}>
+                                    ${option.label}
+                                </option>
+                            `).join('')}
+                        </select>
+                    </div>
+                `;
+            } else {
+                return `
+                    <div class="form-group">
+                        <label class="form-label">${input.name.charAt(0).toUpperCase() + input.name.slice(1)}</label>
+                        <input type="${input.type}" 
+                               class="form-input" 
+                               data-step-id="${step.id}" 
+                               data-param="${input.name}" 
+                               placeholder="${input.placeholder || ''}"
+                               value="${value}"
+                               ${input.required ? 'required' : ''}>
+                    </div>
+                `;
+            }
+        }
+
+        function addStepEventListeners(step, stepElement, index) {
+            // Action select change
+            const actionSelect = stepElement.querySelector('.action-select');
+            actionSelect.addEventListener('change', (e) => {
+                step.action = e.target.value;
+                step.parameters = {}; // Reset parameters when action changes
+                renderSteps();
+                updatePreview();
+                markUnsaved();
+            });
+
+            // Parameter inputs change
+            const inputs = stepElement.querySelectorAll('input, select, textarea');
+            inputs.forEach(input => {
+                if (!input.classList.contains('action-select')) {
+                    input.addEventListener('input', (e) => {
+                        const paramName = e.target.dataset.param;
+                        step.parameters[paramName] = e.target.value;
+                        updatePreview();
+                        markUnsaved();
+                    });
+                }
+            });
+        }
+
+        function findAction(actionValue) {
+            for (const category of Object.values(ACTIONS)) {
+                const action = category.find(a => a.value === actionValue);
+                if (action) return action;
+            }
+            return null;
+        }
+
+        function getCategoryEmoji(actionValue) {
+            if (Object.values(ACTIONS.navigation).some(a => a.value === actionValue)) return '🌐';
+            if (Object.values(ACTIONS.interactions).some(a => a.value === actionValue)) return '👆';
+            if (Object.values(ACTIONS.waits).some(a => a.value === actionValue)) return '⏳';
+            if (Object.values(ACTIONS.extraction).some(a => a.value === actionValue)) return '📝';
+            if (Object.values(ACTIONS.assertions).some(a => a.value === actionValue)) return '👁️';
+            if (Object.values(ACTIONS.advanced).some(a => a.value === actionValue)) return '⚡';
+            return '🔧';
+        }
+
+        function updatePreview() {
+            if (steps.length === 0) {
+                scenarioPreview.textContent = 'Click "Add Step" to start building your automation scenario...';
+                return;
+            }
+
+            const preview = steps.map((step, index) => {
+                const action = findAction(step.action);
+                if (!action) return `${index + 1}. Unknown action`;
+
+                const paramStr = Object.entries(step.parameters)
+                    .filter(([key, value]) => value)
+                    .map(([key, value]) => `${key}: "${value}"`)
+                    .join(', ');
+
+                return `${index + 1}. ${action.label}${paramStr ? ` (${paramStr})` : ''}`;
+            }).join('\n');
+
+            scenarioPreview.textContent = preview;
+        }
+
+        function markUnsaved() {
+            isSaved = false;
+            saveBtn.textContent = 'Save Scenario';
+            saveBtn.classList.remove('btn-success');
+            saveBtn.classList.add('btn-warning');
+        }
+
+        function markSaved() {
+            isSaved = true;
+            saveBtn.textContent = 'Saved ✓';
+            saveBtn.classList.remove('btn-warning');
+            saveBtn.classList.add('btn-success');
+            
+            savingStatus.style.display = 'block';
+            setTimeout(() => {
+                savingStatus.style.display = 'none';
+            }, 2000);
+        }
+
+        function saveScenario() {
+            if (steps.length === 0) {
+                alert('Please add at least one step before saving.');
+                return;
+            }
+
+            // Validate all steps
+            for (let i = 0; i < steps.length; i++) {
+                const step = steps[i];
+                const action = findAction(step.action);
+                if (!action) continue;
+
+                const requiredInputs = action.inputs.filter(input => input.required);
+                for (const input of requiredInputs) {
+                    if (!step.parameters[input.name]) {
+                        alert(`Step ${i + 1}: ${input.name} is required for ${action.label}`);
+                        return;
+                    }
+                }
+            }
+
+            markSaved();
+        }
+
+        function exportScenario() {
+            if (steps.length === 0) {
+                alert('No steps to export. Please add some steps first.');
+                return;
+            }
+
+            const scenario = {
+                name: `Browser Automation - ${new Date().toLocaleDateString()}`,
+                created: new Date().toISOString(),
+                steps: steps
+            };
+
+            const blob = new Blob([JSON.stringify(scenario, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `browser-automation-${Date.now()}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        function importScenario(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const scenario = JSON.parse(e.target.result);
+                    if (scenario.steps && Array.isArray(scenario.steps)) {
+                        steps = scenario.steps.map(step => ({
+                            ...step,
+                            id: Date.now() + Math.random() // Ensure unique IDs
+                        }));
+                        renderSteps();
+                        updatePreview();
+                        markUnsaved();
+                        alert(`Successfully imported ${steps.length} steps!`);
+                    } else {
+                        alert('Invalid scenario file format.');
+                    }
+                } catch (error) {
+                    alert('Failed to parse scenario file: ' + error.message);
+                }
+            };
+            reader.readAsText(file);
+            
+            // Clear the file input
+            event.target.value = '';
+        }
+
+        function runAutomation() {
+            if (isRunning) return;
+            
+            if (!isSaved) {
+                alert('Please save your scenario before running it.');
+                return;
+            }
+
+            if (steps.length === 0) {
+                alert('No steps to run. Please add some steps first.');
+                return;
+            }
+
+            isRunning = true;
+            showLoader();
+            
+            const requestData = {
+                prompt: `Execute browser automation with ${steps.length} steps`,
+                steps: steps.map(step => ({
+                    action: step.action,
+                    ...step.parameters
+                })),
+                captureScreenshotOnFailure: true
+            };
+
+            fetch('/api/browseruse/navigation', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(requestData)
+            })
+            .then(response => response.json())
+            .then(data => {
+                hideLoader();
+                isRunning = false;
+                displayResults(data);
+            })
+            .catch(error => {
+                hideLoader();
+                isRunning = false;
+                console.error('Error:', error);
+                displayError(error.message);
+            });
+        }
+
+        function showLoader() {
+            runBtnText.style.display = 'none';
+            runBtnSpinner.style.display = 'inline-block';
+            runBtn.disabled = true;
+            fullscreenLoader.classList.add('active');
+        }
+
+        function hideLoader() {
+            runBtnText.style.display = 'inline-flex';
+            runBtnSpinner.style.display = 'none';
+            runBtn.disabled = false;
+            fullscreenLoader.classList.remove('active');
+        }
+
+        function displayResults(data) {
+            resultsSection.style.display = 'block';
+            resultsSection.innerHTML = `
+                <div class="result-card">
+                    <div class="result-header">
+                        <h3>Automation Results</h3>
+                        <div class="result-status ${data.success ? 'success' : 'error'}">
+                            <i class="fas fa-${data.success ? 'check' : 'times'}"></i>
+                            ${data.success ? 'Success' : 'Failed'}
+                        </div>
+                    </div>
+                    
+                    <div class="result-details">
+                        <p><strong>Steps Executed:</strong> ${data.report?.steps_executed || 0} / ${data.report?.total_steps || steps.length}</p>
+                        <p><strong>Message:</strong> ${data.report?.message || 'No message'}</p>
+                        
+                        ${data.steps ? `
+                            <h4 style="margin-top: 1.5rem; margin-bottom: 1rem;">Step Details:</h4>
+                            <div class="steps-results">
+                                ${data.steps.map((step, index) => `
+                                    <div class="step-result" style="padding: 0.75rem; margin-bottom: 0.5rem; background: ${step.success ? '#f0f9ff' : '#fef2f2'}; border-radius: 6px; border-left: 4px solid ${step.success ? '#3b82f6' : '#ef4444'};">
+                                        <strong>Step ${index + 1}:</strong> ${step.action} 
+                                        <span style="color: ${step.success ? '#059669' : '#dc2626'};">
+                                            ${step.success ? '✓' : '✗'}
+                                        </span>
+                                        ${step.error ? `<br><small style="color: #dc2626;">${step.error}</small>` : ''}
+                                        ${step.screenshot ? `
+                                            <div class="screenshot-container">
+                                                <img src="${step.screenshot}" alt="Step screenshot" class="screenshot-image" style="max-width: 300px;">
+                                            </div>
+                                        ` : ''}
+                                    </div>
+                                `).join('')}
+                            </div>
+                        ` : ''}
+                        
+                        ${data.report?.failureScreenshot ? `
+                            <h4 style="margin-top: 1.5rem; margin-bottom: 1rem;">Failure Screenshot:</h4>
+                            <div class="screenshot-container">
+                                <img src="${data.report.failureScreenshot}" alt="Failure screenshot" class="screenshot-image">
+                            </div>
+                        ` : ''}
+                    </div>
+                </div>
+            `;
+            
+            resultsSection.scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function displayError(message) {
+            resultsSection.style.display = 'block';
+            resultsSection.innerHTML = `
+                <div class="result-card">
+                    <div class="result-header">
+                        <h3>Automation Error</h3>
+                        <div class="result-status error">
+                            <i class="fas fa-times"></i>
+                            Error
+                        </div>
+                    </div>
+                    <div class="result-details">
+                        <p style="color: var(--error);">${message}</p>
+                        <p>Please check your steps and try again.</p>
+                    </div>
+                </div>
+            `;
+            
+            resultsSection.scrollIntoView({ behavior: 'smooth' });
+        }
+
+        // Initialize the application when DOM is loaded
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>

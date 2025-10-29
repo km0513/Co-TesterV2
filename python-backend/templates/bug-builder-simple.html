@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bug Builder - Co-Tester</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none'><defs><linearGradient id='favGradient' x1='0%' y1='0%' x2='100%' y2='100%'><stop offset='0%' style='stop-color:%23f59e0b;stop-opacity:1' /><stop offset='100%' style='stop-color:%23d97706;stop-opacity:1' /></linearGradient></defs><path d='M12 2L13.09 8.26L20 9L13.09 9.74L12 16L10.91 9.74L4 9L10.91 8.26L12 2Z' fill='url(%23favGradient)'/><circle cx='12' cy='12' r='3' fill='none' stroke='url(%23favGradient)' stroke-width='1.8'/></svg>">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='left-sidebar.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='bug-builder-simple.css') }}?v=3">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+</head>
+<body>
+  {% set active_tab = 'bug-builder' %}
+  {% include 'left-sidebar.html' %}
+  
+  <div class="main-content">
+        {% set page_title = '<i class="fas fa-bug"></i> Bug Builder' %}
+    {% set allow_html = true %}
+    {% set page_subtitle = 'Record Playwright steps, capture video, and export professional bug reports to Jira' %}
+    {% include 'page-header.html' %}
+    
+    <div class="bug-container">
+   
+   
+      <!-- Step 1: Start Playwright -->
+      <div class="bug-card" id="step1">
+        <h2>Step 1: Start Playwright Browser</h2>
+        <p class="step-description">
+          Launch a Playwright browser that will automatically record all your actions (clicks, typing, navigation).
+          This creates a reproducible test script.
+        </p>
+        <div class="info-box">
+          <i class="fas fa-info-circle"></i>
+          <span><strong>Tip:</strong> Have the URL ready where you want to reproduce the bug. The browser will open to that page.</span>
+        </div>
+        <button class="btn-primary" id="startPlaywrightBtn" onclick="startPlaywright()">
+          <i class="fas fa-robot"></i>
+          Start Playwright Browser
+        </button>
+        <div id="status1"></div>
+        
+        <!-- Launching indicator -->
+        <div id="launchingIndicator" style="display:none; margin-top: 1.5rem;">
+          <div class="warning-box">
+            <i class="fas fa-spinner fa-spin"></i>
+            <div>
+              <strong>Launching Playwright Browser...</strong>
+              <p>This may take a few seconds. Please wait...</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Step 2: Record Video -->
+      <div class="bug-card" id="step2" style="display:none;">
+        <h2>Step 2: Record Video (Optional)</h2>
+        
+        <!-- Browser status -->
+        <div class="success-box" id="browserStatus">
+          <i class="fas fa-check-circle"></i>
+          <span>Playwright browser is ready!</span>
+        </div>
+        
+        <p class="step-description">
+          Optionally record a video of the Playwright browser to attach visual proof to your bug report.
+          When prompted, select the Playwright browser window.
+        </p>
+        <div class="info-box">
+          <i class="fas fa-lightbulb"></i>
+          <span><strong>Note:</strong> You can skip video recording if you only need the automated steps. Video is helpful for visual bugs.</span>
+        </div>
+        <button class="btn-primary" id="videoRecordBtn" onclick="startVideoRecording()">
+          <i class="fas fa-video"></i>
+          Start Video Recording
+        </button>
+        <button class="btn-secondary" onclick="skipVideo()">
+          Skip Video (Steps Only)
+        </button>
+        <div id="status2"></div>
+      </div>
+      
+      <!-- Step 3: Finish Recording -->
+      <div class="bug-card" id="step3" style="display:none;">
+        <h2>Step 3: Reproduce the Bug</h2>
+        <p class="step-description">
+          Perform the steps to reproduce the bug in the Playwright browser. All your actions are being recorded automatically.
+        </p>
+        <div class="error-box">
+          <i class="fas fa-exclamation-circle"></i>
+          <div>
+            <strong>Recording Status:</strong>
+            <div class="recording-status">
+              <div class="status-item">
+                <i class="fas fa-circle" style="color: #ef4444;"></i>
+                <span>Playwright Recording Active</span>
+              </div>
+              <div class="status-item" id="videoStatus" style="display:none;">
+                <i class="fas fa-circle" style="color: #ef4444;"></i>
+                <span>Video Recording Active</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="info-box">
+          <i class="fas fa-info-circle"></i>
+          <span><strong>When finished:</strong> Simply close the Playwright browser window. The app will automatically process your recording.</span>
+        </div>
+        <div id="status3"></div>
+        <button class="btn-secondary" onclick="manualContinue()" style="margin-top: 1rem;">
+          <i class="fas fa-arrow-right"></i>
+          Browser Closed - Continue to Review
+        </button>
+      </div>
+      
+      <!-- Detecting Closure Overlay -->
+      <div id="detectingOverlay" class="overlay" style="display:none;">
+        <div class="overlay-content">
+          <div class="loader-spinner"></div>
+          <h2>Detecting Browser Closure...</h2>
+          <p>Please wait while we confirm the recording is complete</p>
+        </div>
+      </div>
+      
+      <!-- Processing Overlay -->
+      <div id="processingOverlay" class="overlay" style="display:none;">
+        <div class="overlay-content">
+          <div class="loader-spinner"></div>
+          <h2>Processing Your Recording</h2>
+          <p>Please wait while we process your bug report...</p>
+          <div id="processingSteps">
+            <div class="processing-step" id="step-extract">
+              <i class="fas fa-spinner fa-spin"></i>
+              <span>Extracting steps from Playwright recording...</span>
+            </div>
+            <div class="processing-step" id="step-video" style="display:none;">
+              <i class="fas fa-spinner fa-spin"></i>
+              <span>Processing video recording...</span>
+            </div>
+            <div class="processing-step" id="step-ai" style="display:none;">
+              <i class="fas fa-spinner fa-spin"></i>
+              <span>Enhancing steps with AI...</span>
+            </div>
+            <div class="processing-step" id="step-complete" style="display:none;">
+              <i class="fas fa-check-circle" style="color: #10b981;"></i>
+              <span>Processing complete!</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Step 4: Complete Bug Report -->
+      <div class="bug-card" id="step4" style="display:none;">
+        <h2>Complete Your Bug Report</h2>
+        <p class="step-description">
+          Review and edit the automatically generated steps, then fill in the bug details below.
+        </p>
+        
+        <!-- Video Section -->
+        <div id="videoSection" style="display:none; margin-bottom: 2rem;">
+          <h3><i class="fas fa-video"></i> Screen Recording</h3>
+          <video id="videoPlayer" controls class="video-player"></video>
+        </div>
+        
+        <!-- Bug Title -->
+        <div class="form-group">
+          <label class="form-label">
+            <i class="fas fa-heading"></i>
+            Bug Title *
+          </label>
+          <input type="text" id="bugTitle" placeholder="Brief description of the issue" class="form-input" required>
+        </div>
+        
+        <!-- Bug Description -->
+        <div class="form-group">
+          <label class="form-label">
+            <i class="fas fa-align-left"></i>
+            Bug Description
+          </label>
+          <textarea id="bugDescription" placeholder="Additional context, environment details, or any other relevant information..." class="form-input" rows="3"></textarea>
+          <small style="color: #64748b; font-size: 0.875rem;">Optional: Add any additional context that helps understand the bug</small>
+        </div>
+        
+        <!-- Steps to Reproduce -->
+        <div class="form-group">
+          <div class="form-header">
+            <label class="form-label">
+              <i class="fas fa-list-ol"></i>
+              Steps to Reproduce *
+            </label>
+            <button class="btn-secondary btn-sm" onclick="addStep()">
+              <i class="fas fa-plus"></i>
+              Add Step
+            </button>
+          </div>
+          <div id="editableStepsList"></div>
+        </div>
+        
+        <!-- Expected Result -->
+        <div class="form-group">
+          <label class="form-label">
+            <i class="fas fa-check-circle" style="color: #10b981;"></i>
+            Expected Result *
+          </label>
+          <textarea id="expectedResult" placeholder="What should happen?" class="form-input" required></textarea>
+        </div>
+        
+        <!-- Actual Result -->
+        <div class="form-group">
+          <label class="form-label">
+            <i class="fas fa-times-circle" style="color: #ef4444;"></i>
+            Actual Result *
+          </label>
+          <textarea id="actualResult" placeholder="What actually happened?" class="form-input" required></textarea>
+        </div>
+        
+        <!-- Generate Report Button -->
+        <div class="form-actions">
+          <button class="btn-primary btn-lg" onclick="generateBugReport()">
+            <i class="fas fa-file-alt"></i>
+            Generate Bug Report
+          </button>
+        </div>
+      </div>
+      
+      <!-- Step 5: Review Bug Report -->
+      <div class="bug-card" id="step5" style="display:none;">
+        <h2>Review Bug Report</h2>
+        <p class="step-description">Review your bug report before exporting</p>
+        
+        <div id="bugReportPreview" class="report-preview"></div>
+        
+        <div class="form-actions">
+          <button class="btn-secondary" onclick="editReport()">
+            <i class="fas fa-edit"></i>
+            Edit Report
+          </button>
+          <button class="btn-primary" onclick="showExportOptions()">
+            <i class="fas fa-arrow-right"></i>
+            Continue to Export
+          </button>
+        </div>
+      </div>
+      
+      <!-- Step 6: Export -->
+      <div class="bug-card" id="step6" style="display:none;">
+        <div class="card-header-with-back">
+          <h2>Export Your Bug Report</h2>
+          <button class="btn-secondary btn-sm" onclick="backToReview()">
+            <i class="fas fa-arrow-left"></i>
+            Back to Review
+          </button>
+        </div>
+        
+        <div class="export-grid">
+          <button class="export-card" onclick="exportJira()">
+            <i class="fab fa-jira"></i>
+            <span>Export to Jira</span>
+            <small>Create ticket with video</small>
+          </button>
+          <button class="export-card" onclick="downloadScript()">
+            <i class="fas fa-code"></i>
+            <span>Download Script</span>
+            <small>Runnable Playwright test</small>
+          </button>
+          <button class="export-card" onclick="downloadVideo()" id="downloadVideoBtn">
+            <i class="fas fa-video"></i>
+            <span>Download Video</span>
+            <small>Screen recording</small>
+          </button>
+          <button class="export-card" onclick="downloadAll()">
+            <i class="fas fa-download"></i>
+            <span>Download All</span>
+            <small>Script + Video + Report</small>
+          </button>
+        </div>
+      </div>
+      
+    </div>
+  </div>
+  
+  <script src="{{ url_for('static', filename='auth-utils.js') }}"></script>
+  <script src="{{ url_for('static', filename='bug-builder-simple.js') }}"></script>
+</body>
+</html>

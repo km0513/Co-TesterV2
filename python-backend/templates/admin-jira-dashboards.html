@@ -1,0 +1,668 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin Dashboard - Co-Tester</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+  <link rel="stylesheet" href="{{ url_for('static', filename='left-sidebar.css') }}">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <style>
+    :root {
+      --primary: #6366f1;
+      --primary-dark: #4f46e5;
+      --bg: #f8fafc;
+      --text: #111827;
+      --muted: #6b7280;
+      --border: #e5e7eb;
+      --success: #10b981;
+      --warning: #f59e0b;
+      --danger: #ef4444;
+    }
+    
+    body {
+      background: var(--bg);
+      min-height: 100vh;
+      font-family: 'Inter', system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+    }
+    
+    .page {
+      margin-left: var(--sidebar-width, 280px);
+      padding: 0;
+      padding-top: 0;
+      transition: margin-left 0.3s ease;
+    }
+    
+    body.sidebar-collapsed .page {
+      margin-left: 60px;
+    }
+    
+    /* Cards */
+    .card {
+      background: white;
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+      margin-bottom: 2rem;
+    }
+    
+    .card-header {
+      background: white;
+      border-bottom: 1px solid var(--border);
+      padding: 1.5rem;
+      border-radius: 16px 16px 0 0;
+    }
+    
+    .card-title {
+      margin: 0;
+      font-weight: 800;
+      font-size: 1.25rem;
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    
+    .card-body {
+      padding: 1.5rem;
+    }
+    
+    /* Stats Cards */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 1.5rem;
+      margin-bottom: 2rem;
+    }
+    
+    .stat-card {
+      background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+      color: white;
+      padding: 1.5rem;
+      border-radius: 12px;
+      box-shadow: 0 6px 16px rgba(99,102,241,0.25);
+    }
+    
+    .stat-card.success {
+      background: linear-gradient(135deg, #10b981, #059669);
+    }
+    
+    .stat-card.warning {
+      background: linear-gradient(135deg, #f59e0b, #d97706);
+    }
+    
+    .stat-card.danger {
+      background: linear-gradient(135deg, #ef4444, #dc2626);
+    }
+    
+    .stat-label {
+      font-size: 0.875rem;
+      opacity: 0.9;
+      margin-bottom: 0.5rem;
+    }
+    
+    .stat-value {
+      font-size: 2.5rem;
+      font-weight: 700;
+      margin: 0;
+    }
+    
+    .stat-icon {
+      font-size: 2rem;
+      opacity: 0.3;
+      float: right;
+    }
+    
+    /* Query Section */
+    .query-section {
+      background: white;
+      padding: 1.5rem;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+    }
+    
+    .form-label {
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 0.5rem;
+    }
+    
+    textarea.form-control {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 0.875rem;
+    }
+    
+    .btn-primary {
+      background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+      border: none;
+      padding: 0.75rem 1.5rem;
+      font-weight: 600;
+      box-shadow: 0 6px 16px rgba(99,102,241,0.25);
+      transition: all 0.3s;
+    }
+    
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 20px rgba(99,102,241,0.35);
+    }
+    
+    .btn-outline-secondary {
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 0.75rem 1.5rem;
+      font-weight: 600;
+    }
+    
+    /* Quick Filters */
+    .quick-filters {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+      margin-top: 1rem;
+    }
+    
+    .quick-filter-btn {
+      padding: 0.5rem 1rem;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: white;
+      color: var(--text);
+      font-size: 0.875rem;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    
+    .quick-filter-btn:hover {
+      background: var(--primary);
+      color: white;
+      border-color: var(--primary);
+    }
+    
+    /* Charts */
+    .chart-container {
+      position: relative;
+      height: 350px;
+    }
+    
+    /* Table */
+    .table-container {
+      overflow-x: auto;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+    }
+    
+    table {
+      width: 100%;
+      margin: 0;
+    }
+    
+    thead th {
+      background: #f9fafb;
+      color: var(--text);
+      font-weight: 700;
+      padding: 1rem;
+      border-bottom: 2px solid var(--border);
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+    
+    tbody td {
+      padding: 1rem;
+      border-bottom: 1px solid var(--border);
+      vertical-align: middle;
+    }
+    
+    tbody tr:hover {
+      background: #f9fafb;
+    }
+    
+    .issue-key {
+      font-weight: 600;
+      color: var(--primary);
+      text-decoration: none;
+    }
+    
+    .issue-key:hover {
+      text-decoration: underline;
+    }
+    
+    .status-badge {
+      padding: 0.25rem 0.75rem;
+      border-radius: 12px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      display: inline-block;
+    }
+    
+    .status-todo {
+      background: #e0e7ff;
+      color: #3730a3;
+    }
+    
+    .status-inprogress {
+      background: #dbeafe;
+      color: #1e40af;
+    }
+    
+    .status-done {
+      background: #d1fae5;
+      color: #065f46;
+    }
+    
+    /* Loading */
+    .loading {
+      text-align: center;
+      padding: 3rem;
+    }
+    
+    .spinner {
+      width: 48px;
+      height: 48px;
+      border: 4px solid var(--border);
+      border-top-color: var(--primary);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 1rem;
+    }
+    
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    
+    .hidden {
+      display: none !important;
+    }
+    
+    .alert {
+      border-radius: 12px;
+      padding: 1rem 1.5rem;
+    }
+  </style>
+</head>
+<body>
+  {% include 'left-sidebar.html' %}
+  
+  <div class="page">
+    {% set page_title = '<i class="fas fa-chart-line"></i> Admin Dashboard' %}
+    {% set page_subtitle = 'Comprehensive analytics and insights for team performance and project metrics' %}
+    {% set allow_html = true %}
+    {% include 'page-header.html' %}
+    
+    <div class="container-fluid" style="padding: 2rem;">
+      
+      <!-- Query Section -->
+      <div class="card">
+        <div class="card-header">
+          <h3 class="card-title">
+            <i class="fas fa-search"></i>
+            JQL Query
+          </h3>
+        </div>
+        <div class="card-body">
+          <div class="row g-3">
+            <div class="col-12">
+              <label class="form-label">JQL Query</label>
+              <textarea id="jqlInput" class="form-control" rows="3" placeholder="e.g. project = UPG AND updated >= -30d ORDER BY updated DESC"></textarea>
+            </div>
+            <div class="col-12">
+              <button id="runBtn" class="btn btn-primary">
+                <i class="fas fa-play"></i> Run Query
+              </button>
+              <button id="clearBtn" class="btn btn-outline-secondary ms-2">
+                <i class="fas fa-times"></i> Clear
+              </button>
+            </div>
+            <div class="col-12">
+              <div class="quick-filters">
+                <strong class="me-2">Quick Filters:</strong>
+                <button class="quick-filter-btn" data-jql="updated >= -7d ORDER BY updated DESC">Last 7 days</button>
+                <button class="quick-filter-btn" data-jql="updated >= -30d ORDER BY updated DESC">Last 30 days</button>
+                <button class="quick-filter-btn" data-jql="assignee = currentUser() AND resolution = Unresolved ORDER BY updated DESC">My Open Issues</button>
+                <button class="quick-filter-btn" data-jql="statusCategory != Done ORDER BY priority DESC">All Open</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Loading -->
+      <div id="loading" class="loading hidden">
+        <div class="spinner"></div>
+        <p class="text-muted">Fetching all issues from Jira...</p>
+      </div>
+      
+      <!-- Error -->
+      <div id="error" class="alert alert-danger hidden" role="alert"></div>
+      
+      <!-- Results -->
+      <div id="results" class="hidden">
+        
+        <!-- Stats -->
+        <div class="stats-grid">
+          <div class="stat-card">
+            <i class="fas fa-clipboard-list stat-icon"></i>
+            <div class="stat-label">Total Issues</div>
+            <div class="stat-value" id="statTotal">0</div>
+          </div>
+          <div class="stat-card success">
+            <i class="fas fa-check-circle stat-icon"></i>
+            <div class="stat-label">Completed</div>
+            <div class="stat-value" id="statDone">0</div>
+          </div>
+          <div class="stat-card warning">
+            <i class="fas fa-spinner stat-icon"></i>
+            <div class="stat-label">In Progress</div>
+            <div class="stat-value" id="statInProgress">0</div>
+          </div>
+          <div class="stat-card danger">
+            <i class="fas fa-exclamation-circle stat-icon"></i>
+            <div class="stat-label">To Do</div>
+            <div class="stat-value" id="statTodo">0</div>
+          </div>
+        </div>
+        
+        <!-- Charts -->
+        <div class="row g-3 mb-4">
+          <div class="col-lg-6">
+            <div class="card">
+              <div class="card-header">
+                <h2 class="card-title"><i class="fas fa-tasks"></i> By Status</h2>
+              </div>
+              <div class="card-body">
+                <div class="chart-container">
+                  <canvas id="chartStatus"></canvas>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="col-lg-6">
+            <div class="card">
+              <div class="card-header">
+                <h2 class="card-title"><i class="fas fa-flag"></i> By Priority</h2>
+              </div>
+              <div class="card-body">
+                <div class="chart-container">
+                  <canvas id="chartPriority"></canvas>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="col-lg-6">
+            <div class="card">
+              <div class="card-header">
+                <h2 class="card-title"><i class="fas fa-user"></i> Top Assignees</h2>
+              </div>
+              <div class="card-body">
+                <div class="chart-container">
+                  <canvas id="chartAssignee"></canvas>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="col-lg-6">
+            <div class="card">
+              <div class="card-header">
+                <h2 class="card-title"><i class="fas fa-calendar"></i> Created Over Time</h2>
+              </div>
+              <div class="card-body">
+                <div class="chart-container">
+                  <canvas id="chartCreated"></canvas>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Table -->
+        <div class="card">
+          <div class="card-header d-flex justify-content-between align-items-center">
+            <h2 class="card-title"><i class="fas fa-table"></i> Issues</h2>
+            <span class="badge bg-primary" id="issueCount">0 issues</span>
+          </div>
+          <div class="card-body p-0">
+            <div class="table-container">
+              <table class="table mb-0">
+                <thead>
+                  <tr>
+                    <th style="width: 120px">Key</th>
+                    <th>Summary</th>
+                    <th style="width: 150px">Status</th>
+                    <th style="width: 120px">Priority</th>
+                    <th style="width: 180px">Assignee</th>
+                    <th style="width: 150px">Updated</th>
+                  </tr>
+                </thead>
+                <tbody id="issuesTable"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+        
+      </div>
+      
+    </div>
+  </div>
+  
+  {% include 'footer.html' %}
+  
+  <script>
+    const jiraBase = {{ (session.get('jira_domain') or 'https://upgrad-jira.atlassian.net') | tojson }};
+    let charts = {};
+    
+    // Initialize
+    document.addEventListener('DOMContentLoaded', () => {
+      document.getElementById('runBtn').addEventListener('click', runQuery);
+      document.getElementById('clearBtn').addEventListener('click', clearQuery);
+      
+      document.querySelectorAll('.quick-filter-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          document.getElementById('jqlInput').value = btn.dataset.jql;
+          runQuery();
+        });
+      });
+      
+      // Default query
+      document.getElementById('jqlInput').value = 'updated >= -30d ORDER BY updated DESC';
+    });
+    
+    function clearQuery() {
+      document.getElementById('jqlInput').value = '';
+      document.getElementById('results').classList.add('hidden');
+    }
+    
+    async function runQuery() {
+      const jql = document.getElementById('jqlInput').value.trim();
+      if (!jql) {
+        alert('Please enter a JQL query');
+        return;
+      }
+      
+      document.getElementById('loading').classList.remove('hidden');
+      document.getElementById('error').classList.add('hidden');
+      document.getElementById('results').classList.add('hidden');
+      
+      try {
+        const response = await fetch('/api/jira/admin/run-jql', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ jql })
+        });
+        
+        const data = await response.json();
+        
+        if (!response.ok || !data.success) {
+          throw new Error(data.error || 'Failed to fetch issues');
+        }
+        
+        displayResults(data);
+      } catch (error) {
+        document.getElementById('error').textContent = error.message;
+        document.getElementById('error').classList.remove('hidden');
+      } finally {
+        document.getElementById('loading').classList.add('hidden');
+      }
+    }
+    
+    function displayResults(data) {
+      document.getElementById('results').classList.remove('hidden');
+      
+      // Update stats
+      const total = data.total || 0;
+      const statusCat = data.aggregates.byStatusCategory || [];
+      const done = statusCat.find(s => s.key === 'Done')?.value || 0;
+      const inProgress = statusCat.find(s => s.key === 'In Progress')?.value || 0;
+      const todo = statusCat.find(s => s.key === 'To Do')?.value || 0;
+      
+      document.getElementById('statTotal').textContent = total;
+      document.getElementById('statDone').textContent = done;
+      document.getElementById('statInProgress').textContent = inProgress;
+      document.getElementById('statTodo').textContent = todo;
+      
+      // Update charts
+      updateCharts(data.aggregates);
+      
+      // Update table
+      updateTable(data.issues, data.jiraBaseUrl);
+      
+      document.getElementById('issueCount').textContent = `${total} issues`;
+    }
+    
+    function updateCharts(agg) {
+      // Destroy existing charts
+      Object.values(charts).forEach(chart => chart?.destroy());
+      
+      // Status Chart
+      const statusData = agg.byStatus || [];
+      charts.status = new Chart(document.getElementById('chartStatus'), {
+        type: 'doughnut',
+        data: {
+          labels: statusData.map(s => s.key),
+          datasets: [{
+            data: statusData.map(s => s.value),
+            backgroundColor: ['#6366f1', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#84cc16']
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { position: 'right' }
+          }
+        }
+      });
+      
+      // Priority Chart
+      const priorityData = agg.byPriority || [];
+      charts.priority = new Chart(document.getElementById('chartPriority'), {
+        type: 'bar',
+        data: {
+          labels: priorityData.map(p => p.key),
+          datasets: [{
+            label: 'Issues',
+            data: priorityData.map(p => p.value),
+            backgroundColor: '#6366f1'
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false }
+          }
+        }
+      });
+      
+      // Assignee Chart
+      const assigneeData = agg.byAssignee || [];
+      charts.assignee = new Chart(document.getElementById('chartAssignee'), {
+        type: 'bar',
+        data: {
+          labels: assigneeData.map(a => a.key),
+          datasets: [{
+            label: 'Issues',
+            data: assigneeData.map(a => a.value),
+            backgroundColor: '#10b981'
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          indexAxis: 'y',
+          plugins: {
+            legend: { display: false }
+          }
+        }
+      });
+      
+      // Created Over Time Chart
+      const createdData = agg.createdByDay || [];
+      charts.created = new Chart(document.getElementById('chartCreated'), {
+        type: 'line',
+        data: {
+          labels: createdData.map(c => c.key),
+          datasets: [{
+            label: 'Created',
+            data: createdData.map(c => c.value),
+            borderColor: '#6366f1',
+            backgroundColor: 'rgba(99, 102, 241, 0.1)',
+            fill: true,
+            tension: 0.4
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false }
+          }
+        }
+      });
+    }
+    
+    function updateTable(issues, jiraBaseUrl) {
+      const tbody = document.getElementById('issuesTable');
+      tbody.innerHTML = '';
+      
+      issues.forEach(issue => {
+        const tr = document.createElement('tr');
+        
+        const statusClass = getStatusClass(issue.statusCategory);
+        
+        tr.innerHTML = `
+          <td><a href="${jiraBaseUrl}/browse/${issue.key}" target="_blank" class="issue-key">${issue.key}</a></td>
+          <td>${issue.summary || ''}</td>
+          <td><span class="status-badge ${statusClass}">${issue.status || 'Unknown'}</span></td>
+          <td>${issue.priority || '-'}</td>
+          <td>${issue.assignee || 'Unassigned'}</td>
+          <td>${formatDate(issue.updated)}</td>
+        `;
+        
+        tbody.appendChild(tr);
+      });
+    }
+    
+    function getStatusClass(category) {
+      if (!category) return 'status-todo';
+      const cat = category.toLowerCase();
+      if (cat.includes('done')) return 'status-done';
+      if (cat.includes('progress')) return 'status-inprogress';
+      return 'status-todo';
+    }
+    
+    function formatDate(dateStr) {
+      if (!dateStr) return '-';
+      try {
+        return new Date(dateStr).toLocaleDateString('en-US', {
+          year: 'numeric',
+          month: 'short',
+          day: 'numeric'
+        });
+      } catch {
+        return dateStr;
+      }
+    }
+  </script>
+</body>
+</html>

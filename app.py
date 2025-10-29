@@ -18155,114 +18155,133 @@ def ai_test_studio():
 @app.route('/api/analyze-test-goal', methods=['POST'])
 @jira_auth_required
 def analyze_test_goal():
-    """Analyze user's testing goal and recommend the best tool"""
+    """Analyze user's testing goal and recommend the best tool using AI"""
     try:
         data = request.json
-        goal = data.get('goal', '').lower()
+        goal = data.get('goal', '')
         
         if not goal:
             return jsonify({'success': False, 'error': 'No goal provided'}), 400
         
-        # Smart routing logic based on keywords and patterns
-        recommendation = {
-            'tool': '',
-            'reason': '',
-            'url': ''
-        }
-        
-        # Keywords for each tool
-        record_keywords = ['record', 'capture', 'learn', 'visual', 'see', 'manual', 'click', 'step by step']
-        agent_keywords = ['complex', 'dynamic', 'changing', 'visual verification', 'captcha', 'iframe', 
-                         'shadow dom', 'canvas', 'no selectors', 'flexible', 'adapt']
-        mcp_keywords = ['api', 'structured', 'chat', 'describe', 'specification', 'detailed', 
-                       'iterate', 'refine', 'conversation']
-        
-        # Score each tool
-        record_score = sum(1 for kw in record_keywords if kw in goal)
-        agent_score = sum(1 for kw in agent_keywords if kw in goal)
-        mcp_score = sum(1 for kw in mcp_keywords if kw in goal)
-        
-        # Pattern matching for specific scenarios
-        if any(word in goal for word in ['multi-step', 'multiple steps', 'workflow']):
-            agent_score += 2
-        
-        if any(word in goal for word in ['simple', 'basic', 'quick']):
-            record_score += 2
-        
-        if any(word in goal for word in ['api', 'rest', 'graphql', 'endpoint']):
-            mcp_score += 3
-        
-        # Determine recommendation
-        max_score = max(record_score, agent_score, mcp_score)
-        
-        if max_score == 0:
-            # Default recommendation based on AI analysis
-            try:
-                # Use AI to analyze the goal
-                model = genai.GenerativeModel(
-                    model_name=os.getenv('GOOGLE_API_MODEL', 'gemini-2.0-flash-exp'),
-                    generation_config=generation_config
-                )
-                
-                prompt = f"""Analyze this testing goal and recommend ONE tool:
+        # Always use AI for intelligent recommendations
+        try:
+            model = genai.GenerativeModel(
+                model_name=os.getenv('GOOGLE_API_MODEL', 'gemini-2.0-flash-exp'),
+                generation_config=generation_config
+            )
+            
+            prompt = f"""Analyze this testing goal and recommend the BEST tool with detailed reasoning.
 
-Testing Goal: {goal}
+Testing Goal: "{goal}"
 
 Tools Available:
-1. Record & Enhance (Playwright Codegen) - Visual recording, AI beautification, manual editing
-2. AI Agent (Computer Use) - Vision-based, natural language, self-healing, complex workflows
-3. Conversational MCP - Chat-based, API testing, structured tests, iterative refinement
+1. **Record & Enhance (Playwright Codegen)**
+   - Visual recording with browser automation
+   - AI code beautification and documentation
+   - Manual editing and refinement
+   - Best for: Simple-to-moderate UI tests, learning, quick prototypes
+   - Limitations: Requires manual recording, less flexible for dynamic content
 
-Respond in JSON format:
+2. **AI Agent (Computer Use)**
+   - Vision-based interaction using screenshots
+   - Natural language instructions
+   - Self-healing when elements change
+   - Handles complex workflows automatically
+   - Best for: Complex workflows, dynamic content, visual verification, CAPTCHA
+   - Limitations: Slower, requires more resources
+
+3. **Conversational MCP (Model Context Protocol)**
+   - Chat-based test creation
+   - API and E2E testing
+   - Structured test generation
+   - Iterative refinement through conversation
+   - Best for: API testing, structured tests, when you can describe requirements clearly
+   - Limitations: Requires clear descriptions, not visual
+
+Consider:
+- Complexity of the testing scenario
+- Type of application (UI-heavy, API, mixed)
+- Need for visual verification
+- Dynamic vs static content
+- User's technical level
+
+Respond in JSON format (ensure valid JSON, no markdown):
 {{
-    "tool": "<tool name>",
-    "reason": "<2-3 sentences explaining why this tool is best>"
+    "tool": "<exact tool name from list above>",
+    "reason": "<3-4 sentences with specific reasoning about why this tool is best for this goal. Include what makes it better than the alternatives.>",
+    "confidence": "<high/medium/low>",
+    "alternative": "<optional: another tool if user needs different approach>"
 }}"""
-                
-                response = model.generate_content(prompt)
-                ai_recommendation = json.loads(response.text.strip())
-                
-                recommendation['tool'] = ai_recommendation['tool']
-                recommendation['reason'] = ai_recommendation['reason']
-                
-            except Exception as e:
-                logger.error(f"AI analysis error: {str(e)}")
-                # Fallback to Record & Enhance
-                recommendation['tool'] = 'Record & Enhance'
-                recommendation['reason'] = 'This is a versatile tool suitable for most testing scenarios. You can record your interactions and then enhance them with AI.'
-        
-        elif record_score == max_score:
-            recommendation['tool'] = 'Record & Enhance'
-            recommendation['reason'] = 'Based on your goal, <strong>Record & Enhance</strong> is perfect. You can visually record your test steps, and our AI will beautify the code and add documentation. Great for learning and quick test creation.'
-            recommendation['url'] = '/automation-test-creator'
-        
-        elif agent_score == max_score:
-            recommendation['tool'] = 'AI Agent (Computer Use)'
-            recommendation['reason'] = 'Your scenario requires <strong>AI Agent</strong> capabilities. It uses vision-based interaction, handles dynamic content naturally, and self-heals when elements change. Perfect for complex workflows.'
-            recommendation['url'] = '/browseruse-automation'
-        
-        else:  # mcp_score
-            recommendation['tool'] = 'Conversational MCP'
-            recommendation['reason'] = 'For your needs, <strong>Conversational MCP</strong> is ideal. It offers a chat-based interface where you can describe your tests iteratively, perfect for API testing and structured test creation.'
-            recommendation['url'] = '/playwright-mcp-automation'
-        
-        # Set URL if not set by AI
-        if not recommendation['url']:
-            if 'Record' in recommendation['tool']:
-                recommendation['url'] = '/automation-test-creator'
-            elif 'Agent' in recommendation['tool']:
-                recommendation['url'] = '/browseruse-automation'
+            
+            response = model.generate_content(prompt)
+            response_text = response.text.strip()
+            
+            # Remove markdown code blocks if present
+            if response_text.startswith('```'):
+                response_text = response_text.split('```')[1]
+                if response_text.startswith('json'):
+                    response_text = response_text[4:]
+                response_text = response_text.strip()
+            
+            ai_recommendation = json.loads(response_text)
+            
+            # Map tool name to URL
+            tool_name = ai_recommendation['tool']
+            if 'Record' in tool_name or 'Codegen' in tool_name:
+                url = '/automation-test-creator'
+            elif 'Agent' in tool_name or 'Computer Use' in tool_name:
+                url = '/browseruse-automation'
+            elif 'MCP' in tool_name or 'Conversational' in tool_name:
+                url = '/playwright-mcp-automation'
             else:
-                recommendation['url'] = '/playwright-mcp-automation'
-        
-        return jsonify({
-            'success': True,
-            **recommendation
-        })
+                # Default to Record & Enhance
+                url = '/automation-test-creator'
+            
+            return jsonify({
+                'success': True,
+                'tool': ai_recommendation['tool'],
+                'reason': ai_recommendation['reason'],
+                'url': url,
+                'confidence': ai_recommendation.get('confidence', 'medium'),
+                'alternative': ai_recommendation.get('alternative', '')
+            })
+                
+        except Exception as e:
+            logger.error(f"AI analysis error: {str(e)}")
+            logger.error(f"Response text: {response.text if 'response' in locals() else 'No response'}")
+            # Fallback to Record & Enhance with keyword-based logic
+            goal_lower = goal.lower()
+            
+            # Simple keyword fallback
+            if any(word in goal_lower for word in ['api', 'rest', 'graphql', 'endpoint']):
+                tool = 'Conversational MCP'
+                reason = 'For API testing scenarios, Conversational MCP provides the best chat-based interface for creating structured tests.'
+                url = '/playwright-mcp-automation'
+            elif any(word in goal_lower for word in ['complex', 'dynamic', 'captcha', 'visual']):
+                tool = 'AI Agent (Computer Use)'
+                reason = 'For complex or dynamic scenarios, AI Agent uses vision-based interaction and self-healing capabilities.'
+                url = '/browseruse-automation'
+            else:
+                tool = 'Record & Enhance'
+                reason = 'Record & Enhance is a versatile tool perfect for most testing scenarios. Record your interactions and AI will beautify the code.'
+                url = '/automation-test-creator'
+            
+            return jsonify({
+                'success': True,
+                'tool': tool,
+                'reason': reason,
+                'url': url,
+                'confidence': 'low',
+                'alternative': ''
+            })
         
     except Exception as e:
         logger.error(f"Error analyzing test goal: {str(e)}")
-        return jsonify({'success': False, 'error': str(e)}), 500
+        return jsonify({
+            'success': False, 
+            'error': 'Failed to analyze test goal. Please try again.',
+            'details': str(e)
+        }), 500
 
 # ==============================
 # Cross-Tool Integration APIs
