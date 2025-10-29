@@ -1849,6 +1849,14 @@ try:
 except Exception as e:
     print(f"⚠️  Warning: Could not register API Co-Test routes: {e}")
 
+# Import and register Model-Based Testing routes
+try:
+    from routes.mbt_routes import mbt_bp
+    app.register_blueprint(mbt_bp)
+    print("✅ Model-Based Testing routes registered")
+except Exception as e:
+    print(f"⚠️  Warning: Could not register MBT routes: {e}")
+
 # Define Jira OAuth URLs
 JIRA_AUTH_URL = 'https://auth.atlassian.com/authorize'
 JIRA_TOKEN_URL = 'https://auth.atlassian.com/oauth/token'

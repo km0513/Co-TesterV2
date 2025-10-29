@@ -57,12 +57,20 @@ export const {machine_id} = createMachine({{
         
         # Add meta test assertions
         if 'meta' in config and 'test' in config['meta']:
-            test_code = config['meta']['test']
-            # Escape and format test code
+            test_config = config['meta']['test']
             code += f"{spaces}  meta: {{\n"
-            code += f"{spaces}    test: async ({{ page }}) => {{\n"
-            for line in test_code.strip().split('\n'):
-                code += f"{spaces}      {line}\n"
+            code += f"{spaces}    test: {{\n"
+            
+            # Add action if present
+            if isinstance(test_config, dict) and 'action' in test_config:
+                action = test_config['action']
+                code += f"{spaces}      action: `{action}`,\n"
+            
+            # Add assertion if present
+            if isinstance(test_config, dict) and 'assertion' in test_config:
+                assertion = test_config['assertion']
+                code += f"{spaces}      assertion: `{assertion}`,\n"
+            
             code += f"{spaces}    }}\n"
             code += f"{spaces}  }},\n"
         
