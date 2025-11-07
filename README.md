@@ -28,12 +28,57 @@ Co-Tester is a comprehensive testing automation platform that combines AI-powere
 
 ## 🚀 Quick Start
 
-### Prerequisites
-- Python 3.8+ (recommended: 3.9+)
-- Node.js 20.x
-- Git
+### 🎯 One-Click Setup (Recommended)
 
-### Installation
+Get up and running in **under 5 minutes**!
+
+#### Windows (PowerShell)
+```powershell
+# Clone the repository
+git clone <your-repo-url>
+cd Co-Tester
+
+# Run one-click setup
+.\setup.ps1
+```
+
+#### macOS/Linux (Bash)
+```bash
+# Clone the repository
+git clone <your-repo-url>
+cd Co-Tester
+
+# Make executable and run
+chmod +x setup.sh
+./setup.sh
+```
+
+The script will automatically:
+- ✅ Check prerequisites (Python, Node.js)
+- ✅ Create virtual environment
+- ✅ Install all dependencies (~90 Python + 9 Node packages)
+- ✅ Install Playwright browsers
+- ✅ Setup `.env` configuration
+- ✅ Initialize database
+- ✅ Verify installation
+- ✅ Start the application (optional)
+
+**See [QUICK-START.md](QUICK-START.md) for detailed instructions and troubleshooting.**
+
+---
+
+### 📋 Prerequisites
+
+Before running setup, ensure you have:
+- **Python 3.11+** ([Download](https://www.python.org/downloads/))
+- **Node.js 20.x** ([Download](https://nodejs.org/))
+- **Git** (recommended) ([Download](https://git-scm.com/))
+
+---
+
+### 🔧 Manual Installation (Alternative)
+
+If you prefer manual setup:
 
 1. **Clone the repository**
    ```bash
