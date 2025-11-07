@@ -1,13 +1,37 @@
 {
+  "name": "co-tester",
+  "version": "1.0.0",
+  "description": "AI-Powered Test Automation Platform with Model-Based Testing",
   "scripts": {
-    "heroku-postbuild": "playwright install"
+    "heroku-postbuild": "playwright install",
+    "install:all": "npm install && pip install -r requirements.txt",
+    "install:browsers": "playwright install"
   },
   "dependencies": {
     "cors": "^2.8.5",
     "express": "^5.1.0",
-    "playwright": "^1.43.1"
+    "playwright": "^1.43.1",
+    "@playwright/test": "^1.43.1",
+    "xstate": "^5.21.0",
+    "@xstate/test": "^1.0.0",
+    "@xstate/graph": "^2.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.0.0"
   },
   "engines": {
-    "node": "20.x"
-  }
+    "node": "20.x",
+    "npm": ">=9.0.0"
+  },
+  "keywords": [
+    "test-automation",
+    "model-based-testing",
+    "playwright",
+    "xstate",
+    "ai-testing",
+    "mbt"
+  ],
+  "author": "Co-Tester Team",
+  "license": "MIT"
 }
